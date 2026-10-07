@@ -1,5 +1,4 @@
 -- SAZO schema v0.1 — smoke test with scenario data (S06 engine swap, S08 cloned plate, S26 VIN typo)
-\set ON_ERROR_STOP 1
 SET client_min_messages = warning;
 BEGIN;
 
@@ -166,4 +165,9 @@ VALUES ('00000000-0000-7000-8000-000000000644','00000000-0000-7000-8000-00000000
 INSERT INTO results SELECT 'T15 correction/duplicate stored as a relation, original untouched', 'PASS';
 
 SELECT test, outcome FROM results ORDER BY test COLLATE "C";
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM results WHERE outcome <> 'PASS') THEN
+    RAISE EXCEPTION 'schema smoke tests failed: %', (SELECT string_agg(test || ' -> ' || outcome, '; ') FROM results WHERE outcome <> 'PASS');
+  END IF;
+END $$;
 ROLLBACK;

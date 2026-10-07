@@ -1,7 +1,7 @@
 {
   "name": "sazo",
   "private": true,
-  "description": "SAZO — vehicle history, verification and intelligence platform (Uganda / East Africa)",
+  "description": "SAZO \u2014 vehicle history, verification and intelligence platform (Uganda / East Africa)",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=22"
@@ -11,9 +11,9 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "build": "tsc -b packages/contracts packages/trust-engine packages/scenarios",
+    "typecheck": "tsc -b packages/contracts packages/trust-engine packages/scenarios --dry",
+    "test": "vitest run",
     "lint": "eslint . && npm run lint:boundaries",
     "lint:boundaries": "depcruise apps packages --config .dependency-cruiser.cjs",
     "format": "prettier --write .",
@@ -21,5 +21,17 @@
     "db:test": "node db/migrate.mjs --test",
     "dev:services": "docker compose up -d"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "dependency-cruiser": "^18.5.0",
+    "eslint": "^10.12.0",
+    "pg": "^8.23.1",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
 }
