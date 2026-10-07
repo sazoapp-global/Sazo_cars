@@ -1,8 +1,8 @@
-# Pending decisions — defaults the code currently uses
+# Decisions in the code — approved
 
-The product owner chose to build while these are still being reviewed. The code follows the **recommended** answer for each, and keeps each one easy to change. To override one, tell the developer (or edit the decisions log) — the "Where it lives in code" column says what changes.
+**✅ Approved by the product owner on 8 Oct 2026** ("I approve the choices in docs/PENDING_DECISIONS.md"). Everything in this file — the recommended defaults below, the behaviour choices for sign-in and the Garage workspace, and the engineering notes — is now the agreed behaviour. P-001…P-013, the O-001 default and DM-1…DM-16 are recorded as DECIDED in the [decisions log](design/decisions-log.md). Each stays easy to change: the "Where it lives in code" column says what changes. The engineering notes remain a to-do list of simplifications to replace before launch.
 
-| ID | Recommended default in use | Where it lives in code |
+| ID | Decision in use | Where it lives in code |
 |---|---|---|
 | P-001 | Two scores only: Vehicle Health + Record Confidence | `packages/trust-engine` (`health.ts`, `record-confidence.ts`) |
 | P-002 | Public summary = one status + one line per question; details/valuation need sign-in | Reports module, exposure policies |
