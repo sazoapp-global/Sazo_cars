@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node"],
+    "paths": {
+      "@sazo/contracts": ["./packages/contracts/src/index.ts"],
+      "@sazo/trust-engine": ["./packages/trust-engine/src/index.ts"],
+      "@sazo/scenarios": ["./packages/scenarios/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src/**/*.ts", "vitest.config.mts"]
+}

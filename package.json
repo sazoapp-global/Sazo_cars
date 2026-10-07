@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "build": "tsc -b packages/contracts packages/trust-engine packages/scenarios",
-    "typecheck": "tsc -b packages/contracts packages/trust-engine packages/scenarios --dry",
+    "typecheck": "tsc -p tsconfig.tests.json",
     "test": "vitest run",
     "lint": "eslint . && npm run lint:boundaries",
     "lint:boundaries": "depcruise apps packages --config .dependency-cruiser.cjs",

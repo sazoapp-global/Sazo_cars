@@ -1,6 +1,6 @@
 # SAZO Scenario Dataset v0.1
 
-**Status:** Draft for review · **Date:** 7 October 2026 · v0.1.1 (checked against Rule Set v1)
+**Status:** Executable: `packages/scenarios` (all outcomes tested) · **Date:** 7 October 2026 · v0.1.2 (checked against Rule Set v1)
 **Built on:** Decisions Log, Domain Model v0.2, Rule Set v1 (`rs-2026.10-v1`)
 
 ## 1. Purpose
@@ -150,10 +150,10 @@ Customs coverage starts in 2015, so the import isn't covered.
 | Date | Source | Observation |
 |---|---|---|
 | 14 Apr 2022 | GAR-MUT | `odometer_reading` 134,000 |
-| 03 Jul 2023 | GAR-MUT | `component_replaced` {instrument_cluster, reading_before 141,200, reading_after 12} + photos of both clusters |
-| 22 Aug 2024 | GAR-MUT | `odometer_reading` 18,500 (new cluster) |
+| 03 Nov 2023 | GAR-MUT | `component_replaced` {instrument_cluster, reading_before 141,200, reading_after 12} + photos of both clusters |
+| 22 Aug 2025 | GAR-MUT | `odometer_reading` 18,500 (new cluster) |
 
-**Expected:** no `mileage_decrease` (a declared replacement splits the series). M ! "Odometer replaced in Jul 2023; estimated total ≈ 159,700 km" · `current_mileage_km` = estimated total with lower confidence · **RC: Medium**. *Needs G1.*
+**Expected:** no `mileage_decrease` (a declared replacement splits the series). M ! "Odometer replaced in Nov 2023; estimated total ≈ 159,700 km" · `current_mileage_km` = 159,688 (estimated, lower confidence) · **RC: High**. *Needs G1.*
 
 ### S06: Declared engine replacement (2014 Toyota Premio, UBK 482M, chassis NZT260-3048271)
 | Date | Source | Observation |

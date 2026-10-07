@@ -227,7 +227,7 @@ base   = 95 if a passing inspection in the last 12 months, else 85
 | Deduction | Points |
 |---|---|
 | Structural damage | −25 |
-| Rebuilt after total loss | −35 |
+| Rebuilt after total loss (replaces the structural-damage deduction; v1.1 clarification) | −35 |
 | Flood damage | −30 |
 | Non-structural accident | −8 each, max −16 |
 | Mileage ✗ / ! | −20 / −5 |
@@ -294,21 +294,21 @@ base   = 95 if a passing inspection in the last 12 months, else 85
 |---|---|---|---|---|---|---|---|---|---|---|
 | S01 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | High | 88 (95 −5 mileage −2 age) | ✅ |
 | S02 | ✓ | – | ✓ | – | – | ✓ | ✓ | Insufficient | Insufficient history | ✅ |
-| S03 | ✓ | ! (1 service in 36 mo) | ✓ | ✗ | ✓ | ✓ | ✓ | Low | 57 (85 −20 −5 −3) | ✅ |
-| S04 | ✓ | ✓ | ✓ | ✗ | ! | ✓ | ✓ | Low | ≈ 55 | ✅ |
-| S05 | ✓ | ✓ | ✓ | ! (2 segments) | ✓ | ✓ | ✓ | Medium | ≈ 65 | ✅ |
-| S06 | ✓ + note | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | High | ≈ 76 | ✅ |
-| S07 | ! | – | ✓ | – | ✓ | ✓ | ✓ | Low (< 5 records) | ≈ 79 (inspection base 95) | ✅ |
-| S08a/b | ✗ | ✓ / – | ✓ | ✓ / – | ✓ | ✓ | ✓ | Low | — | ✅ |
+| S03 | ✓ | ! (1 service in 36 mo) | ✓ | ✗ | ✓ | ✓ | ✓ | Low | **49** (85 −20 mileage −8 care −5 km −3 age) | ✅ tested |
+| S04 | ✓ | ✓ | ✓ | ✗ | ! | ✓ | ✓ | Low | **54** | ✅ tested |
+| S05 | ✓ | ✓ | ✓ | ! (2 segments) | ✓ | ✓ | ✓ | **High** | **60** | ✅ tested (cluster swap dated Nov 2023) |
+| S06 | ✓ + note | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | High | **71** | ✅ tested |
+| S07 | ! | – | ✓ | – | ✓ | ✓ | ✓ | Low (< 5 records) | **Insufficient history** (C and M both –) | ✅ tested |
+| S08a/b | ✗ | ✓ / **!** | ✓ | ✓ / – | ✓ | ✓ | ✓ | Low | — | ✅ tested (S08b has one Kireka visit → C !) |
 | S09 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | High | — | ✅ (baseline adds the 2016 import) |
 | S10 | ✓ | ✓ | ✓ | ✓ | ✓ | ! | ✓ | High | — | ✅ |
 | S11 | ✓ | – | ✓ | – | ✓ | ✗ | ✓ | Low | — | ✅ |
 | S12 | ✓ | – | ✓ | – | ✓ | ! | ✓ | Low | — | ✅ |
-| S13 | ✓ | – | ✓ | – | ✓ | ✓ + note | ✓ | Low | — | ✅ |
-| S14 | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | High | ≈ 52 | ✅ **(dataset updated: 2 services added at GAR-BWE in 2024–2025)** |
-| S15 | ✓ | ✓ | ✗ | ✓ | ! | ✓ | ! | Medium | ≈ 40 | ✅ **(dataset updated: V is ! because of the rebuilt adjustment)** |
+| S13 | ✓ | – | ✓ | – | ✓ | ✓ + note | ✓ | **Medium** (5 records, 3 sources) | — | ✅ tested |
+| S14 | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | High | **51** | ✅ tested |
+| S15 | ✓ | ✓ | ✗ | ✓ | ! | ✓ | ! | **High** | **38** (rebuilt replaces the structural deduction) | ✅ tested |
 | S16 | ✓ | – | ✗ | – | ✓ | ✓ | ✓ | Low | Insufficient history (C and M both –) | ✅ |
-| S17 | ✓ | ✓ | ✓ | ✓ | ! | ✓ | ✓ | High | ≈ 60 | ✅ |
+| S17 | ✓ | ✓ | ✓ | ✓ | ! | ✓ | ✓ | High | **51** | ✅ tested |
 | S18 | ✓ | ✓ | ✓ | ✓ | ! | ✓ | ! (few comps) | High | ≈ 45 | ✅ **(dataset updated: "Health ≈ 45, Poor", not "moderate")** |
 | S19 | ✓ + note | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | High | — | ✅ |
 | S20 | ! | – | ✓ | – | ✓ | ✓ | ✓ | Low | — | ✅ |
@@ -321,7 +321,9 @@ base   = 95 if a passing inspection in the last 12 months, else 85
 
 "—" in Health means it isn't specified by the scenario. It's computed, but not asserted in tests.
 
-**Three scenario updates come out of this check.** They're applied to the Scenario Dataset:
+**Verified by code (7 Oct 2026).** These outcomes are now automated tests in `packages/scenarios` and all pass. Writing them as code corrected the hand-calculated values marked in bold above: S03/S05/S06/S07/S14/S15/S17 health, S05/S13/S15 record confidence, S08b care. It also clarified that a rebuilt title replaces (rather than adds to) the structural deduction.
+
+**Three scenario updates came out of the first, manual check.** They're applied to the Scenario Dataset:
 - S14 gains two services
 - S15's valuation becomes !
 - S18's health becomes ≈ 45 (Poor)

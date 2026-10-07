@@ -11,8 +11,14 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@sazo/contracts": "0.1.0",
+    "@sazo/trust-engine": "0.1.0"
   }
 }
