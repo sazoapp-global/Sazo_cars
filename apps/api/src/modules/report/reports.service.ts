@@ -3,6 +3,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IngestionService } from '../ingest/index.js';
 import { ObservationsService, type StoredObservation } from '../obs/index.js';
+import { ReferenceService } from '../ref/index.js';
 import { TrustService, type TrustSnapshot } from '../trust/index.js';
 import { VehicleRegistry, type VehicleCard } from '../vehicle/index.js';
 
@@ -26,6 +27,7 @@ export class ReportsService {
     @Inject(TrustService) private readonly trust: TrustService,
     @Inject(ObservationsService) private readonly observations: ObservationsService,
     @Inject(IngestionService) private readonly ingestion: IngestionService,
+    @Inject(ReferenceService) private readonly reference: ReferenceService,
   ) {}
 
   private async load(ref: string): Promise<{ id: string; card: VehicleCard & Record<string, unknown>; snap: TrustSnapshot }> {
@@ -39,6 +41,17 @@ export class ReportsService {
     const banner = snap.questions.find((q) => q.status === 'serious' && ['identity', 'legal_financial'].includes(q.question));
     if (banner) enriched.banner = { severity: 'serious', headlineKey: banner.headlineKey };
     return { id, card: enriched, snap };
+  }
+
+  /** Search results with make/model/year added from the current trust snapshot (no other details). */
+  async enrichCards(cards: VehicleCard[]): Promise<(VehicleCard & Record<string, unknown>)[]> {
+    return Promise.all(cards.map(async (c) => {
+      const id = await this.registry.idForRef(c.vehicleRef);
+      const snap = id ? await this.trust.current(id) : undefined;
+      const out: VehicleCard & Record<string, unknown> = { ...c };
+      for (const k of PUBLIC_CARD_FACTS) if (snap?.facts[k]) out[k] = snap.facts[k]!.value;
+      return out;
+    }));
   }
 
   /** Public summary: one status + one headline per question. No details, figures, sources or valuation (P-002). */
@@ -59,15 +72,20 @@ export class ReportsService {
       .filter(([k]) => CONSUMER_FACTS.has(k))
       .map(([key, f]) => ({ key, value: f.value, confidence: f.confidence, estimated: f.estimated }));
     const valuation = snap.questions.find((q) => q.question === 'valuation');
+    const valuationStatus = valuation?.status === 'verified' ? 'verified' : valuation?.status === 'attention' ? 'attention' : 'not_available';
+    const fact = (k: string) => snap.facts[k]?.value as string | number | undefined;
+    const range = await this.reference.valuationRange(fact('make') as string, fact('model') as string, fact('year') as number, snap.asOf);
     return {
       vehicle: card,
       questions: snap.questions.map((q) => ({ question: q.question, status: q.status, headlineKey: q.headlineKey, params: q.params, notes: q.notes })),
       recordConfidence: snap.recordConfidence,
       health: snap.health ?? { insufficient: true, score: null, band: null, deductions: [] },
       valuation: {
-        status: valuation?.status === 'verified' ? 'verified' : valuation?.status === 'attention' ? 'attention' : 'not_available',
+        status: valuationStatus,
         comparablesCount: Number((valuation?.params as { comparables?: number })?.comparables ?? 0),
         isEstimate: true,
+        // Only when there are enough comparable sales to say anything (Rule Set §10).
+        ...(range && valuationStatus !== 'not_available' ? { range } : {}),
       },
       facts,
       openConflicts: snap.openConflicts.map((c) => ({ topic: c.topic, headlineKey: `conflict.${c.topic}.open` })),

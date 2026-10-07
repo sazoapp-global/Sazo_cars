@@ -95,7 +95,15 @@ describe.skipIf(!base)('sign-in and access control (e2e)', () => {
     expect(r1.body.refreshToken).not.toBe(t.refreshToken);
     await http.get('/v1/me').set(bearer(r1.body.accessToken)).expect(200);
 
-    // Someone replays the old token → session revoked, even the new tokens stop working.
+    // The same browser racing itself (within seconds) is told to use the newest token; the session survives.
+    expect((await http.post('/v1/auth/refresh').send({ refreshToken: t.refreshToken }).expect(409)).body.code).toBe('refresh_in_progress');
+    await http.get('/v1/me').set(bearer(r1.body.accessToken)).expect(200);
+
+    // Later, someone replays the old token → session revoked, even the new tokens stop working.
+    const c = new pg.Client({ connectionString: url.toString() });
+    await c.connect();
+    await c.query(`UPDATE iam.sessions SET rotated_at = now() - interval '1 minute' WHERE previous_hash IS NOT NULL`);
+    await c.end();
     const reuse = await http.post('/v1/auth/refresh').send({ refreshToken: t.refreshToken }).expect(401);
     expect(reuse.body.code).toBe('invalid_token');
     await http.post('/v1/auth/refresh').send({ refreshToken: r1.body.refreshToken }).expect(401);

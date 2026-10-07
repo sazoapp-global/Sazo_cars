@@ -41,6 +41,25 @@ export class ReferenceService {
     return rows[0]!.n;
   }
 
+  /**
+   * Estimated price range from the same comparables (D-060): the middle half of comparable sale prices
+   * (25th–75th percentile) and the median, rounded to UGX 100,000. Always shown as an estimate with its basis.
+   */
+  async valuationRange(make: string | undefined, model: string | undefined, year: number | undefined, asOf: string): Promise<{ lowUgx: number; midUgx: number; highUgx: number; comparables: number } | undefined> {
+    if (!make || !model || !year) return undefined;
+    const { rows } = await this.pool.query<{ low: string; mid: string; high: string; n: number }>(
+      `SELECT percentile_cont(0.25) WITHIN GROUP (ORDER BY c.price_ugx) AS low, percentile_cont(0.5) WITHIN GROUP (ORDER BY c.price_ugx) AS mid,
+              percentile_cont(0.75) WITHIN GROUP (ORDER BY c.price_ugx) AS high, count(*)::int AS n
+         FROM ref.market_comparables c JOIN ref.vehicle_models m ON m.id = c.model_id
+        WHERE lower(m.make) = lower($1) AND lower(m.model) = lower($2) AND c.year BETWEEN $3 - 2 AND $3 + 2
+          AND c.sold_on > ($4::timestamptz - interval '12 months') AND c.sold_on <= $4::timestamptz`,
+      [make, model, year, asOf]);
+    const r = rows[0];
+    if (!r || !r.n) return undefined;
+    const round = (v: string) => Math.round(Number(v) / 100_000) * 100_000;
+    return { lowUgx: round(r.low), midUgx: round(r.mid), highUgx: round(r.high), comparables: r.n };
+  }
+
   async saveHealth(sql: Sql, h: { vehicleId: string; runId: string; ruleSetVersion: string; asOf: string; health: HealthResult }): Promise<void> {
     await sql.query(
       `INSERT INTO ref.vehicle_health (vehicle_id, trust_run_id, rule_set_version, as_of, insufficient, score, band, deductions)

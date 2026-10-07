@@ -124,13 +124,17 @@ export class IamRepository {
     return rows[0];
   }
 
-  async sessionByPreviousRefresh(hash: string): Promise<{ id: string } | undefined> {
-    const { rows } = await this.pool.query('SELECT id FROM iam.sessions WHERE previous_hash = $1', [hash]);
+  async sessionByPreviousRefresh(hash: string): Promise<{ id: string; secondsSinceRotation: number } | undefined> {
+    const { rows } = await this.pool.query(
+      `SELECT id, EXTRACT(EPOCH FROM (now() - rotated_at))::float AS "secondsSinceRotation" FROM iam.sessions WHERE previous_hash = $1`, [hash]);
     return rows[0];
   }
 
-  async rotateSession(id: string, oldHash: string, newHash: string): Promise<void> {
-    await this.pool.query('UPDATE iam.sessions SET previous_hash = $2, refresh_hash = $3, rotated_at = now() WHERE id = $1', [id, oldHash, newHash]);
+  /** Rotate only if the presented token is still the current one (two simultaneous refreshes: one wins). */
+  async rotateSession(id: string, oldHash: string, newHash: string): Promise<boolean> {
+    const r = await this.pool.query(
+      'UPDATE iam.sessions SET previous_hash = $2, refresh_hash = $3, rotated_at = now() WHERE id = $1 AND refresh_hash = $2', [id, oldHash, newHash]);
+    return r.rowCount === 1;
   }
 
   async revokeSession(id: string, reason: string): Promise<void> {

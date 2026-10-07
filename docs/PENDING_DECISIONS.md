@@ -66,3 +66,15 @@
 | What the confirmation page shows | Garage name, date, plate, type of work, mileage. No cost, no names. |
 | Garage's data source | Created automatically on the first submitted job (channel `garage_app`, starting reputation 0.70). |
 | Cost | Stored as a confidential record: never shown to consumers (P-007). |
+
+## Behaviour choices made while building the consumer website (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Wording | Every sentence on a report comes from one catalogue (`packages/contracts/src/copy.ts`). A test checks that every answer the engine can give has wording, that the public summary has no figures, and that no guarantee words appear. |
+| Price estimate | Shown only to signed-in people: the middle half of comparable sale prices (25th–75th percentile) and the typical (median) price, rounded to UGX 100,000, labelled as an estimate with its number of sales. |
+| Mileage in key facts | Labelled "Mileage (best estimate)" — after a wind-back it is the highest trustworthy figure, not the latest reading. |
+| Price question status | Reads "Estimate available" / "Rough estimate" instead of "Consistent". |
+| Sign-in on the website | Phone code only; tokens live in httpOnly cookies, never in browser JavaScript. Sessions refresh automatically; two refreshes from the same browser within 10 seconds are treated as one, not as a stolen token. |
+| Fonts and icons | Bundled with the site (no Google requests): lighter on mobile data and nothing leaks to third parties. |
+| Simulated data notice | A strip at the top of every page while all records are simulated. |

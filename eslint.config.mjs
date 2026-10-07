@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', 'docs/**'] },
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', 'docs/**', '**/.next/**', 'apps/web/next-env.d.ts', 'apps/web/src/components/icon-paths.ts', 'apps/web/playwright-report/**', 'apps/web/test-results/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -11,6 +11,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': ['error', { fixStyle: 'inline-type-imports', disallowTypeAnnotations: false }],
     },
+  },
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    languageOptions: { globals: { atob: 'readonly', fetch: 'readonly', React: 'readonly' } },
   },
   {
     files: ['**/*.cjs'],

@@ -9,8 +9,8 @@ const Phone = z.string().regex(/^\+[1-9][0-9]{7,14}$/, 'Use international format
 
 function toProblem(err: unknown): never {
   if (err instanceof AuthError) {
-    const status = err.code === 'rate_limited' ? 429 : err.code === 'display_name_required' ? 400 : 401;
-    throw new Problem(status, err.code, status === 429 ? 'Too many requests' : status === 400 ? 'Invalid request' : 'Unauthorized', err.message);
+    const status = err.code === 'rate_limited' ? 429 : err.code === 'display_name_required' ? 400 : err.code === 'refresh_in_progress' ? 409 : 401;
+    throw new Problem(status, err.code, ({ 429: 'Too many requests', 400: 'Invalid request', 409: 'Conflict' } as Record<number, string>)[status] ?? 'Unauthorized', err.message);
   }
   throw err;
 }

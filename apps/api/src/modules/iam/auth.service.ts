@@ -10,8 +10,11 @@ import { NotificationsService } from '../notify/index.js';
 import type { Actor } from './actor.js';
 import { IamRepository } from './iam.repository.js';
 
+/** Refreshes this close together count as one browser racing itself, not a stolen token. */
+const REFRESH_GRACE_SECONDS = 10;
+
 export class AuthError extends Error {
-  constructor(readonly code: 'rate_limited' | 'invalid_code' | 'display_name_required' | 'invalid_token' | 'account_suspended', message: string) {
+  constructor(readonly code: 'rate_limited' | 'invalid_code' | 'display_name_required' | 'invalid_token' | 'account_suspended' | 'refresh_in_progress', message: string) {
     super(message);
   }
 }
@@ -91,12 +94,15 @@ export class AuthService {
     const s = await this.repo.sessionByRefresh(hash);
     if (!s) {
       const reused = await this.repo.sessionByPreviousRefresh(hash);
+      // The same browser sending two requests at once (e.g. a page and a prefetch) is not theft:
+      // within a few seconds of a rotation, answer "already refreshed" and keep the session.
+      if (reused && reused.secondsSinceRotation < REFRESH_GRACE_SECONDS) throw new AuthError('refresh_in_progress', 'Already refreshed; use the newest token');
       if (reused) await this.repo.revokeSession(reused.id, 'refresh_token_reuse');
       throw new AuthError('invalid_token', 'Sign in again');
     }
     if (s.revoked || s.expired) throw new AuthError('invalid_token', 'Sign in again');
     const next = randomBytes(32).toString('base64url');
-    await this.repo.rotateSession(s.id, hash, sha256(next));
+    if (!(await this.repo.rotateSession(s.id, hash, sha256(next)))) throw new AuthError('refresh_in_progress', 'Already refreshed; use the newest token');
     return { accessToken: await this.sign(s.userId, s.id), refreshToken: next, expiresIn: this.cfg.ACCESS_TOKEN_TTL_SECONDS };
   }
 
