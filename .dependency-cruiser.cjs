@@ -34,7 +34,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(dist|node_modules|\.next|playwright-report|test-results)/' },
+    exclude: { path: '(dist|node_modules|[.]next|playwright-report|test-results)/' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.tests.json' },
   },
