@@ -1,0 +1,25 @@
+{
+  "name": "sazo",
+  "private": true,
+  "description": "SAZO — vehicle history, verification and intelligence platform (Uganda / East Africa)",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint . && npm run lint:boundaries",
+    "lint:boundaries": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "format": "prettier --write .",
+    "db:migrate": "node db/migrate.mjs",
+    "db:test": "node db/migrate.mjs --test",
+    "dev:services": "docker compose up -d"
+  },
+  "devDependencies": {}
+}

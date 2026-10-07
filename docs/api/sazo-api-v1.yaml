@@ -1,0 +1,2101 @@
+openapi: 3.1.0
+info:
+  title: SAZO API
+  version: 0.1.0
+  summary: Vehicle history and verification platform — public, consumer, garage, partner and admin API (first slice).
+  description: |
+    Derived from the SAZO Domain Model v0.2, Database Schema v0.1, Rule Set v1 and the Decisions Log.
+
+    **Conventions**
+    - All paths are versioned under `/v1`. Breaking changes ship as `/v2`.
+    - JSON everywhere (`application/json`), except file upload (S3 pre-signed PUT) and PDF download.
+    - Errors use RFC 9457 `application/problem+json` with a stable `code`.
+    - Lists use cursor pagination: `?cursor=&limit=` → `{ items, nextCursor }`.
+    - **Idempotency**: every request that creates a submission, job submit, provisional vehicle or snapshot
+      must carry an `Idempotency-Key` header (UUID). Replays return the original response (X5).
+    - **Exposure** is applied on the server before data leaves it (Reports module + `report.exposure_policies`).
+      Clients never receive fields the caller's audience may not see (D-025, P-007).
+    - **Wording**: user-facing text is returned as `headlineKey` + `params`; the apps render it from one
+      template file so the "state what records show" rule (P-006) lives in one place.
+    - Vehicles are addressed by their public reference `SZV-XXXX-XXXX`, never by internal UUID.
+    - Times are ISO 8601 UTC; dates carry a `precision` where history may be approximate.
+  contact:
+    name: SAZO
+  license:
+    name: Proprietary
+    identifier: LicenseRef-SAZO-Proprietary
+servers:
+  - url: https://api.sazo.example/v1
+    description: Placeholder — real domain to be decided
+tags:
+  - name: Auth
+    description: Phone one-time code, password, token refresh; current user.
+  - name: Vehicles
+    description: Search, public summary, full report, timeline, evidence ledger, compare (consumer surface).
+  - name: Saved & shared
+    description: Saved checks, frozen report snapshots, share links and PDFs.
+  - name: Garage
+    description: SAZO Garage workspace (D-050–D-059).
+  - name: Evidence
+    description: Photo/document upload (S3 pre-signed, write-once, hash-verified) and OCR assist.
+  - name: Ingestion
+    description: Partner and simulated-source data intake (D-010). The only way data enters SAZO.
+  - name: Attestation
+    description: Owner confirm/dispute via SMS reply or link (D-058).
+  - name: Admin
+    description: SAZO staff consoles — approvals, conflicts, identity resolution, sources, rules, moderation.
+  - name: System
+    description: Health checks.
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ------------------------------------------------------------------ AUTH
+  /auth/otp/request:
+    post:
+      tags: [Auth]
+      operationId: requestOtp
+      summary: Send a one-time sign-in code by SMS
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { $ref: '#/components/schemas/PhoneE164' }
+      responses:
+        '202': { description: 'Code sent (always 202, even for unknown numbers, to avoid account discovery)' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/otp/verify:
+    post:
+      tags: [Auth]
+      operationId: verifyOtp
+      summary: Exchange a one-time code for tokens (creates the account on first sign-in)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone: { $ref: '#/components/schemas/PhoneE164' }
+                code: { type: string, pattern: '^[0-9]{6}$' }
+                displayName: { type: string, maxLength: 120, description: Required on first sign-in }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tokens' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/password/sign-in:
+    post:
+      tags: [Auth]
+      operationId: passwordSignIn
+      summary: Sign in with email or phone and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password]
+              properties:
+                login: { type: string, description: Email or E.164 phone }
+                password: { type: string, format: password, minLength: 8 }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tokens' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshTokens
+      summary: Rotate a refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: New tokens (the old refresh token is revoked)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tokens' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/sign-out:
+    post:
+      tags: [Auth]
+      operationId: signOut
+      summary: Revoke the current session
+      responses:
+        '204': { description: Signed out }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me:
+    get:
+      tags: [Auth]
+      operationId: getMe
+      summary: Current user, platform roles and organisation memberships
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # -------------------------------------------------------------- VEHICLES
+  /vehicles/search:
+    get:
+      tags: [Vehicles]
+      operationId: searchVehicles
+      summary: Search by VIN, chassis number or plate
+      description: |
+        Normalises input (uppercase, strips spaces/dashes). Never silently picks one vehicle when a plate
+        matches several (cloned or re-issued plates) — returns `multiple`. VIN/chassis input containing
+        O/I/Q yields a `suggestion` (G9). A network or server failure is never reported as `not_found`.
+        Anonymous callers are rate-limited per client.
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 4, maxLength: 32 }
+          example: UBK 482M
+      responses:
+        '200':
+          description: Search outcome
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /vehicles/{vehicleRef}/summary:
+    get:
+      tags: [Vehicles]
+      operationId: getPublicSummary
+      summary: Public summary — one status and one line per buyer question (P-002)
+      description: No details, sources, figures or valuation range. Served from `report.public_summary_cache`.
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      responses:
+        '200':
+          description: Public summary
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicSummary' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /vehicles/{vehicleRef}/report:
+    get:
+      tags: [Vehicles]
+      operationId: getFullReport
+      summary: Full report for the caller's audience (signed-in)
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      responses:
+        '200':
+          description: Full report, exposure-filtered for the caller
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FullReport' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /vehicles/{vehicleRef}/timeline:
+    get:
+      tags: [Vehicles]
+      operationId: getTimeline
+      summary: The vehicle story — events in time order
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Timeline page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/TimelineEvent' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /vehicles/{vehicleRef}/evidence:
+    get:
+      tags: [Vehicles]
+      operationId: getEvidenceLedger
+      summary: Evidence ledger — every observation the caller may see, including excluded ones (with reason)
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+        - name: question
+          in: query
+          schema: { $ref: '#/components/schemas/Question' }
+        - name: evidenceClass
+          in: query
+          schema: { $ref: '#/components/schemas/EvidenceClass' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Ledger page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ObservationView' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /vehicles/compare:
+    get:
+      tags: [Vehicles]
+      operationId: compareVehicles
+      summary: Compare up to 3 vehicles question by question (D-042)
+      parameters:
+        - name: refs
+          in: query
+          required: true
+          style: form
+          explode: false
+          schema:
+            type: array
+            minItems: 2
+            maxItems: 3
+            items: { $ref: '#/components/schemas/VehicleRef' }
+      responses:
+        '200':
+          description: Comparison
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [vehicles]
+                properties:
+                  vehicles: { type: array, items: { $ref: '#/components/schemas/FullReport' } }
+                  differingQuestions: { type: array, items: { $ref: '#/components/schemas/Question' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /vehicles/provisional:
+    post:
+      tags: [Vehicles]
+      operationId: addProvisionalVehicle
+      summary: Add a vehicle that SAZO couldn't find (not-found flow, P-010)
+      description: Creates an owner-provided submission. The vehicle stays `provisional` and labelled "not yet verified" until corroborated.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProvisionalVehicleInput' }
+      responses:
+        '202':
+          description: Accepted for ingestion
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubmissionAccepted' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ------------------------------------------------------- SAVED & SHARED
+  /me/saved-checks:
+    get:
+      tags: [Saved & shared]
+      operationId: listSavedChecks
+      summary: My saved vehicle checks
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Saved checks
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [vehicleRef, savedAt, summary]
+                      properties:
+                        vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                        savedAt: { type: string, format: date-time }
+                        summary: { $ref: '#/components/schemas/PublicSummary' }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Saved & shared]
+      operationId: saveCheck
+      summary: Save a vehicle check
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vehicleRef]
+              properties:
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+      responses:
+        '204': { description: Saved (idempotent) }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /me/saved-checks/{vehicleRef}:
+    delete:
+      tags: [Saved & shared]
+      operationId: removeSavedCheck
+      summary: Remove a saved check
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      responses:
+        '204': { description: Removed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /vehicles/{vehicleRef}/snapshots:
+    post:
+      tags: [Saved & shared]
+      operationId: createSnapshot
+      summary: Freeze the current report for sharing or PDF download
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                createShareLink: { type: boolean, default: true }
+                expiresInDays: { type: integer, minimum: 1, maximum: 90, default: 30 }
+      responses:
+        '201':
+          description: Snapshot created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snapshot' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /snapshots/{snapshotRef}/pdf:
+    get:
+      tags: [Saved & shared]
+      operationId: downloadSnapshotPdf
+      summary: PDF of a frozen report
+      parameters:
+        - name: snapshotRef
+          in: path
+          required: true
+          schema: { type: string, pattern: '^SZR-[0-9A-Z]{4}-[0-9A-Z]{4}$' }
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /shared/{token}:
+    get:
+      tags: [Saved & shared]
+      operationId: openSharedReport
+      summary: Open a shared report link (no sign-in needed)
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string, minLength: 22 }
+      responses:
+        '200':
+          description: The frozen report, as exposed to the person who shared it, minus owner-only fields
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Snapshot' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Gone' }
+
+  # ---------------------------------------------------------------- GARAGE
+  /garage/vehicles/lookup:
+    get:
+      tags: [Garage]
+      operationId: garageLookupVehicle
+      summary: Find the car in the bay by plate (D-053)
+      description: |
+        Returns the match plus what the garage needs to record a job well: last mileage (value + date,
+        not the other garage's name), expected engine number, plate/chassis to confirm at the car.
+        `multiple` when the plate is on more than one vehicle; `not_found` → new-to-SAZO flow (plate photo required).
+      parameters:
+        - name: plate
+          in: query
+          required: true
+          schema: { type: string, minLength: 4, maxLength: 12 }
+        - $ref: '#/components/parameters/OrganisationId'
+      responses:
+        '200':
+          description: Lookup result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GarageLookupResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /garage/jobs:
+    get:
+      tags: [Garage]
+      operationId: listGarageJobs
+      summary: The garage's jobs (drafts and submitted)
+      parameters:
+        - $ref: '#/components/parameters/OrganisationId'
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, submitted, accepted, rejected] }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/GarageJob' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /garage/jobs/{jobId}:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        description: UUIDv7 generated on the phone, so drafts created offline keep their identity (DM-16)
+        schema: { type: string, format: uuid }
+    put:
+      tags: [Garage]
+      operationId: upsertGarageJobDraft
+      summary: Create or update a job draft (offline-safe upsert)
+      parameters:
+        - $ref: '#/components/parameters/OrganisationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GarageJobDraftInput' }
+      responses:
+        '200':
+          description: Draft saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GarageJob' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      tags: [Garage]
+      operationId: getGarageJob
+      summary: One job, with its submission status and owner-confirmation status
+      parameters:
+        - $ref: '#/components/parameters/OrganisationId'
+      responses:
+        '200':
+          description: Job
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GarageJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /garage/jobs/{jobId}/submit:
+    post:
+      tags: [Garage]
+      operationId: submitGarageJob
+      summary: Submit a job — becomes an Ingestion submission via the garage_app channel (DM-4)
+      description: |
+        Validates required evidence (odometer photo; engine-number photo for engine replacement; plate photo if
+        new to SAZO — D-057). Consistency checks (mileage lower than last, plate/VIN mismatch, undeclared engine
+        change) come back as `warnings`; they never block unless `blocking: true` (D-059 "warn, don't block").
+        The garage organisation must be `approved` (D-055) or the call returns 403 `organisation_not_approved`.
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/OrganisationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                acknowledgedWarnings:
+                  type: array
+                  description: Codes of warnings the user chose to continue past, with explanations
+                  items:
+                    type: object
+                    required: [code, explanation]
+                    properties:
+                      code: { type: string }
+                      explanation: { type: string, maxLength: 500 }
+      responses:
+        '202':
+          description: Accepted; observations are created asynchronously and the owner SMS is queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GarageSubmitResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /garage/staff:
+    get:
+      tags: [Garage]
+      operationId: listGarageStaff
+      summary: Staff accounts (D-056)
+      parameters:
+        - $ref: '#/components/parameters/OrganisationId'
+      responses:
+        '200':
+          description: Staff
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Membership' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Garage]
+      operationId: inviteGarageStaff
+      summary: Invite a mechanic or receptionist (managers only)
+      parameters:
+        - $ref: '#/components/parameters/OrganisationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, displayName, role]
+              properties:
+                phone: { $ref: '#/components/schemas/PhoneE164' }
+                displayName: { type: string }
+                role: { type: string, enum: [org_staff, org_manager] }
+      responses:
+        '201':
+          description: Invited
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Membership' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /garage/suspicious-activity:
+    post:
+      tags: [Garage]
+      operationId: reportSuspiciousActivity
+      summary: Report suspected fraud (categories pending O-002)
+      parameters:
+        - $ref: '#/components/parameters/OrganisationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plateEntered, category, description]
+              properties:
+                plateEntered: { type: string }
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                category: { type: string, description: 'Provisional list: altered_vin, altered_engine_number, cloned_plate, suspicious_documents, suspected_stolen, other' }
+                description: { type: string, maxLength: 2000 }
+                evidenceIds: { type: array, items: { type: string, format: uuid } }
+      responses:
+        '202': { description: Received for SAZO review }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # -------------------------------------------------------------- EVIDENCE
+  /evidence/uploads:
+    post:
+      tags: [Evidence]
+      operationId: startEvidenceUpload
+      summary: Get a pre-signed S3 URL for a photo/document
+      description: The client computes the SHA-256 first; the object is stored write-once and the hash is re-verified on completion.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, mimeType, sizeBytes, sha256]
+              properties:
+                kind: { $ref: '#/components/schemas/EvidenceKind' }
+                mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, application/pdf] }
+                sizeBytes: { type: integer, minimum: 1, maximum: 15000000 }
+                sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+                capturedAt: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Upload slot
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [evidenceId, uploadUrl, expiresAt]
+                properties:
+                  evidenceId: { type: string, format: uuid }
+                  uploadUrl: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /evidence/{evidenceId}/complete:
+    post:
+      tags: [Evidence]
+      operationId: completeEvidenceUpload
+      summary: Confirm the upload; server verifies size and hash
+      parameters:
+        - name: evidenceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Stored and verified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EvidenceFile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /evidence/{evidenceId}/ocr:
+    post:
+      tags: [Evidence]
+      operationId: requestOcr
+      summary: Read a receipt/document and propose field values (D-027)
+      parameters:
+        - name: evidenceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Proposed values — must be confirmed before they count
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OcrExtraction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /ocr/{extractionId}/confirm:
+    post:
+      tags: [Evidence]
+      operationId: confirmOcr
+      summary: Confirm (and correct) proposed values
+      parameters:
+        - name: extractionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmedFields]
+              properties:
+                confirmedFields: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Confirmed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OcrExtraction' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ------------------------------------------------------------- INGESTION
+  /ingest/submissions:
+    post:
+      tags: [Ingestion]
+      operationId: createSubmission
+      summary: Submit records from a source (partner console, simulated feed, or partner API)
+      description: |
+        The envelope is stored exactly as received, then validated, mapped to observation types, and each item
+        resolved to a vehicle. Processing is asynchronous; poll the submission or subscribe to webhooks (later).
+        Partner API clients authenticate with OAuth2 client credentials scoped to their source (`submission.create:<domain>`).
+      security:
+        - bearerAuth: []
+        - partnerClientCredentials: ['submission.create']
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: X-Source-Code
+          in: header
+          required: true
+          schema: { type: string, example: REG-SIM }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmissionInput' }
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubmissionAccepted' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+
+  /ingest/submissions/{submissionId}:
+    get:
+      tags: [Ingestion]
+      operationId: getSubmission
+      summary: Submission status with per-item results
+      security:
+        - bearerAuth: []
+        - partnerClientCredentials: ['submission.read']
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Submission
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Submission' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------------------------------------- ATTESTATION
+  /webhooks/sms/inbound:
+    post:
+      tags: [Attestation]
+      operationId: smsInboundWebhook
+      summary: SMS provider callback for owner replies ("1" confirm / "2" dispute)
+      description: Verified by provider signature/shared secret. Phone numbers are hashed on receipt; raw numbers are not stored here.
+      security: [{ providerSignature: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { description: Acknowledged }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /webhooks/sms/delivery:
+    post:
+      tags: [Attestation]
+      operationId: smsDeliveryWebhook
+      summary: SMS provider delivery reports
+      security: [{ providerSignature: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200': { description: Acknowledged }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /attest/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        description: Single-use token from the SMS link
+        schema: { type: string, minLength: 22 }
+    get:
+      tags: [Attestation]
+      operationId: getAttestationRequest
+      summary: What the owner is being asked to confirm (no sign-in)
+      security: []
+      responses:
+        '200':
+          description: Request details (garage name, date, work summary, mileage — no costs, no other personal data)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttestationRequestView' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Gone' }
+    post:
+      tags: [Attestation]
+      operationId: answerAttestationRequest
+      summary: Confirm or dispute
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [response]
+              properties:
+                response: { type: string, enum: [confirmed, disputed] }
+                comment: { type: string, maxLength: 500 }
+      responses:
+        '204': { description: Recorded }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Gone' }
+
+  # ----------------------------------------------------------------- ADMIN
+  /admin/organisations:
+    get:
+      tags: [Admin]
+      operationId: adminListOrganisations
+      summary: Organisations, e.g. the verification queue (?status=pending_verification)
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/OrganisationStatus' }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/OrganisationType' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Organisations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Organisation' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/organisations/{organisationId}/decision:
+    post:
+      tags: [Admin]
+      operationId: adminDecideOrganisation
+      summary: Approve, reject, request info, or suspend (D-055)
+      parameters:
+        - name: organisationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision: { type: string, enum: [approve, reject, request_info, suspend] }
+                reason: { type: string, minLength: 3 }
+      responses:
+        '200':
+          description: Updated organisation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Organisation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/conflicts:
+    get:
+      tags: [Admin]
+      operationId: adminListConflicts
+      summary: Conflict review queue
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, under_review, auto_resolved, resolved, dismissed] }
+        - name: topic
+          in: query
+          schema: { $ref: '#/components/schemas/ConflictTopic' }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Conflicts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Conflict' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/conflicts/{conflictId}:
+    get:
+      tags: [Admin]
+      operationId: adminGetConflict
+      summary: Conflict with the competing observations side by side (reviewer audience)
+      parameters:
+        - $ref: '#/components/parameters/ConflictId'
+      responses:
+        '200':
+          description: Conflict detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConflictDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/conflicts/{conflictId}/actions:
+    post:
+      tags: [Admin]
+      operationId: adminActOnConflict
+      summary: Assign, comment, resolve or dismiss (reasoning required to resolve/dismiss)
+      parameters:
+        - $ref: '#/components/parameters/ConflictId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConflictAction' }
+      responses:
+        '200':
+          description: Updated conflict
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conflict' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/resolutions:
+    get:
+      tags: [Admin]
+      operationId: adminListResolutions
+      summary: Identity resolution decisions — the ambiguous queue (?outcome=ambiguous)
+      parameters:
+        - name: outcome
+          in: query
+          schema: { type: string, enum: [matched, created_new, created_provisional, ambiguous, rejected] }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Decisions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ResolutionDecision' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/resolutions/{decisionId}/decide:
+    post:
+      tags: [Admin]
+      operationId: adminDecideResolution
+      summary: Resolve an ambiguous match — attach to a candidate, create new, or reject (adds a new decision row)
+      parameters:
+        - name: decisionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome, reason]
+              properties:
+                outcome: { type: string, enum: [matched, created_new, rejected] }
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                reason: { type: string, minLength: 3 }
+      responses:
+        '200':
+          description: New decision
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResolutionDecision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/vehicle-merges:
+    post:
+      tags: [Admin]
+      operationId: adminMergeVehicles
+      summary: Merge a duplicate vehicle into a survivor (DM-7, reversible)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromVehicleRef, intoVehicleRef, reason]
+              properties:
+                fromVehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                intoVehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                reason: { type: string, minLength: 3 }
+      responses:
+        '201':
+          description: Merge recorded; Trust recompute queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VehicleMerge' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/vehicle-merges/{mergeId}/reverse:
+    post:
+      tags: [Admin]
+      operationId: adminReverseMerge
+      summary: Reverse a merge (X3) — records a new reversal row
+      parameters:
+        - name: mergeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3 }
+      responses:
+        '201':
+          description: Reversal recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VehicleMerge' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /admin/sources:
+    get:
+      tags: [Admin]
+      operationId: adminListSources
+      summary: Data sources incl. simulated ones and their coverage
+      responses:
+        '200':
+          description: Sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Source' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/sources/{sourceId}:
+    patch:
+      tags: [Admin]
+      operationId: adminUpdateSource
+      summary: Pause, retire, or mark a simulated source as superseded by a real one (D-011, X1)
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, paused, retired] }
+                supersededBySourceId: { type: string, format: uuid }
+                reason: { type: string }
+      responses:
+        '200':
+          description: Updated source
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Source' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/rule-sets/{version}/activate:
+    post:
+      tags: [Admin]
+      operationId: adminActivateRuleSet
+      summary: Activate a rule-set version (triggers a full rebuild unless deferred)
+      parameters:
+        - name: version
+          in: path
+          required: true
+          schema: { type: string, pattern: '^rs-[0-9]{4}\.[0-9]{2}-v[0-9]+$' }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startFullRebuild: { type: boolean, default: true }
+      responses:
+        '202':
+          description: Activated; rebuild job id returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RebuildJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/rebuilds:
+    post:
+      tags: [Admin]
+      operationId: adminStartRebuild
+      summary: Recompute trust for one vehicle or all vehicles (as of a given time)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                asOf: { type: string, format: date-time }
+      responses:
+        '202':
+          description: Rebuild queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RebuildJob' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/moderation:
+    get:
+      tags: [Admin]
+      operationId: adminListModeration
+      summary: Moderation queue (creator links, model reviews — P-008)
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Cases
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ModerationCase' } }
+                  nextCursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /admin/moderation/{caseId}/decision:
+    post:
+      tags: [Admin]
+      operationId: adminDecideModeration
+      summary: Approve or reject
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                reason: { type: string }
+      responses:
+        '200':
+          description: Decided
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModerationCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------------------------------------------------------------- SYSTEM
+  /health:
+    get:
+      tags: [System]
+      operationId: health
+      summary: Liveness/readiness
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok, degraded] }
+                  checks: { type: object, additionalProperties: { type: string } }
+        '503':
+          description: Unhealthy
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Short-lived access token (15 min) from the Auth endpoints; carries user id, platform roles, memberships.
+    partnerClientCredentials:
+      type: oauth2
+      description: Machine-to-machine access for partner systems once real integrations start (Stage 1).
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.sazo.example/oauth/token
+          scopes:
+            submission.create: Create submissions for the client's own source(s)
+            submission.read: Read the client's own submissions
+    providerSignature:
+      type: apiKey
+      in: header
+      name: X-Provider-Signature
+      description: Shared-secret signature from the SMS provider.
+
+  parameters:
+    VehicleRef:
+      name: vehicleRef
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/VehicleRef' }
+    ConflictId:
+      name: conflictId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    OrganisationId:
+      name: X-Organisation-Id
+      in: header
+      required: true
+      description: The organisation the user is acting for (must be an active membership).
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Not signed in or token invalid
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Signed in but not allowed (role, organisation not approved, wrong source)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Not found (or not visible to the caller)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: State conflict (e.g. idempotency key reused with a different body, job already submitted)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Gone:
+      description: Link expired or already used
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unprocessable:
+      description: Business rule failed (e.g. required evidence missing, hash mismatch)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PayloadTooLarge:
+      description: Too many items or too large
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooManyRequests:
+      description: Rate limit reached
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    # ---------- primitives & enums
+    VehicleRef:
+      type: string
+      pattern: '^SZV-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$'
+      example: SZV-7K3M-9Q2D
+    PhoneE164:
+      type: string
+      pattern: '^\+[1-9][0-9]{7,14}$'
+      example: '+256700000001'
+    Question:
+      type: string
+      enum: [identity, care, damage, mileage, provenance, legal_financial, valuation]
+    QuestionStatus:
+      type: string
+      enum: [verified, attention, serious, not_available]
+    EvidenceClass:
+      type: string
+      enum: [official, garage, inspection, dealer, owner_provided, community]
+    EvidenceKind:
+      type: string
+      enum: [odometer_photo, engine_number_photo, plate_photo, vehicle_photo, receipt, invoice, part_photo, inspection_report, official_document, org_verification_document, other]
+    TimePrecision:
+      type: string
+      enum: [exact, day, month, year, unknown]
+    OrganisationType:
+      type: string
+      enum: [garage, dealer, inspector, inspection_centre, police, revenue_authority, registry, lender, insurer, auction, rental, manufacturer, importer, sazo]
+    OrganisationStatus:
+      type: string
+      enum: [pending_verification, approved, rejected, suspended]
+    ConflictTopic:
+      type: string
+      enum: [mileage, identity, ownership, damage, finance, spec, care, legal]
+    WorkType:
+      type: string
+      enum: [service, repair, accident_damage, body_paint, engine, transmission, electrical, inspection, other]
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: integer, minimum: 0 }
+        currency: { type: string, enum: [UGX] }
+    FuzzyTime:
+      type: object
+      required: [precision]
+      properties:
+        at: { type: [string, 'null'], format: date-time }
+        precision: { $ref: '#/components/schemas/TimePrecision' }
+
+    Problem:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          description: Stable machine code, e.g. evidence_required, organisation_not_approved, idempotency_key_reused, rate_limited
+        detail: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              path: { type: string }
+              code: { type: string }
+              message: { type: string }
+
+    # ---------- auth
+    Tokens:
+      type: object
+      required: [accessToken, refreshToken, expiresIn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: integer, description: Seconds }
+    Membership:
+      type: object
+      required: [organisationId, organisationName, organisationType, role, status]
+      properties:
+        userId: { type: string, format: uuid }
+        displayName: { type: string }
+        organisationId: { type: string, format: uuid }
+        organisationName: { type: string }
+        organisationType: { $ref: '#/components/schemas/OrganisationType' }
+        organisationStatus: { $ref: '#/components/schemas/OrganisationStatus' }
+        role: { type: string }
+        status: { type: string, enum: [invited, active, removed] }
+    Me:
+      type: object
+      required: [id, displayName, platformRoles, memberships]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+        phone: { $ref: '#/components/schemas/PhoneE164' }
+        email: { type: string, format: email }
+        platformRoles: { type: array, items: { type: string } }
+        memberships: { type: array, items: { $ref: '#/components/schemas/Membership' } }
+
+    # ---------- search & reports
+    VehicleCard:
+      type: object
+      description: Minimal identity shown in search results and headers
+      required: [vehicleRef, status]
+      properties:
+        vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        status: { type: string, enum: [active, provisional, retired] }
+        make: { type: string }
+        model: { type: string }
+        year: { type: integer }
+        currentPlate: { type: string }
+        maskedVin: { type: string, example: 'NZT260-30••••••' }
+        matchedOn: { type: string, enum: [vin, chassis_number, registration_plate, previous_plate] }
+        banner: { $ref: '#/components/schemas/Banner' }
+    Banner:
+      type: object
+      description: Serious alert shown above everything (stolen, cloned plate, rollback, total loss)
+      required: [severity, headlineKey]
+      properties:
+        severity: { type: string, enum: [serious, attention] }
+        headlineKey: { type: string }
+        params: { type: object, additionalProperties: true }
+    SearchResult:
+      type: object
+      required: [outcome, queryKind, matches]
+      properties:
+        outcome: { type: string, enum: [found, multiple, not_found, invalid] }
+        queryKind: { type: string, enum: [vin, chassis, plate, unknown] }
+        normalizedQuery: { type: string }
+        matches: { type: array, items: { $ref: '#/components/schemas/VehicleCard' } }
+        suggestion:
+          type: [object, 'null']
+          description: '"Did you mean" for VIN/chassis typos (G9)'
+          properties:
+            query: { type: string }
+            match: { $ref: '#/components/schemas/VehicleCard' }
+        simulatedDataNotice: { type: boolean, description: True while records come from simulated sources (MVP) }
+    QuestionAnswer:
+      type: object
+      required: [question, status, headlineKey]
+      properties:
+        question: { $ref: '#/components/schemas/Question' }
+        status: { $ref: '#/components/schemas/QuestionStatus' }
+        headlineKey: { type: string, example: mileage.verified.consistent }
+        params: { type: object, additionalProperties: true }
+        notes:
+          type: array
+          items:
+            type: object
+            required: [key]
+            properties:
+              key: { type: string, example: identity.note.engine_replaced }
+              params: { type: object, additionalProperties: true }
+    PublicSummary:
+      type: object
+      required: [vehicle, questions, recordConfidence, asOf]
+      properties:
+        vehicle: { $ref: '#/components/schemas/VehicleCard' }
+        questions:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: { $ref: '#/components/schemas/QuestionAnswer' }
+        recordConfidence: { $ref: '#/components/schemas/RecordConfidence' }
+        asOf: { type: string, format: date-time }
+        signInForDetails: { type: boolean, const: true }
+    RecordConfidence:
+      type: object
+      required: [level, records, sources]
+      properties:
+        level: { type: string, enum: [high, medium, low, insufficient] }
+        records: { type: integer }
+        sources: { type: integer }
+        openConflicts: { type: integer }
+    VehicleHealth:
+      type: object
+      required: [insufficient]
+      properties:
+        insufficient: { type: boolean }
+        score: { type: [integer, 'null'], minimum: 0, maximum: 100 }
+        band: { type: [string, 'null'], enum: [good, fair, poor, null] }
+        deductions:
+          type: array
+          items:
+            type: object
+            required: [key, points]
+            properties:
+              key: { type: string, example: health.deduction.structural_damage }
+              points: { type: integer }
+    Valuation:
+      type: object
+      required: [status, comparablesCount]
+      properties:
+        status: { type: string, enum: [verified, attention, not_available] }
+        comparablesCount: { type: integer }
+        rangeLow: { $ref: '#/components/schemas/Money' }
+        rangeHigh: { $ref: '#/components/schemas/Money' }
+        point: { $ref: '#/components/schemas/Money' }
+        adjustments:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              percent: { type: number }
+        isEstimate: { type: boolean, const: true }
+    ForecastItem:
+      type: object
+      required: [item, dueKind]
+      properties:
+        item: { type: string, example: engine_oil }
+        dueKind: { type: string, enum: [due_now_no_record, due_by_km, due_by_date, not_due] }
+        dueInKm: { type: [integer, 'null'] }
+        dueBy: { type: [string, 'null'], format: date }
+        costLow: { $ref: '#/components/schemas/Money' }
+        costHigh: { $ref: '#/components/schemas/Money' }
+    FullReport:
+      type: object
+      required: [vehicle, questions, recordConfidence, health, facts, asOf, ruleSetVersion]
+      properties:
+        vehicle: { $ref: '#/components/schemas/VehicleCard' }
+        questions:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: { $ref: '#/components/schemas/QuestionAnswer' }
+        recordConfidence: { $ref: '#/components/schemas/RecordConfidence' }
+        health: { $ref: '#/components/schemas/VehicleHealth' }
+        valuation: { $ref: '#/components/schemas/Valuation' }
+        forecast:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: '#/components/schemas/ForecastItem' } }
+            totalLow: { $ref: '#/components/schemas/Money' }
+            totalHigh: { $ref: '#/components/schemas/Money' }
+            assumptions: { type: object, additionalProperties: true }
+        facts:
+          type: array
+          description: Canonical facts the caller may see (exposure-filtered)
+          items:
+            type: object
+            required: [key, value, confidence]
+            properties:
+              key: { type: string, example: current_mileage_km }
+              value: {}
+              confidence: { type: number }
+              estimated: { type: boolean }
+        openConflicts:
+          type: array
+          items:
+            type: object
+            required: [topic, headlineKey]
+            properties:
+              topic: { $ref: '#/components/schemas/ConflictTopic' }
+              headlineKey: { type: string }
+        asOf: { type: string, format: date-time }
+        ruleSetVersion: { type: string, example: rs-2026.10-v1 }
+    TimelineEvent:
+      type: object
+      required: [eventId, type, time, evidenceClass, summaryKey]
+      properties:
+        eventId: { type: string, format: uuid }
+        type: { type: string }
+        time: { $ref: '#/components/schemas/FuzzyTime' }
+        evidenceClass: { $ref: '#/components/schemas/EvidenceClass' }
+        sourceLabel: { type: string, description: 'Audience-dependent: "Garage record · Mutungo Auto Works", "Official record"' }
+        summaryKey: { type: string }
+        params: { type: object, additionalProperties: true }
+        mileageKm: { type: [integer, 'null'] }
+        evidenceCount: { type: integer }
+        ownerConfirmation: { type: string, enum: [confirmed, disputed, pending, not_requested] }
+        flags: { type: array, items: { type: string } }
+    ObservationView:
+      type: object
+      required: [observationId, type, time, evidenceClass, confidence, excluded]
+      properties:
+        observationId: { type: string, format: uuid }
+        eventId: { type: [string, 'null'], format: uuid }
+        type: { type: string }
+        attributes: { type: object, additionalProperties: true, description: Exposure-filtered }
+        time: { $ref: '#/components/schemas/FuzzyTime' }
+        recordedAt: { type: string, format: date-time }
+        evidenceClass: { $ref: '#/components/schemas/EvidenceClass' }
+        sourceLabel: { type: string }
+        confidence: { type: number }
+        confidenceFactors: { type: object, additionalProperties: true }
+        excluded: { type: boolean }
+        exclusionReason: { type: [string, 'null'], enum: [retracted, corrected, retired_simulated_source, duplicate, null] }
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/EvidenceThumb' }
+    EvidenceThumb:
+      type: object
+      required: [evidenceId, kind]
+      properties:
+        evidenceId: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/EvidenceKind' }
+        thumbnailUrl: { type: string, format: uri, description: Short-lived signed URL }
+        capturedAt: { type: string, format: date-time }
+    ProvisionalVehicleInput:
+      type: object
+      required: [plate, make, model]
+      properties:
+        plate: { type: string }
+        vinOrChassis: { type: string }
+        make: { type: string }
+        model: { type: string }
+        year: { type: integer, minimum: 1950, maximum: 2030 }
+        mileageKm: { type: integer, minimum: 0 }
+        evidenceIds: { type: array, items: { type: string, format: uuid } }
+    Snapshot:
+      type: object
+      required: [snapshotRef, vehicleRef, createdAt, report]
+      properties:
+        snapshotRef: { type: string, example: SZR-4F7K-2M9Q }
+        vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        createdAt: { type: string, format: date-time }
+        shareUrl: { type: [string, 'null'], format: uri }
+        expiresAt: { type: [string, 'null'], format: date-time }
+        report: { $ref: '#/components/schemas/FullReport' }
+
+    # ---------- garage
+    GarageLookupResult:
+      type: object
+      required: [outcome]
+      properties:
+        outcome: { type: string, enum: [found, multiple, not_found] }
+        candidates:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/VehicleCard'
+              - type: object
+                properties:
+                  chassisLast4: { type: string, description: Confirm against the car's chassis plate }
+                  colour: { type: string }
+                  expectedEngineNumber: { type: string }
+                  lastMileage:
+                    type: object
+                    properties:
+                      km: { type: integer }
+                      on: { type: string, format: date }
+        newVehicleRequires:
+          type: array
+          items: { $ref: '#/components/schemas/EvidenceKind' }
+          description: e.g. [plate_photo] when not found
+    GarageJobDraftInput:
+      type: object
+      required: [plateEntered, workTypes, clientCreatedAt, form]
+      properties:
+        plateEntered: { type: string }
+        vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        workTypes:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/WorkType' }
+        clientCreatedAt: { type: string, format: date-time }
+        form: { $ref: '#/components/schemas/GarageJobForm' }
+        version: { type: integer, description: Optimistic concurrency — send the version you last read }
+    GarageJobForm:
+      type: object
+      description: Answers per step. Only sections for the chosen work types are required (D-052).
+      properties:
+        mileage:
+          type: object
+          properties:
+            value: { type: integer, minimum: 0 }
+            unit: { type: string, enum: [km, mi], default: km }
+            odometerPhotoId: { type: string, format: uuid }
+        service:
+          type: object
+          properties:
+            items: { type: array, items: { type: string } }
+        engine:
+          type: object
+          properties:
+            replaced: { type: boolean }
+            oldEngineNumber: { type: string }
+            oldMatchedRecord: { type: boolean }
+            newEngineNumber: { type: string }
+            newEngineNumberPhotoId: { type: string, format: uuid }
+            engineSource: { type: string, enum: [new, used_import, used_local, rebuilt] }
+            reason: { type: string }
+        bodyPaint:
+          type: object
+          properties:
+            areas: { type: array, items: { type: string, enum: [full_body, front, rear, left, right, roof, bonnet, other] } }
+            oldColour: { type: string }
+            newColour: { type: string }
+            reason: { type: string, enum: [accident, cosmetic, rust, other] }
+        repair:
+          type: object
+          properties:
+            components: { type: array, items: { type: string } }
+            structural: { type: boolean }
+            description: { type: string }
+        customer:
+          type: object
+          properties:
+            name: { type: string }
+            phone: { $ref: '#/components/schemas/PhoneE164' }
+            smsConsent: { type: boolean }
+        cost:
+          type: object
+          properties:
+            total: { $ref: '#/components/schemas/Money' }
+            paid: { $ref: '#/components/schemas/Money' }
+            method: { type: string, enum: [cash, mtn_momo, airtel_money, bank, other] }
+            receiptPhotoId: { type: string, format: uuid }
+        notes: { type: string, maxLength: 2000 }
+        evidenceIds: { type: array, items: { type: string, format: uuid } }
+    GarageJob:
+      type: object
+      required: [jobId, publicRef, status, plateEntered, workTypes, createdBy, clientCreatedAt, version]
+      properties:
+        jobId: { type: string, format: uuid }
+        publicRef: { type: string, example: GJ-2609-0001 }
+        status: { type: string, enum: [draft, submitted, accepted, rejected] }
+        plateEntered: { type: string }
+        vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        workTypes: { type: array, items: { $ref: '#/components/schemas/WorkType' } }
+        form: { $ref: '#/components/schemas/GarageJobForm' }
+        createdBy: { type: object, properties: { userId: { type: string, format: uuid }, displayName: { type: string } } }
+        clientCreatedAt: { type: string, format: date-time }
+        submittedAt: { type: [string, 'null'], format: date-time }
+        submissionId: { type: [string, 'null'], format: uuid }
+        ownerConfirmation: { type: string, enum: [confirmed, disputed, pending, not_requested] }
+        rejectionReason: { type: [string, 'null'] }
+        version: { type: integer }
+    CheckWarning:
+      type: object
+      required: [code, severity, messageKey]
+      properties:
+        code: { type: string, enum: [mileage_lower_than_last, plate_vin_mismatch, undeclared_engine_change, implausible_mileage_rate, date_impossible] }
+        severity: { type: string, enum: [attention, serious] }
+        messageKey: { type: string }
+        params: { type: object, additionalProperties: true }
+        blocking: { type: boolean, default: false }
+    GarageSubmitResult:
+      type: object
+      required: [jobId, submissionId, status]
+      properties:
+        jobId: { type: string, format: uuid }
+        submissionId: { type: string, format: uuid }
+        status: { type: string, enum: [submitted] }
+        warnings: { type: array, items: { $ref: '#/components/schemas/CheckWarning' } }
+        ownerConfirmation: { type: string, enum: [pending, not_requested] }
+
+    # ---------- evidence
+    EvidenceFile:
+      type: object
+      required: [evidenceId, kind, sha256, mimeType, sizeBytes, uploadedAt]
+      properties:
+        evidenceId: { type: string, format: uuid }
+        kind: { $ref: '#/components/schemas/EvidenceKind' }
+        sha256: { type: string }
+        mimeType: { type: string }
+        sizeBytes: { type: integer }
+        capturedAt: { type: string, format: date-time }
+        uploadedAt: { type: string, format: date-time }
+    OcrExtraction:
+      type: object
+      required: [extractionId, evidenceId, proposedFields]
+      properties:
+        extractionId: { type: string, format: uuid }
+        evidenceId: { type: string, format: uuid }
+        proposedFields:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              value: {}
+              confidence: { type: number }
+        confirmedFields: { type: [object, 'null'], additionalProperties: true }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+
+    # ---------- ingestion
+    SubmissionInput:
+      type: object
+      required: [schemaVersion, items]
+      properties:
+        schemaVersion: { type: integer, example: 1 }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: object
+            required: [identifiers, records]
+            properties:
+              identifiers:
+                type: object
+                description: At least one of vin, chassisNumber, plate
+                properties:
+                  vin: { type: string }
+                  chassisNumber: { type: string }
+                  plate: { type: string }
+                  engineNumber: { type: string }
+              records:
+                type: array
+                minItems: 1
+                items:
+                  type: object
+                  required: [type, attributes, time]
+                  properties:
+                    type: { type: string, example: odometer_reading }
+                    attributes: { type: object, additionalProperties: true }
+                    time: { $ref: '#/components/schemas/FuzzyTime' }
+                    evidenceIds: { type: array, items: { type: string, format: uuid } }
+                    sourceRecordId: { type: string, description: "The partner's own id, for traceability" }
+    SubmissionAccepted:
+      type: object
+      required: [submissionId, status]
+      properties:
+        submissionId: { type: string, format: uuid }
+        status: { type: string, enum: [received] }
+        statusUrl: { type: string }
+    Submission:
+      type: object
+      required: [submissionId, sourceCode, status, receivedAt, items]
+      properties:
+        submissionId: { type: string, format: uuid }
+        sourceCode: { type: string }
+        status: { type: string, enum: [received, validating, accepted, partially_accepted, rejected, processed] }
+        statusReason: { type: [string, 'null'] }
+        receivedAt: { type: string, format: date-time }
+        items:
+          type: array
+          items:
+            type: object
+            required: [sequence, status]
+            properties:
+              sequence: { type: integer }
+              status: { type: string, enum: [pending, accepted, rejected, needs_review] }
+              vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+              resolution: { type: string, enum: [matched, created_new, created_provisional, ambiguous, rejected] }
+              errors: { type: array, items: { type: object, additionalProperties: true } }
+              warnings: { type: array, items: { $ref: '#/components/schemas/CheckWarning' } }
+
+    # ---------- attestation
+    AttestationRequestView:
+      type: object
+      required: [garageName, eventDate, workSummaryKey, plate]
+      properties:
+        garageName: { type: string }
+        eventDate: { type: string, format: date }
+        plate: { type: string }
+        workSummaryKey: { type: string }
+        params: { type: object, additionalProperties: true }
+        mileageKm: { type: [integer, 'null'] }
+        expiresAt: { type: string, format: date-time }
+
+    # ---------- admin
+    Organisation:
+      type: object
+      required: [id, type, legalName, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/OrganisationType' }
+        legalName: { type: string }
+        tradingName: { type: string }
+        registrationNumber: { type: string }
+        district: { type: string }
+        status: { $ref: '#/components/schemas/OrganisationStatus' }
+        verificationEvidenceIds: { type: array, items: { type: string, format: uuid } }
+        reputation: { type: [number, 'null'], description: Garages only (Rule Set §2) }
+        createdAt: { type: string, format: date-time }
+    Conflict:
+      type: object
+      required: [conflictId, vehicleRef, topic, status, openedAt]
+      properties:
+        conflictId: { type: string, format: uuid }
+        vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        relatedVehicleRefs: { type: array, items: { $ref: '#/components/schemas/VehicleRef' } }
+        topic: { $ref: '#/components/schemas/ConflictTopic' }
+        status: { type: string, enum: [open, under_review, auto_resolved, resolved, dismissed] }
+        openedByCheck: { type: [string, 'null'] }
+        assignedTo: { type: [string, 'null'], format: uuid }
+        openedAt: { type: string, format: date-time }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+    ConflictDetail:
+      allOf:
+        - $ref: '#/components/schemas/Conflict'
+        - type: object
+          required: [observations, activity]
+          properties:
+            observations: { type: array, items: { $ref: '#/components/schemas/ObservationView' } }
+            activity:
+              type: array
+              items:
+                type: object
+                properties:
+                  kind: { type: string }
+                  actor: { type: [string, 'null'] }
+                  at: { type: string, format: date-time }
+                  details: { type: object, additionalProperties: true }
+            resolution:
+              type: [object, 'null']
+              properties:
+                interpretation: { type: string }
+                reasoning: { type: string }
+    ConflictAction:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [assign, comment, start_review, resolve, dismiss, reopen] }
+        assigneeUserId: { type: string, format: uuid }
+        comment: { type: string }
+        interpretation: { type: string, description: Required for resolve }
+        reasoning: { type: string, description: Required for resolve and dismiss }
+        relations:
+          type: array
+          description: Optional corrections/retractions to record as part of the resolution (never edits)
+          items:
+            type: object
+            required: [kind, fromObservationId, toObservationId]
+            properties:
+              kind: { type: string, enum: [corrects, retracts, duplicates] }
+              fromObservationId: { type: string, format: uuid }
+              toObservationId: { type: string, format: uuid }
+    ResolutionDecision:
+      type: object
+      required: [decisionId, outcome, presentedIdentifiers, decidedAt]
+      properties:
+        decisionId: { type: string, format: uuid }
+        submissionItemId: { type: string, format: uuid }
+        outcome: { type: string, enum: [matched, created_new, created_provisional, ambiguous, rejected] }
+        presentedIdentifiers: { type: object, additionalProperties: true }
+        matchedVehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        candidates: { type: array, items: { $ref: '#/components/schemas/VehicleCard' } }
+        ruleApplied: { type: string }
+        score: { type: [number, 'null'] }
+        decidedBy: { type: [string, 'null'], description: null = system }
+        decidedAt: { type: string, format: date-time }
+    VehicleMerge:
+      type: object
+      required: [mergeId, fromVehicleRef, intoVehicleRef, at]
+      properties:
+        mergeId: { type: string, format: uuid }
+        fromVehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        intoVehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        reversesMergeId: { type: [string, 'null'], format: uuid }
+        reason: { type: string }
+        at: { type: string, format: date-time }
+    Source:
+      type: object
+      required: [id, code, name, domain, channel, isSimulated, status]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        domain: { type: string }
+        channel: { type: string }
+        isSimulated: { type: boolean }
+        status: { type: string, enum: [active, paused, retired] }
+        supersededBySourceId: { type: [string, 'null'], format: uuid }
+        coverage:
+          type: array
+          items:
+            type: object
+            properties:
+              scope: { type: string }
+              periodFrom: { type: string, format: date }
+              periodTo: { type: [string, 'null'], format: date }
+        currentReputation: { type: [number, 'null'] }
+    RebuildJob:
+      type: object
+      required: [jobId, status]
+      properties:
+        jobId: { type: string }
+        status: { type: string, enum: [queued, running, done, failed] }
+        vehicles: { type: [integer, 'null'] }
+    ModerationCase:
+      type: object
+      required: [caseId, targetType, status]
+      properties:
+        caseId: { type: string, format: uuid }
+        targetType: { type: string, enum: [model_review, creator_link] }
+        status: { type: string, enum: [open, approved, rejected] }
+        model: { type: string, example: Toyota Harrier XU60 }
+        content: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
