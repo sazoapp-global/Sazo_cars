@@ -63,6 +63,30 @@ export class IngestionService {
     return this.sources.list();
   }
 
+  sourceByCode(code: string): Promise<SourceRow | undefined> {
+    return this.sources.byCode(code);
+  }
+
+  sourceById(id: string): Promise<SourceRow | undefined> {
+    return this.sources.byId(id);
+  }
+
+  /** Change a source's status; emits ingest.source_changed so Trust re-weighs that source's records (X1). */
+  async updateSource(id: string, change: { status?: SourceRow['status']; supersededBySourceId?: string | null }): Promise<SourceRow> {
+    await this.bus.transaction(async (tx, emit) => {
+      await this.sources.updateStatus(tx, id, change);
+      await emit('ingest', { type: 'ingest.source_changed', aggregateId: id, payload: { sourceId: id, ...change } });
+    });
+    return (await this.sources.byId(id))!;
+  }
+
+  /** The organisation a submission was made for (its source's owner) — used for access checks. */
+  async submissionOrganisation(submissionId: string): Promise<string | undefined> {
+    const { rows } = await this.pool.query<{ organisation_id: string }>(
+      'SELECT src.organisation_id FROM ingest.submissions s JOIN ingest.sources src ON src.id = s.source_id WHERE s.id = $1', [submissionId]);
+    return rows[0]?.organisation_id;
+  }
+
   upsertSource(...args: Parameters<SourcesRepository['upsert']>): Promise<string> {
     return this.sources.upsert(...args);
   }
@@ -197,6 +221,20 @@ export class IngestionService {
     await this.finalise(row.submission_id);
     const result = (await this.get(row.submission_id))!;
     return { ...result, replayed: false, items: result.items.map((it) => (it.sequence === row.sequence ? { ...it, observationIds: ids } : it)) };
+  }
+
+  /** A reviewer rejects an ambiguous item: a new "rejected" decision, and the item is rejected. */
+  async rejectAmbiguousItem(itemId: string, reviewerId: string): Promise<void> {
+    const { rows } = await this.pool.query<{ status: string; resolution_decision_id: string; submission_id: string }>(
+      'SELECT status, resolution_decision_id, submission_id FROM ingest.submission_items WHERE id = $1', [itemId]);
+    const row = rows[0];
+    if (!row || row.status !== 'needs_review') throw new Error('item is not waiting for review');
+    await this.bus.transaction(async (tx) => {
+      const decisionId = await this.registry.rejectAmbiguous(tx, row.resolution_decision_id, reviewerId);
+      await tx.query(`UPDATE ingest.submission_items SET status = 'rejected', resolution_decision_id = $2, errors = $3 WHERE id = $1`,
+        [itemId, decisionId, JSON.stringify([{ path: 'identifiers', code: 'rejected_by_reviewer', message: 'a reviewer could not match this vehicle' }])]);
+    });
+    await this.finalise(row.submission_id);
   }
 
   async get(submissionId: string): Promise<Omit<SubmissionResult, 'replayed'> | undefined> {

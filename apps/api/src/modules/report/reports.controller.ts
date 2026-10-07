@@ -1,16 +1,13 @@
 import { Controller, Get, Inject, Param } from '@nestjs/common';
-import { APP_CONFIG, type AppConfig } from '../../config.js';
-import { Problem, notFound } from '../../platform/problem.js';
+import { notFound } from '../../platform/problem.js';
+import { Public, RequirePermission } from '../iam/index.js';
 import { ReportNotFound, ReportsService } from './reports.service.js';
 
 const REF = /^SZV-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
 
 @Controller('vehicles')
 export class ReportsController {
-  constructor(
-    @Inject(ReportsService) private readonly reports: ReportsService,
-    @Inject(APP_CONFIG) private readonly cfg: AppConfig,
-  ) {}
+  constructor(@Inject(ReportsService) private readonly reports: ReportsService) {}
 
   private async run<T>(ref: string, fn: () => Promise<T>): Promise<T> {
     if (!REF.test(ref)) throw notFound('vehicle_not_found', 'No such vehicle');
@@ -22,14 +19,8 @@ export class ReportsController {
     }
   }
 
-  /** Signed-in views. Until sign-in exists (module 1), they are only served outside production. */
-  private requireSignIn(): void {
-    if (this.cfg.NODE_ENV === 'production') {
-      throw new Problem(401, 'authentication_required', 'Unauthorized', 'Sign in to see the full report');
-    }
-  }
-
   /** GET /v1/vehicles/:ref/summary — public (operationId getPublicSummary). */
+  @Public()
   @Get(':ref/summary')
   summary(@Param('ref') ref: string) {
     return this.run(ref, () => this.reports.publicSummary(ref));
@@ -37,22 +28,22 @@ export class ReportsController {
 
   /** GET /v1/vehicles/:ref/report — operationId getFullReport. */
   @Get(':ref/report')
+  @RequirePermission('vehicle.report.full.read')
   report(@Param('ref') ref: string) {
-    this.requireSignIn();
     return this.run(ref, () => this.reports.fullReport(ref));
   }
 
   /** GET /v1/vehicles/:ref/timeline — operationId getTimeline. */
   @Get(':ref/timeline')
+  @RequirePermission('vehicle.report.full.read')
   timeline(@Param('ref') ref: string) {
-    this.requireSignIn();
     return this.run(ref, () => this.reports.timeline(ref));
   }
 
   /** GET /v1/vehicles/:ref/evidence — operationId getEvidenceLedger. */
   @Get(':ref/evidence')
+  @RequirePermission('vehicle.report.full.read')
   evidence(@Param('ref') ref: string) {
-    this.requireSignIn();
     return this.run(ref, () => this.reports.evidenceLedger(ref));
   }
 }

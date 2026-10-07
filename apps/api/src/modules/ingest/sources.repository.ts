@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { EvidenceClass, SourceDomain } from '@sazo/contracts';
 import pg from 'pg';
+import type { Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 
 export interface SourceRow {
@@ -37,6 +38,23 @@ export class SourcesRepository {
 
   async byCode(code: string): Promise<SourceRow | undefined> {
     return (await this.list()).find((s) => s.code === code);
+  }
+
+  async byId(id: string): Promise<SourceRow | undefined> {
+    return (await this.list()).find((s) => s.id === id);
+  }
+
+  /** Pause, retire or supersede a source (D-011, X1). Its records stay; Trust decides how to weigh them. */
+  async updateStatus(sql: Sql, id: string, change: { status?: SourceRow['status']; supersededBySourceId?: string | null }): Promise<void> {
+    await sql.query(
+      `UPDATE ingest.sources
+          SET status = COALESCE($2, status),
+              superseded_by_source_id = CASE WHEN $3::boolean THEN $4::uuid ELSE superseded_by_source_id END,
+              active_to = CASE WHEN COALESCE($2, status) = 'retired' THEN COALESCE(active_to, now())
+                               WHEN COALESCE($2, status) = 'active' THEN NULL ELSE active_to END
+        WHERE id = $1`,
+      [id, change.status ?? null, change.supersededBySourceId !== undefined, change.supersededBySourceId ?? null],
+    );
   }
 
   /** Create or update a source (used by seeding and the admin console). */

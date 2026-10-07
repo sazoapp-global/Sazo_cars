@@ -1,8 +1,10 @@
 import { Controller, Get, Inject, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import pg from 'pg';
+import { Public } from '../modules/iam/index.js';
 import { DB_POOL } from './tokens.js';
 
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(@Inject(DB_POOL) private readonly pool: pg.Pool) {}

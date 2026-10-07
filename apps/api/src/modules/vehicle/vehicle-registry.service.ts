@@ -228,6 +228,59 @@ export class VehicleRegistry {
     return { outcome: 'matched', vehicleId, decisionId: id, candidates: [], newIdentifierIds: newIds };
   }
 
+  /** A reviewer rejects an ambiguous item (adds a new "rejected" decision row). */
+  async rejectAmbiguous(sql: Sql, decisionId: string, reviewerId: string): Promise<string> {
+    const d = await this.repo.getDecision(decisionId, sql);
+    if (!d || d.outcome !== 'ambiguous') throw new Error('decision is not ambiguous');
+    return this.repo.insertDecision(sql, { submissionItemId: d.submissionItemId, presented: d.presented, outcome: 'rejected', rule: 'reviewer_reject', decidedBy: reviewerId });
+  }
+
+  getDecision(id: string) {
+    return this.repo.getDecision(id);
+  }
+
+  isLatestDecision(id: string): Promise<boolean> {
+    return this.repo.isLatestDecision(id);
+  }
+
+  /** Decisions for the admin queue, with vehicle references instead of internal ids. */
+  async listDecisions(outcome: string | undefined, limit = 50) {
+    const rows = await this.repo.listDecisions(outcome, limit);
+    const refOf = async (id: string | null) => (id ? (await this.repo.getVehicle(id))?.publicRef : undefined);
+    return Promise.all(rows.map(async (r) => ({
+      decisionId: r.id,
+      submissionItemId: r.submissionItemId,
+      outcome: r.outcome,
+      presentedIdentifiers: r.presented,
+      ...(r.matchedVehicleId ? { matchedVehicleRef: await refOf(r.matchedVehicleId) } : {}),
+      candidateVehicleRefs: (await Promise.all(r.candidates.map(refOf))).filter(Boolean) as string[],
+      rule: r.rule,
+      decidedBy: r.decidedBy ? 'reviewer' : 'system',
+      decidedAt: r.decidedAt,
+    })));
+  }
+
+  liveVehicleIds(): Promise<string[]> {
+    return this.repo.liveVehicleIds();
+  }
+
+  /**
+   * A reviewer settles a cloned-plate dispute: the plate stays (active) on `keepVehicleId`; every other
+   * vehicle's copy becomes historical with change_reason 'correction' (never deleted, D-020).
+   * Returns every vehicle whose identifiers changed, so Trust can recompute them.
+   */
+  async resolvePlateDispute(sql: Sql, plate: string, keepVehicleId: string): Promise<string[]> {
+    const norm = normalizeIdentifier(plate);
+    const holders = await this.repo.plateHolders(norm, sql);
+    if (!holders.some((h) => h.vehicleId === keepVehicleId)) throw new Error('that vehicle does not hold this plate');
+    if (!holders.some((h) => h.status === 'disputed')) throw new Error('this plate is not disputed');
+    for (const h of holders) {
+      if (h.vehicleId === keepVehicleId) await this.repo.setIdentifierStatus(sql, h.id, 'active');
+      else await this.repo.setIdentifierStatus(sql, h.id, 'historical', null, 'correction');
+    }
+    return [...new Set(holders.map((h) => h.vehicleId))];
+  }
+
   // ------------------------------------------------- identifier maintenance
 
   /**

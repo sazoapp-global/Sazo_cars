@@ -2,6 +2,7 @@ import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { z } from 'zod';
 import { APP_CONFIG, type AppConfig } from '../../config.js';
 import { badRequest } from '../../platform/problem.js';
+import { Public } from '../iam/index.js';
 import { VehicleRegistry } from './vehicle-registry.service.js';
 
 const SearchQuery = z.object({ q: z.string().trim().min(4).max(32) });
@@ -14,6 +15,7 @@ export class VehiclesController {
   ) {}
 
   /** GET /v1/vehicles/search?q= — operationId searchVehicles (docs/api/sazo-api-v1.yaml). */
+  @Public()
   @Get('search')
   async search(@Query() query: Record<string, unknown>) {
     const parsed = SearchQuery.safeParse(query);

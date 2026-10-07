@@ -59,6 +59,20 @@ export class TrustService implements OnModuleInit {
     this.bus.subscribe('attestation.received', async (e) => {
       await this.recompute(String(e.payload.vehicleId), 'attestation');
     });
+    // A paused/retired/superseded source changes how its records are weighed (X1) — re-weigh its vehicles.
+    this.bus.subscribe('ingest.source_changed', async (e) => {
+      for (const id of await this.observations.vehiclesWithSource(String(e.payload.sourceId))) await this.recompute(id, 'full_rebuild');
+    });
+  }
+
+  /**
+   * Recompute one vehicle or every live vehicle. Runs in-process for now (the BullMQ worker comes later);
+   * each vehicle gets a new derivation run, the previous ones stay for audit (DM-12).
+   */
+  async rebuild(opts: { vehicleId?: string; asOf?: string } = {}): Promise<number> {
+    const ids = opts.vehicleId ? [opts.vehicleId] : await this.registry.liveVehicleIds();
+    for (const id of ids) await this.recompute(id, opts.vehicleId ? 'manual' : 'full_rebuild', opts.asOf);
+    return ids.length;
   }
 
   /** Recompute one vehicle (following merges to the survivor) and store a new run. */

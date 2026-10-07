@@ -10,6 +10,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
+import { AuthService, IamService } from './modules/iam/index.js';
+import { IngestionService } from './modules/ingest/index.js';
 import { compareWithExpectations } from './seed/compare.js';
 import { seedScenarios, type SeededVehicle } from './seed/scenario-seed.js';
 
@@ -23,6 +25,7 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
   const admin = new pg.Client({ connectionString: base });
   let app: INestApplication;
   let seeded: SeededVehicle[] = [];
+  let auth: Record<string, string> = {};
   const ref = (id: string) => seeded.find((s) => s.scenarioId === id)!.vehicleRef;
 
   beforeAll(async () => {
@@ -32,6 +35,8 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
     app = await createApp(loadConfig({ ...process.env, NODE_ENV: 'test', DATABASE_URL: url.toString() }));
     await app.init();
     seeded = await seedScenarios(app);
+    const adminId = await app.get(IamService).ensureUser('+256700000998', 'Pipeline Admin', 'sazo_admin');
+    auth = { Authorization: `Bearer ${(await app.get(AuthService).issueTokens(adminId)).accessToken}` };
   }, 600_000);
 
   afterAll(async () => {
@@ -61,25 +66,25 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
   });
 
   it('S06: repair cost never reaches a consumer (confidential, P-007)', async () => {
-    const ledger = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S06')}/evidence`).expect(200);
+    const ledger = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S06')}/evidence`).set(auth).expect(200);
     expect(ledger.body.items.map((i: { type: string }) => i.type)).not.toContain('cost_recorded');
     expect(JSON.stringify(ledger.body)).not.toContain('4250000');
-    const report = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S06')}/report`).expect(200);
+    const report = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S06')}/report`).set(auth).expect(200);
     const facts = Object.fromEntries(report.body.facts.map((f: { key: string; value: unknown }) => [f.key, f.value]));
     expect(facts.current_engine_number).toBe('1NZ-B222222');
     expect(facts.registered_engine_number).toBe('1NZ-A111111');
   });
 
   it('S12: finance shows as status only — no lender details (O-001 default)', async () => {
-    const ledger = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S12')}/evidence`).expect(200);
+    const ledger = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S12')}/evidence`).set(auth).expect(200);
     const lien = ledger.body.items.find((i: { type: string }) => i.type === 'finance_lien_registered');
     expect(lien.attributes).toEqual({});
-    const report = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S12')}/report`).expect(200);
+    const report = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S12')}/report`).set(auth).expect(200);
     expect(report.body.facts.find((f: { key: string }) => f.key === 'finance_status').value).toBe('active');
   });
 
   it('S23: the mileage typo stays in the ledger, excluded as corrected (append-only, D-020)', async () => {
-    const ledger = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S23')}/evidence`).expect(200);
+    const ledger = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S23')}/evidence`).set(auth).expect(200);
     const typo = ledger.body.items.find((i: { attributes: { km?: number } }) => i.attributes.km === 1_540_000);
     expect(typo).toMatchObject({ excluded: true, exclusionReason: 'corrected' });
   });
@@ -88,21 +93,93 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
     const body = { schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZSU60-0071234' }, records: [
       { type: 'service_performed', attributes: { items: ['wiper_blades'] }, time: { at: '2026-09-30T10:00:00Z', precision: 'day' } }] }] };
     const key = '0192a000-0000-7000-8000-0000000000aa';
-    const first = await request(app.getHttpServer()).post('/v1/ingest/submissions').set('Idempotency-Key', key).set('X-Source-Code', 'DLR').send(body).expect(202);
-    const second = await request(app.getHttpServer()).post('/v1/ingest/submissions').set('Idempotency-Key', key).set('X-Source-Code', 'DLR').send(body).expect(202);
+    const first = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'DLR').send(body).expect(202);
+    const second = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'DLR').send(body).expect(202);
     expect(second.body.submissionId).toBe(first.body.submissionId);
     expect(first.body.items[0]).not.toHaveProperty('vehicleId');
-    await request(app.getHttpServer()).post('/v1/ingest/submissions').set('Idempotency-Key', key).set('X-Source-Code', 'DLR')
+    await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'DLR')
       .send({ ...body, schemaVersion: 2 }).expect(409);
   });
 
   it('a garage job without the required odometer photo is rejected (D-057)', async () => {
-    const res = await request(app.getHttpServer()).post('/v1/ingest/submissions')
+    const res = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth)
       .set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000bb').set('X-Source-Code', 'GAR-MUT')
       .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'NZT260-3048271' }, records: [
         { type: 'odometer_reading', attributes: { km: 152000, originalValue: 152000, originalUnit: 'km' }, time: { at: '2026-09-30T10:00:00Z', precision: 'day' } }] }] })
       .expect(202);
     expect(res.body.status).toBe('rejected');
     expect(res.body.items[0].errors[0].code).toBe('evidence_required');
+  });
+
+  it('the full report needs a sign-in; the public summary does not', async () => {
+    await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S06')}/report`).expect(401);
+    await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S06')}/summary`).expect(200);
+  });
+
+  it('the identity queue shows the reviewer decision for the S24 match', async () => {
+    const res = await request(app.getHttpServer()).get('/v1/admin/resolutions').query({ outcome: 'matched' }).set(auth).expect(200);
+    const reviewed = res.body.items.filter((d: { rule: string }) => d.rule === 'reviewer_match');
+    expect(reviewed).toHaveLength(1);
+    expect(reviewed[0]).toMatchObject({ decidedBy: 'reviewer', matchedVehicleRef: ref('S24') });
+    expect(JSON.stringify(res.body)).not.toMatch(/"matchedVehicleId"/);
+    const pending = await request(app.getHttpServer()).get('/v1/admin/resolutions').query({ outcome: 'ambiguous' }).set(auth).expect(200);
+    expect(pending.body.items).toEqual([]);
+  });
+
+  // ----- From here on the tests CHANGE data (reviewer and admin actions); keep them last. -----
+
+  it('S08: a reviewer settles the cloned plate — the genuine car keeps it, the clone loses it', async () => {
+    const queue = await request(app.getHttpServer()).get('/v1/admin/conflicts').query({ topic: 'identity' }).set(auth).expect(200);
+    const conflict = queue.body.items.find((c: { vehicleRef: string }) => c.vehicleRef === ref('S08a'));
+    expect(conflict).toMatchObject({ status: 'open', relatedVehicleRefs: [ref('S08b')] });
+
+    const detail = await request(app.getHttpServer()).get(`/v1/admin/conflicts/${conflict.conflictId}`).set(auth).expect(200);
+    expect(detail.body.disputedPlates).toEqual(['UAX 123A']);
+
+    // Resolving needs reasoning.
+    await request(app.getHttpServer()).post(`/v1/admin/conflicts/${conflict.conflictId}/actions`).set(auth)
+      .send({ action: 'resolve', interpretation: 'clone' }).expect(400);
+    const done = await request(app.getHttpServer()).post(`/v1/admin/conflicts/${conflict.conflictId}/actions`).set(auth)
+      .send({ action: 'resolve', interpretation: 'S08b is using a cloned plate', reasoning: 'Registry record and chassis match S08a',
+        plateDispute: { plate: 'UAX 123A', keepVehicleRef: ref('S08a') } }).expect(200);
+    expect(done.body.status).toBe('resolved');
+    await request(app.getHttpServer()).post(`/v1/admin/conflicts/${conflict.conflictId}/actions`).set(auth)
+      .send({ action: 'dismiss', reasoning: 'again' }).expect(409);
+
+    const search = await request(app.getHttpServer()).get('/v1/vehicles/search').query({ q: 'UAX 123A' }).expect(200);
+    expect(search.body.outcome).toBe('found');
+    expect(search.body.matches.map((m: { vehicleRef: string }) => m.vehicleRef)).toEqual([ref('S08a')]);
+    expect(search.body.matches[0].banner).toBeUndefined();
+
+    // The clone's own identity conflict closes by itself once the cause is gone.
+    const after = await request(app.getHttpServer()).get('/v1/admin/conflicts').query({ topic: 'identity', status: 'auto_resolved' }).set(auth).expect(200);
+    expect(after.body.items.map((c: { vehicleRef: string }) => c.vehicleRef)).toContain(ref('S08b'));
+  });
+
+  it('X1: retiring the simulated lien feed excludes its records without deleting them', async () => {
+    const sources = await request(app.getHttpServer()).get('/v1/admin/sources').set(auth).expect(200);
+    const lien = sources.body.find((s: { domain: string; isSimulated: boolean }) => s.domain === 'finance' && s.isSimulated);
+    // The real registry feed is connected (D-011): the simulated one is retired and superseded by it.
+    const ingestion = app.get(IngestionService);
+    const realId = await ingestion.upsertSource({
+      code: 'LIEN-REAL', name: 'Lien registry (live)', organisationId: (await ingestion.sourceById(lien.id))!.organisationId,
+      domain: 'finance', channel: 'api', isSimulated: false, evidenceClass: 'official', baselineReputation: 0.9, coverage: [],
+    });
+    await request(app.getHttpServer()).patch(`/v1/admin/sources/${lien.id}`).set(auth).send({ status: 'retired' }).expect(400);
+    const updated = await request(app.getHttpServer()).patch(`/v1/admin/sources/${lien.id}`).set(auth)
+      .send({ status: 'retired', supersededBySourceId: realId, reason: 'Real lien registry connected' }).expect(200);
+    expect(updated.body).toMatchObject({ status: 'retired', supersededBySourceId: realId });
+
+    const ledger = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S12')}/evidence`).set(auth).expect(200);
+    const record = ledger.body.items.find((i: { type: string }) => i.type === 'finance_lien_registered');
+    expect(record).toMatchObject({ excluded: true, exclusionReason: 'retired_simulated_source' });
+    const report = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S12')}/report`).set(auth).expect(200);
+    expect(report.body.facts.find((f: { key: string }) => f.key === 'finance_status')?.value).not.toBe('active');
+  });
+
+  it('a full rebuild recomputes every vehicle', async () => {
+    const res = await request(app.getHttpServer()).post('/v1/admin/rebuilds').set(auth).send({}).expect(202);
+    expect(res.body).toMatchObject({ status: 'done' });
+    expect(res.body.vehicles).toBeGreaterThanOrEqual(27);
   });
 });

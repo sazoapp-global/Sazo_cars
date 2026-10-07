@@ -30,5 +30,20 @@ The product owner chose to build while these are still being reviewed. The code 
 | Events | Transactional outbox per module + in-process delivery after commit | Background worker (BullMQ) retries unpublished outbox rows |
 | Recompute after a dispute | Recomputes the disputed vehicle only | Also refresh other vehicles of that garage (reputation change), e.g. nightly rebuild |
 | Queries | Plain SQL through the `pg` driver (Drizzle instance wired, typed schema not generated yet) | `drizzle-kit pull` to generate typed tables |
-| Auth | Not built; signed-in and intake endpoints refuse to run in production | Module 1 (phone OTP, roles, partner client credentials) |
+| Auth | Phone OTP + JWT (15 min) + rotating refresh tokens (30 days). Partners submit as signed-in users acting for their organisation | Partner machine credentials (OAuth2 client credentials); password sign-in (returns 501 for now) |
+| SMS | Africa's Talking adapter (unverified against a live account) + console sender for dev/tests | Confirm sender ID and pricing; add delivery-report webhook |
+| Rebuilds | `POST /admin/rebuilds` and source changes recompute in-process, synchronously | Run as a BullMQ job with progress |
+| Admin lists | Simple `limit`, no cursor yet (`nextCursor: null`) | Cursor pagination when queues grow |
 | Summary caching | Computed on read | `report.public_summary_cache` refreshed on `trust.vehicle_updated` |
+
+## Behaviour choices made while building module 1 (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| First sign-in | Creates a **consumer** account; a display name is required. A correct code stays usable if the name was missing, so the user can retry. |
+| Stolen refresh token | Presenting an already-used refresh token revokes the whole session (both copies stop working). |
+| Pending business (X4) | Members of an organisation that is not yet approved get `403 organisation_not_approved` on submissions. |
+| Other organisations' submissions | Look exactly like missing ones (404), so nobody can discover them. |
+| Cloned plate settled by a reviewer | The genuine vehicle keeps the plate; the clone's copy becomes *historical (correction)* and no longer appears in search. Nothing is deleted. |
+| Retiring a simulated source (X1) | Its records are excluded only when it is retired **and** superseded by a real source (D-011); retiring alone just stops new intake. |
+| Resolve / dismiss / reopen a conflict | Needs `conflict.resolve` (reviewers and admins); resolving needs an interpretation and reasoning. Every decision is audited. |

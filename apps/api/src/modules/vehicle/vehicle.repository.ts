@@ -51,6 +51,8 @@ export class VehicleRepository {
          SELECT v.id, v.public_ref, v.status, v.merged_into_id, i.type, i.status AS istatus, i.value_normalized, 0 AS depth
            FROM vehicle.vehicle_identifiers i JOIN vehicle.vehicles v ON v.id = i.vehicle_id
           WHERE i.type = ANY($1) AND i.value_normalized = $2
+            -- an identifier withdrawn as a correction (e.g. a cloned plate) was never really this vehicle's
+            AND NOT (i.status = 'historical' AND i.change_reason IS NOT DISTINCT FROM 'correction')
          UNION ALL
          SELECT v.id, v.public_ref, v.status, v.merged_into_id, h.type, h.istatus, h.value_normalized, h.depth + 1
            FROM hits h JOIN vehicle.vehicles v ON v.id = h.merged_into_id
@@ -169,6 +171,42 @@ export class VehicleRepository {
       [submissionItemId],
     );
     return rows[0];
+  }
+
+  /**
+   * Decisions for the admin queue. `ambiguous` lists only items still waiting (the ambiguous decision is
+   * the item's latest one); other outcomes list every decision with that outcome, newest first.
+   */
+  async listDecisions(outcome: string | undefined, limit: number): Promise<{
+    id: string; submissionItemId: string; outcome: string; presented: Record<string, string>; matchedVehicleId: string | null;
+    candidates: string[]; rule: string; decidedBy: string | null; decidedAt: string;
+  }[]> {
+    const { rows } = await this.pool.query(
+      `WITH latest AS (
+         SELECT DISTINCT ON (submission_item_id) * FROM vehicle.resolution_decisions ORDER BY submission_item_id, decided_at DESC, id DESC)
+       SELECT id, submission_item_id AS "submissionItemId", outcome, presented_identifiers AS presented, matched_vehicle_id AS "matchedVehicleId",
+              candidate_vehicle_ids AS candidates, rule_applied AS rule, decided_by_user_id AS "decidedBy", decided_at AS "decidedAt"
+         FROM ${outcome === 'ambiguous' ? 'latest' : 'vehicle.resolution_decisions'}
+        WHERE ($1::text IS NULL OR outcome = $1)
+        ORDER BY decided_at DESC, id DESC LIMIT $2`,
+      [outcome ?? null, limit],
+    );
+    return rows.map((r) => ({ ...r, decidedAt: new Date(r.decidedAt).toISOString() }));
+  }
+
+  /** Is this decision still the item's latest one (i.e. not yet decided by a reviewer)? */
+  async isLatestDecision(id: string, sql: Sql = this.pool): Promise<boolean> {
+    const { rows } = await sql.query<{ latest: boolean }>(
+      `SELECT d.id = (SELECT id FROM vehicle.resolution_decisions x WHERE x.submission_item_id = d.submission_item_id
+                       ORDER BY decided_at DESC, id DESC LIMIT 1) AS latest
+         FROM vehicle.resolution_decisions d WHERE d.id = $1`, [id]);
+    return !!rows[0]?.latest;
+  }
+
+  /** Every vehicle that is not merged away (for full rebuilds). */
+  async liveVehicleIds(): Promise<string[]> {
+    const { rows } = await this.pool.query<{ id: string }>(`SELECT id FROM vehicle.vehicles WHERE merged_into_id IS NULL ORDER BY created_at, id`);
+    return rows.map((r) => r.id);
   }
 
   async getVehicle(id: string, sql: Sql = this.pool): Promise<{ id: string; publicRef: string; status: VehicleStatus; mergedIntoId: string | null } | undefined> {

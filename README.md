@@ -51,8 +51,10 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | Trust engine — Rule Set v1, all 26 scenarios pass as unit tests | ✅ |
 | **Full pipeline:** Ingestion → Vehicle Registry (cloned plates, provisional vehicles, reviewer decisions) → Observations → Trust (recompute on events, stored runs, conflicts) → Reports | ✅ |
 | API: health, search, public summary, full report, timeline, evidence ledger, partner submissions | ✅ |
+| **Sign-in & access (module 1):** phone one-time codes by SMS, rotating refresh tokens (stolen-token detection), roles & permissions, business sign-up with approval (pending businesses cannot submit), audit log | ✅ |
+| **Admin APIs:** organisation approval queue, conflict review (resolve/dismiss with reasoning, cloned-plate settlement), ambiguous vehicle matches, data sources (retire/supersede simulated feeds), trust rebuilds | ✅ |
 | All 27 scenario vehicles loaded through the real pipeline match their expected outcomes (automated) | ✅ |
-| Sign-in / accounts (module 1), Garage workspace, consumer web app, partner/admin consoles | ⏳ next |
+| Garage workspace, consumer web app, partner/admin console screens | ⏳ next |
 
 ### Load the demo vehicles
 
@@ -62,7 +64,19 @@ npm run seed -w @sazo/api          # loads all scenario vehicles through the rea
 npm run seed:check -w @sazo/api    # verifies every vehicle's verdict against the scenario dataset
 ```
 
-> Until sign-in is built, the full report, timeline, evidence and intake endpoints are only served when `NODE_ENV` is not `production`.
+### Sign in (development)
+
+Outside production, SMS codes are not sent — they are printed in the API log (`(dev) SMS to …`).
+
+```bash
+npm run create-admin -w @sazo/api -- --phone +256772000001 --name "Your Name"   # gives a SAZO admin role
+curl -X POST localhost:3000/v1/auth/otp/request -H 'content-type: application/json' -d '{"phone":"+256772000001"}'
+curl -X POST localhost:3000/v1/auth/otp/verify  -H 'content-type: application/json' -d '{"phone":"+256772000001","code":"<from log>"}'
+# then: -H "Authorization: Bearer <accessToken>" on /v1/me, /v1/vehicles/<ref>/report, /v1/admin/...
+```
+
+Public without sign-in: health, search, public summary. Everything else needs a token; admin routes need the matching permission.
+In production set `JWT_SECRET`, `HMAC_SECRET` (32+ chars each) and `SMS_PROVIDER=africastalking` with `AT_USERNAME`/`AT_API_KEY` — the API refuses to start otherwise.
 
 ## Architecture in one paragraph
 

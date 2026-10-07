@@ -153,6 +153,12 @@ export class ObservationsService implements OnModuleInit {
     }));
   }
 
+  /** Vehicles holding at least one record from a source (to re-weigh them when the source changes, X1). */
+  async vehiclesWithSource(sourceId: string): Promise<string[]> {
+    const { rows } = await this.pool.query<{ vehicle_id: string }>('SELECT DISTINCT vehicle_id FROM obs.observations WHERE source_id = $1', [sourceId]);
+    return rows.map((r) => r.vehicle_id);
+  }
+
   async relationsFor(vehicleIds: string[]): Promise<{ from: string; to: string; kind: 'corrects' | 'retracts' | 'duplicates' | 'corroborates' }[]> {
     const { rows } = await this.pool.query(
       `SELECT r.from_observation_id AS "from", r.to_observation_id AS "to", r.kind
