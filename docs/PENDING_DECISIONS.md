@@ -22,3 +22,13 @@ The product owner chose to build while these are still being reviewed. The code 
 ## Small engineering deviation to note
 
 - **Monorepo tooling:** the design proposed Nx (P-012). To keep the first build simple, the repo uses plain **npm workspaces** and enforces module boundaries with **dependency-cruiser** (`npm run lint:boundaries`). Nx can be added later without restructuring. Everything else in P-012 (NestJS, Drizzle, Zod, BullMQ, Next.js, PWA, etc.) is unchanged.
+
+## Engineering notes (temporary simplifications, to revisit)
+
+| Area | Current | Later |
+|---|---|---|
+| Events | Transactional outbox per module + in-process delivery after commit | Background worker (BullMQ) retries unpublished outbox rows |
+| Recompute after a dispute | Recomputes the disputed vehicle only | Also refresh other vehicles of that garage (reputation change), e.g. nightly rebuild |
+| Queries | Plain SQL through the `pg` driver (Drizzle instance wired, typed schema not generated yet) | `drizzle-kit pull` to generate typed tables |
+| Auth | Not built; signed-in and intake endpoints refuse to run in production | Module 1 (phone OTP, roles, partner client credentials) |
+| Summary caching | Computed on read | `report.public_summary_cache` refreshed on `trust.vehicle_updated` |

@@ -48,10 +48,21 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 |---|---|
 | Database schema (11 modules, 78 tables) + migration runner + 15 DB tests | ✅ |
 | Shared contracts: identifiers (VIN / chassis / plate, typo suggestions), observation catalogue | ✅ |
-| Trust engine — Rule Set v1, all 26 scenarios pass as tests | ✅ |
-| API: health, vehicle search (cloned plates → "multiple", previous plates, "did you mean") | ✅ |
-| Ingestion → observations → trust → reports pipeline | ⏳ next |
-| Garage workspace, consumer web app, partner/admin consoles | ⏳ planned |
+| Trust engine — Rule Set v1, all 26 scenarios pass as unit tests | ✅ |
+| **Full pipeline:** Ingestion → Vehicle Registry (cloned plates, provisional vehicles, reviewer decisions) → Observations → Trust (recompute on events, stored runs, conflicts) → Reports | ✅ |
+| API: health, search, public summary, full report, timeline, evidence ledger, partner submissions | ✅ |
+| All 27 scenario vehicles loaded through the real pipeline match their expected outcomes (automated) | ✅ |
+| Sign-in / accounts (module 1), Garage workspace, consumer web app, partner/admin consoles | ⏳ next |
+
+### Load the demo vehicles
+
+```bash
+npm run db:migrate                 # on an EMPTY database
+npm run seed -w @sazo/api          # loads all scenario vehicles through the real pipeline, prints their references
+npm run seed:check -w @sazo/api    # verifies every vehicle's verdict against the scenario dataset
+```
+
+> Until sign-in is built, the full report, timeline, evidence and intake endpoints are only served when `NODE_ENV` is not `production`.
 
 ## Architecture in one paragraph
 

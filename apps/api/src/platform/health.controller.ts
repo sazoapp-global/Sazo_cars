@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import pg from 'pg';
-import { DB_POOL } from './database.module.js';
+import { DB_POOL } from './tokens.js';
 
 @Controller('health')
 export class HealthController {
