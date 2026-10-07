@@ -35,7 +35,23 @@ npm run db:migrate        # apply db/migrations
 npm run db:test           # run database smoke tests
 npm test                  # unit + scenario tests
 npm run lint              # code style + module-boundary rules
+npm run dev -w @sazo/api  # start the API on http://localhost:3000/v1
 ```
+
+Try it: `curl "http://localhost:3000/v1/vehicles/search?q=UBK%20482M"` · `curl http://localhost:3000/v1/health`
+
+End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this automatically).
+
+## What works so far
+
+| Area | Status |
+|---|---|
+| Database schema (11 modules, 78 tables) + migration runner + 15 DB tests | ✅ |
+| Shared contracts: identifiers (VIN / chassis / plate, typo suggestions), observation catalogue | ✅ |
+| Trust engine — Rule Set v1, all 26 scenarios pass as tests | ✅ |
+| API: health, vehicle search (cloned plates → "multiple", previous plates, "did you mean") | ✅ |
+| Ingestion → observations → trust → reports pipeline | ⏳ next |
+| Garage workspace, consumer web app, partner/admin consoles | ⏳ planned |
 
 ## Architecture in one paragraph
 

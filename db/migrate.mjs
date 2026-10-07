@@ -45,7 +45,7 @@ try {
       await client.query('COMMIT');
     } catch (err) {
       await client.query('ROLLBACK');
-      throw new Error(`${file} failed: ${err.message}`);
+      throw new Error(`${file} failed: ${err.message}`, { cause: err });
     }
     console.log('done');
     count++;
@@ -64,7 +64,7 @@ try {
         console.log(`${file}: passed`);
       } catch (err) {
         await client.query('ROLLBACK').catch(() => {});
-        throw new Error(`${file}: ${err.message}`);
+        throw new Error(`${file}: ${err.message}`, { cause: err });
       }
     }
   }

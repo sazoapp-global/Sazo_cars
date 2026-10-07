@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sazo
+          POSTGRES_PASSWORD: sazo
+          POSTGRES_DB: sazo
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sazo"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://sazo:sazo@localhost:5432/sazo
+      TEST_DATABASE_URL: postgres://sazo:sazo@localhost:5432/sazo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Lint (code style + module boundaries)
+        run: npm run lint
+      - name: Type-check
+        run: npm run typecheck
+      - name: Build
+        run: npm run build && npm run build -w @sazo/api
+      - name: Database migrations + schema tests
+        run: npm run db:test
+      - name: Unit, scenario and end-to-end tests
+        run: npm test

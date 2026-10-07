@@ -4,12 +4,26 @@
     "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "paths": {
-      "@sazo/contracts": ["./packages/contracts/src/index.ts"],
-      "@sazo/trust-engine": ["./packages/trust-engine/src/index.ts"],
-      "@sazo/scenarios": ["./packages/scenarios/src/index.ts"]
-    }
+      "@sazo/contracts": [
+        "./packages/contracts/src/index.ts"
+      ],
+      "@sazo/trust-engine": [
+        "./packages/trust-engine/src/index.ts"
+      ],
+      "@sazo/scenarios": [
+        "./packages/scenarios/src/index.ts"
+      ]
+    },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
-  "include": ["packages/*/src/**/*.ts", "vitest.config.mts"]
+  "include": [
+    "packages/*/src/**/*.ts",
+    "apps/*/src/**/*.ts",
+    "vitest.config.mts"
+  ]
 }
