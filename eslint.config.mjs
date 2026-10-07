@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', 'docs/**', '**/.next/**', 'apps/web/next-env.d.ts', 'apps/web/src/components/icon-paths.ts', 'apps/web/playwright-report/**', 'apps/web/test-results/**'] },
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', 'docs/**', '**/.next/**', 'apps/web/next-env.d.ts', 'apps/web/src/components/icon-paths.ts', 'apps/garage/src/components/icon-paths.ts', 'apps/garage/dev-dist/**', 'apps/garage/playwright-report/**', 'apps/garage/test-results/**', 'apps/web/playwright-report/**', 'apps/web/test-results/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -13,7 +13,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/web/**/*.{ts,tsx}'],
+    files: ['apps/web/**/*.{ts,tsx}', 'apps/garage/**/*.{ts,tsx}'],
     languageOptions: { globals: { atob: 'readonly', fetch: 'readonly', React: 'readonly' } },
   },
   {

@@ -78,3 +78,16 @@
 | Sign-in on the website | Phone code only; tokens live in httpOnly cookies, never in browser JavaScript. Sessions refresh automatically; two refreshes from the same browser within 10 seconds are treated as one, not as a stolen token. |
 | Fonts and icons | Bundled with the site (no Google requests): lighter on mobile data and nothing leaks to third parties. |
 | Simulated data notice | A strip at the top of every page while all records are simulated. |
+
+## Behaviour choices made while building the garage phone app (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Offline | Everything typed and every photo is saved on the phone immediately. Drafts sync to SAZO in the background whenever there is signal; **sending** a job needs signal. |
+| Finding the car with no signal | The mechanic can carry on with just the plate; SAZO matches it when the job is sent. |
+| Two phones editing one draft | The phone that last saved wins (it holds the newest answers). A draft started on another phone shows as read-only. |
+| Customer details on the phone | Kept on the phone only until the job is sent, then deleted from the phone. Signing out wipes everything stored on the phone. |
+| Staying signed in | The refresh token is stored on the phone so mechanics stay signed in between days; the access token is only in memory. |
+| Photos | Shrunk to at most 1600 px (JPEG) to save data, then fingerprinted before upload. |
+| Deployment | The app and the API are served from the same web address (the app calls `/v1`), so no cross-site access is needed. |
+| App updates | A new version is offered with an “Update” button; it never reloads in the middle of a job. |

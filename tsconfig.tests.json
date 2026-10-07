@@ -27,6 +27,7 @@
     "vitest.config.mts"
   ],
   "exclude": [
-    "apps/web/**"
+    "apps/web/**",
+    "apps/garage/**"
   ]
 }

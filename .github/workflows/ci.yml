@@ -81,9 +81,18 @@ jobs:
         working-directory: apps/web
         env:
           CI: 'true'
+      - name: Build the garage app (PWA)
+        run: npm run build -w @sazo/garage
+      - name: Garage app browser tests (journey, offline sync, accessibility)
+        run: npx playwright test
+        working-directory: apps/garage
+        env:
+          CI: 'true'
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
-          path: apps/web/playwright-report
+          name: playwright-reports
+          path: |
+            apps/web/playwright-report
+            apps/garage/playwright-report
           retention-days: 7

@@ -37,6 +37,7 @@ npm test                  # unit + scenario tests
 npm run lint              # code style + module-boundary rules
 npm run dev -w @sazo/api  # start the API on http://localhost:3000/v1
 npm run dev -w @sazo/web  # start the website on http://localhost:3001 (talks to the API above)
+npm run dev -w @sazo/garage  # start the garage phone app on http://localhost:3002
 ```
 
 Try it: `curl "http://localhost:3000/v1/vehicles/search?q=UBK%20482M"` · `curl http://localhost:3000/v1/health`
@@ -61,7 +62,8 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | Customer details encrypted in the personal-data store; confirmation links single-use and never logged | ✅ |
 | **Consumer website (Next.js):** search by plate/VIN/chassis, several-cars and not-found guidance, public summary (no figures), phone-code sign-in, full report (Vehicle Health + Record Confidence with reasons, key facts, 7 questions, price range estimate), timeline, evidence ledger with filters, customer confirmation page for garage SMS links | ✅ |
 | Browser tests on a phone-sized screen, with automatic accessibility checks (axe, WCAG 2 AA) | ✅ |
-| Garage phone app (offline PWA), admin and partner console screens, “my cars”, compare | ⏳ next |
+| **Garage phone app (installable, works offline):** sign in by phone, find the car by plate (or carry on without signal), work-type tiles, mileage + odometer photo, details per type of work, customer + consent + cost, check-and-send with explained warnings, job list with customer-confirmation status, staff management. Drafts and photos are kept on the phone and sync when the signal returns | ✅ |
+| Admin and partner console screens, “my cars”, compare | ⏳ next |
 
 ### Load the demo vehicles
 
