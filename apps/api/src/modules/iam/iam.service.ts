@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import pg from 'pg';
 import { withTx, type Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
+import { NotificationsService } from '../notify/index.js';
 import type { Actor } from './actor.js';
 import { IamRepository, type OrganisationRow } from './iam.repository.js';
 
@@ -13,6 +14,7 @@ export class IamService {
   constructor(
     @Inject(DB_POOL) private readonly pool: pg.Pool,
     @Inject(IamRepository) private readonly repo: IamRepository,
+    @Inject(NotificationsService) private readonly notify: NotificationsService,
   ) {}
 
   /** Write an audit entry (append-only). Pass a transaction to audit atomically with the change. */
@@ -61,5 +63,36 @@ export class IamService {
       await this.repo.audit(tx, { actorUserId: actor.userId, action: `organisation.${decision}`, targetType: 'organisation', targetId: id, details: { reason } });
     });
     return this.repo.organisation(id);
+  }
+
+  /** Active (and invited) members of an organisation — the garage staff list (D-056). */
+  listMembers(organisationId: string) {
+    return this.repo.members(organisationId);
+  }
+
+  async isActiveMember(userId: string, organisationId: string): Promise<boolean> {
+    return (await this.repo.members(organisationId)).some((m) => m.userId === userId && m.status === 'active');
+  }
+
+  displayNames(userIds: string[]): Promise<Map<string, string>> {
+    return this.repo.displayNames([...new Set(userIds)]);
+  }
+
+  /**
+   * A manager adds a mechanic or receptionist by phone (D-056). The person signs in with a phone code;
+   * their membership is active straight away because the manager vouches for them. They get an SMS.
+   */
+  async addStaff(actor: Actor, organisationId: string, s: { phone: string; displayName: string; role: 'org_staff' | 'org_manager' }) {
+    const org = await this.repo.organisation(organisationId);
+    const userId = await withTx(this.pool, async (tx) => {
+      const existing = await this.repo.userByPhone(s.phone);
+      const id = existing?.id ?? (await this.repo.createUser(tx, s.displayName, s.phone));
+      if (!existing) await this.repo.assignPlatformRole(tx, id, 'consumer');
+      await this.repo.addMembership(tx, id, organisationId, s.role, 'active', actor.userId);
+      await this.repo.audit(tx, { actorUserId: actor.userId, organisationId, action: 'membership.added', targetType: 'user', targetId: id, details: { role: s.role } });
+      return id;
+    });
+    await this.notify.sendSmsToPhone(s.phone, 'staff_added', { organisation: org?.tradingName ?? org?.legalName ?? 'a business' }, 'account', userId);
+    return (await this.repo.members(organisationId)).find((m) => m.userId === userId)!;
   }
 }

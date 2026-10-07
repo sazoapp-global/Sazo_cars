@@ -698,7 +698,8 @@ paths:
                 required: [evidenceId, uploadUrl, expiresAt]
                 properties:
                   evidenceId: { type: string, format: uuid }
-                  uploadUrl: { type: string, format: uri }
+                  uploadUrl: { type: string, format: uri, description: PUT the file bytes here (raw body, the declared content type) }
+                  uploadMethod: { type: string, enum: [PUT] }
                   expiresAt: { type: string, format: date-time }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -1862,8 +1863,14 @@ components:
         jobId: { type: string, format: uuid }
         submissionId: { type: string, format: uuid }
         status: { type: string, enum: [submitted] }
-        warnings: { type: array, items: { $ref: '#/components/schemas/CheckWarning' } }
+        jobStatus: { type: string, enum: [submitted, accepted, rejected], description: accepted = stored; submitted = waiting for a reviewer (ambiguous vehicle) }
+        vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+        acknowledgedWarnings:
+          type: array
+          description: Warnings the user continued past. Unacknowledged warnings return 422 warnings_need_acknowledgement with the list in `errors`.
+          items: { type: object, properties: { code: { type: string }, explanation: { type: string } } }
         ownerConfirmation: { type: string, enum: [pending, not_requested] }
+        rejectionReason: { type: string }
 
     # ---------- evidence
     EvidenceFile:
@@ -1968,6 +1975,7 @@ components:
         params: { type: object, additionalProperties: true }
         mileageKm: { type: [integer, 'null'] }
         expiresAt: { type: string, format: date-time }
+        answered: { type: [string, 'null'], enum: [confirmed, disputed, null] }
 
     # ---------- admin
     Organisation:

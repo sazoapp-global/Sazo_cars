@@ -117,11 +117,11 @@ export class ObservationsService implements OnModuleInit {
   }
 
   /** Register an uploaded evidence file (write-once storage; hash recorded). */
-  async registerEvidence(e: { storageKey: string; sha256: string; mimeType: string; sizeBytes: number; kind: EvidenceKind; capturedAt?: string | null; uploadedByUserId?: string | null }): Promise<string> {
+  async registerEvidence(e: { id?: string; storageKey: string; sha256: string; mimeType: string; sizeBytes: number; kind: EvidenceKind; capturedAt?: string | null; uploadedByUserId?: string | null }): Promise<string> {
     const { rows } = await this.pool.query<{ id: string }>(
-      `INSERT INTO obs.evidence_files (storage_key, sha256, mime_type, size_bytes, kind, captured_at, uploaded_by_user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-      [e.storageKey, e.sha256, e.mimeType, e.sizeBytes, e.kind, e.capturedAt ?? null, e.uploadedByUserId ?? null],
+      `INSERT INTO obs.evidence_files (id, storage_key, sha256, mime_type, size_bytes, kind, captured_at, uploaded_by_user_id)
+       VALUES (COALESCE($8::uuid, gen_random_uuid()), $1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [e.storageKey, e.sha256, e.mimeType, e.sizeBytes, e.kind, e.capturedAt ?? null, e.uploadedByUserId ?? null, e.id ?? null],
     );
     return rows[0]!.id;
   }

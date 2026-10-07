@@ -19,6 +19,7 @@
     "@sazo/scenarios": "0.1.0",
     "@sazo/trust-engine": "0.1.0",
     "drizzle-orm": "^0.45.3",
+    "express": "^5.2.1",
     "jose": "^6.2.12",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",

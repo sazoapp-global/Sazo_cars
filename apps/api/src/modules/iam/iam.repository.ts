@@ -70,6 +70,20 @@ export class IamRepository {
     return rows;
   }
 
+  async members(organisationId: string): Promise<{ userId: string; displayName: string; role: string; status: 'invited' | 'active' | 'removed'; joinedAt: string | null }[]> {
+    const { rows } = await this.pool.query(
+      `SELECT u.id AS "userId", u.display_name AS "displayName", r.code AS role, m.status, m.joined_at AS "joinedAt"
+         FROM iam.memberships m JOIN iam.users u ON u.id = m.user_id JOIN iam.roles r ON r.id = m.role_id
+        WHERE m.organisation_id = $1 AND m.status <> 'removed' ORDER BY m.created_at`, [organisationId]);
+    return rows.map((r) => ({ ...r, joinedAt: r.joinedAt ? new Date(r.joinedAt).toISOString() : null }));
+  }
+
+  async displayNames(userIds: string[]): Promise<Map<string, string>> {
+    if (!userIds.length) return new Map();
+    const { rows } = await this.pool.query<{ id: string; display_name: string }>('SELECT id, display_name FROM iam.users WHERE id = ANY($1)', [userIds]);
+    return new Map(rows.map((r) => [r.id, r.display_name]));
+  }
+
   // ---------- one-time codes
   async recentOtpCount(phone: string, minutes: number): Promise<number> {
     const { rows } = await this.pool.query<{ n: number }>(

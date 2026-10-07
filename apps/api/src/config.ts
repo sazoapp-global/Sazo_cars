@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 const DEV_SECRET = 'dev-only-secret-change-me-dev-only-secret';
+/** A fixed 32-byte key, base64 — development only. */
+const DEV_PII_KEY = Buffer.from('dev-only-pii-key-32-bytes-long!!').toString('base64');
 
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -20,6 +22,15 @@ const Env = z.object({
   AT_API_KEY: z.string().optional(),
   AT_SENDER_ID: z.string().optional(),
   AT_SANDBOX: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
+  /** AES-256-GCM key (base64, 32 bytes) for names and phone numbers in the personal-data store (DM-15). KMS later. */
+  PII_ENCRYPTION_KEY: z.string().default(DEV_PII_KEY)
+    .refine((k) => Buffer.from(k, 'base64').length === 32, 'must be 32 bytes, base64-encoded'),
+  /** Where evidence photos are stored (write-once). Local folder now; S3 later. */
+  EVIDENCE_DIR: z.string().default('./var/evidence'),
+  /** Public web address used in SMS links, e.g. the owner-confirmation page. */
+  PUBLIC_WEB_URL: z.string().url().default('http://localhost:3001'),
+  /** The address of this API as seen by phones (used in upload URLs). */
+  PUBLIC_API_URL: z.string().url().default('http://localhost:3000'),
 });
 
 export type AppConfig = z.infer<typeof Env>;
@@ -34,6 +45,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (cfg.NODE_ENV === 'production') {
     if (cfg.JWT_SECRET === DEV_SECRET || cfg.HMAC_SECRET === DEV_SECRET) throw new Error('Set JWT_SECRET and HMAC_SECRET in production');
     if (cfg.SMS_PROVIDER === 'console') throw new Error('SMS_PROVIDER=console is not allowed in production');
+    if (cfg.PII_ENCRYPTION_KEY === DEV_PII_KEY) throw new Error('Set PII_ENCRYPTION_KEY in production');
   }
   if (cfg.SMS_PROVIDER === 'africastalking' && (!cfg.AT_USERNAME || !cfg.AT_API_KEY)) {
     throw new Error("SMS_PROVIDER=africastalking needs AT_USERNAME and AT_API_KEY");

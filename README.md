@@ -54,7 +54,9 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | **Sign-in & access (module 1):** phone one-time codes by SMS, rotating refresh tokens (stolen-token detection), roles & permissions, business sign-up with approval (pending businesses cannot submit), audit log | ✅ |
 | **Admin APIs:** organisation approval queue, conflict review (resolve/dismiss with reasoning, cloned-plate settlement), ambiguous vehicle matches, data sources (retire/supersede simulated feeds), trust rebuilds | ✅ |
 | All 27 scenario vehicles loaded through the real pipeline match their expected outcomes (automated) | ✅ |
-| Garage workspace, consumer web app, partner/admin console screens | ⏳ next |
+| **Garage workspace (module 7):** find the car by plate, job drafts saved step by step (offline-safe ids, version checks), photo uploads checked by hash, consistency warnings that must be explained, submit → the vehicle's history, customer confirms or disputes by SMS link; staff accounts | ✅ |
+| Customer details encrypted in the personal-data store; confirmation links single-use and never logged | ✅ |
+| Consumer web app, garage phone app (PWA), partner/admin console screens | ⏳ next |
 
 ### Load the demo vehicles
 
