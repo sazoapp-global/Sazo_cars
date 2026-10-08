@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DOMAIN_RECORD_TYPES, buildAttributes, csvColumns, fieldsFor } from './partner.js';
+import { DOMAIN_RECORD_TYPES, buildAttributes, buyerVisibleAttributes, csvColumns, fieldsFor } from './partner.js';
 
 describe('partner data entry', () => {
   it('every record type in every domain has a form', () => {
@@ -29,5 +29,25 @@ describe('partner data entry', () => {
   it('lists the CSV columns for a source', () => {
     expect(csvColumns('police').slice(0, 5)).toEqual(['vin', 'chassis_number', 'plate', 'record_type', 'date']);
     expect(csvColumns('finance')).toEqual(['vin', 'chassis_number', 'plate', 'record_type', 'date']);
+  });
+});
+
+describe('what buyers see of a record (security S6)', () => {
+  it('drops undeclared fields, including inside nested objects', () => {
+    expect(buyerVisibleAttributes('import_recorded', { originCountry: 'JP', note: 'agent: John Doe', exportMileage: { value: 1, unit: 'km', extra: 'x' } }))
+      .toEqual({ originCountry: 'JP', exportMileage: { value: 1, unit: 'km' } });
+    expect(buyerVisibleAttributes('inspection_result', { passed: true, defects: [{ item: 'tyre', severity: 'minor', mechanic: 'Sam' }] }))
+      .toEqual({ passed: true, defects: [{ item: 'tyre', severity: 'minor' }] });
+  });
+  it('shows nothing of free-form records', () => {
+    expect(buyerVisibleAttributes('customs_cleared', { clearingAgent: 'Jane', phone: '+256772000000' })).toEqual({});
+    expect(buyerVisibleAttributes('total_loss_declared', { insurer: 'X', claimant: 'Y' })).toEqual({});
+  });
+  it('never shows links to people or intake phone numbers', () => {
+    expect(buyerVisibleAttributes('registration_issued', { plate: 'UBJ 214K', ownerPartyId: '00000000-0000-4000-8000-000000000000', ownerPhone: '+256772000000' }))
+      .toEqual({ plate: 'UBJ 214K' });
+  });
+  it('rejects unknown record types', () => {
+    expect(buyerVisibleAttributes('nope', { a: 1 })).toEqual({});
   });
 });

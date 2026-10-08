@@ -1,7 +1,7 @@
 // Reports — module 6: exposure-filtered read models (D-025, P-002, P-007, O-001 default "status only").
 // The only place that assembles what a user sees, so hiding rules live in exactly one place.
 import { Inject, Injectable } from '@nestjs/common';
-import { repaintedPanels } from '@sazo/contracts';
+import { buyerVisibleAttributes, repaintedPanels } from '@sazo/contracts';
 import { ConcernService } from '../concern/index.js';
 import { IngestionService } from '../ingest/index.js';
 import { ObservationsService, type StoredObservation } from '../obs/index.js';
@@ -149,8 +149,8 @@ export class ReportsService {
   private exposeObservation(o: StoredObservation): Record<string, unknown> | undefined {
     if (o.sensitivity === 'confidential') return undefined; // costs, ownership parties (P-007)
     if (o.sensitivity === 'restricted') return {}; // police/finance/claims: the fact that it exists, not the detail (O-001)
-    // Links to people (owner, lender) never leave SAZO, even as ids (P-007).
-    return Object.fromEntries(Object.entries(o.attributes).filter(([k]) => !/PartyId$/.test(k)));
+    // Only the fields each record type declares; links to people (owner, lender) never leave SAZO, even as ids (P-007, S6).
+    return buyerVisibleAttributes(o.type, o.attributes);
   }
 
   async timeline(ref: string) {

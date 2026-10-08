@@ -1,11 +1,16 @@
 // Identity & Access — public interface used by other modules and by scripts.
 import { Inject, Injectable } from '@nestjs/common';
 import pg from 'pg';
+import { enforceLimit } from '../../platform/limits.js';
 import { withTx, type Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 import { NotificationsService } from '../notify/index.js';
 import type { Actor } from './actor.js';
 import { IamRepository, type OrganisationRow } from './iam.repository.js';
+
+/** Limits agreed in the security review (S5). */
+export const ORG_SIGNUPS_PER_DAY = 3;
+export const STAFF_INVITES_PER_MINUTE = 3;
 
 export const BUSINESS_ORG_TYPES = ['garage', 'dealer', 'inspector', 'inspection_centre', 'lender', 'insurer', 'auction', 'rental', 'importer'] as const;
 
@@ -35,6 +40,9 @@ export class IamService {
   /** Business sign-up (D-055): the organisation starts pending; the creator becomes its manager. */
   async registerOrganisation(actor: Actor, o: { type: (typeof BUSINESS_ORG_TYPES)[number]; legalName: string; tradingName?: string; registrationNumber?: string; district?: string; contactPhone?: string }): Promise<OrganisationRow> {
     const id = await withTx(this.pool, async (tx) => {
+      await enforceLimit(tx, `org-signup:${actor.userId}`, ORG_SIGNUPS_PER_DAY,
+        `SELECT count(*)::int AS n FROM iam.audit_entries WHERE actor_user_id = $1 AND action = 'organisation.registered' AND at > now() - interval '1 day'`,
+        [actor.userId], `You can register up to ${ORG_SIGNUPS_PER_DAY} businesses a day. Try again tomorrow or call SAZO.`);
       const orgId = await this.repo.createOrganisation(tx, o);
       await this.repo.addMembership(tx, actor.userId, orgId, 'org_manager', 'active');
       await this.repo.openVerificationCase(tx, orgId);
@@ -114,6 +122,10 @@ export class IamService {
   async addStaff(actor: Actor, organisationId: string, s: { phone: string; displayName: string; role: 'org_staff' | 'org_manager' }) {
     const org = await this.repo.organisation(organisationId);
     const userId = await withTx(this.pool, async (tx) => {
+      // Each invitation sends a text, so a business can add only a few people a minute (S5).
+      await enforceLimit(tx, `staff-invite:${organisationId}`, STAFF_INVITES_PER_MINUTE,
+        `SELECT count(*)::int AS n FROM iam.audit_entries WHERE acting_for_organisation_id = $1 AND action = 'membership.added' AND at > now() - interval '1 minute'`,
+        [organisationId], `You can add up to ${STAFF_INVITES_PER_MINUTE} people a minute. Wait a minute and try again.`);
       const existing = await this.repo.userByPhone(s.phone);
       const id = existing?.id ?? (await this.repo.createUser(tx, s.displayName, s.phone));
       if (!existing) await this.repo.assignPlatformRole(tx, id, 'consumer');

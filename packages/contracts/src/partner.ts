@@ -143,3 +143,36 @@ export function csvColumns(domain: string): string[] {
   for (const t of DOMAIN_RECORD_TYPES[domain] ?? []) for (const f of fieldsFor(t)) fields.add(f.path);
   return ['vin', 'chassis_number', 'plate', 'record_type', 'date', ...fields];
 }
+
+/** Keys never shown to buyers even when a record type declares them (links to people, intake-only phone numbers). */
+const NEVER_TO_BUYERS = (key: string) => /PartyId$/.test(key) || key === 'ownerPhone';
+
+function pick(value: unknown, s: JsonSchema | undefined): unknown {
+  if (!s) return undefined;
+  const variants = s.anyOf ?? [s];
+  if (Array.isArray(value)) {
+    const items = variants.find((v) => v.items)?.items;
+    return items ? value.map((x) => pick(x, items)).filter((x) => x !== undefined) : undefined;
+  }
+  if (value !== null && typeof value === 'object') {
+    const obj = variants.find((v) => v.properties);
+    if (!obj?.properties) return undefined; // an object with no declared fields (e.g. a free-form record) shows nothing
+    const out: Record<string, unknown> = {};
+    for (const [k, prop] of Object.entries(obj.properties)) {
+      if (NEVER_TO_BUYERS(k) || !(k in (value as Record<string, unknown>))) continue;
+      const v = pick((value as Record<string, unknown>)[k], prop);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * What a buyer may see of a record's details (security review S6): only the fields the record type declares,
+ * never links to people, and nothing at all for free-form record types such as customs or insurance notices.
+ */
+export function buyerVisibleAttributes(type: string, attributes: Record<string, unknown>): Record<string, unknown> {
+  if (!isObservationType(type)) return {};
+  return (pick(attributes, schemaOf(type)) as Record<string, unknown> | undefined) ?? {};
+}

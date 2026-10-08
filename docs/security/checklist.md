@@ -47,8 +47,10 @@ Used by every security review (the `sazo-security-review` skill). Each line is a
 
 ## 6. Abuse limits
 
-- Codes: 5/hour/number. Provisional cars: 5/day/person. Concerns: 10/day/business. Reviews: one per person per model. Ownership: one live claim per person and car. Share links: random 128-bit tokens, 30-day expiry, revocable.
+- Codes: 5/hour/number. Provisional cars: 5/day/person. Concerns: 10/day/business. Staff invitations: 3/minute/business. Business sign-ups: 3/day/person. Share links: 20/day/person. Dealer listings: 50/day/dealer. Reviews: one per person per model. Ownership: one live claim per person and car. Share links: random 128-bit tokens, 30-day expiry, revocable.
 - Look for any new endpoint that creates rows or sends texts without a limit.
+- A limit must check and write in one transaction behind a lock (`enforceLimit` in `platform/limits.ts`); a count followed by a separate insert can be beaten by sending requests at once.
+- Buyers see record details only through `buyerVisibleAttributes` (declared fields only). New record types: check what that shows.
 
 ## 7. Secrets, config, dependencies
 

@@ -182,3 +182,12 @@
 | Download my data | A JSON file: details, businesses, preferences, devices, saved cars, shared reports, cars owned, reviews and video suggestions. Car histories are not personal data of the user and are not included. |
 | Delete my account | Typed confirmation ("DELETE"). Refused while the person is the only manager of a business that has other staff. Removed: name, phone, sign-ins, saved cars, share links (they stop working), car claims, reviews and video suggestions; the encrypted personal record for their phone (name/number given by garages) is erased. Kept without the name: records they entered for a business (append-only history), and the audit log. |
 
+
+## Limits agreed in the security review (8 Oct 2026, easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Staff invitations | 3 a minute per business (each sends a text). `STAFF_INVITES_PER_MINUTE` in `iam.service.ts`. |
+| Business sign-ups | 3 a day per person. `ORG_SIGNUPS_PER_DAY` in `iam.service.ts`. |
+| Share links | 20 a day per person; saving a report without a link is not limited. `SHARES_PER_DAY` in `buyer.service.ts`. |
+| What buyers see of partner records | Only the fields each record type declares. Customs-cleared, total-loss and flood records show that they exist, with no details. |

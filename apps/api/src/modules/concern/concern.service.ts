@@ -37,9 +37,6 @@ export class ConcernService {
   ) {}
 
   async report(actor: Actor, organisationId: string, r: { plate: string; vehicleRef?: string; category: ConcernCategory; description: string; evidenceIds: string[] }) {
-    const { rows: [count] } = await this.pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM concern.reports WHERE organisation_id = $1 AND created_at > now() - interval '1 day'`, [organisationId]);
-    if (count!.n >= DAILY_LIMIT) throw new ConcernError('too_many_reports', `Your business can raise up to ${DAILY_LIMIT} concerns a day. Call SAZO if it is urgent.`);
     let vehicleId: string | null = null;
     if (r.vehicleRef) {
       vehicleId = (await this.registry.idForRef(r.vehicleRef)) ?? null;
@@ -53,10 +50,26 @@ export class ConcernService {
     if (files.length !== r.evidenceIds.length || !(await Promise.all(files.map((f) => f.uploadedBy ? this.iam.isActiveMember(f.uploadedBy, organisationId) : false))).every(Boolean)) {
       throw new ConcernError('evidence_invalid', 'A photo was not found — upload it again');
     }
-    const { rows } = await this.pool.query<Row>(
-      `INSERT INTO concern.reports (vehicle_id, plate_entered, organisation_id, reporter_user_id, category, severity, description, evidence_ids)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ${COLS}`,
-      [vehicleId, r.plate.toUpperCase(), organisationId, actor.userId, r.category, CONCERNS[r.category].severity, r.description, r.evidenceIds]);
+    // Count and insert as one step, one business at a time, so many reports sent at once cannot beat the limit (S4).
+    const client = await this.pool.connect();
+    let rows: Row[];
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext('concern:' || $1))`, [organisationId]);
+      const { rows: [count] } = await client.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM concern.reports WHERE organisation_id = $1 AND created_at > now() - interval '1 day'`, [organisationId]);
+      if (count!.n >= DAILY_LIMIT) throw new ConcernError('too_many_reports', `Your business can raise up to ${DAILY_LIMIT} concerns a day. Call SAZO if it is urgent.`);
+      ({ rows } = await client.query<Row>(
+        `INSERT INTO concern.reports (vehicle_id, plate_entered, organisation_id, reporter_user_id, category, severity, description, evidence_ids)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ${COLS}`,
+        [vehicleId, r.plate.toUpperCase(), organisationId, actor.userId, r.category, CONCERNS[r.category].severity, r.description, r.evidenceIds]));
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
     await this.iam.audit({ actor, action: 'concern.report', targetType: 'concern', targetId: rows[0]!.id, details: { category: r.category } });
     return this.view(rows[0]!);
   }

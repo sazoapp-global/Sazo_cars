@@ -128,4 +128,24 @@ describe.skipIf(!base)('concerns (e2e)', () => {
     const mine = (await http.get('/v1/concerns').set(asGarage()).expect(200)).body.items;
     expect(mine.map((c: { status: string }) => c.status)).toEqual(['upheld', 'upheld', 'dismissed']);
   });
+  it('the daily limit holds when many reports arrive at once (security S4)', async () => {
+    const { rows: [{ n }] } = await db.query(`SELECT count(*)::int AS n FROM concern.reports WHERE organisation_id = $1`, [orgId]);
+    const left = 10 - n;
+    const results = await Promise.all(Array.from({ length: left + 5 }, (_, i) =>
+      http.post('/v1/concerns').set(asGarage()).send({ plate: 'UBU 606E', vehicleRef, category: 'other', description: `Burst report number ${i} from the workshop` })));
+    expect(results.filter((r) => r.status === 201)).toHaveLength(left);
+    expect(results.filter((r) => r.status === 429)).toHaveLength(5);
+  });
+  it('buyers see only the declared fields of a partner record (security S6)', async () => {
+    const ingestion = app.get(IngestionService);
+    await ingestion.upsertSource({ code: 'INS', name: 'Insurer (simulated)', organisationId: randomUUID(), domain: 'insurance', channel: 'simulated_feed',
+      isSimulated: true, evidenceClass: 'official', baselineReputation: 0.8, coverage: [{ scope: 'own_customers', from: '2000-01-01' }] });
+    await ingestion.submit('INS', { schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZRE142-6033333' }, records: [
+      { type: 'total_loss_declared', attributes: { claimant: 'Jane Namubiru', claimantPhone: '+256772999999' }, time: { at: '2025-06-01T00:00:00Z', precision: 'day' } },
+    ] }] }, { idempotencyKey: randomUUID() });
+    const items = (await http.get(`/v1/vehicles/${vehicleRef}/evidence`).set(bearer(managerToken)).expect(200)).body.items;
+    const loss = items.find((o: { type: string }) => o.type === 'total_loss_declared');
+    expect(loss.attributes).toEqual({});
+    expect(JSON.stringify(items)).not.toContain('Namubiru');
+  });
 });

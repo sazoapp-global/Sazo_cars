@@ -25,6 +25,8 @@ docs/
 
 ## Quick start (developers)
 
+Step-by-step, for anyone: **[docs/RUNNING_LOCALLY.md](docs/RUNNING_LOCALLY.md)**.
+
 Requirements: Node 22+, Docker.
 
 ```bash

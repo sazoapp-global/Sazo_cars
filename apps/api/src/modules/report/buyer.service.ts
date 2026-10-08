@@ -3,6 +3,8 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import pg from 'pg';
+import { enforceLimit } from '../../platform/limits.js';
+import { withTx } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 import { TrustService } from '../trust/index.js';
 import { VehicleRegistry } from '../vehicle/index.js';
@@ -12,6 +14,9 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const code4 = () => Array.from({ length: 4 }, () => CROCKFORD[randomInt(CROCKFORD.length)]).join('');
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
 export const SHARE_DAYS_DEFAULT = 30;
+
+/** Share links one person can make a day (security review S5). */
+export const SHARES_PER_DAY = 20;
 
 export class BuyerError extends Error {
   constructor(readonly code: 'too_many' | 'not_found' | 'link_expired', message: string) { super(message); }
@@ -85,20 +90,28 @@ export class BuyerService {
     for (let attempt = 0; attempt < 5; attempt++) {
       const snapshotRef = `SZR-${code4()}-${code4()}`;
       try {
-        const { rows } = await this.pool.query<{ id: string; created_at: Date }>(
-          `INSERT INTO report.report_snapshots (public_ref, vehicle_id, audience, trust_run_id, content, created_by_user_id)
-           VALUES ($1,$2,'consumer',$3,$4,$5) RETURNING id, created_at`,
-          [snapshotRef, vehicleId, runId, JSON.stringify(report), userId]);
-        let token: string | undefined;
-        let expiresAt: string | null = null;
-        if (opts.share) {
-          token = randomBytes(18).toString('base64url');
-          const ins = await this.pool.query<{ expires_at: Date }>(
-            `INSERT INTO report.shared_links (token_hash, snapshot_id, created_by_user_id, expires_at) VALUES ($1,$2,$3, now() + make_interval(days => $4)) RETURNING expires_at`,
-            [hash(token), rows[0]!.id, userId, opts.expiresInDays]);
-          expiresAt = ins.rows[0]!.expires_at.toISOString();
-        }
-        return { snapshotRef, vehicleRef: report.vehicle.vehicleRef, createdAt: rows[0]!.created_at.toISOString(), token, expiresAt, report };
+        return await withTx(this.pool, async (tx) => {
+          // Share links can be opened by anyone holding them, so a person can make only so many a day (S5).
+          if (opts.share) {
+            await enforceLimit(tx, `share-link:${userId}`, SHARES_PER_DAY,
+              `SELECT count(*)::int AS n FROM report.shared_links WHERE created_by_user_id = $1 AND created_at > now() - interval '1 day'`,
+              [userId], `You can make up to ${SHARES_PER_DAY} share links a day. Try again tomorrow.`);
+          }
+          const { rows } = await tx.query<{ id: string; created_at: Date }>(
+            `INSERT INTO report.report_snapshots (public_ref, vehicle_id, audience, trust_run_id, content, created_by_user_id)
+             VALUES ($1,$2,'consumer',$3,$4,$5) RETURNING id, created_at`,
+            [snapshotRef, vehicleId, runId, JSON.stringify(report), userId]);
+          let token: string | undefined;
+          let expiresAt: string | null = null;
+          if (opts.share) {
+            token = randomBytes(18).toString('base64url');
+            const ins = await tx.query<{ expires_at: Date }>(
+              `INSERT INTO report.shared_links (token_hash, snapshot_id, created_by_user_id, expires_at) VALUES ($1,$2,$3, now() + make_interval(days => $4)) RETURNING expires_at`,
+              [hash(token), rows[0]!.id, userId, opts.expiresInDays]);
+            expiresAt = ins.rows[0]!.expires_at.toISOString();
+          }
+          return { snapshotRef, vehicleRef: report.vehicle.vehicleRef, createdAt: rows[0]!.created_at.toISOString(), token, expiresAt, report };
+        });
       } catch (err) {
         if ((err as { code?: string }).code !== '23505') throw err; // reference collision: try another
       }

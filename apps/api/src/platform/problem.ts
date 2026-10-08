@@ -1,6 +1,7 @@
 // RFC 9457 problem+json errors with a stable machine `code` (API Outline §2).
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Response } from 'express';
+import { LimitReached } from './limits.js';
 
 export class Problem extends HttpException {
   constructor(status: number, readonly code: string, title: string, detail?: string, readonly errors?: unknown[]) {
@@ -25,6 +26,9 @@ export class ProblemFilter implements ExceptionFilter {
       status = exception.getStatus();
       const r = exception.getResponse() as { title: string; detail?: string };
       body = { type: 'about:blank', title: r.title, status, code: exception.code, detail: r.detail, errors: exception.errors };
+    } else if (exception instanceof LimitReached) {
+      status = HttpStatus.TOO_MANY_REQUESTS;
+      body = { type: 'about:blank', title: 'Too many requests', status, code: 'limit_reached', detail: exception.message };
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       body = { type: 'about:blank', title: exception.message, status, code: `http_${status}` };
