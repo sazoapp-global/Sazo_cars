@@ -15,7 +15,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import pg from 'pg';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const url = process.env.DATABASE_URL ?? 'postgres://sazo:sazo@localhost:5432/sazo';
+const url = process.env.DATABASE_URL ?? 'postgres://sazo:sazo@127.0.0.1:5432/sazo';
 const runTests = process.argv.includes('--test');
 
 // The database may still be starting (e.g. just after `docker compose up`): keep trying for up to a minute.
