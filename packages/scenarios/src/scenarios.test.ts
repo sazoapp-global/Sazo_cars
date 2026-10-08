@@ -105,4 +105,16 @@ describe('properties of the engine', () => {
     const confirmed = r.assessments.find((a) => a.factors.attestation !== undefined)!;
     expect(confirmed.factors.attestation).toBe(0.05);
   });
+
+  it('v1.1: thick paint at the latest inspection adds a repaint note, without changing the damage status', () => {
+    const s = SCENARIOS.find((x) => x.id === 'S01')!;
+    const ctx = { asOf: AS_OF, sources: sourceMap(), comparablesCount: s.comparablesCount };
+    const plain = evaluateVehicle(s.vehicle, ctx);
+    const v = { ...s.vehicle, observations: s.vehicle.observations.map((o) => o.type === 'inspection_result'
+      ? { ...o, attributes: { ...o.attributes, paintReadings: [{ panel: 'bonnet', microns: 410 }, { panel: 'roof', microns: 120 }, { panel: 'front_left_door', microns: 300 }] } } : o) };
+    const r = evaluateVehicle(v, ctx);
+    expect(r.questions.damage.status).toBe(plain.questions.damage.status);
+    expect(r.questions.damage.notes).toContainEqual({ key: 'damage.note.repainted_panels', params: { panels: 2, on: '2026-06-10' } });
+    expect(plain.questions.damage.notes.map((n) => n.key)).not.toContain('damage.note.repainted_panels');
+  });
 });

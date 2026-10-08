@@ -7,6 +7,8 @@ import { GarageError, GarageService } from './garage.service.js';
 import { DraftInput } from './job-form.js';
 
 const Uuid = z.string().uuid();
+/** The phone app's staff screen also serves inspectors and inspection centres (same roles). */
+const STAFF_ORG_TYPES = ['garage', 'inspector', 'inspection_centre'];
 const Submit = z.object({
   acknowledgedWarnings: z.array(z.object({ code: z.string(), explanation: z.string().trim().min(3).max(500) })).max(10).default([]),
 });
@@ -36,7 +38,7 @@ export class GarageController {
   ) {}
 
   /** The caller must act for an APPROVED garage with this permission (D-055, D-056). */
-  private async org(actor: Actor, orgId: string | undefined, permission: string): Promise<string> {
+  private async org(actor: Actor, orgId: string | undefined, permission: string, types: string[] = ['garage']): Promise<string> {
     if (!orgId || !Uuid.safeParse(orgId).success) throw badRequest('organisation_required', 'Send the X-Organisation-Id header');
     const access = canForOrg(actor, orgId, permission);
     if (!access.ok) {
@@ -44,7 +46,7 @@ export class GarageController {
       throw new Problem(403, 'forbidden', 'Forbidden', 'You cannot do this for this organisation');
     }
     const type = access.membership?.organisationType ?? (await this.iam.organisation(orgId))?.type;
-    if (type !== 'garage') throw new Problem(403, 'not_a_garage', 'Forbidden', 'This organisation is not a garage');
+    if (!type || !types.includes(type)) throw new Problem(403, 'not_a_garage', 'Forbidden', 'This organisation is not a garage');
     return orgId;
   }
 
@@ -101,14 +103,14 @@ export class GarageController {
   /** GET /v1/garage/staff */
   @Get('staff')
   async staff(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined) {
-    const org = await this.org(actor, orgId, 'garage.staff.manage');
+    const org = await this.org(actor, orgId, 'garage.staff.manage', STAFF_ORG_TYPES);
     return this.iam.listMembers(org);
   }
 
   /** POST /v1/garage/staff — managers add a mechanic or receptionist (D-056). */
   @Post('staff')
   async addStaff(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Body() body: unknown) {
-    const org = await this.org(actor, orgId, 'garage.staff.manage');
+    const org = await this.org(actor, orgId, 'garage.staff.manage', STAFF_ORG_TYPES);
     const b = Staff.safeParse(body);
     if (!b.success) throw badRequest('invalid_request', 'phone, displayName and role are required');
     return this.iam.addStaff(actor, org, b.data);

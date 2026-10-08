@@ -47,6 +47,7 @@ export interface FullReport {
   valuation: { status: Status; comparablesCount: number; isEstimate: true; range?: { lowUgx: number; midUgx: number; highUgx: number; comparables: number } };
   facts: { key: string; value: unknown; confidence: number; estimated: boolean }[];
   openConflicts: { topic: string; headlineKey: string }[];
+  latestInspection?: LatestInspection | null;
   asOf: string;
   ruleSetVersion: string;
 }
@@ -129,3 +130,7 @@ export interface ShareLink { id: string; snapshotRef: string; vehicleRef: string
 export interface MyCar { vehicleRef: string; status: 'pending' | 'verified' | 'rejected'; method: 'phone_match' | 'logbook'; claimedAt: string; reason: string | null; summary?: Summary }
 export interface Visit extends TimelineItem { ownerAnswer: 'confirmed' | 'disputed' | null; canAnswer: boolean }
 export interface OwnershipClaim { claimId: string; vehicleRef: string; plate: string | null; claimant: string; claimedAt: string; evidenceIds: string[] }
+export interface LatestInspection {
+  date: string; sourceLabel: string; passed: boolean; structuralFindings: boolean | null; tyresPercent: number | null; batteryOk: boolean | null;
+  defects: { item: string; severity: 'minor' | 'major' }[]; panelsMeasured: number; repaintedPanels: string[]; photos: number;
+}

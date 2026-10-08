@@ -111,6 +111,7 @@ const HEADLINES: Record<string, Text> = {
   // Notes and conflicts
   'identity.note.engine_replaced': (p) => `Engine replaced${p.on ? ` on ${formatDate(String(p.on))}` : ''} (recorded).`,
   'identity.note.full_repaint': (p) => `Fully repainted${p.from && p.to ? ` from ${p.from} to ${p.to}` : ''}.`,
+  'damage.note.repainted_panels': (p) => `At an inspection${p.on ? ` on ${formatDate(String(p.on))}` : ''}, the paint on ${plural(p.panels, 'panel was', 'panels were')} thicker than factory paint — a sign of repainting, often after body repairs.`,
   'legal.note.previous_loan_cleared': 'A previous loan on this car was recorded as paid off.',
   'legal.note.past_stolen_recovered': 'It was once reported stolen and later recovered.',
   'conflict.mileage.open': 'Mileage records disagree — under review.',
@@ -200,6 +201,7 @@ export function headline(key: string, params?: Params): string {
 
 /** Figure-free wording for the public summary (P-002: one status and one line, no figures or details). */
 const SUMMARY_LINES: Record<string, string> = {
+  'damage.note.repainted_panels': 'An inspection found paint thicker than factory paint — a sign of repainting.',
   'identity.attention.colour_mismatch': 'The colour seen at inspection differs from the registered colour.',
   'care.verified.regular_services': 'Regular services are recorded.',
   'care.attention.service_gap': 'No recent service is recorded.',

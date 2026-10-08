@@ -1,6 +1,7 @@
 // Reports — module 6: exposure-filtered read models (D-025, P-002, P-007, O-001 default "status only").
 // The only place that assembles what a user sees, so hiding rules live in exactly one place.
 import { Inject, Injectable } from '@nestjs/common';
+import { repaintedPanels } from '@sazo/contracts';
 import { IngestionService } from '../ingest/index.js';
 import { ObservationsService, type StoredObservation } from '../obs/index.js';
 import { ReferenceService } from '../ref/index.js';
@@ -67,7 +68,7 @@ export class ReportsService {
   }
 
   async fullReport(ref: string) {
-    const { card, snap } = await this.load(ref);
+    const { id, card, snap } = await this.load(ref);
     const facts = Object.entries(snap.facts)
       .filter(([k]) => CONSUMER_FACTS.has(k))
       .map(([key, f]) => ({ key, value: f.value, confidence: f.confidence, estimated: f.estimated }));
@@ -89,8 +90,34 @@ export class ReportsService {
       },
       facts,
       openConflicts: snap.openConflicts.map((c) => ({ topic: c.topic, headlineKey: `conflict.${c.topic}.open` })),
+      latestInspection: await this.latestInspection(id, snap),
       asOf: snap.asOf,
       ruleSetVersion: snap.ruleSetVersion,
+    };
+  }
+
+  /** The most recent inspection SAZO counts (P-004): what a trained person found on the car that day. */
+  private async latestInspection(id: string, snap: TrustSnapshot) {
+    const family = await this.registry.mergeFamily(id);
+    const obs = (await this.observations.listForVehicles(family))
+      .filter((o) => o.type === 'inspection_result' && o.eventTime && !snap.assessments.get(o.id)?.excluded)
+      .sort((a, b) => b.eventTime!.localeCompare(a.eventTime!));
+    const o = obs[0];
+    if (!o) return null;
+    const a = o.attributes as { passed: boolean; structuralFindings?: boolean; tyresPercent?: number; batteryOk?: boolean;
+      defects?: { item: string; severity: 'minor' | 'major' }[]; paintReadings?: { panel: string; microns: number }[] };
+    const src = (await this.sourceLabels()).get(o.sourceId);
+    return {
+      date: o.eventTime!.slice(0, 10),
+      sourceLabel: src?.label ?? 'Inspection',
+      passed: a.passed,
+      structuralFindings: a.structuralFindings ?? null,
+      tyresPercent: a.tyresPercent ?? null,
+      batteryOk: a.batteryOk ?? null,
+      defects: a.defects ?? [],
+      panelsMeasured: a.paintReadings?.length ?? 0,
+      repaintedPanels: repaintedPanels(a.paintReadings),
+      photos: o.evidenceKinds.filter((k) => k === 'vehicle_photo').length,
     };
   }
 

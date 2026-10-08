@@ -157,6 +157,8 @@ export const OBSERVATION_TYPES = {
     tyresPercent: z.number().min(0).max(100).optional(),
     batteryOk: z.boolean().optional(),
     defects: z.array(z.object({ item: z.string(), severity: z.enum(['minor', 'major']) })).optional(),
+    /** Paint thickness per steel panel, in microns (P-004). */
+    paintReadings: z.array(z.object({ panel: z.string(), microns: z.number().int().min(0).max(3000) })).optional(),
   }), 'public', () => ['inspection_report']),
 
   // Market

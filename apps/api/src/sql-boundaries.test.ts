@@ -6,11 +6,11 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const modulesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'modules');
-const SCHEMAS = ['iam', 'vehicle', 'ingest', 'obs', 'pii', 'trust', 'report', 'garage', 'notify', 'ref', 'community'];
+const SCHEMAS = ['iam', 'vehicle', 'ingest', 'obs', 'pii', 'trust', 'report', 'garage', 'inspection', 'notify', 'ref', 'community'];
 /** Module folder → schemas it owns. */
 const OWNS: Record<string, string[]> = {
   vehicle: ['vehicle'], ingest: ['ingest'], obs: ['obs', 'pii'], trust: ['trust'], report: ['report'], ref: ['ref'],
-  iam: ['iam'], garage: ['garage'], notify: ['notify'], community: ['community'],
+  iam: ['iam'], garage: ['garage'], inspection: ['inspection'], notify: ['notify'], community: ['community'],
 };
 const SQL_REF = new RegExp(`\\b(?:FROM|JOIN|INTO|UPDATE|TABLE)\\s+(${SCHEMAS.join('|')})\\.\\w+`, 'gi');
 

@@ -5,8 +5,8 @@ import { registerBusiness, type RegisterState } from '../actions';
 const TYPES = [
   { v: 'garage', label: 'Garage', hint: 'Servicing and repairs. The garage app is ready.' },
   { v: 'dealer', label: 'Car dealer', hint: 'Workspace coming soon.' },
-  { v: 'inspector', label: 'Independent inspector', hint: 'Workspace coming soon.' },
-  { v: 'inspection_centre', label: 'Inspection centre', hint: 'Workspace coming soon.' },
+  { v: 'inspector', label: 'Independent inspector', hint: 'Record inspections in the SAZO phone app.' },
+  { v: 'inspection_centre', label: 'Inspection centre', hint: 'Record inspections in the SAZO phone app.' },
 ];
 const DISTRICTS = ['Kampala', 'Wakiso', 'Mukono', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu', 'Mbale', 'Masaka', 'Lira', 'Arua', 'Fort Portal', 'Hoima', 'Kabale', 'Soroti'];
 

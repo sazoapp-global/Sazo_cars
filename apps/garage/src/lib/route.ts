@@ -1,18 +1,22 @@
-// Tiny hash router: #/ · #/job/<id> · #/jobs/<id> (submitted, read-only) · #/staff. The phone's back button works.
+// Tiny hash router: #/ · #/job/<id> · #/jobs/<id> (submitted, read-only) · #/inspection/<id> · #/inspections/<id> · #/staff. The phone's back button works.
 import { useEffect, useState } from 'react';
 
-export type Route = { name: 'home' } | { name: 'job'; jobId: string } | { name: 'server-job'; jobId: string } | { name: 'staff' };
+export type Route = { name: 'home' } | { name: 'job'; jobId: string } | { name: 'server-job'; jobId: string } | { name: 'staff' }
+  | { name: 'inspection'; id: string } | { name: 'server-inspection'; id: string };
 
 function parse(hash: string): Route {
   const [, a, b] = hash.replace(/^#/, '').split('/');
   if (a === 'job' && b) return { name: 'job', jobId: b };
   if (a === 'jobs' && b) return { name: 'server-job', jobId: b };
   if (a === 'staff') return { name: 'staff' };
+  if (a === 'inspection' && b) return { name: 'inspection', id: b };
+  if (a === 'inspections' && b) return { name: 'server-inspection', id: b };
   return { name: 'home' };
 }
 
 export function go(route: Route, replace = false): void {
-  const hash = route.name === 'job' ? `#/job/${route.jobId}` : route.name === 'server-job' ? `#/jobs/${route.jobId}` : route.name === 'staff' ? '#/staff' : '#/';
+  const hash = route.name === 'job' ? `#/job/${route.jobId}` : route.name === 'server-job' ? `#/jobs/${route.jobId}` : route.name === 'staff' ? '#/staff'
+    : route.name === 'inspection' ? `#/inspection/${route.id}` : route.name === 'server-inspection' ? `#/inspections/${route.id}` : '#/';
   if (replace) location.replace(hash);
   else location.hash = hash;
 }

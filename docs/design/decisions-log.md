@@ -178,3 +178,4 @@ Physical inspection booking and inspector escort · telematics · fleet manageme
 | 2026-10-07 | API Outline v0.1: OpenAPI 3.1 spec with 53 operations, validated by Redocly (0 errors, 0 warnings), plus browsable HTML docs, internal module interfaces, event contracts, and the first build slice with its definition of done. |
 | 2026-10-08 | Product owner approved all choices in `docs/PENDING_DECISIONS.md`: P-001–P-013 accepted, O-001 default (status-only for finance/police) accepted, DM-1–DM-16 accepted, plus the sign-in and Garage behaviour choices. |
 | 2026-10-08 | O-007 decided: owners prove ownership by phone match with the registry owner record, or a logbook photo reviewed by SAZO. Built as "My cars". |
+| 2026-10-08 | Inspector workspace built (P-004, P-005) in the shared phone app. Rule Set v1.1 (`rs-2026.10-v1.1`): inspection paint readings add a repaint note to the damage answer; structural damage seen by an inspector counts as a damage record. |

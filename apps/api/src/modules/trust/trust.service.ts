@@ -47,7 +47,7 @@ export class TrustService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.pool.query(
-      `INSERT INTO trust.rule_sets (version, description, parameters, activated_at) VALUES ($1, 'Rule Set v1', $2, now())
+      `INSERT INTO trust.rule_sets (version, description, parameters, activated_at) VALUES ($1, 'Rule Set ' || $1, $2, now())
        ON CONFLICT (version) DO NOTHING`,
       [RULE_SET_VERSION, JSON.stringify(PARAMS)],
     );

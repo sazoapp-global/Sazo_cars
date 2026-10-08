@@ -58,6 +58,11 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   await expect(page.getByRole('heading', { name: 'Vehicle Health' })).toBeVisible();
   await expect(page.getByText('Estimated price range')).toBeVisible();
   await expect(page.getByText(/UGX \d+(\.\d)?M – UGX/)).toBeVisible();
+  // The latest inspection (P-004) in plain words.
+  const inspection = page.getByRole('region', { name: 'Latest inspection' });
+  await expect(inspection).toContainText('Passed');
+  await expect(inspection).toContainText('No structural damage found');
+  await expect(inspection).toContainText('60% tread left on the most worn tyre');
   await expect(page.getByRole('link', { name: /Test Buyer/ })).toBeVisible();
   await noSeriousA11yIssues(page);
 

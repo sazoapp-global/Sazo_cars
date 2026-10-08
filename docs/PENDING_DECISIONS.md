@@ -127,3 +127,16 @@
 | Owner phone from the registry | Registry partners may send the owner's phone with a registration or change-of-owner record. It is moved to the encrypted personal-data store before anything is saved — the record and the raw copy keep only a reference. Buyers never see it. |
 | Garage visits for owners | A confirmed owner can confirm or dispute visits on or after the latest registration / change-of-owner date, once per visit, with an optional comment. Earlier visits are shown as "before the car was yours". Earlier owners' answers stay as they were. |
 | Logbook photos | Only the person who sent it and SAZO reviewers can open it; buyers never see it. |
+
+## Behaviour choices made while building the inspector workspace (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Where inspectors work | In the same phone app as garages (it shows "SAZO Inspect" for an inspector or inspection centre). Same sign-in, offline drafts, photo uploads and Staff screen. Only approved businesses of type inspector / inspection centre can record inspections. |
+| The checklist | Mileage with an odometer photo (required); what the car shows — chassis/VIN (optional, needed for a car new to SAZO, with a photo), colour, engine number; paint thickness on 11 steel panels (optional); structural damage yes/no (required; where and how bad if yes); worst tyre tread %; battery OK / needs attention; defects (minor/major); at least 2 photos of the car (front and back); passed / did not pass (required) with an optional summary. |
+| Differences from records | Lower mileage than last time, a different chassis number, engine number or colour are shown to the inspector, who must explain before sending. They are still recorded — a difference is a finding. A date in the future blocks sending. |
+| What SAZO stores | The inspection becomes records on the inspector's own source (evidence class "inspection"): the mileage reading, the inspection result, and — if structural damage was found — a structural damage record. SAZO also writes the whole checklist, who did it, when, and the fingerprint of every photo into a report file, stored write-once like other evidence. |
+| What buyers see | A "Latest inspection" card on the full report (passed or not, structure, paint, tyres, battery, defects), plus the damage answer: structural damage found by an inspector makes it "serious"; thick paint adds a note (Rule Set v1.1). Photos and the report file are seen only by SAZO staff and the inspector's business. |
+| Owner SMS | Not sent for inspections (the inspector is not the car's owner's garage). Can be added later. |
+| Booking an inspector | Not built (FUTURE, P-004). |
+

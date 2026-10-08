@@ -169,7 +169,8 @@ export class IngestionService {
     // 1. Validate every record against the catalogue.
     const records: RecordInput[] = [];
     // People sending records (not internal loads) may only send their source's kinds of record (e.g. no mileage from police).
-    const allowed = opts.userId && source.channel !== 'garage_app' ? DOMAIN_RECORD_TYPES[source.domain] : undefined;
+    // The garage and inspector apps build their own records and are not limited here.
+    const allowed = opts.userId && !CAPTURE_CHANNELS.has(source.channel) ? DOMAIN_RECORD_TYPES[source.domain] : undefined;
     for (const [ri, r] of (item.records ?? []).entries()) {
       if (allowed && !allowed.includes(r.type as never)) {
         errors.push({ path: `records[${ri}].type`, code: 'record_type_not_allowed', message: `a ${source.domain} source cannot send ${r.type}` });

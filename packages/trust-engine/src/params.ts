@@ -1,5 +1,6 @@
 // Rule Set v1 tunable parameters (docs/design/rule-set-v1.md §11). Changing any value = new rule-set version.
-export const RULE_SET_VERSION = 'rs-2026.10-v1';
+// v1.1 (8 Oct 2026): inspection paint readings add a repaint note to the damage answer.
+export const RULE_SET_VERSION = 'rs-2026.10-v1.1';
 
 export const PARAMS = {
   weakThreshold: 0.4,

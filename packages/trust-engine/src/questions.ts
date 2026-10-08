@@ -1,5 +1,5 @@
 // The seven buyer questions (Rule Set §7). Rules are checked top to bottom; the first match wins.
-import type { Question, QuestionStatus } from '@sazo/contracts';
+import { repaintedPanels, type Question, type QuestionStatus } from '@sazo/contracts';
 import type { MileageSeries } from './mileage.js';
 import { PARAMS } from './params.js';
 import { monthsBetween, ms } from './time.js';
@@ -140,6 +140,11 @@ export function answerQuestions(q: QuestionInputs): Record<Question, QuestionAns
     }
     return answer('damage', 'not_available', 'no_coverage');
   })();
+
+  // Paint thicker than factory paint at the latest inspection (Rule Set v1.1): a note, not a status change.
+  const lastInspection = of('inspection_result').filter((o) => o.eventTime).sort((x, y) => ms(y.eventTime!) - ms(x.eventTime!))[0];
+  const repainted = repaintedPanels(lastInspection?.attributes.paintReadings as { panel: string; microns: number }[] | undefined);
+  if (repainted.length) damage.notes = [...damage.notes, { key: 'damage.note.repainted_panels', params: { panels: repainted.length, on: lastInspection!.eventTime!.slice(0, 10) } }];
 
   // ---------- mileage
   const mileage = ((): QuestionAnswer => {

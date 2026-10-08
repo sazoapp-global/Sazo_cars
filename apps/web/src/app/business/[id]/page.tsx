@@ -8,6 +8,8 @@ import { sendDocuments } from '../actions';
 
 export const metadata: Metadata = { title: 'Your business' };
 
+/** Businesses that work in the SAZO phone app (garages, inspectors). */
+const WORKSHOP = ['garage', 'inspector', 'inspection_centre'];
 const GARAGE_APP_URL = process.env.SAZO_GARAGE_APP_URL ?? 'http://localhost:3002';
 
 export default async function BusinessStatus({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ new?: string; done?: string; error?: string }> }) {
@@ -57,14 +59,16 @@ export default async function BusinessStatus({ params, searchParams }: { params:
         </section>
       )}
 
-      {org.status === 'approved' && org.type === 'garage' && (
+      {org.status === 'approved' && WORKSHOP.includes(org.type) && (
         <section className="card p-4">
           <h2 className="font-display text-lg font-semibold">You&apos;re ready</h2>
-          <p className="text-muted">Open the SAZO Garage app on your phone and sign in with this phone number. Add your mechanics from the app&apos;s Staff screen.</p>
-          <a href={GARAGE_APP_URL} className="btn btn-primary mt-3"><Icon name="garage" />Open the Garage app</a>
+          <p className="text-muted">{org.type === 'garage'
+            ? <>Open the SAZO Garage app on your phone and sign in with this phone number. Add your mechanics from the app&apos;s Staff screen.</>
+            : <>Open the SAZO app on your phone and sign in with this phone number to record inspections. Add your inspectors from the app&apos;s Staff screen.</>}</p>
+          <a href={GARAGE_APP_URL} className="btn btn-primary mt-3"><Icon name="garage" />{org.type === 'garage' ? 'Open the Garage app' : 'Open the SAZO app'}</a>
         </section>
       )}
-      {org.status === 'approved' && org.type !== 'garage' && <p className="text-muted">Approved. Your workspace is coming soon — we&apos;ll send an SMS when it&apos;s ready.</p>}
+      {org.status === 'approved' && !WORKSHOP.includes(org.type) && <p className="text-muted">Approved. Your workspace is coming soon — we&apos;ll send an SMS when it&apos;s ready.</p>}
       {(org.status === 'rejected' || org.status === 'suspended') && <p className="text-muted">Contact SAZO support if you think this is a mistake.</p>}
       <Link href="/account" className="link inline-block">Back to your account</Link>
     </div>

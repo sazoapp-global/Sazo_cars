@@ -42,5 +42,24 @@ export interface SubmitResult {
 
 export interface StaffMember { userId: string; displayName: string; role: string; status: string; joinedAt: string | null }
 
-/** The garage the user is working for right now. */
-export interface Garage { id: string; name: string; role: string }
+/** The business the user is working for right now: a garage, or an inspector / inspection centre (same app). */
+export interface Garage { id: string; name: string; role: string; type: string }
+export const WORKPLACE_TYPES = ['garage', 'inspector', 'inspection_centre'];
+export const isInspector = (w: Garage) => w.type === 'inspector' || w.type === 'inspection_centre';
+
+export interface ServerInspection {
+  inspectionId: string;
+  publicRef: string;
+  status: 'draft' | 'submitted' | 'accepted' | 'rejected';
+  plateEntered: string;
+  vehicleRef?: string;
+  form: import('@sazo/contracts').InspectionForm;
+  createdBy: { userId: string; displayName: string };
+  clientCreatedAt: string;
+  submittedAt: string | null;
+  acknowledgedWarnings: { code: string; explanation: string }[];
+  rejectionReason: string | null;
+  version: number;
+}
+export interface InspectionWarning { code: string; severity: 'attention' | 'serious'; message: string; blocking: boolean }
+export interface InspectionSubmitResult { inspectionId: string; submissionId: string; status: 'submitted' | 'accepted' | 'rejected'; vehicleRef?: string; rejectionReason?: string }

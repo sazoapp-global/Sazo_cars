@@ -1,5 +1,5 @@
-import { FACT_LABELS, factValue, formatUgx, headline } from '@sazo/contracts';
-import type { FullReport } from '@/lib/types';
+import { FACT_LABELS, PANEL_LABELS, factValue, formatDate, formatUgx, headline, type Panel } from '@sazo/contracts';
+import type { FullReport, LatestInspection } from '@/lib/types';
 import { Confidence } from './confidence';
 import { HealthDial } from './health-dial';
 import { Icon } from './icon';
@@ -43,6 +43,8 @@ export function FullReportView({ r }: { r: FullReport }) {
 
         {r.questions.filter((q) => q.question !== 'valuation').map((q) => <QuestionCard key={q.question} q={q} detailed />)}
 
+        {r.latestInspection && <InspectionCard x={r.latestInspection} />}
+
         {valuation && (
           <QuestionCard q={valuation} detailed>
             {r.valuation.range ? (
@@ -56,6 +58,40 @@ export function FullReportView({ r }: { r: FullReport }) {
         )}
 
     </>
+  );
+}
+
+/** The latest inspection SAZO counts (P-004): what a trained person found on the car that day. */
+function InspectionCard({ x }: { x: LatestInspection }) {
+  const rows: [string, string, 'ok' | 'warn' | 'bad' | 'na'][] = [
+    ['Structure', x.structuralFindings === null ? 'Not recorded' : x.structuralFindings ? 'Structural damage found' : 'No structural damage found', x.structuralFindings ? 'bad' : x.structuralFindings === null ? 'na' : 'ok'],
+    ['Paint', x.panelsMeasured === 0 ? 'Not measured' : x.repaintedPanels.length ? `Thicker than factory paint on ${x.repaintedPanels.map((p) => PANEL_LABELS[p as Panel] ?? p).join(', ')}` : `${x.panelsMeasured} panels measured, all within factory range`, x.repaintedPanels.length ? 'warn' : x.panelsMeasured ? 'ok' : 'na'],
+    ['Tyres', x.tyresPercent === null ? 'Not recorded' : `${x.tyresPercent}% tread left on the most worn tyre`, x.tyresPercent === null ? 'na' : x.tyresPercent < 25 ? 'warn' : 'ok'],
+    ['Battery', x.batteryOk === null ? 'Not recorded' : x.batteryOk ? 'OK' : 'Needs attention', x.batteryOk === null ? 'na' : x.batteryOk ? 'ok' : 'warn'],
+  ];
+  const cls = { ok: 'text-ok-text', warn: 'text-warn-text', bad: 'text-bad-text', na: 'text-muted' } as const;
+  return (
+    <section className="card p-4 md:p-5" aria-labelledby="inspection">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="inspection" className="font-display text-lg font-semibold">Latest inspection</h2>
+        <span className={`chip ${x.passed ? 'border-ok-line bg-ok-fill text-ok-text' : 'border-bad-line bg-bad-fill text-bad-text'}`}>
+          <Icon name={x.passed ? 'check_circle' : 'report'} size={14} />{x.passed ? 'Passed' : 'Did not pass'}</span>
+      </div>
+      <p className="text-sm text-muted">{x.sourceLabel} · {formatDate(x.date)}{x.photos ? ` · ${x.photos} photos kept by SAZO` : ''}</p>
+      <dl className="mt-3 divide-y divide-line">
+        {rows.map(([k, v, tone]) => (
+          <div key={k} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:justify-between sm:gap-4"><dt className="text-muted">{k}</dt><dd className={`font-semibold sm:text-right ${cls[tone]}`}>{v}</dd></div>
+        ))}
+        <div className="py-2"><dt className="text-muted">Defects noted</dt>
+          <dd className="mt-1">{x.defects.length === 0 ? <span className="font-semibold">None</span> : (
+            <ul className="space-y-1">{x.defects.map((d, i) => (
+              <li key={`${d.item}-${i}`} className="flex items-start gap-2"><Icon name={d.severity === 'major' ? 'report' : 'info'} size={16} className={`mt-0.5 shrink-0 ${d.severity === 'major' ? 'text-bad-text' : 'text-warn-text'}`} />
+                <span>{d.item}{d.severity === 'major' && <span className="font-semibold text-bad-text"> (major)</span>}</span></li>
+            ))}</ul>
+          )}</dd></div>
+      </dl>
+      <p className="mt-2 text-xs text-muted">An inspection shows the car on that day. Things can change — check it again before you pay.</p>
+    </section>
   );
 }
 

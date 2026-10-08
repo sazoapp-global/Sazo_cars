@@ -283,6 +283,7 @@ base   = 95 if a passing inspection in the last 12 months, else 85
 | Record confidence | insufficient < 3 · low < 5 · high ≥ 8 records and ≥ 3 sources |
 | Health base | 95 with an inspection in the last 12 months / 85 otherwise |
 | Valuation | ≥ 5 comparables verified · 2–4 widened ±10% · rebuilt ×1.5 |
+| Repaint threshold (v1.1) | paint thicker than 250 microns on a steel panel |
 
 ---
 
@@ -336,3 +337,14 @@ base   = 95 if a passing inspection in the last 12 months, else 85
 - Valuation ignores trim and options unless the reference data separates them.
 
 These are candidates for v2, once real data shows where v1 is wrong.
+
+---
+
+## 14. Changes in v1.1 (`rs-2026.10-v1.1`, 8 October 2026)
+
+Added with the inspector workspace (P-004). No answer's status changes; only a note is added.
+
+- **Paint readings.** An inspection may record paint thickness per steel panel (`inspection_result.paintReadings`, microns). If the **latest** counted inspection has any panel above **250 microns**, the damage answer gets the note `damage.note.repainted_panels` ("…the paint on N panels was thicker than factory paint — a sign of repainting"). Factory paint is usually 80–180 microns.
+- **Structural damage seen by an inspector** is sent as a `damage_assessed` record (`structural: true`) next to the inspection, so the existing damage rule (§7, "structural") applies unchanged.
+- Older runs keep `rs-2026.10-v1`; a recalculation moves a vehicle to v1.1.
+

@@ -34,6 +34,8 @@ tags:
     description: Search, public summary, full report, timeline, evidence ledger, compare (consumer surface).
   - name: Saved & shared
     description: Saved checks, frozen report snapshots, share links and PDFs.
+  - name: Inspections
+    description: Inspector and inspection-centre workspace (P-004) — checklist drafts from the phone app, sent through Ingestion (inspector_app).
   - name: My cars
     description: Owners prove a car is theirs (phone match or logbook photo, O-007) and answer for garage visits.
   - name: Garage
@@ -482,6 +484,87 @@ paths:
         '404': { description: visit_not_found }
         '409': { description: already_answered }
         '422': { description: before_your_time }
+
+  /inspections/vehicles/lookup:
+    get:
+      tags: [Inspections]
+      operationId: inspectionLookup
+      summary: Find the car by plate (same view as the garage bay)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: plate, in: query, required: true, schema: { type: string, minLength: 4, maxLength: 12 } }
+      responses:
+        '200': { description: '{ outcome: found | multiple | not_found, candidates }' }
+        '403': { description: organisation_not_approved / not_an_inspector }
+
+  /inspections:
+    get:
+      tags: [Inspections]
+      operationId: listInspections
+      summary: Recent inspections of this organisation
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [draft, submitted, accepted, rejected] } }
+      responses:
+        '200': { description: '{ items: Inspection[] }' }
+
+  /inspections/{inspectionId}:
+    put:
+      tags: [Inspections]
+      operationId: saveInspectionDraft
+      summary: Create or update a draft by its phone-made id (offline-safe; optimistic version)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: inspectionId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plateEntered, clientCreatedAt, form]
+              description: 'form = InspectionForm (@sazo/contracts inspection-form.ts): mileage, identity, paint.readings, structure, tyres, battery, defects, result, photoIds'
+              properties:
+                plateEntered: { type: string }
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                clientCreatedAt: { type: string, format: date-time }
+                form: { type: object }
+                version: { type: integer }
+      responses:
+        '200': { description: The saved inspection }
+        '409': { description: version_conflict / not_editable }
+    get:
+      tags: [Inspections]
+      operationId: getInspection
+      summary: One inspection
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: inspectionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Inspection }
+        '404': { description: inspection_not_found }
+
+  /inspections/{inspectionId}/submit:
+    post:
+      tags: [Inspections]
+      operationId: submitInspection
+      summary: Send the inspection — SAZO writes the report file and submits the records through Ingestion
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: inspectionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                acknowledgedWarnings: { type: array, items: { type: object, properties: { code: { type: string }, explanation: { type: string, minLength: 3 } } } }
+      responses:
+        '202': { description: '{ inspectionId, submissionId, status: accepted | submitted | rejected, vehicleRef }' }
+        '400': { description: incomplete (errors list what is missing) }
+        '409': { description: already_submitted }
+        '422': { description: warnings_need_acknowledgement / blocked / chassis_required / evidence_invalid }
 
   /admin/ownership-claims:
     get:
