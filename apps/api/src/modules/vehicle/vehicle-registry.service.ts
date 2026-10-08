@@ -148,7 +148,7 @@ export class VehicleRegistry {
    * 3. A new anchor whose plate belongs to an un-anchored (provisional) vehicle is "ambiguous" → reviewer.
    * 4. Plate only: one holder → matched; several → ambiguous; none → provisional vehicle.
    */
-  async resolve(sql: Sql, presented: PresentedIdentifiers, ctx: { submissionItemId: string; submissionId: string; eventTime?: string | null }): Promise<Resolution> {
+  async resolve(sql: Sql, presented: PresentedIdentifiers, ctx: { submissionItemId: string; submissionId: string; eventTime?: string | null; newVehicleStatus?: 'active' | 'provisional' }): Promise<Resolution> {
     const vin = presented.vin ? normalizeIdentifier(presented.vin) : undefined;
     const chassis = presented.chassisNumber ? normalizeIdentifier(presented.chassisNumber) : undefined;
     const plate = presented.plate ? normalizeIdentifier(presented.plate) : undefined;
@@ -178,7 +178,8 @@ export class VehicleRegistry {
           return { outcome: 'ambiguous', decisionId: await record('ambiguous', 'new_anchor_plate_on_provisional', undefined, candidates), candidates, newIdentifierIds: [] };
         }
       }
-      const v = await this.repo.createVehicle(sql, 'active', ctx.submissionId);
+      // Owner-entered cars stay provisional even with a VIN/chassis until an official record confirms them (P-010).
+      const v = await this.repo.createVehicle(sql, ctx.newVehicleStatus ?? 'active', ctx.submissionId);
       const newIds = [await this.repo.addIdentifier(sql, { vehicleId: v.id, type: anchorType, raw: (presented.vin ?? presented.chassisNumber)!, normalized: anchorValue })];
       if (plate) newIds.push(...(await this.attachPlate(sql, v.id, presented.plate!, ctx.eventTime ?? null)));
       return { outcome: 'created_new', vehicleId: v.id, decisionId: await record('created_new', `new_${anchorType}`, v.id), candidates: [], newIdentifierIds: newIds };
@@ -279,6 +280,14 @@ export class VehicleRegistry {
       else await this.repo.setIdentifierStatus(sql, h.id, 'historical', null, 'correction');
     }
     return [...new Set(holders.map((h) => h.vehicleId))];
+  }
+
+  /** An official record matched a provisional car: it is now confirmed (P-010). Returns true if it changed. */
+  async confirmIfProvisional(sql: Sql, vehicleId: string): Promise<boolean> {
+    const v = await this.repo.getVehicle(vehicleId, sql);
+    if (v?.status !== 'provisional') return false;
+    await this.repo.setVehicleStatus(sql, vehicleId, 'active');
+    return true;
   }
 
   // ------------------------------------------------- identifier maintenance

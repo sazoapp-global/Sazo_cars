@@ -13,7 +13,7 @@ export default defineConfig({
   workers: 1,
   // Admin tests change data (they settle the cloned plate), so they run after the buyer journeys.
   projects: [
-    { name: 'buyer', testMatch: /consumer\.spec\.ts/ },
+    { name: 'buyer', testMatch: /(consumer|buyer-tools)\.spec\.ts/ },
     { name: 'admin', testMatch: /(admin|business|partner)\.spec\.ts/, dependencies: ['buyer'] },
   ],
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',

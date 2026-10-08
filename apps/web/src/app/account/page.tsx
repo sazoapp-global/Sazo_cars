@@ -29,6 +29,8 @@ export default async function Account() {
         </section>
       )}
       <div className="flex flex-wrap gap-2">
+        <a href="/saved" className="btn btn-ghost">Saved cars</a>
+        <a href="/shares" className="btn btn-ghost">Shared reports</a>
         <a href="/business/register" className="btn btn-ghost">Register a business</a>
         <a href="/partner" className="btn btn-ghost">Send records (data partners)</a>
       </div>

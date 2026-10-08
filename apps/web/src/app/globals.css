@@ -65,3 +65,10 @@
   .skeleton { background: linear-gradient(90deg, #eef2f7 25%, #f6f8fb 50%, #eef2f7 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 8px; }
   @keyframes shimmer { to { background-position: -200% 0; } }
 }
+
+/* Printing / "Save as PDF" from a shared report: no navigation, no breaking a card across pages. */
+@media print {
+  body { background: #fff; }
+  .card { break-inside: avoid; box-shadow: none; }
+  a { text-decoration: none; }
+}

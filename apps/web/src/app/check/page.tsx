@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { api } from '@/lib/api';
+import { AddCarForm } from '@/components/add-car-form';
+import { api, isSignedIn } from '@/lib/api';
 import type { SearchResult } from '@/lib/types';
 import { Icon } from '@/components/icon';
 import { SearchBox } from '@/components/search-box';
@@ -14,6 +15,7 @@ export default async function Check({ searchParams }: { searchParams: Promise<{ 
   if (q.length < 4) redirect('/');
   const r = await api<SearchResult>(`/vehicles/search?q=${encodeURIComponent(q)}`);
   if (r.outcome === 'found' && r.matches.length === 1) redirect(`/v/${r.matches[0]!.vehicleRef}`);
+  const signedIn = await isSignedIn();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:px-8">
@@ -42,6 +44,9 @@ export default async function Check({ searchParams }: { searchParams: Promise<{ 
             <li className="flex gap-2"><Icon name="check_circle" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span>A VIN has 17 characters and never contains the letters I, O or Q.</span></li>
             <li className="flex gap-2"><Icon name="check_circle" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span>Try the chassis number printed on the logbook, e.g. <span className="sazo-id whitespace-nowrap">NZT260-3041234</span>.</span></li>
           </ul>
+          {signedIn ? <AddCarForm plate={r.queryKind === 'plate' ? r.normalizedQuery : undefined} vin={r.queryKind === 'vin' ? r.normalizedQuery : undefined} /> : (
+            <p className="mt-6 text-sm"><Link className="link" href={`/sign-in?next=${encodeURIComponent(`/check?q=${q}`)}`}>Sign in</Link> to add this car&apos;s details to SAZO.</p>
+          )}
         </section>
       )}
 

@@ -126,6 +126,55 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
     expect(pending.body.items).toEqual([]);
   });
 
+  it('a buyer saves cars, compares them, and shares a frozen report', async () => {
+    const buyerId = await app.get(IamService).ensureUser('+256700000996', 'Pipeline Buyer');
+    const buyer = { Authorization: `Bearer ${(await app.get(AuthService).issueTokens(buyerId)).accessToken}` };
+    const http = request(app.getHttpServer());
+    await http.post('/v1/me/saved-checks').set(buyer).send({ vehicleRef: ref('S01') }).expect(204);
+    await http.post('/v1/me/saved-checks').set(buyer).send({ vehicleRef: ref('S01') }).expect(204); // idempotent
+    await http.post('/v1/me/saved-checks').set(buyer).send({ vehicleRef: ref('S03') }).expect(204);
+    const saved = await http.get('/v1/me/saved-checks').set(buyer).expect(200);
+    expect(saved.body.items.map((i: { vehicleRef: string }) => i.vehicleRef)).toEqual([ref('S03'), ref('S01')]);
+    expect(saved.body.items[0].summary.questions).toHaveLength(7);
+    await http.delete(`/v1/me/saved-checks/${ref('S03')}`).set(buyer).expect(204);
+    expect((await http.get(`/v1/me/saved-checks/${ref('S03')}`).set(buyer).expect(200)).body).toEqual({ saved: false });
+
+    const cmp = await http.get('/v1/vehicles/compare').query({ refs: `${ref('S01')},${ref('S03')}` }).set(buyer).expect(200);
+    expect(cmp.body.vehicles).toHaveLength(2);
+    expect(cmp.body.differingQuestions).toContain('mileage');
+    await http.get('/v1/vehicles/compare').query({ refs: ref('S01') }).set(buyer).expect(400);
+
+    const snap = await http.post(`/v1/vehicles/${ref('S06')}/snapshots`).set(buyer).send({}).expect(201);
+    expect(snap.body.snapshotRef).toMatch(/^SZR-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+    const shared = await http.get(`/v1/shared/${snap.body.shareToken}`).expect(200); // no sign-in
+    expect(shared.body.report.vehicle.vehicleRef).toBe(ref('S06'));
+    expect(JSON.stringify(shared.body)).not.toContain('4250000'); // repair cost stays confidential
+    const links = await http.get('/v1/me/shares').set(buyer).expect(200);
+    await http.delete(`/v1/me/shares/${links.body.items[0].id}`).set(buyer).expect(204);
+    await http.get(`/v1/shared/${snap.body.shareToken}`).expect(404);
+  });
+
+  it('P-010: a car added by a buyer stays "not yet confirmed" until an official record matches it', async () => {
+    const userId = await app.get(IamService).ensureUser('+256700000995', 'Pipeline Owner');
+    const owner = { Authorization: `Bearer ${(await app.get(AuthService).issueTokens(userId)).accessToken}` };
+    const http = request(app.getHttpServer());
+    const added = await http.post('/v1/vehicles/provisional').set(owner)
+      .send({ chassisNumber: 'GRJ150-0123456', plate: 'UBN 551Q', make: 'Toyota', model: 'Land Cruiser Prado', year: 2012 }).expect(202);
+    expect(added.body.status).toBe('accepted');
+    const card = await http.get('/v1/vehicles/search').query({ q: 'UBN 551Q' }).expect(200);
+    expect(card.body.matches[0]).toMatchObject({ vehicleRef: added.body.vehicleRef, status: 'provisional' });
+    expect(card.body.matches[0].make).toBeUndefined(); // owner-only details are too weak to state as facts
+    const again = await http.post('/v1/vehicles/provisional').set(owner).send({ plate: 'UBN 551Q', make: 'Toyota', model: 'Prado', year: 2012 }).expect(409);
+    expect(again.body.code).toBe('vehicle_exists');
+
+    // The registry confirms the same chassis → the car is now confirmed.
+    await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000cc').set('X-Source-Code', 'REG')
+      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'GRJ150-0123456', plate: 'UBN 551Q' }, records: [
+        { type: 'registration_issued', attributes: { plate: 'UBN 551Q' }, time: { at: '2015-03-01T00:00:00Z', precision: 'day' } }] }] }).expect(202);
+    const after = await http.get('/v1/vehicles/search').query({ q: 'UBN 551Q' }).expect(200);
+    expect(after.body.matches[0]).toMatchObject({ vehicleRef: added.body.vehicleRef, status: 'active' });
+  });
+
   // ----- From here on the tests CHANGE data (reviewer and admin actions); keep them last. -----
 
   it('S08: a reviewer settles the cloned plate — the genuine car keeps it, the clone loses it', async () => {

@@ -30,7 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Icon name="science" size={14} className="mr-1 inline align-[-2px]" />
           SAZO is in testing. The vehicles and records shown are simulated and do not describe real cars.
         </div>
-        <header className="border-b border-line bg-white">
+        <header className="border-b border-line bg-white print:hidden">
           <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-4 px-4 md:px-8 lg:px-12">
             <Link href="/" className="font-display text-xl font-extrabold tracking-tight text-primary" aria-label="SAZO home">SAZO</Link>
             <span className="flex-1 md:hidden" />
@@ -42,6 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
               <Link href="/admin" className="text-sm font-semibold text-primary-container hover:underline">Admin</Link>
             )}
+            {me && <Link href="/saved" className="text-sm font-semibold text-muted hover:text-primary-container">Saved</Link>}
             {me ? (
               <Link href="/account" className="btn btn-ghost !min-h-10 !px-3 text-sm"><Icon name="person" size={18} /><span className="max-w-[10rem] truncate">{me.displayName}</span></Link>
             ) : (

@@ -4,13 +4,14 @@ import { ObservationsModule } from '../obs/index.js';
 import { VehicleModule } from '../vehicle/index.js';
 import { IngestAdminController } from './admin.controller.js';
 import { PartnerController } from './partner.controller.js';
+import { ProvisionalController } from './provisional.controller.js';
 import { IngestionController } from './ingestion.controller.js';
 import { IngestionService } from './ingestion.service.js';
 import { SourcesRepository } from './sources.repository.js';
 
 @Module({
   imports: [IamModule, VehicleModule, ObservationsModule],
-  controllers: [IngestionController, IngestAdminController, PartnerController],
+  controllers: [IngestionController, IngestAdminController, PartnerController, ProvisionalController],
   providers: [SourcesRepository, IngestionService],
   exports: [IngestionService],
 })

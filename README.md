@@ -66,7 +66,8 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | **Admin console (website `/admin`, SAZO staff only):** overview of what needs a person, business approvals, conflict review (records side by side, resolve/dismiss with reasoning, mark a record as a mistake or duplicate, settle a cloned plate, notes), uncertain vehicle matches, data sources (pause/retire/replace simulated feeds), recalculation | ✅ |
 | **Business sign-up (website `/business`):** for-businesses page, registration, approval progress, sending verification documents, SAZO's questions shown to the business, SMS on every decision; reviewers open the documents from the approval queue | ✅ |
 | **Partner data-entry console (website `/partner`):** for each data source (registry, customs, police, lender, insurer, auction, rental, manufacturer, dealer, inspection), enter one record with a form built from the record catalogue, or upload a CSV file (template per source; every row checked; good rows sent in batches; re-sending a file never duplicates); recent submissions with per-record results | ✅ |
-| “My cars”, saved checks, compare, dealer and inspector workspaces | ⏳ next |
+| **Buyer tools:** save cars (answers update as records arrive), compare 2–3 cars question by question with differences highlighted, share a frozen copy of a report by link (30 days, no sign-in, can be stopped; prints as PDF), add a car SAZO doesn't know (shown as not yet confirmed until an official record matches) | ✅ |
+| “My cars” for owners (waits on O-007: how owners prove ownership), dealer and inspector workspaces, server-made PDFs | ⏳ next |
 
 ### Load the demo vehicles
 

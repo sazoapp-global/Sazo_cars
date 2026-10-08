@@ -80,6 +80,14 @@ export class IngestionService {
     return (await this.sources.byId(id))!;
   }
 
+  /** How many submissions a person made to a source recently (simple abuse limit for owner submissions). */
+  async countRecentByUser(sourceId: string, userId: string, hours: number): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM ingest.submissions WHERE source_id = $1 AND submitted_by_user_id = $2 AND received_at > now() - make_interval(hours => $3)`,
+      [sourceId, userId, hours]);
+    return rows[0]!.n;
+  }
+
   /** Recent submissions for a source, newest first, with how their items fared. */
   async recentSubmissions(sourceId: string, limit: number) {
     const { rows } = await this.pool.query(
@@ -192,7 +200,10 @@ export class IngestionService {
     // 3. Resolve the vehicle and store observations atomically; events are delivered after commit.
     const firstTime = records.map((r) => r.time.at).filter(Boolean).sort()[0] ?? null;
     return this.bus.transaction(async (tx, emit): Promise<string[]> => {
-      const resolution = forced ?? (await this.registry.resolve(tx, item.identifiers, { submissionItemId: itemId, submissionId, eventTime: firstTime }));
+      const resolution = forced ?? (await this.registry.resolve(tx, item.identifiers, {
+        submissionItemId: itemId, submissionId, eventTime: firstTime,
+        newVehicleStatus: source.evidenceClass === 'owner_provided' || source.evidenceClass === 'community' ? 'provisional' : 'active',
+      }));
       if (resolution.outcome === 'rejected' || resolution.outcome === 'ambiguous') {
         const status = resolution.outcome === 'ambiguous' ? 'needs_review' : 'rejected';
         const errs = resolution.outcome === 'rejected' ? [{ path: 'identifiers', code: resolution.reason ?? 'unresolvable', message: 'could not identify the vehicle' }] : [];
@@ -201,6 +212,7 @@ export class IngestionService {
         return [];
       }
       const vehicleId = resolution.vehicleId!;
+      if (source.evidenceClass === 'official') await this.registry.confirmIfProvisional(tx, vehicleId);
       const observationIds = await this.observations.recordItem(tx, emit, {
         vehicleId, sourceId: source.id, sourceDomain: source.domain, evidenceClass: source.evidenceClass, submissionId,
         submissionItemId: itemId, records, enteredByUserId: opts.userId, actingForOrganisationId: opts.organisationId,

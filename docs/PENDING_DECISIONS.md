@@ -113,3 +113,14 @@
 | Dates | One date per record (the day it happened); a date in the future is refused. |
 | CSV files | Up to 5,000 rows and 5 MB. Every row is checked first; only good rows are sent; each row gets its own result. Sending the same file again returns the same submission instead of duplicating records. Lists inside a cell use `;`. |
 | Finance details | Lender names and amounts are not entered here (O-001: buyers see status only). |
+
+## Behaviour choices made while building the buyer tools (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Saved cars | Up to 200 per person. The list shows today's answers, so a saved car's status can change when new records arrive. |
+| Compare | 2 or 3 cars, signed in. Rows where the cars differ are highlighted. Only records — no reviews or opinions (D-063). |
+| Share links | A copy of the report frozen at that moment, valid 30 days, opened without signing in, can be stopped at any time. Same content a signed-in buyer sees: no owner details, no garage costs, finance status only. |
+| PDF | For now the shared report prints cleanly to PDF from the phone or computer ("Save as PDF"). A PDF made by the server comes later. |
+| Adding an unknown car | Signed-in people can add up to 5 cars a day. If the plate, VIN or chassis is already known, they are sent to that car instead. The car stays "not yet confirmed" — even with a VIN — until an official record matches it; then it is confirmed automatically. Make and model typed by the person are not shown as facts (too weak a source) until a trusted record confirms them. |
+| “My cars” | Not built yet: it depends on O-007 (how an owner proves ownership). |

@@ -120,3 +120,9 @@ export interface PartnerSource { code: string; name: string; domain: string; cha
 export interface SubmissionItem { sequence: number; status: 'pending' | 'accepted' | 'rejected' | 'needs_review'; vehicleRef?: string; resolution?: string; errors: { path: string; code: string; message: string }[] }
 export interface Submission { submissionId: string; sourceCode: string; status: string; items: SubmissionItem[] }
 export interface SubmissionSummary { submissionId: string; status: string; receivedAt: string; items: number; accepted: number; rejected: number; needsReview: number }
+
+// ---------- buyer
+export interface SavedCheck { vehicleRef: string; savedAt: string; summary: Summary }
+export interface Comparison { vehicles: FullReport[]; differingQuestions: string[] }
+export interface SharedReport { snapshotRef: string; vehicleRef: string; createdAt: string; expiresAt: string | null; report: FullReport }
+export interface ShareLink { id: string; snapshotRef: string; vehicleRef: string; plate: string | null; createdAt: string; expiresAt: string | null; revoked: boolean }
