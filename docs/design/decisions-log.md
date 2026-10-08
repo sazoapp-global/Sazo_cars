@@ -179,3 +179,4 @@ Physical inspection booking and inspector escort · telematics · fleet manageme
 | 2026-10-08 | Product owner approved all choices in `docs/PENDING_DECISIONS.md`: P-001–P-013 accepted, O-001 default (status-only for finance/police) accepted, DM-1–DM-16 accepted, plus the sign-in and Garage behaviour choices. |
 | 2026-10-08 | O-007 decided: owners prove ownership by phone match with the registry owner record, or a logbook photo reviewed by SAZO. Built as "My cars". |
 | 2026-10-08 | Inspector workspace built (P-004, P-005) in the shared phone app. Rule Set v1.1 (`rs-2026.10-v1.1`): inspection paint readings add a repaint note to the damage answer; structural damage seen by an inspector counts as a damage record. |
+| 2026-10-08 | Dealer workspace built (P-005) on the website. Cars first seen through a dealer listing are provisional until an official record matches (P-010 extended to dealers). |

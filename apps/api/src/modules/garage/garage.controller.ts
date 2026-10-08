@@ -7,8 +7,8 @@ import { GarageError, GarageService } from './garage.service.js';
 import { DraftInput } from './job-form.js';
 
 const Uuid = z.string().uuid();
-/** The phone app's staff screen also serves inspectors and inspection centres (same roles). */
-const STAFF_ORG_TYPES = ['garage', 'inspector', 'inspection_centre'];
+/** The staff screens also serve inspectors, inspection centres and dealers (same roles). */
+const STAFF_ORG_TYPES = ['garage', 'inspector', 'inspection_centre', 'dealer'];
 const Submit = z.object({
   acknowledgedWarnings: z.array(z.object({ code: z.string(), explanation: z.string().trim().min(3).max(500) })).max(10).default([]),
 });

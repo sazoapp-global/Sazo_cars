@@ -140,3 +140,14 @@
 | Owner SMS | Not sent for inspections (the inspector is not the car's owner's garage). Can be added later. |
 | Booking an inspector | Not built (FUTURE, P-004). |
 
+## Behaviour choices made while building the dealer workspace (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Where dealers work | On the website (`/dealer/<business>`), not the phone app — listing and pricing are desk work. Same approval as other businesses; managers add sales staff there. |
+| Adding a car | By plate if SAZO knows exactly one car with it; otherwise the VIN or chassis number is needed. A car new to SAZO, first seen through a dealer, shows as "not yet confirmed" until an official record matches it (P-010 now covers dealer listings too). A car can be in a dealer's stock once at a time. |
+| What joins the car's history | Each asking price (including price changes) as a dealer listing that buyers can see; the mileage given when listing; the sale. Removing a car without a sale adds nothing. |
+| Sale price | Kept confidential (never shown to buyers or in share links). It is stored for future price estimates. |
+| Buyer links | The same frozen 30-day report links buyers use (they appear under the dealer person's "Shared reports"). Dealer branding on reports stays FUTURE (P-011). |
+| Mileage when listing | Optional, and no odometer photo is asked for, so it counts for less than a garage or inspector reading. |
+

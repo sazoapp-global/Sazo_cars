@@ -21,7 +21,7 @@ export default async function Account() {
           <ul className="mt-2 divide-y divide-line">
             {me.memberships.map((m) => (
               <li key={m.organisationId} className="flex items-center justify-between gap-3 py-2">
-                <a href={`/business/${m.organisationId}`} className="link">{m.organisationName}</a>
+                <a href={m.organisationType === 'dealer' && m.organisationStatus === 'approved' ? `/dealer/${m.organisationId}` : `/business/${m.organisationId}`} className="link">{m.organisationName}</a>
                 <span className="text-sm text-muted">{ORG_STATUS[m.organisationStatus] ?? m.organisationStatus}</span>
               </li>
             ))}

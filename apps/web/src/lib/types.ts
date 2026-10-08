@@ -134,3 +134,8 @@ export interface LatestInspection {
   date: string; sourceLabel: string; passed: boolean; structuralFindings: boolean | null; tyresPercent: number | null; batteryOk: boolean | null;
   defects: { item: string; severity: 'minor' | 'major' }[]; panelsMeasured: number; repaintedPanels: string[]; photos: number;
 }
+export interface StockItem {
+  stockId: string; vehicleRef?: string; status: 'in_stock' | 'sold' | 'removed'; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null;
+  listedAt: string; soldAt: string | null; salePriceUgx: number | null; vehicle: VehicleCard | null; questions: QuestionView[]; recordConfidence: RecordConfidence | null;
+}
+export interface StaffMember { userId: string; displayName: string; role: string; status: string; joinedAt: string | null }

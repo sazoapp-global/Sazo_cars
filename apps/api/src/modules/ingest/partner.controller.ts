@@ -12,7 +12,7 @@ export class PartnerController {
   @Get()
   async sources(@CurrentActor() actor: Actor) {
     return (await this.ingestion.listSources())
-      .filter((s) => s.status === 'active' && s.channel !== 'garage_app' && s.channel !== 'inspector_app' && canForOrg(actor, s.organisationId, 'submission.create').ok)
+      .filter((s) => s.status === 'active' && s.channel !== 'garage_app' && s.channel !== 'inspector_app' && !(s.domain === 'dealer' && !s.isSimulated) && canForOrg(actor, s.organisationId, 'submission.create').ok)
       .map((s) => ({ code: s.code, name: s.name, domain: s.domain, channel: s.channel, isSimulated: s.isSimulated, evidenceClass: s.evidenceClass }));
   }
 

@@ -68,7 +68,14 @@ export default async function BusinessStatus({ params, searchParams }: { params:
           <a href={GARAGE_APP_URL} className="btn btn-primary mt-3"><Icon name="garage" />{org.type === 'garage' ? 'Open the Garage app' : 'Open the SAZO app'}</a>
         </section>
       )}
-      {org.status === 'approved' && !WORKSHOP.includes(org.type) && <p className="text-muted">Approved. Your workspace is coming soon — we&apos;ll send an SMS when it&apos;s ready.</p>}
+      {org.status === 'approved' && org.type === 'dealer' && (
+        <section className="card p-4">
+          <h2 className="font-display text-lg font-semibold">Your cars for sale</h2>
+          <p className="text-muted">List the cars you are selling, keep prices up to date, record sales and send buyers report links.</p>
+          <Link href={`/dealer/${org.id}`} className="btn btn-primary mt-3"><Icon name="directions_car" />Open your stock</Link>
+        </section>
+      )}
+      {org.status === 'approved' && !WORKSHOP.includes(org.type) && org.type !== 'dealer' && <p className="text-muted">Approved. Your workspace is coming soon — we&apos;ll send an SMS when it&apos;s ready.</p>}
       {(org.status === 'rejected' || org.status === 'suspended') && <p className="text-muted">Contact SAZO support if you think this is a mistake.</p>}
       <Link href="/account" className="link inline-block">Back to your account</Link>
     </div>

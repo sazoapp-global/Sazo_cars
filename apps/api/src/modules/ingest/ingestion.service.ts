@@ -207,7 +207,8 @@ export class IngestionService {
     return this.bus.transaction(async (tx, emit): Promise<string[]> => {
       const resolution = forced ?? (await this.registry.resolve(tx, item.identifiers, {
         submissionItemId: itemId, submissionId, eventTime: firstTime,
-        newVehicleStatus: source.evidenceClass === 'owner_provided' || source.evidenceClass === 'community' ? 'provisional' : 'active',
+        // Cars first seen through owners, the community or a dealer's listing stay provisional until an official record matches (P-010).
+        newVehicleStatus: ['owner_provided', 'community', 'dealer'].includes(source.evidenceClass) ? 'provisional' : 'active',
       }));
       if (resolution.outcome === 'rejected' || resolution.outcome === 'ambiguous') {
         const status = resolution.outcome === 'ambiguous' ? 'needs_review' : 'rejected';

@@ -36,6 +36,8 @@ tags:
     description: Saved checks, frozen report snapshots, share links and PDFs.
   - name: Inspections
     description: Inspector and inspection-centre workspace (P-004) — checklist drafts from the phone app, sent through Ingestion (inspector_app).
+  - name: Dealer
+    description: Dealer workspace (P-005) — cars for sale, prices, sales (confidential). Listings and sales go through Ingestion on the dealer's own source.
   - name: My cars
     description: Owners prove a car is theirs (phone match or logbook photo, O-007) and answer for garage visits.
   - name: Garage
@@ -565,6 +567,102 @@ paths:
         '400': { description: incomplete (errors list what is missing) }
         '409': { description: already_submitted }
         '422': { description: warnings_need_acknowledgement / blocked / chassis_required / evidence_invalid }
+
+  /dealer/stock:
+    get:
+      tags: [Dealer]
+      operationId: listDealerStock
+      summary: Cars for sale (or sold / removed) with today's answers about each car
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [in_stock, sold, removed] } }
+      responses:
+        '200': { description: '{ items: StockItem[] }' }
+        '403': { description: organisation_not_approved / not_a_dealer }
+    post:
+      tags: [Dealer]
+      operationId: addDealerStock
+      summary: List a car for sale — a known car by vehicleRef, or a new one by VIN / chassis number (+ plate)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [askingPriceUgx]
+              properties:
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                plate: { type: string }
+                vin: { type: string }
+                chassisNumber: { type: string }
+                askingPriceUgx: { type: integer, minimum: 1 }
+                mileageKm: { type: integer, minimum: 0 }
+                notes: { type: string, maxLength: 500 }
+      responses:
+        '201': { description: StockItem }
+        '400': { description: identifiers_required }
+        '409': { description: already_in_stock }
+        '422': { description: vehicle_needs_review / listing_rejected }
+
+  /dealer/stock/{stockId}:
+    get:
+      tags: [Dealer]
+      operationId: getDealerStockItem
+      summary: One car in stock
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: StockItem }
+    patch:
+      tags: [Dealer]
+      operationId: changeDealerPrice
+      summary: New asking price (recorded as a new listing in the car's history)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [askingPriceUgx], properties: { askingPriceUgx: { type: integer, minimum: 1 } } }
+      responses:
+        '200': { description: StockItem }
+        '409': { description: not_in_stock }
+    delete:
+      tags: [Dealer]
+      operationId: removeDealerStock
+      summary: Take a car off sale without a sale (nothing is added to its history)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removed }
+        '409': { description: not_in_stock }
+
+  /dealer/stock/{stockId}/sold:
+    post:
+      tags: [Dealer]
+      operationId: markDealerSold
+      summary: Record the sale; the price is confidential
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [salePriceUgx]
+              properties:
+                salePriceUgx: { type: integer, minimum: 1 }
+                soldOn: { type: string, format: date }
+      responses:
+        '200': { description: StockItem }
+        '409': { description: not_in_stock }
 
   /admin/ownership-claims:
     get:

@@ -4,7 +4,7 @@ import { registerBusiness, type RegisterState } from '../actions';
 
 const TYPES = [
   { v: 'garage', label: 'Garage', hint: 'Servicing and repairs. The garage app is ready.' },
-  { v: 'dealer', label: 'Car dealer', hint: 'Workspace coming soon.' },
+  { v: 'dealer', label: 'Car dealer', hint: 'List your cars for sale and send buyers report links.' },
   { v: 'inspector', label: 'Independent inspector', hint: 'Record inspections in the SAZO phone app.' },
   { v: 'inspection_centre', label: 'Inspection centre', hint: 'Record inspections in the SAZO phone app.' },
 ];
