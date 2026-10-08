@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query } from '@nestjs/common';
 import { z } from 'zod';
-import { badRequest, notFound } from '../../platform/problem.js';
+import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import type { Actor } from './actor.js';
 import { CurrentActor, RequirePermission } from './auth.guard.js';
 import { BUSINESS_ORG_TYPES, IamService } from './iam.service.js';
@@ -25,6 +25,34 @@ export class OrganisationsController {
     const r = Register.safeParse(body);
     if (!r.success) throw badRequest('invalid_request', 'Check the fields', r.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })));
     return this.iam.registerOrganisation(actor, r.data);
+  }
+
+  /** GET /v1/me/organisations — my businesses and where their verification stands. */
+  @Get('me/organisations')
+  async mine(@CurrentActor() actor: Actor) {
+    return this.iam.myOrganisations(actor.userId);
+  }
+
+  /** POST /v1/organisations/:id/verification-documents — managers send documents for SAZO to check. */
+  @Post('organisations/:id/verification-documents')
+  @HttpCode(200)
+  async documents(@CurrentActor() actor: Actor, @Param('id') id: string, @Body() body: unknown) {
+    const b = z.object({ evidenceIds: z.array(z.string().uuid()).min(1).max(10) }).safeParse(body);
+    if (!b.success) throw badRequest('invalid_request', 'evidenceIds: 1–10 uploaded files');
+    const isManager = actor.memberships.some((m) => m.organisationId === id && m.status === 'active' && m.role === 'org_manager');
+    if (!isManager) throw notFound('organisation_not_found', 'No such organisation');
+    if (!(await this.iam.addVerificationDocuments(actor, id, b.data.evidenceIds))) {
+      throw new Problem(409, 'verification_closed', 'Conflict', 'This business has already been decided');
+    }
+    return { status: 'received' };
+  }
+
+  /** GET /v1/admin/organisations/:id/documents — ids of the documents a business sent (view via /v1/evidence/:id/content). */
+  @Get('admin/organisations/:id/documents')
+  @RequirePermission('organisation.approve')
+  async adminDocuments(@Param('id') id: string) {
+    if (!z.string().uuid().safeParse(id).success) throw notFound('organisation_not_found', 'No such organisation');
+    return { evidenceIds: await this.iam.verificationDocuments(id) };
   }
 
   /** GET /v1/admin/organisations?status=pending_verification — the verification queue. */

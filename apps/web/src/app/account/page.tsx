@@ -21,13 +21,14 @@ export default async function Account() {
           <ul className="mt-2 divide-y divide-line">
             {me.memberships.map((m) => (
               <li key={m.organisationId} className="flex items-center justify-between gap-3 py-2">
-                <span className="font-semibold">{m.organisationName}</span>
+                <a href={`/business/${m.organisationId}`} className="link">{m.organisationName}</a>
                 <span className="text-sm text-muted">{ORG_STATUS[m.organisationStatus] ?? m.organisationStatus}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
+      <a href="/business/register" className="btn btn-ghost">Register a business</a>
       <form action={signOut}><button type="submit" className="btn btn-ghost">Sign out</button></form>
     </div>
   );

@@ -37,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <nav aria-label="Main" className="mr-auto hidden gap-6 pl-4 text-sm font-semibold text-muted md:flex">
               <Link href="/" className="hover:text-primary-container">Check a car</Link>
               <Link href="/#how" className="hover:text-primary-container">How it works</Link>
+              <Link href="/business" className="hover:text-primary-container">For businesses</Link>
             </nav>
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
               <Link href="/admin" className="text-sm font-semibold text-primary-container hover:underline">Admin</Link>
@@ -52,7 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <footer className="mt-12 border-t border-line bg-white">
           <div className="mx-auto max-w-[1280px] px-4 py-6 text-sm text-muted md:px-8 lg:px-12">
             <p>SAZO describes what the available records show. It does not certify a vehicle. Always inspect a car and check its documents before you pay.</p>
-            <p className="mt-2">© {new Date().getFullYear()} SAZO</p>
+            <p className="mt-2"><Link href="/business" className="link">For businesses</Link> · © {new Date().getFullYear()} SAZO</p>
           </div>
         </footer>
       </body>

@@ -1,4 +1,5 @@
 import { formatDate } from '@sazo/contracts';
+import { api } from '@/lib/api';
 import type { Organisation } from '@/lib/types';
 import { decideOrganisation } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
@@ -12,6 +13,8 @@ export default async function Organisations({ searchParams }: { searchParams: SP
   const sp = await searchParams;
   const status = sp.status ?? 'pending_verification';
   const data = await adminFetch<{ items: Organisation[] }>(`/admin/organisations?status=${status}`);
+  const docs = new Map(data === 'forbidden' ? [] : await Promise.all(data.items.map(async (o) =>
+    [o.id, (await api<{ evidenceIds: string[] }>(`/admin/organisations/${o.id}/documents`, { auth: true }).catch(() => ({ evidenceIds: [] }))).evidenceIds] as const)));
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Businesses</h1>
@@ -32,6 +35,7 @@ export default async function Organisations({ searchParams }: { searchParams: SP
                 <span className="text-sm text-muted">{TYPE[o.type] ?? o.type} · registered {formatDate(o.createdAt)}</span>
               </div>
               <p className="text-sm">{[o.tradingName ? o.legalName : null, o.registrationNumber ? `Reg. no. ${o.registrationNumber}` : 'No registration number given', o.district ?? 'District not given'].filter(Boolean).join(' · ')}</p>
+              <p className="mt-1 text-sm">{(docs.get(o.id) ?? []).length === 0 ? <span className="text-warn-text">No documents sent yet.</span> : <>Documents: {(docs.get(o.id) ?? []).map((d, i) => <a key={d} className="link mr-2" href={`/admin/files/${d}`} target="_blank" rel="noreferrer">document {i + 1}</a>)}</>}</p>
               <form action={decideOrganisation} className="mt-3 flex flex-col gap-2 md:flex-row md:items-end">
                 <input type="hidden" name="id" value={o.id} />
                 <div className="flex-1"><label htmlFor={`r-${o.id}`} className="label">Reason (kept in the audit log)</label>

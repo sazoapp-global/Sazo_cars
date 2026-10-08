@@ -1,5 +1,5 @@
 // POST /v1/evidence/uploads → PUT /v1/evidence/uploads/:id/content → POST /v1/evidence/:id/complete
-import { Body, Controller, HttpCode, Inject, Param, Post, Put, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Put, Req, StreamableFile } from '@nestjs/common';
 import { EVIDENCE_KINDS } from '@sazo/contracts';
 import type { Request } from 'express';
 import { z } from 'zod';
@@ -60,6 +60,19 @@ export class EvidenceController {
     if (!Uuid.safeParse(id).success) throw notFound('upload_not_found', 'No such upload');
     const { uploadedBy: _uploader, ...view } = await this.evidence.complete(id, actor.userId).catch(toProblem);
     return view;
+  }
+
+  /**
+   * GET /v1/evidence/:id/content — the photo or document itself. For the person who uploaded it and for
+   * SAZO reviewers only; buyers see that a photo exists, never the photo (it may show people or places).
+   */
+  @Get(':id/content')
+  async file(@CurrentActor() actor: Actor, @Param('id') id: string) {
+    if (!Uuid.safeParse(id).success) throw notFound('evidence_not_found', 'No such file');
+    const f = await this.evidence.content(id);
+    const reviewer = actor.permissions.has('conflict.review') || actor.permissions.has('organisation.approve');
+    if (!f || (f.uploadedBy !== actor.userId && !reviewer)) throw notFound('evidence_not_found', 'No such file');
+    return new StreamableFile(f.bytes, { type: f.mime, disposition: 'inline', length: f.bytes.length });
   }
 
   /** Receipt reading (D-027) is not built yet. */

@@ -10,6 +10,10 @@ import { SMS_SENDER, type SmsSender } from './sms.js';
 /** SMS templates (en-UG). Short, plain, and never containing personal data beyond what's needed. */
 const TEMPLATES: Record<string, { version: number; body: string }> = {
   otp: { version: 1, body: 'Your SAZO code is {code}. It expires in 10 minutes. Never share it with anyone.' },
+  org_approved: { version: 1, body: '{organisation} is approved on SAZO. You can now record jobs in the SAZO Garage app.' },
+  org_info_requested: { version: 1, body: 'SAZO needs more information about {organisation}: {reason}. Reply on the SAZO website.' },
+  org_rejected: { version: 1, body: 'SAZO could not approve {organisation} at this time. Contact SAZO support for details.' },
+  org_suspended: { version: 1, body: '{organisation} has been suspended on SAZO and cannot record history for now. Contact SAZO support.' },
   staff_added: { version: 1, body: '{organisation} added you to their team on SAZO. Sign in with this phone number to start recording jobs.' },
   // D-058: what was recorded, and a link to confirm or dispute. No costs, no other personal data.
   attestation: { version: 1, body: '{garage} recorded {work} on {plate} at {km} km on {date}. Was this your car? Confirm or dispute: {link}' },

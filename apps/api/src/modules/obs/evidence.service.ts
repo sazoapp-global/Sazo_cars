@@ -84,6 +84,15 @@ export class EvidenceService {
     return (await this.view([evidenceId]))[0]!;
   }
 
+  /** The stored bytes of a completed evidence file (write-once storage). */
+  async content(evidenceId: string): Promise<{ bytes: Buffer; mime: string; uploadedBy: string | null } | undefined> {
+    const { rows } = await this.pool.query<{ storage_key: string; mime_type: string; uploaded_by_user_id: string | null }>(
+      'SELECT storage_key, mime_type, uploaded_by_user_id FROM obs.evidence_files WHERE id = $1', [evidenceId]);
+    if (!rows[0]) return undefined;
+    const bytes = await this.store.get(rows[0].storage_key);
+    return bytes ? { bytes, mime: rows[0].mime_type, uploadedBy: rows[0].uploaded_by_user_id } : undefined;
+  }
+
   async view(ids: string[]): Promise<(EvidenceFileView & { uploadedBy: string | null })[]> {
     if (!ids.length) return [];
     const { rows } = await this.pool.query(

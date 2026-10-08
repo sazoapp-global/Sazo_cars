@@ -92,3 +92,13 @@
 | Photos | Shrunk to at most 1600 px (JPEG) to save data, then fingerprinted before upload. |
 | Deployment | The app and the API are served from the same web address (the app calls `/v1`), so no cross-site access is needed. |
 | App updates | A new version is offered with an “Update” button; it never reloads in the middle of a job. |
+
+## Behaviour choices made while building business sign-up (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Who can register | Any signed-in person; they become the business's manager. Garages get the Garage app; dealers, inspectors and inspection centres can register now and get their workspaces later. |
+| Documents | Trading licence or URSB certificate and a photo of the premises — photos or PDFs, up to 8 MB each. Only the business's managers and SAZO reviewers can open them. |
+| SAZO asks for more | The reviewer's question is shown to the business and sent by SMS. Sending more documents puts the business back in the review queue. |
+| Decision SMS | Managers get an SMS for approve, reject, more-information and suspend. A rejection SMS does not include the reviewer's reason (it says to contact support). |
+| Photos in buyer views | Buyers see that a photo exists, never the photo itself (it may show people or places). Only the uploader and SAZO reviewers can open it. |

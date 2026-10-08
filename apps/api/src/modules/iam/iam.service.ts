@@ -62,7 +62,31 @@ export class IamService {
       await this.repo.decideOrganisation(tx, id, decision, reason, actor.userId);
       await this.repo.audit(tx, { actorUserId: actor.userId, action: `organisation.${decision}`, targetType: 'organisation', targetId: id, details: { reason } });
     });
-    return this.repo.organisation(id);
+    const org = await this.repo.organisation(id);
+    // Tell the business's managers by SMS. The reviewer's reason is only included when they must act on it.
+    const template = ({ approve: 'org_approved', reject: 'org_rejected', request_info: 'org_info_requested', suspend: 'org_suspended' } as const)[decision];
+    for (const m of await this.repo.managerPhones(id)) {
+      await this.notify.sendSmsToPhone(m.phone, template, { organisation: org?.tradingName ?? org?.legalName ?? 'Your business', reason: reason.slice(0, 120) }, 'account', m.userId)
+        .catch(() => false); // a failed SMS never undoes the decision
+    }
+    return org;
+  }
+
+  myOrganisations(userId: string) {
+    return this.repo.myOrganisations(userId);
+  }
+
+  verificationDocuments(organisationId: string) {
+    return this.repo.verificationDocuments(organisationId);
+  }
+
+  /** A manager sends documents (trading licence, photos of the premises) for verification. */
+  async addVerificationDocuments(actor: Actor, organisationId: string, evidenceIds: string[]): Promise<boolean> {
+    return withTx(this.pool, async (tx) => {
+      const ok = await this.repo.addVerificationDocuments(tx, organisationId, evidenceIds);
+      if (ok) await this.repo.audit(tx, { actorUserId: actor.userId, organisationId, action: 'organisation.documents_added', targetType: 'organisation', targetId: organisationId, details: { count: evidenceIds.length } });
+      return ok;
+    });
   }
 
   /** Active (and invited) members of an organisation — the garage staff list (D-056). */

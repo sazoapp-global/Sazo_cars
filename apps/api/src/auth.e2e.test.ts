@@ -1,6 +1,7 @@
 // Sign-in and access control over HTTP, on a brand-new migrated database (no scenario data).
 // Covers phone codes, refresh rotation + reuse detection, 401/403, and X4 (a pending business cannot submit).
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
@@ -146,11 +147,34 @@ describe.skipIf(!base)('sign-in and access control (e2e)', () => {
 
     expect((await submit(owner.accessToken, '0192a000-0000-7000-8000-000000000101').expect(403)).body.code).toBe('organisation_not_approved');
 
+    // The manager sends a document; SAZO staff can view it, nobody else can.
+    const doc = Buffer.from('trading licence scan');
+    const sha = createHash('sha256').update(doc).digest('hex');
+    const slot = await http.post('/v1/evidence/uploads').set(bearer(owner.accessToken))
+      .send({ kind: 'org_verification_document', mimeType: 'application/pdf', sizeBytes: doc.length, sha256: sha }).expect(201);
+    await http.put(`/v1/evidence/uploads/${slot.body.evidenceId}/content`).set(bearer(owner.accessToken)).set('Content-Type', 'application/pdf').send(doc).expect(204);
+    await http.post(`/v1/evidence/${slot.body.evidenceId}/complete`).set(bearer(owner.accessToken)).expect(200);
+    await http.post(`/v1/organisations/${org.body.id}/verification-documents`).set(bearer(owner.accessToken)).send({ evidenceIds: [slot.body.evidenceId] }).expect(200);
+    const mine = await http.get('/v1/me/organisations').set(bearer(owner.accessToken)).expect(200);
+    expect(mine.body[0]).toMatchObject({ status: 'pending_verification', role: 'org_manager', verificationStatus: 'open', documents: 1 });
+    const docs = await http.get(`/v1/admin/organisations/${org.body.id}/documents`).set(bearer(adminToken)).expect(200);
+    expect(docs.body.evidenceIds).toEqual([slot.body.evidenceId]);
+    const file = await http.get(`/v1/evidence/${slot.body.evidenceId}/content`).set(bearer(adminToken)).expect(200);
+    expect(file.headers['content-type']).toContain('application/pdf');
+    const nosy = await signIn('+256772100007', 'Nosy Neighbour');
+    await http.get(`/v1/evidence/${slot.body.evidenceId}/content`).set(bearer(nosy.accessToken)).expect(404);
+
+    // Asking for more information is shown to the business with the reviewer's note.
+    await http.post(`/v1/admin/organisations/${org.body.id}/decision`).set(bearer(adminToken)).send({ decision: 'request_info', reason: 'Send a photo of your signboard' }).expect(200);
+    expect((await http.get('/v1/me/organisations').set(bearer(owner.accessToken))).body[0]).toMatchObject({ verificationStatus: 'info_requested', infoRequested: 'Send a photo of your signboard' });
+    expect(app.get(ConsoleSmsSender, { strict: false }).latest('+256772100005')).toContain('Send a photo of your signboard');
+
     const queue = await http.get('/v1/admin/organisations').query({ status: 'pending_verification' }).set(bearer(adminToken)).expect(200);
     expect(queue.body.items.map((o: { id: string }) => o.id)).toContain(org.body.id);
     const decided = await http.post(`/v1/admin/organisations/${org.body.id}/decision`).set(bearer(adminToken))
       .send({ decision: 'approve', reason: 'Trading licence checked' }).expect(200);
     expect(decided.body.status).toBe('approved');
+    expect(app.get(ConsoleSmsSender, { strict: false }).latest('+256772100005')).toContain('Kireka Auto Works Ltd is approved on SAZO');
 
     garageToken = owner.accessToken;
     const ok = await submit(owner.accessToken, '0192a000-0000-7000-8000-000000000102').expect(202);

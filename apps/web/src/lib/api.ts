@@ -20,9 +20,10 @@ export async function isSignedIn(): Promise<boolean> {
 }
 
 /** Call the API. `auth: true` sends the signed-in user's access token. */
-export async function api<T>(path: string, opts: { method?: string; body?: unknown; auth?: boolean; headers?: Record<string, string> } = {}): Promise<T> {
+export async function api<T>(path: string, opts: { method?: string; body?: unknown; raw?: { bytes: Uint8Array<ArrayBuffer>; contentType: string }; auth?: boolean; headers?: Record<string, string> } = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json', ...(opts.headers ?? {}) };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (opts.raw) headers['Content-Type'] = opts.raw.contentType;
   if (opts.auth) {
     const token = await accessToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -30,7 +31,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
   const res = await fetch(`${API_URL}/v1${path}`, {
     method: opts.method ?? 'GET',
     headers,
-    body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+    body: opts.raw ? new Blob([opts.raw.bytes]) : opts.body === undefined ? undefined : JSON.stringify(opts.body),
     cache: 'no-store',
   });
   if (res.status === 204) return undefined as T;

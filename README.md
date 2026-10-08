@@ -64,7 +64,8 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | Browser tests on a phone-sized screen, with automatic accessibility checks (axe, WCAG 2 AA) | ✅ |
 | **Garage phone app (installable, works offline):** sign in by phone, find the car by plate (or carry on without signal), work-type tiles, mileage + odometer photo, details per type of work, customer + consent + cost, check-and-send with explained warnings, job list with customer-confirmation status, staff management. Drafts and photos are kept on the phone and sync when the signal returns | ✅ |
 | **Admin console (website `/admin`, SAZO staff only):** overview of what needs a person, business approvals, conflict review (records side by side, resolve/dismiss with reasoning, mark a record as a mistake or duplicate, settle a cloned plate, notes), uncertain vehicle matches, data sources (pause/retire/replace simulated feeds), recalculation | ✅ |
-| Business sign-up screens, partner data-entry console, “my cars”, compare, dealer and inspector workspaces | ⏳ next |
+| **Business sign-up (website `/business`):** for-businesses page, registration, approval progress, sending verification documents, SAZO's questions shown to the business, SMS on every decision; reviewers open the documents from the approval queue | ✅ |
+| Partner data-entry console, “my cars”, compare, dealer and inspector workspaces | ⏳ next |
 
 ### Load the demo vehicles
 

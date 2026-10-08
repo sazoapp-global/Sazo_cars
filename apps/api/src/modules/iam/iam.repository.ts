@@ -78,6 +78,42 @@ export class IamRepository {
     return rows.map((r) => ({ ...r, joinedAt: r.joinedAt ? new Date(r.joinedAt).toISOString() : null }));
   }
 
+  /** Phone numbers of an organisation's active managers (to tell them about decisions). */
+  /** Businesses the user belongs to, with where their verification stands (the SAZO reviewer's note when more is needed). */
+  async myOrganisations(userId: string) {
+    const { rows } = await this.pool.query(
+      `SELECT o.id, o.type, o.legal_name AS "legalName", o.trading_name AS "tradingName", o.status, r.code AS role,
+              vc.status AS "verificationStatus", CASE WHEN vc.status = 'info_requested' THEN vc.decision_reason END AS "infoRequested",
+              COALESCE(cardinality(vc.submitted_evidence_ids), 0) AS "documents"
+         FROM iam.memberships m JOIN iam.organisations o ON o.id = m.organisation_id JOIN iam.roles r ON r.id = m.role_id
+         LEFT JOIN LATERAL (SELECT * FROM iam.verification_cases v WHERE v.organisation_id = o.id ORDER BY created_at DESC LIMIT 1) vc ON true
+        WHERE m.user_id = $1 AND m.status = 'active' ORDER BY o.created_at`, [userId]);
+    return rows;
+  }
+
+  /** Add documents to the open verification case; answering a request for information re-opens it for review. */
+  async addVerificationDocuments(sql: Sql, organisationId: string, evidenceIds: string[]): Promise<boolean> {
+    const r = await sql.query(
+      `UPDATE iam.verification_cases SET submitted_evidence_ids = (SELECT array_agg(DISTINCT x) FROM unnest(submitted_evidence_ids || $2::uuid[]) x),
+              status = CASE WHEN status = 'info_requested' THEN 'open' ELSE status END
+        WHERE id = (SELECT id FROM iam.verification_cases WHERE organisation_id = $1 AND status IN ('open','info_requested') ORDER BY created_at DESC LIMIT 1)`,
+      [organisationId, evidenceIds]);
+    return r.rowCount === 1;
+  }
+
+  async verificationDocuments(organisationId: string): Promise<string[]> {
+    const { rows } = await this.pool.query<{ ids: string[] }>(
+      'SELECT submitted_evidence_ids AS ids FROM iam.verification_cases WHERE organisation_id = $1 ORDER BY created_at DESC LIMIT 1', [organisationId]);
+    return rows[0]?.ids ?? [];
+  }
+
+  async managerPhones(organisationId: string): Promise<{ userId: string; phone: string }[]> {
+    const { rows } = await this.pool.query<{ userId: string; phone: string }>(
+      `SELECT u.id AS "userId", u.phone_e164 AS phone FROM iam.memberships m JOIN iam.users u ON u.id = m.user_id JOIN iam.roles r ON r.id = m.role_id
+        WHERE m.organisation_id = $1 AND m.status = 'active' AND r.code = 'org_manager' AND u.phone_e164 IS NOT NULL`, [organisationId]);
+    return rows;
+  }
+
   async displayNames(userIds: string[]): Promise<Map<string, string>> {
     if (!userIds.length) return new Map();
     const { rows } = await this.pool.query<{ id: string; display_name: string }>('SELECT id, display_name FROM iam.users WHERE id = ANY($1)', [userIds]);

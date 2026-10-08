@@ -109,3 +109,8 @@ export interface ConflictDetail extends Conflict {
 }
 export interface Decision { decisionId: string; submissionItemId: string; outcome: string; presentedIdentifiers: Record<string, string>; matchedVehicleRef?: string; candidateVehicleRefs: string[]; rule: string; decidedBy: 'system' | 'reviewer'; decidedAt: string }
 export interface Source { id: string; code: string; name: string; domain: string; channel: string; isSimulated: boolean; evidenceClass: string; baselineReputation: number; status: 'active' | 'paused' | 'retired'; supersededBySourceId: string | null; coverage: { scope: string; periodFrom: string; periodTo: string | null }[] }
+
+export interface MyOrganisation {
+  id: string; type: string; legalName: string; tradingName: string | null; status: string; role: string;
+  verificationStatus: 'open' | 'info_requested' | 'approved' | 'rejected' | null; infoRequested: string | null; documents: number;
+}
