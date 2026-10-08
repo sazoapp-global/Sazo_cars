@@ -31,12 +31,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           SAZO is in testing. The vehicles and records shown are simulated and do not describe real cars.
         </div>
         <header className="border-b border-line bg-white">
-          <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between gap-4 px-4 md:px-8 lg:px-12">
+          <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-4 px-4 md:px-8 lg:px-12">
             <Link href="/" className="font-display text-xl font-extrabold tracking-tight text-primary" aria-label="SAZO home">SAZO</Link>
-            <nav aria-label="Main" className="hidden gap-6 text-sm font-semibold text-muted md:flex">
+            <span className="flex-1 md:hidden" />
+            <nav aria-label="Main" className="mr-auto hidden gap-6 pl-4 text-sm font-semibold text-muted md:flex">
               <Link href="/" className="hover:text-primary-container">Check a car</Link>
               <Link href="/#how" className="hover:text-primary-container">How it works</Link>
             </nav>
+            {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
+              <Link href="/admin" className="text-sm font-semibold text-primary-container hover:underline">Admin</Link>
+            )}
             {me ? (
               <Link href="/account" className="btn btn-ghost !min-h-10 !px-3 text-sm"><Icon name="person" size={18} /><span className="max-w-[10rem] truncate">{me.displayName}</span></Link>
             ) : (

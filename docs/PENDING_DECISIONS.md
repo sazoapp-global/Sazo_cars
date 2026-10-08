@@ -22,6 +22,7 @@
 ## Small engineering deviation to note
 
 - **Monorepo tooling:** the design proposed Nx (P-012). To keep the first build simple, the repo uses plain **npm workspaces** and enforces module boundaries with **dependency-cruiser** (`npm run lint:boundaries`). Nx can be added later without restructuring. Everything else in P-012 (NestJS, Drizzle, Zod, BullMQ, Next.js, PWA, etc.) is unchanged.
+- **Admin console:** P-012 proposed Refine for the admin and partner consoles. The admin console is instead built as pages inside the website (`/admin`), reusing its sign-in, design system and tests, with no extra framework. If the consoles grow into heavy data tables later, Refine can still be added for them.
 
 ## Engineering notes (temporary simplifications, to revisit)
 

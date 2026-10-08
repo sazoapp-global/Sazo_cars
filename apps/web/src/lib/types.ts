@@ -97,3 +97,15 @@ export interface AttestationView {
   expiresAt: string;
   answered: 'confirmed' | 'disputed' | null;
 }
+
+// ---------- admin (SAZO staff)
+export interface Organisation { id: string; type: string; legalName: string; tradingName: string | null; registrationNumber: string | null; district: string | null; status: string; createdAt: string }
+export interface Conflict { conflictId: string; vehicleRef: string; relatedVehicleRefs: string[]; topic: string; status: string; openedByCheck: string | null; assignedTo: string | null; openedAt: string; resolvedAt: string | null }
+export interface ConflictDetail extends Conflict {
+  observations: { id: string; type: string; attributes: Record<string, unknown>; eventTime: string | null; precision: string; recordedAt: string; sourceCode?: string; evidenceClass: string; evidenceKinds: string[] }[];
+  disputedPlates: string[];
+  activity: { kind: string; actor: string | null; at: string; details: Record<string, unknown> }[];
+  resolution: { interpretation?: string | null; reasoning?: string } | null;
+}
+export interface Decision { decisionId: string; submissionItemId: string; outcome: string; presentedIdentifiers: Record<string, string>; matchedVehicleRef?: string; candidateVehicleRefs: string[]; rule: string; decidedBy: 'system' | 'reviewer'; decidedAt: string }
+export interface Source { id: string; code: string; name: string; domain: string; channel: string; isSimulated: boolean; evidenceClass: string; baselineReputation: number; status: 'active' | 'paused' | 'retired'; supersededBySourceId: string | null; coverage: { scope: string; periodFrom: string; periodTo: string | null }[] }
