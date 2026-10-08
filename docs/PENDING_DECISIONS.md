@@ -102,3 +102,14 @@
 | SAZO asks for more | The reviewer's question is shown to the business and sent by SMS. Sending more documents puts the business back in the review queue. |
 | Decision SMS | Managers get an SMS for approve, reject, more-information and suspend. A rejection SMS does not include the reviewer's reason (it says to contact support). |
 | Photos in buyer views | Buyers see that a photo exists, never the photo itself (it may show people or places). Only the uploader and SAZO reviewers can open it. |
+
+## Behaviour choices made while building the partner data-entry console (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| What each source may send | Fixed per kind of source in `packages/contracts/src/partner.ts` (e.g. police: stolen, recovered, impounded, released, accident; lenders: finance registered / paid off). The API refuses anything else from people sending records; internal test-data loads are not limited. |
+| Who can send | Operators of the organisation that owns the source, and SAZO admins (for the simulated sources during testing). Garages use the Garage app, not this console. |
+| Mileage in miles | The partner types the reading and the unit; SAZO works out km. |
+| Dates | One date per record (the day it happened); a date in the future is refused. |
+| CSV files | Up to 5,000 rows and 5 MB. Every row is checked first; only good rows are sent; each row gets its own result. Sending the same file again returns the same submission instead of duplicating records. Lists inside a cell use `;`. |
+| Finance details | Lender names and amounts are not entered here (O-001: buyers see status only). |

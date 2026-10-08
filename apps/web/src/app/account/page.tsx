@@ -28,7 +28,10 @@ export default async function Account() {
           </ul>
         </section>
       )}
-      <a href="/business/register" className="btn btn-ghost">Register a business</a>
+      <div className="flex flex-wrap gap-2">
+        <a href="/business/register" className="btn btn-ghost">Register a business</a>
+        <a href="/partner" className="btn btn-ghost">Send records (data partners)</a>
+      </div>
       <form action={signOut}><button type="submit" className="btn btn-ghost">Sign out</button></form>
     </div>
   );

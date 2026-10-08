@@ -11,6 +11,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: '/admin/matches', label: 'Vehicle matches', icon: 'directions_car' },
   { href: '/admin/sources', label: 'Data sources', icon: 'account_balance' },
   { href: '/admin/rebuild', label: 'Recalculate', icon: 'history' },
+  { href: '/partner', label: 'Send records', icon: 'receipt_long' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

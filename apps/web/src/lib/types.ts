@@ -114,3 +114,9 @@ export interface MyOrganisation {
   id: string; type: string; legalName: string; tradingName: string | null; status: string; role: string;
   verificationStatus: 'open' | 'info_requested' | 'approved' | 'rejected' | null; infoRequested: string | null; documents: number;
 }
+
+// ---------- partner console
+export interface PartnerSource { code: string; name: string; domain: string; channel: string; isSimulated: boolean; evidenceClass: string }
+export interface SubmissionItem { sequence: number; status: 'pending' | 'accepted' | 'rejected' | 'needs_review'; vehicleRef?: string; resolution?: string; errors: { path: string; code: string; message: string }[] }
+export interface Submission { submissionId: string; sourceCode: string; status: string; items: SubmissionItem[] }
+export interface SubmissionSummary { submissionId: string; status: string; receivedAt: string; items: number; accepted: number; rejected: number; needsReview: number }

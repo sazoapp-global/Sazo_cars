@@ -2,7 +2,7 @@
 // Submission (stored exactly as received) → validate → required evidence → resolve vehicle → observations.
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { isObservationType, requiredEvidenceFor, validateObservation } from '@sazo/contracts';
+import { DOMAIN_RECORD_TYPES, isObservationType, requiredEvidenceFor, validateObservation } from '@sazo/contracts';
 import pg from 'pg';
 import { EventBus } from '../../platform/event-bus.js';
 import { DB_POOL } from '../../platform/tokens.js';
@@ -80,6 +80,19 @@ export class IngestionService {
     return (await this.sources.byId(id))!;
   }
 
+  /** Recent submissions for a source, newest first, with how their items fared. */
+  async recentSubmissions(sourceId: string, limit: number) {
+    const { rows } = await this.pool.query(
+      `SELECT s.id AS "submissionId", s.status, s.received_at AS "receivedAt",
+              count(i.id)::int AS items,
+              count(i.id) FILTER (WHERE i.status = 'accepted')::int AS accepted,
+              count(i.id) FILTER (WHERE i.status = 'rejected')::int AS rejected,
+              count(i.id) FILTER (WHERE i.status = 'needs_review')::int AS "needsReview"
+         FROM ingest.submissions s LEFT JOIN ingest.submission_items i ON i.submission_id = s.id
+        WHERE s.source_id = $1 GROUP BY s.id ORDER BY s.received_at DESC LIMIT $2`, [sourceId, limit]);
+    return rows.map((r) => ({ ...r, receivedAt: new Date(r.receivedAt).toISOString() }));
+  }
+
   /** The organisation a submission was made for (its source's owner) — used for access checks. */
   async submissionOrganisation(submissionId: string): Promise<string | undefined> {
     const { rows } = await this.pool.query<{ organisation_id: string }>(
@@ -143,7 +156,13 @@ export class IngestionService {
 
     // 1. Validate every record against the catalogue.
     const records: RecordInput[] = [];
+    // People sending records (not internal loads) may only send their source's kinds of record (e.g. no mileage from police).
+    const allowed = opts.userId && source.channel !== 'garage_app' ? DOMAIN_RECORD_TYPES[source.domain] : undefined;
     for (const [ri, r] of (item.records ?? []).entries()) {
+      if (allowed && !allowed.includes(r.type as never)) {
+        errors.push({ path: `records[${ri}].type`, code: 'record_type_not_allowed', message: `a ${source.domain} source cannot send ${r.type}` });
+        continue;
+      }
       const v = validateObservation(r.type, r.attributes);
       if (!v.ok) {
         for (const e of v.errors) errors.push({ path: `records[${ri}].${e.path}`, code: 'invalid_record', message: e.message });
