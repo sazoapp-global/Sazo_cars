@@ -68,3 +68,13 @@ export async function startRebuild(form: FormData) {
   } catch (err) { back('/admin/rebuild', failure(err), false); }
   back('/admin/rebuild', `Recalculated ${n} ${n === 1 ? 'vehicle' : 'vehicles'}.`);
 }
+
+export async function decideOwnership(form: FormData) {
+  const decision = text(form, 'decision');
+  const reason = text(form, 'reason');
+  if (reason.length < 3) back('/admin/ownership', 'Write a reason (at least 3 characters).', false);
+  try {
+    await api(`/admin/ownership-claims/${text(form, 'id')}/decision`, { method: 'POST', auth: true, body: { decision, reason } });
+  } catch (err) { back('/admin/ownership', failure(err), false); }
+  back('/admin/ownership', decision === 'approve' ? 'Approved. The owner has been sent a text.' : 'Rejected. The person has been sent a text.');
+}

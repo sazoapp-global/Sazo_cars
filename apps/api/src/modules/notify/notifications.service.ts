@@ -14,6 +14,8 @@ const TEMPLATES: Record<string, { version: number; body: string }> = {
   org_info_requested: { version: 1, body: 'SAZO needs more information about {organisation}: {reason}. Reply on the SAZO website.' },
   org_rejected: { version: 1, body: 'SAZO could not approve {organisation} at this time. Contact SAZO support for details.' },
   org_suspended: { version: 1, body: '{organisation} has been suspended on SAZO and cannot record history for now. Contact SAZO support.' },
+  ownership_approved: { version: 1, body: 'SAZO confirmed you as the owner of {plate}. See it under My cars on SAZO.' },
+  ownership_rejected: { version: 1, body: 'SAZO could not confirm you as the owner of {plate} from the logbook photo. You can try again with a clearer photo.' },
   staff_added: { version: 1, body: '{organisation} added you to their team on SAZO. Sign in with this phone number to start recording jobs.' },
   // D-058: what was recorded, and a link to confirm or dispute. No costs, no other personal data.
   attestation: { version: 1, body: '{garage} recorded {work} on {plate} at {km} km on {date}. Was this your car? Confirm or dispute: {link}' },

@@ -126,3 +126,6 @@ export interface SavedCheck { vehicleRef: string; savedAt: string; summary: Summ
 export interface Comparison { vehicles: FullReport[]; differingQuestions: string[] }
 export interface SharedReport { snapshotRef: string; vehicleRef: string; createdAt: string; expiresAt: string | null; report: FullReport }
 export interface ShareLink { id: string; snapshotRef: string; vehicleRef: string; plate: string | null; createdAt: string; expiresAt: string | null; revoked: boolean }
+export interface MyCar { vehicleRef: string; status: 'pending' | 'verified' | 'rejected'; method: 'phone_match' | 'logbook'; claimedAt: string; reason: string | null; summary?: Summary }
+export interface Visit extends TimelineItem { ownerAnswer: 'confirmed' | 'disputed' | null; canAnswer: boolean }
+export interface OwnershipClaim { claimId: string; vehicleRef: string; plate: string | null; claimant: string; claimedAt: string; evidenceIds: string[] }

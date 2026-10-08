@@ -6,7 +6,7 @@ import { MILES_TO_KM, OBSERVATION_TYPES, isObservationType, validateObservation,
 
 /** Record types each source domain may submit. Garages use the Garage app; owners and community never use this console. */
 export const DOMAIN_RECORD_TYPES: Partial<Record<string, ObservationTypeCode[]>> = {
-  registration: ['spec_declared', 'registration_issued', 'plate_changed', 'identifier_assigned', 'deregistered', 'usage_declared', 'odometer_reading'],
+  registration: ['spec_declared', 'registration_issued', 'ownership_transferred', 'plate_changed', 'identifier_assigned', 'deregistered', 'usage_declared', 'odometer_reading'],
   customs: ['import_recorded', 'customs_cleared', 'spec_declared', 'identifier_assigned'],
   police: ['stolen_reported', 'stolen_recovered', 'impounded', 'released', 'accident_reported'],
   finance: ['finance_lien_registered', 'finance_lien_discharged'],
@@ -41,6 +41,7 @@ const LABELS: Record<string, string> = {
   'exportMileage.value': 'Mileage at export', 'exportMileage.unit': 'Unit at export', auctionGrade: 'Auction grade',
   newVehicle: 'Registered as new', oldPlate: 'Old plate', newPlate: 'New plate', claimType: 'Claim type',
   'askingPrice.amount': 'Asking price (UGX)', 'price.amount': 'Price (UGX)', structuralFindings: 'Structural damage found',
+  ownerPhone: 'Registered owner phone (+256…)',
   observedColour: 'Colour seen', observedEngineNumber: 'Engine number seen', tyresPercent: 'Tyre tread left (%)', batteryOk: 'Battery OK',
 };
 const humanise = (path: string) => LABELS[path] ?? path.split('.').at(-1)!.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());

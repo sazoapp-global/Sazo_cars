@@ -111,7 +111,8 @@ export class ReportsService {
   private exposeObservation(o: StoredObservation): Record<string, unknown> | undefined {
     if (o.sensitivity === 'confidential') return undefined; // costs, ownership parties (P-007)
     if (o.sensitivity === 'restricted') return {}; // police/finance/claims: the fact that it exists, not the detail (O-001)
-    return o.attributes;
+    // Links to people (owner, lender) never leave SAZO, even as ids (P-007).
+    return Object.fromEntries(Object.entries(o.attributes).filter(([k]) => !/PartyId$/.test(k)));
   }
 
   async timeline(ref: string) {

@@ -7,7 +7,9 @@ import { Icon } from '@/components/icon';
 import { QuestionCard } from '@/components/question-card';
 import { VehicleHeader } from '@/components/vehicle-header';
 import { api } from '@/lib/api';
+import type { MyCar } from '@/lib/types';
 import { saveCar, shareReport, unsaveCar } from '../../buyer-actions';
+import { claimCar } from '../../my-cars/actions';
 import { loadVehicle } from './load';
 
 type Props = { params: Promise<{ ref: string }>; searchParams: Promise<{ error?: string }> };
@@ -44,7 +46,10 @@ export default async function VehiclePage({ params, searchParams }: Props) {
   }
 
   const r = data.report;
-  const saved = (await api<{ saved: boolean }>(`/me/saved-checks/${ref}`, { auth: true }).catch(() => ({ saved: false }))).saved;
+  const [saved, mine] = await Promise.all([
+    api<{ saved: boolean }>(`/me/saved-checks/${ref}`, { auth: true }).then((x) => x.saved).catch(() => false),
+    api<{ items: MyCar[] }>('/me/cars', { auth: true }).then((x) => x.items.find((c) => c.vehicleRef === ref && c.status !== 'rejected')).catch(() => undefined),
+  ]);
   return (
     <>
       <VehicleHeader v={r.vehicle} asOf={r.asOf} tab="report" />
@@ -55,6 +60,12 @@ export default async function VehiclePage({ params, searchParams }: Props) {
           <Link href={`/compare?r=${ref}`} className="btn btn-ghost"><Icon name="compare_arrows" />Compare</Link>
           <form action={shareReport}><input type="hidden" name="ref" value={ref} />
             <button className="btn btn-ghost"><Icon name="share" />Share or save as PDF</button></form>
+          {mine ? (
+            <Link href={mine.status === 'verified' ? `/my-cars/${ref}` : '/my-cars'} className="btn btn-ghost"><Icon name="key" />{mine.status === 'verified' ? 'Your car' : 'Logbook being checked'}</Link>
+          ) : (
+            <form action={claimCar}><input type="hidden" name="ref" value={ref} />
+              <button className="btn btn-ghost"><Icon name="key" />This is my car</button></form>
+          )}
         </div>
         {error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{error}</p>}
         <FullReportView r={r} />

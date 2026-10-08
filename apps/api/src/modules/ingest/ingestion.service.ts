@@ -133,6 +133,10 @@ export class IngestionService {
       return { ...(await this.get(existing.rows[0].id))!, replayed: true };
     }
 
+    // Phone numbers of owners are swapped for private party ids before anything is stored, even the raw copy (DM-2).
+    input = { ...input, items: await Promise.all(input.items.map(async (it) => ({
+      ...it, records: await Promise.all((it.records ?? []).map(async (r) => ({ ...r, attributes: await this.observations.withoutPersonalData(this.pool, r.type, r.attributes ?? {}) }))),
+    }))) };
     const { rows } = await this.pool.query<{ id: string }>(
       `INSERT INTO ingest.submissions (source_id, submitted_by_user_id, acting_for_organisation_id, idempotency_key, raw_payload, payload_sha256, schema_version, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,'validating') RETURNING id`,

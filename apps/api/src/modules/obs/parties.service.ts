@@ -68,6 +68,12 @@ export class PartiesService {
     return rows.length > 0;
   }
 
+  /** Does this party's phone match a number (compared by keyed hash; nothing is decrypted)? */
+  async phoneMatches(partyId: string, phoneE164: string): Promise<boolean> {
+    const { rows } = await this.pool.query('SELECT 1 FROM pii.parties WHERE id = $1 AND phone_hash = $2 AND erased_at IS NULL', [partyId, this.phoneHash(phoneE164)]);
+    return rows.length > 0;
+  }
+
   /** Decrypt for an allowed purpose (sending an SMS, showing the garage its own customer). */
   async reveal(partyId: string): Promise<{ name?: string; phone?: string } | undefined> {
     const { rows } = await this.pool.query<{ name_ciphertext: Buffer | null; phone_ciphertext: Buffer | null; erased_at: Date | null }>(

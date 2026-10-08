@@ -2,6 +2,7 @@
 // pipeline into a brand-new database, produces exactly its expected outcome — and the HTTP views respect
 // the exposure rules. Skipped when TEST_DATABASE_URL is not set.
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
@@ -224,6 +225,60 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
     expect(record).toMatchObject({ excluded: true, exclusionReason: 'retired_simulated_source' });
     const report = await request(app.getHttpServer()).get(`/v1/vehicles/${ref('S12')}/report`).set(auth).expect(200);
     expect(report.body.facts.find((f: { key: string }) => f.key === 'finance_status')?.value).not.toBe('active');
+  });
+
+  it('O-007: owners prove a car is theirs by phone match or logbook photo; owner answers count; selling ends it', async () => {
+    const http = request(app.getHttpServer());
+    const iam = app.get(IamService);
+    const tokens = app.get(AuthService);
+    const as = async (phone: string, name: string) => ({ Authorization: `Bearer ${(await tokens.issueTokens(await iam.ensureUser(phone, name))).accessToken}` });
+    const OWNER = '+256772440011';
+
+    // The registry records the owner's phone; it goes to the private store, not into the record or the raw copy.
+    await http.post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000dd').set('X-Source-Code', 'REG')
+      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZSU60-0071234' }, records: [
+        { type: 'ownership_transferred', attributes: { ownerPhone: OWNER }, time: { at: '2025-01-15T00:00:00Z', precision: 'day' } }] }] }).expect(202);
+    const db = new pg.Client({ connectionString: url.toString() });
+    await db.connect();
+    const leaks = await db.query(`SELECT (SELECT count(*) FROM ingest.submissions WHERE raw_payload::text LIKE '%772440011%')::int
+      + (SELECT count(*) FROM ingest.submission_items WHERE raw_item::text LIKE '%772440011%')::int
+      + (SELECT count(*) FROM obs.observations WHERE attributes::text LIKE '%772440011%')::int AS n`);
+    await db.end();
+    expect(leaks.rows[0].n).toBe(0);
+
+    // Phone match: confirmed at once.
+    const owner = await as(OWNER, 'Real Owner');
+    expect((await http.post(`/v1/vehicles/${ref('S01')}/ownership-claims`).set(owner).send({}).expect(200)).body).toEqual({ status: 'verified', method: 'phone_match' });
+    expect((await http.get('/v1/me/cars').set(owner).expect(200)).body.items[0]).toMatchObject({ vehicleRef: ref('S01'), status: 'verified' });
+
+    // Someone else: no match → asked for the logbook → a reviewer decides.
+    const other = await as('+256772440022', 'Someone Else');
+    expect((await http.post(`/v1/vehicles/${ref('S01')}/ownership-claims`).set(other).send({}).expect(422)).body.code).toBe('no_phone_match');
+    const photo = Buffer.from('logbook photo');
+    const slot = await http.post('/v1/evidence/uploads').set(other).send({ kind: 'official_document', mimeType: 'image/jpeg', sizeBytes: photo.length, sha256: createHash('sha256').update(photo).digest('hex') }).expect(201);
+    await http.put(`/v1/evidence/uploads/${slot.body.evidenceId}/content`).set(other).set('Content-Type', 'image/jpeg').send(photo).expect(204);
+    await http.post(`/v1/evidence/${slot.body.evidenceId}/complete`).set(other).expect(200);
+    expect((await http.post(`/v1/vehicles/${ref('S01')}/ownership-claims`).set(other).send({ logbookEvidenceId: slot.body.evidenceId }).expect(200)).body.status).toBe('pending');
+    const queue = await http.get('/v1/admin/ownership-claims').set(auth).expect(200);
+    const claim = queue.body.items.find((c: { vehicleRef: string }) => c.vehicleRef === ref('S01'));
+    await http.post(`/v1/admin/ownership-claims/${claim.claimId}/decision`).set(auth).send({ decision: 'reject', reason: 'Name on logbook does not match' }).expect(200);
+    expect((await http.get('/v1/me/cars').set(other).expect(200)).body.items[0]).toMatchObject({ status: 'rejected', reason: 'Name on logbook does not match' });
+
+    // The owner confirms or disputes garage visits — once each.
+    const visits = (await http.get(`/v1/me/cars/${ref('S01')}/visits`).set(owner).expect(200)).body.items;
+    const before = visits.find((v: { time: { at: string } }) => v.time.at < '2025-01-15');
+    expect(before.canAnswer).toBe(false); // before the car was theirs
+    await http.post(`/v1/me/cars/${ref('S01')}/visits/${before.eventId}`).set(owner).send({ response: 'confirmed' }).expect(422);
+    const open = visits.find((v: { canAnswer: boolean }) => v.canAnswer);
+    await http.post(`/v1/me/cars/${ref('S01')}/visits/${open.eventId}`).set(owner).send({ response: 'confirmed' }).expect(204);
+    await http.post(`/v1/me/cars/${ref('S01')}/visits/${open.eventId}`).set(owner).send({ response: 'disputed' }).expect(409);
+    await http.get(`/v1/me/cars/${ref('S01')}/visits`).set(other).expect(403);
+
+    // Sold: the registry records a new owner → the old owner's claim ends.
+    await http.post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000ee').set('X-Source-Code', 'REG')
+      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZSU60-0071234' }, records: [
+        { type: 'ownership_transferred', attributes: { ownerPhone: '+256772440033' }, time: { at: '2026-09-01T00:00:00Z', precision: 'day' } }] }] }).expect(202);
+    expect((await http.get('/v1/me/cars').set(owner).expect(200)).body.items).toEqual([]);
   });
 
   it('a full rebuild recomputes every vehicle', async () => {

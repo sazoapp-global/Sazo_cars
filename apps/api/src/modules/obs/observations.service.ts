@@ -7,6 +7,7 @@ import { z } from 'zod';
 import type { Emit } from '../../platform/event-bus.js';
 import type { Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
+import { PartiesService } from './parties.service.js';
 
 export interface RecordInput {
   type: string;
@@ -54,7 +55,51 @@ function requiredEvidenceOf(code: ObservationTypeCode): string[] {
 @Injectable()
 export class ObservationsService implements OnModuleInit {
   private readonly log = new Logger('Observations');
-  constructor(@Inject(DB_POOL) private readonly pool: pg.Pool) {}
+  constructor(
+    @Inject(DB_POOL) private readonly pool: pg.Pool,
+    @Inject(PartiesService) private readonly parties: PartiesService,
+  ) {}
+
+  /** Owner phone numbers never sit in a record: they go to the personal-data store and the record keeps a party id (DM-2). */
+  async withoutPersonalData(tx: Sql, type: string, attributes: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (typeof attributes.ownerPhone !== 'string') return attributes;
+    const { ownerPhone, ...rest } = attributes;
+    const partyId = await this.parties.upsertPerson({ phone: ownerPhone as string }, tx);
+    return type === 'ownership_transferred' ? { ...rest, toPartyId: partyId } : { ...rest, ownerPartyId: partyId };
+  }
+
+  /** The party the latest registration or change-of-owner record names as the owner (none if unknown). */
+  async currentOwnerParty(vehicleIds: string[]): Promise<{ partyId: string; since: string | null } | undefined> {
+    const { rows } = await this.pool.query<{ party: string | null; event_time: Date | null }>(
+      `SELECT COALESCE(attributes->>'toPartyId', attributes->>'ownerPartyId') AS party, event_time FROM obs.observations
+        WHERE vehicle_id = ANY($1) AND type IN ('registration_issued','ownership_transferred')
+          AND (attributes ? 'toPartyId' OR attributes ? 'ownerPartyId' OR type = 'ownership_transferred')
+        ORDER BY event_time DESC NULLS LAST, recorded_at DESC LIMIT 1`, [vehicleIds]);
+    const r = rows[0];
+    return r?.party ? { partyId: r.party, since: r.event_time?.toISOString() ?? null } : undefined;
+  }
+
+  /** Change-of-owner records after a moment (an owner's claim ends when the car is sold on). */
+  async ownershipChangedSince(vehicleIds: string[], since: string): Promise<boolean> {
+    const { rows } = await this.pool.query(
+      `SELECT 1 FROM obs.observations WHERE vehicle_id = ANY($1) AND type = 'ownership_transferred' AND recorded_at > $2 LIMIT 1`, [vehicleIds, since]);
+    return rows.length > 0;
+  }
+
+  /** Has this owner (party) already answered for this visit? Earlier owners' answers are theirs, not this owner's. */
+  async ownerAnswer(eventId: string, partyId: string): Promise<'confirmed' | 'disputed' | undefined> {
+    const { rows } = await this.pool.query<{ response: 'confirmed' | 'disputed' }>(
+      `SELECT response FROM obs.attestations WHERE target_event_id = $1 AND attester_kind = 'registered_owner' AND attester_party_id = $2
+        ORDER BY responded_at DESC LIMIT 1`, [eventId, partyId]);
+    return rows[0]?.response;
+  }
+
+  /** When the current ownership began: the latest registration or change-of-owner record (undefined if none). */
+  async ownershipStart(vehicleIds: string[]): Promise<string | undefined> {
+    const { rows } = await this.pool.query<{ t: Date | null }>(
+      `SELECT max(event_time) AS t FROM obs.observations WHERE vehicle_id = ANY($1) AND type IN ('registration_issued','ownership_transferred')`, [vehicleIds]);
+    return rows[0]?.t?.toISOString();
+  }
 
   /** Keep obs.observation_types in step with the code catalogue (@sazo/contracts). */
   async onModuleInit(): Promise<void> {
@@ -95,11 +140,12 @@ export class ObservationsService implements OnModuleInit {
         events.set(day, eventId);
       }
       const def = OBSERVATION_TYPES[r.type as ObservationTypeCode];
+      const attributes = await this.withoutPersonalData(tx, r.type, r.attributes);
       const { rows } = await tx.query<{ id: string }>(
         `INSERT INTO obs.observations (vehicle_id, event_id, type, type_schema_version, attributes, event_time, event_time_precision,
            source_id, submission_item_id, entered_by_user_id, acting_for_organisation_id, evidence_class, sensitivity)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
-        [input.vehicleId, eventId, r.type, def.schemaVersion, r.attributes, r.time.at, r.time.at ? r.time.precision : 'unknown',
+        [input.vehicleId, eventId, r.type, def.schemaVersion, attributes, r.time.at, r.time.at ? r.time.precision : 'unknown',
           input.sourceId, input.submissionItemId, input.enteredByUserId ?? null, input.actingForOrganisationId ?? null,
           input.evidenceClass, def.defaultSensitivity],
       );

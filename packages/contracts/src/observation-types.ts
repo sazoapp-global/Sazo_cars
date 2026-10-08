@@ -9,6 +9,7 @@ const km = z.number().int().nonnegative();
 const money = z.object({ amount: z.number().int().nonnegative(), currency: z.literal('UGX') });
 const distance = z.object({ value: z.number().nonnegative(), unit: z.enum(['km', 'mi']) });
 const colour = z.string().min(2).max(40);
+const phone = z.string().regex(/^\+[1-9][0-9]{7,14}$/, 'use international format, e.g. +256772123456');
 
 export const MILES_TO_KM = 1.609344;
 
@@ -61,6 +62,9 @@ export const OBSERVATION_TYPES = {
   registration_issued: def('registration_issued', 'registration', z.object({
     plate: z.string().min(4),
     newVehicle: z.boolean().optional(),
+    ownerPartyId: z.string().uuid().optional(),
+    /** Accepted at intake only: SAZO moves it to the private personal-data store and keeps ownerPartyId (DM-2). */
+    ownerPhone: phone.optional(),
   })),
   plate_changed: def('plate_changed', 'registration', z.object({
     oldPlate: z.string().min(4),
@@ -72,8 +76,10 @@ export const OBSERVATION_TYPES = {
   // Ownership & use
   ownership_transferred: def('ownership_transferred', 'registration', z.object({
     fromPartyId: z.string().uuid().optional(),
-    toPartyId: z.string().uuid(),
-  }), 'confidential'),
+    toPartyId: z.string().uuid().optional(),
+    /** Accepted at intake only: replaced by toPartyId before storage (DM-2). */
+    ownerPhone: phone.optional(),
+  }).refine((a) => a.toPartyId || a.ownerPhone, { message: 'the new owner is required (phone number)' }), 'confidential'),
   usage_declared: def('usage_declared', 'usage', z.object({ usage: z.enum(USAGE_TYPES) })),
   rental_period: def('rental_period', 'rental', z.object({
     from: z.string().date(),

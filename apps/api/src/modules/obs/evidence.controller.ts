@@ -70,7 +70,7 @@ export class EvidenceController {
   async file(@CurrentActor() actor: Actor, @Param('id') id: string) {
     if (!Uuid.safeParse(id).success) throw notFound('evidence_not_found', 'No such file');
     const f = await this.evidence.content(id);
-    const reviewer = actor.permissions.has('conflict.review') || actor.permissions.has('organisation.approve');
+    const reviewer = actor.permissions.has('conflict.review') || actor.permissions.has('organisation.approve') || actor.permissions.has('ownership.review');
     if (!f || (f.uploadedBy !== actor.userId && !reviewer)) throw notFound('evidence_not_found', 'No such file');
     return new StreamableFile(f.bytes, { type: f.mime, disposition: 'inline', length: f.bytes.length });
   }

@@ -72,6 +72,11 @@ export class IamService {
     return org;
   }
 
+  /** The verified phone a user signs in with (used to match the registry's owner record, O-007). */
+  async userPhone(userId: string): Promise<string | undefined> {
+    return (await this.repo.userById(userId))?.phone ?? undefined;
+  }
+
   myOrganisations(userId: string) {
     return this.repo.myOrganisations(userId);
   }

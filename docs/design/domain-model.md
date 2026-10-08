@@ -453,7 +453,7 @@ erDiagram
 ## 11. Still open (affects this model)
 
 - **O-001:** exactly which finance and police attributes each audience sees. This fills in `ExposurePolicy`; the model doesn't change.
-- **O-007:** how an owner proves ownership. It will add an `OwnershipClaim` concept linking a User to a Vehicle with evidence.
+- ~~O-007~~ **Decided 8 Oct 2026:** `OwnershipClaim` (report.ownership_claims) links a User to a Vehicle, proven by phone match with the registry owner party or by a logbook photo (evidence) reviewed by SAZO.
 - **P-013:** data residency, and how long personal data is kept. This affects the `pii` store's retention and hosting.
 - Whether sale prices are recorded and shown (they affect valuation quality; commercially sensitive).
 

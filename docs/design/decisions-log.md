@@ -139,7 +139,7 @@
 | O-004 | Which partners to approach first, and in what order. | |
 | O-005 | Business model and monetisation. | Outside the MVP definition. |
 | O-006 | Detailed contents for the dealer, auction, rental, manufacturer and inspection-centre domains. | The handoff gives the scope. Field-level detail will come out of the screen walkthrough. |
-| O-007 | How an owner proves ownership when adding "my car" to track it. | Affects what owners and later buyers can see. |
+| O-007 | **✅ DECIDED 8 Oct 2026: matching a phone number and uploading a logbook photo.** If the person's signed-in phone equals the phone on the latest registry owner record, they are confirmed at once; otherwise they send a photo of the logbook and a SAZO reviewer approves or rejects it (with a reason, sent by SMS). Ownership ends automatically when a later change of owner is recorded. | Built as "My cars": confirmed owners confirm or dispute garage visits made while the car was theirs. |
 | O-008 | Real-world sources for reference knowledge (comparables, service intervals, price lists) once simulation ends. | |
 | O-009 | **Screens not yet designed** (see section 12). | The design zip covers only part of the system. |
 

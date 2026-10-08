@@ -34,6 +34,8 @@ tags:
     description: Search, public summary, full report, timeline, evidence ledger, compare (consumer surface).
   - name: Saved & shared
     description: Saved checks, frozen report snapshots, share links and PDFs.
+  - name: My cars
+    description: Owners prove a car is theirs (phone match or logbook photo, O-007) and answer for garage visits.
   - name: Garage
     description: SAZO Garage workspace (D-050–D-059).
   - name: Evidence
@@ -396,6 +398,119 @@ paths:
       responses:
         '204': { description: Removed }
         '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /vehicles/{vehicleRef}/ownership-claims:
+    post:
+      tags: [My cars]
+      operationId: claimOwnership
+      summary: '"This is my car" — phone match with the registry owner record, else a logbook photo for review (O-007)'
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logbookEvidenceId: { type: string, format: uuid, description: An uploaded official_document (logbook photo). Needed only when the phone does not match. }
+      responses:
+        '200':
+          description: verified (phone match) or pending (logbook sent to a reviewer)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [verified, pending] }
+                  method: { type: string, enum: [phone_match, logbook] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: already_claimed }
+        '422': { description: no_phone_match (send a logbook photo) or logbook_invalid }
+
+  /me/cars:
+    get:
+      tags: [My cars]
+      operationId: listMyCars
+      summary: My cars — confirmed, waiting for review, or not confirmed (with the reviewer's reason)
+      responses:
+        '200': { description: '{ items: [{ vehicleRef, status, method, claimedAt, reason, summary }] }' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/cars/{vehicleRef}:
+    delete:
+      tags: [My cars]
+      operationId: removeMyCar
+      summary: Not my car any more, or cancel a pending claim
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      responses:
+        '204': { description: Removed }
+
+  /me/cars/{vehicleRef}/visits:
+    get:
+      tags: [My cars]
+      operationId: listMyCarVisits
+      summary: Garage visits on my car; canAnswer is true for visits since the car became mine that I have not answered
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      responses:
+        '200': { description: '{ items: [TimelineItem & { ownerAnswer, canAnswer }] }' }
+        '403': { description: not_owner }
+
+  /me/cars/{vehicleRef}/visits/{eventId}:
+    post:
+      tags: [My cars]
+      operationId: answerMyCarVisit
+      summary: Confirm or dispute a garage visit as the registered owner
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+        - { name: eventId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [response]
+              properties:
+                response: { type: string, enum: [confirmed, disputed] }
+                comment: { type: string, maxLength: 500 }
+      responses:
+        '204': { description: Recorded }
+        '403': { description: not_owner }
+        '404': { description: visit_not_found }
+        '409': { description: already_answered }
+        '422': { description: before_your_time }
+
+  /admin/ownership-claims:
+    get:
+      tags: [Admin]
+      operationId: listOwnershipClaims
+      summary: Logbook claims waiting for a reviewer (ownership.review)
+      responses:
+        '200': { description: '{ items: [{ claimId, vehicleRef, plate, claimant, claimedAt, evidenceIds }] }' }
+
+  /admin/ownership-claims/{claimId}/decision:
+    post:
+      tags: [Admin]
+      operationId: decideOwnershipClaim
+      summary: Approve or reject a logbook claim; the person gets an SMS and sees the reason
+      parameters:
+        - { name: claimId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200': { description: Decided }
+        '404': { description: claim_not_found (or already decided) }
 
   /vehicles/{vehicleRef}/snapshots:
     post:
