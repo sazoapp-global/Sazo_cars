@@ -77,7 +77,10 @@ Start Docker Desktop, then `npm run dev:services` and the three windows from ste
 
 ## If something goes wrong
 
-- **"port 5432 is already in use":** another Postgres is running. Stop it, or change the port in `docker-compose.yml` and set `DATABASE_URL`.
-- **"ECONNREFUSED … 5432":** Docker isn't running, or the database is still starting — wait 10 seconds and try again.
+- **`ECONNRESET` or `ECONNREFUSED` when migrating:** the database isn't ready. Check Docker Desktop is running, then `docker compose ps` — `postgres` should say `healthy`. If it says `restarting` or is missing, `docker compose logs postgres` shows why. `npm run dev:services` now waits until it is healthy, and `db:migrate` waits up to a minute.
+- **Another PostgreSQL on this computer** (common on Windows if PostgreSQL was ever installed): it takes port 5432 first. Check with `netstat -ano | findstr :5432` (Windows) or `lsof -i :5432` (Mac). Either stop it (Windows: Services → `postgresql-x64-…` → Stop), or move SAZO's database to 5433: in `docker-compose.yml` change `"5432:5432"` to `"5433:5432"`, run `npm run dev:services` again, and in **every** window first set:
+  - Windows (Command Prompt): `set DATABASE_URL=postgres://sazo:sazo@localhost:5433/sazo`
+  - Windows (PowerShell): `$env:DATABASE_URL="postgres://sazo:sazo@localhost:5433/sazo"`
+  - Mac/Linux: `export DATABASE_URL=postgres://sazo:sazo@localhost:5433/sazo`
 - **Website shows an error about the API:** window 1 isn't running or has stopped. Look at its last lines.
 - **Odd errors after pulling new code:** run `npm install`, `npm run build` and `npm run db:migrate` again.

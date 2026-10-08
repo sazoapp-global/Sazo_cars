@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "db:migrate": "node db/migrate.mjs",
     "db:test": "node db/migrate.mjs --test",
-    "dev:services": "docker compose up -d"
+    "dev:services": "docker compose up -d --wait"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
