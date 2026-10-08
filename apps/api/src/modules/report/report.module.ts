@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConcernModule } from '../concern/index.js';
 import { IamModule } from '../iam/index.js';
 import { IngestModule } from '../ingest/index.js';
 import { NotifyModule } from '../notify/index.js';
@@ -14,7 +15,7 @@ import { ReportsController } from './reports.controller.js';
 import { ReportsService } from './reports.service.js';
 
 @Module({
-  imports: [IamModule, NotifyModule, VehicleModule, ObservationsModule, IngestModule, TrustModule, ReferenceModule],
+  imports: [IamModule, ConcernModule, NotifyModule, VehicleModule, ObservationsModule, IngestModule, TrustModule, ReferenceModule],
   controllers: [ReportsController, BuyerController, OwnershipController],
   providers: [ReportsService, BuyerService, OwnershipService],
   exports: [ReportsService],

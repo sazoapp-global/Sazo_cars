@@ -1,5 +1,6 @@
 import { FACT_LABELS, PANEL_LABELS, factValue, formatDate, formatUgx, headline, type Panel } from '@sazo/contracts';
 import type { FullReport, LatestInspection } from '@/lib/types';
+import { ConcernNotices } from './concern-notices';
 import { Confidence } from './confidence';
 import { HealthDial } from './health-dial';
 import { Icon } from './icon';
@@ -14,6 +15,7 @@ export function FullReportView({ r }: { r: FullReport }) {
   const valuation = r.questions.find((q) => q.question === 'valuation');
   return (
     <>
+        <ConcernNotices notices={r.notices} />
         <section className="card grid gap-6 p-4 md:grid-cols-2 md:p-5" aria-label="Scores">
           <HealthDial health={r.health} />
           <Confidence rc={r.recordConfidence} />

@@ -5,3 +5,4 @@ export * from './copy.js';
 export * from './garage-job.js';
 export * from './partner.js';
 export * from './inspection-form.js';
+export * from './concerns.js';

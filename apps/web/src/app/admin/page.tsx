@@ -4,16 +4,20 @@ import { adminFetch, requireStaff } from './guard';
 
 export default async function AdminHome() {
   const me = await requireStaff('/admin');
-  const [orgs, conflicts, matches] = await Promise.all([
+  const [orgs, conflicts, matches, concerns, claims] = await Promise.all([
     adminFetch<{ items: Organisation[] }>('/admin/organisations?status=pending_verification'),
     adminFetch<{ items: Conflict[] }>('/admin/conflicts'),
     adminFetch<{ items: Decision[] }>('/admin/resolutions?outcome=ambiguous'),
+    adminFetch<{ items: unknown[] }>('/admin/concerns?status=open'),
+    adminFetch<{ items: unknown[] }>('/admin/ownership-claims'),
   ]);
   const count = (x: { items: unknown[] } | 'forbidden') => (x === 'forbidden' ? '—' : String(x.items.length));
   const cards = [
     { href: '/admin/organisations', n: count(orgs), label: 'businesses waiting for approval', hint: 'Garages cannot record history until approved (D-055).' },
     { href: '/admin/conflicts', n: count(conflicts), label: 'open conflicts', hint: 'Records that disagree — resolve with written reasoning.' },
     { href: '/admin/matches', n: count(matches), label: 'records waiting for a vehicle match', hint: 'SAZO could not tell which car a record belongs to.' },
+    { href: '/admin/concerns', n: count(concerns), label: 'reported problems to check', hint: 'Signs of fraud reported by garages and inspectors (O-002).' },
+    { href: '/admin/ownership', n: count(claims), label: 'logbook photos to check', hint: 'People asking to be confirmed as a car’s owner (O-007).' },
   ];
   return (
     <>

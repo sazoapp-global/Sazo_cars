@@ -31,7 +31,9 @@ export interface QuestionView {
 
 export interface RecordConfidence { level: 'high' | 'medium' | 'low' | 'insufficient'; records: number; sources: number; openConflicts: number }
 
+export type VehicleNotice = { kind: 'under_review' } | { kind: 'upheld'; category: import('@sazo/contracts').ConcernCategory };
 export interface Summary {
+  notices?: VehicleNotice[];
   vehicle: VehicleCard;
   questions: QuestionView[];
   recordConfidence: RecordConfidence;
@@ -48,6 +50,7 @@ export interface FullReport {
   facts: { key: string; value: unknown; confidence: number; estimated: boolean }[];
   openConflicts: { topic: string; headlineKey: string }[];
   latestInspection?: LatestInspection | null;
+  notices?: VehicleNotice[];
   asOf: string;
   ruleSetVersion: string;
 }
@@ -139,3 +142,7 @@ export interface StockItem {
   listedAt: string; soldAt: string | null; salePriceUgx: number | null; vehicle: VehicleCard | null; questions: QuestionView[]; recordConfidence: RecordConfidence | null;
 }
 export interface StaffMember { userId: string; displayName: string; role: string; status: string; joinedAt: string | null }
+export interface ConcernQueueItem {
+  concernId: string; plate: string; vehicleRef?: string; category: import('@sazo/contracts').ConcernCategory; severity: 'serious' | 'attention'; description: string;
+  status: 'open' | 'upheld' | 'dismissed'; decisionReason: string | null; createdAt: string; evidenceIds: string[]; reporter: string; organisation: string; organisationType?: string;
+}

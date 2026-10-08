@@ -1,6 +1,7 @@
 import { factValue } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ConcernNotices } from '@/components/concern-notices';
 import { Confidence } from '@/components/confidence';
 import { FullReportView, NextSteps } from '@/components/full-report';
 import { Icon } from '@/components/icon';
@@ -30,6 +31,7 @@ export default async function VehiclePage({ params, searchParams }: Props) {
       <>
         <VehicleHeader v={s.vehicle} asOf={s.asOf} />
         <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 md:px-8">
+          <ConcernNotices notices={s.notices} />
           <div className="card flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between md:p-5">
             <Confidence rc={s.recordConfidence} />
             <div className="rounded-lg bg-soft p-4 md:max-w-sm">

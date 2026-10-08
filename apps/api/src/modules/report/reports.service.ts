@@ -2,6 +2,7 @@
 // The only place that assembles what a user sees, so hiding rules live in exactly one place.
 import { Inject, Injectable } from '@nestjs/common';
 import { repaintedPanels } from '@sazo/contracts';
+import { ConcernService } from '../concern/index.js';
 import { IngestionService } from '../ingest/index.js';
 import { ObservationsService, type StoredObservation } from '../obs/index.js';
 import { ReferenceService } from '../ref/index.js';
@@ -29,6 +30,7 @@ export class ReportsService {
     @Inject(ObservationsService) private readonly observations: ObservationsService,
     @Inject(IngestionService) private readonly ingestion: IngestionService,
     @Inject(ReferenceService) private readonly reference: ReferenceService,
+    @Inject(ConcernService) private readonly concerns: ConcernService,
   ) {}
 
   private async load(ref: string): Promise<{ id: string; card: VehicleCard & Record<string, unknown>; snap: TrustSnapshot }> {
@@ -57,9 +59,10 @@ export class ReportsService {
 
   /** Public summary: one status + one headline per question. No details, figures, sources or valuation (P-002). */
   async publicSummary(ref: string) {
-    const { card, snap } = await this.load(ref);
+    const { id, card, snap } = await this.load(ref);
     return {
       vehicle: card,
+      notices: await this.notices(id),
       questions: snap.questions.map((q) => ({ question: q.question, status: q.status, headlineKey: q.headlineKey })),
       recordConfidence: snap.recordConfidence,
       asOf: snap.asOf,
@@ -91,9 +94,15 @@ export class ReportsService {
       facts,
       openConflicts: snap.openConflicts.map((c) => ({ topic: c.topic, headlineKey: `conflict.${c.topic}.open` })),
       latestInspection: await this.latestInspection(id, snap),
+      notices: await this.notices(id),
       asOf: snap.asOf,
       ruleSetVersion: snap.ruleSetVersion,
     };
+  }
+
+  /** Concerns raised by businesses (O-002): "being checked" while a serious one is open; what SAZO upheld. */
+  private async notices(id: string) {
+    return this.concerns.notices(await this.registry.mergeFamily(id));
   }
 
   /** The most recent inspection SAZO counts (P-004): what a trained person found on the car that day. */

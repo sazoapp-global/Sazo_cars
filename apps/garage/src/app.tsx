@@ -13,6 +13,7 @@ import { JobWizard } from './screens/job-wizard';
 import { ServerJobView } from './screens/server-job';
 import { SignIn } from './screens/sign-in';
 import { Staff } from './screens/staff';
+import { Concerns } from './screens/concerns';
 import { UpdateBanner } from './components/update-banner';
 
 import { isInspector, WORKPLACE_TYPES, type Garage } from './lib/types';
@@ -75,6 +76,7 @@ export function App() {
           : route.name === 'inspection' ? <InspectionWizard key={route.id} id={route.id} workplace={garage} me={session.me} />
           : route.name === 'server-inspection' ? <ServerInspectionView id={route.id} workplace={garage} />
           : route.name === 'staff' ? <Staff garage={garage} />
+          : route.name === 'concerns' ? <Concerns workplace={garage} />
           : isInspector(garage) ? <InspectionHome workplace={garage} me={session.me} onSignOut={leave} />
           : <Home garage={garage} me={session.me} onSignOut={leave} />}
       </main>

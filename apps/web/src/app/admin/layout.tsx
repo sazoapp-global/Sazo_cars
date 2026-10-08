@@ -8,6 +8,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: '/admin', label: 'Overview', icon: 'list_alt' },
   { href: '/admin/organisations', label: 'Businesses', icon: 'garage' },
   { href: '/admin/ownership', label: 'Ownership claims', icon: 'key' },
+  { href: '/admin/concerns', label: 'Reported problems', icon: 'report' },
   { href: '/admin/conflicts', label: 'Conflicts', icon: 'warning' },
   { href: '/admin/matches', label: 'Vehicle matches', icon: 'directions_car' },
   { href: '/admin/sources', label: 'Data sources', icon: 'account_balance' },

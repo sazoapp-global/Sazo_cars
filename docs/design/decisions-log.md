@@ -134,7 +134,7 @@
 | ID | Question | Notes |
 |---|---|---|
 | O-001 | **✅ Default accepted 8 Oct 2026: buyers see status only ("Active finance on record"), no lender, amount or case details.** Exact exposure rules for police and finance details (e.g. "has an active lien" vs lender name vs amounts). | Needed for buyer question 6, which is in the MVP. Product/legal decision. |
-| O-002 | Garage fraud-report categories and what happens next (admin review, automatic vehicle flag, or both). | |
+| O-002 | **✅ DECIDED 8 Oct 2026: both — SAZO staff review every report, and a serious one puts a neutral "being checked" notice on the car until it is settled.** Categories: plate does not belong to the car, chassis/VIN tampered, mileage wound back, may be stolen, papers look fake (serious) and something else (attention). Upheld → buyers see what SAZO confirmed; dismissed → nothing shown. The reporting business is never named to buyers. | Garages, inspectors and dealers can report; 10 reports a day per business. |
 | O-003 | What makes garages adopt SAZO: voluntary value, regulation, or both. | Business decision. |
 | O-004 | Which partners to approach first, and in what order. | |
 | O-005 | Business model and monetisation. | Outside the MVP definition. |
@@ -180,3 +180,4 @@ Physical inspection booking and inspector escort · telematics · fleet manageme
 | 2026-10-08 | O-007 decided: owners prove ownership by phone match with the registry owner record, or a logbook photo reviewed by SAZO. Built as "My cars". |
 | 2026-10-08 | Inspector workspace built (P-004, P-005) in the shared phone app. Rule Set v1.1 (`rs-2026.10-v1.1`): inspection paint readings add a repaint note to the damage answer; structural damage seen by an inspector counts as a damage record. |
 | 2026-10-08 | Dealer workspace built (P-005) on the website. Cars first seen through a dealer listing are provisional until an official record matches (P-010 extended to dealers). |
+| 2026-10-08 | O-002 decided and built: concerns reported by businesses, reviewed by SAZO staff, with a "being checked" notice while serious ones are open. |

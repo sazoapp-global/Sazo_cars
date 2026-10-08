@@ -6,7 +6,7 @@ import { ApiError, OfflineError, request } from './api';
 import { CAR_PHOTO_SLOTS, draftsFor, getDraft, getInspection, getPhoto, inspectionsFor, saveDraft, saveInspection, savePhoto, type LocalDraft, type LocalInspection } from './db';
 
 /** Upload one photo if it isn't on the server yet; returns its evidence id. */
-async function uploadPhoto(photoId: string): Promise<string> {
+export async function uploadPhoto(photoId: string): Promise<string> {
   const p = await getPhoto(photoId);
   if (!p) throw new Error('photo missing on this phone');
   if (p.evidenceId) return p.evidenceId;

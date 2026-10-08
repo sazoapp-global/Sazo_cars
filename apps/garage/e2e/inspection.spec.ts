@@ -108,3 +108,27 @@ test('inspect a car and send the checklist', async ({ page }) => {
   await expect(page.getByText('Rear wiper not working')).toBeVisible();
   await shot(page, 'i5-sent');
 });
+
+test('report a problem with a car (O-002) and follow what SAZO decides', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Your phone number').fill(`0${MANAGER.slice(4)}`);
+  await page.getByRole('button', { name: 'Send code' }).click();
+  await expect(page.getByLabel('6-digit code')).toBeVisible();
+  await page.getByLabel('6-digit code').fill(lastCode());
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Report a problem with a car' }).click();
+  await expect(page.getByRole('heading', { name: 'Report a problem with a car' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Send to SAZO' })).toBeDisabled();
+  await page.getByLabel('Number plate *').fill('UBG 909K');
+  await page.getByLabel(/Chassis or VIN looks tampered with/).check();
+  await page.getByLabel('What did you see? *').fill('Chassis stamp ground off and re-punched; letters uneven');
+  await page.locator('input[type=file]').first().setInputFiles({ name: 'chassis.png', mimeType: 'image/png', buffer: PNG });
+  await expect(page.getByAltText(/Photo \(optional\)/)).toBeVisible();
+  await a11y(page);
+  await shot(page, 'c1-report');
+  await page.getByRole('button', { name: 'Send to SAZO' }).click();
+  await expect(page.getByText('Thank you. SAZO will check it')).toBeVisible();
+  const mine = page.getByRole('listitem').filter({ hasText: 'UBG 909K' });
+  await expect(mine).toContainText('Chassis or VIN looks tampered with');
+  await expect(mine).toContainText('SAZO is checking');
+});

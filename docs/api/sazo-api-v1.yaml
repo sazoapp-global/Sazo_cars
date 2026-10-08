@@ -38,6 +38,8 @@ tags:
     description: Inspector and inspection-centre workspace (P-004) — checklist drafts from the phone app, sent through Ingestion (inspector_app).
   - name: Dealer
     description: Dealer workspace (P-005) — cars for sale, prices, sales (confidential). Listings and sales go through Ingestion on the dealer's own source.
+  - name: Concerns
+    description: Signs of fraud reported by businesses (O-002), reviewed by SAZO staff.
   - name: My cars
     description: Owners prove a car is theirs (phone match or logbook photo, O-007) and answer for garage visits.
   - name: Garage
@@ -663,6 +665,70 @@ paths:
       responses:
         '200': { description: StockItem }
         '409': { description: not_in_stock }
+
+  /concerns:
+    post:
+      tags: [Concerns]
+      operationId: reportConcern
+      summary: Report signs of fraud on a car (garages, inspectors, dealers; 10 a day)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plate, category, description]
+              properties:
+                plate: { type: string }
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+                category: { type: string, enum: [cloned_plate, chassis_tampered, odometer_tampered, stolen_suspected, fake_documents, other] }
+                description: { type: string, minLength: 10, maxLength: 2000 }
+                evidenceIds: { type: array, maxItems: 10, items: { type: string, format: uuid } }
+      responses:
+        '201': { description: The report (status open) }
+        '429': { description: too_many_reports }
+    get:
+      tags: [Concerns]
+      operationId: listMyConcerns
+      summary: Reports from this business and SAZO's decisions
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ items }' }
+
+  /admin/concerns:
+    get:
+      tags: [Admin]
+      operationId: listConcerns
+      summary: Reported problems by status (concern.review)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [open, upheld, dismissed] } }
+      responses:
+        '200': { description: '{ items }' }
+
+  /admin/concerns/{concernId}/decision:
+    post:
+      tags: [Admin]
+      operationId: decideConcern
+      summary: Uphold or dismiss (with a reason); optionally link the report to the right car
+      parameters:
+        - { name: concernId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision: { type: string, enum: [uphold, dismiss] }
+                reason: { type: string, minLength: 3 }
+                vehicleRef: { $ref: '#/components/schemas/VehicleRef' }
+      responses:
+        '200': { description: Decided }
+        '404': { description: concern_not_found (or already decided) }
 
   /admin/ownership-claims:
     get:

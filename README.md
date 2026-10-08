@@ -70,6 +70,7 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | **My cars (owners, O-007):** "This is my car" on a report — confirmed at once when the phone matches the registry record, otherwise a logbook photo checked by SAZO staff (`/admin/ownership`); owners confirm or dispute garage visits from their time; ownership ends when the car is sold on | ✅ |
 | **Inspector workspace (P-004):** inspectors and inspection centres use the same phone app ("SAZO Inspect"): find the car, mileage + odometer photo, chassis/colour/engine as seen, paint thickness per panel, structure, tyres, battery, defects, photos, pass/fail; works offline; differences from the records must be explained; SAZO stores a fingerprinted report file; buyers see a "Latest inspection" card and a repaint note (Rule Set v1.1) | ✅ |
 | **Dealer workspace (P-005, website `/dealer/…`):** list cars for sale (known car by plate, or a new one by VIN/chassis), asking price and mileage become dealer listings in the car's history, price changes, record a sale (price kept private), buyer report links, team members | ✅ |
+| **Reported problems (O-002):** garages, inspectors and dealers report signs of fraud from the phone app; the car shows a neutral "being checked" notice while a serious report is open; SAZO staff uphold or dismiss at `/admin/concerns`; buyers see only what was upheld | ✅ |
 | Reviews of car models and creator links (D-063, P-008), account settings, server-made PDFs | ⏳ next |
 
 ### Load the demo vehicles

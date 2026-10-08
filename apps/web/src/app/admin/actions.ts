@@ -78,3 +78,14 @@ export async function decideOwnership(form: FormData) {
   } catch (err) { back('/admin/ownership', failure(err), false); }
   back('/admin/ownership', decision === 'approve' ? 'Approved. The owner has been sent a text.' : 'Rejected. The person has been sent a text.');
 }
+
+export async function decideConcern(form: FormData) {
+  const decision = text(form, 'decision');
+  const reason = text(form, 'reason');
+  const vehicleRef = text(form, 'vehicleRef').toUpperCase();
+  if (reason.length < 3) back('/admin/concerns', 'Write a reason (at least 3 characters).', false);
+  try {
+    await api(`/admin/concerns/${text(form, 'id')}/decision`, { method: 'POST', auth: true, body: { decision, reason, ...(vehicleRef ? { vehicleRef } : {}) } });
+  } catch (err) { back('/admin/concerns', failure(err), false); }
+  back('/admin/concerns', decision === 'uphold' ? 'Upheld. Buyers now see what SAZO confirmed.' : 'Dismissed. The "being checked" notice is gone.');
+}

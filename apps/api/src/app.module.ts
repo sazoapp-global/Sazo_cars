@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from './config.js';
+import { ConcernModule } from './modules/concern/index.js';
 import { DealerModule } from './modules/dealer/index.js';
 import { GarageModule } from './modules/garage/index.js';
 import { IamModule } from './modules/iam/index.js';
@@ -43,6 +44,7 @@ export class AppModule {
         GarageModule,
         InspectionModule,
         DealerModule,
+        ConcernModule,
       ],
       controllers: [HealthController],
     };

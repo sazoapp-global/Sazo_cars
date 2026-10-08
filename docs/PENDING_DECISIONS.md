@@ -151,3 +151,13 @@
 | Buyer links | The same frozen 30-day report links buyers use (they appear under the dealer person's "Shared reports"). Dealer branding on reports stays FUTURE (P-011). |
 | Mileage when listing | Optional, and no odometer photo is asked for, so it counts for less than a garage or inspector reading. |
 
+## Behaviour choices made while building reported problems (O-002, easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Who can report | Approved garages, inspectors, inspection centres and dealers (staff and managers). From the phone app ("Report a problem with a car"); up to 10 reports a day per business. Photos optional (up to 3). |
+| What buyers see | While a serious report is open: "A business has raised a concern about this car. SAZO is checking it." Once upheld: a sentence saying what SAZO confirmed (e.g. mileage wound back). Dismissed reports show nothing. Reports in "something else" show nothing until upheld. The reporting business is never named to buyers. Shown on the public summary, the full report and new share links. |
+| A plate SAZO can't place | The report is kept; the reviewer links it to the right car (by reference) when deciding. |
+| Reviewer decisions | Uphold or dismiss, always with a reason (kept in the audit log, shown to the reporting business in its app). |
+| Effect on scores | None yet — the notice sits beside the answers. A confirmed report could later become a record that changes an answer. |
+

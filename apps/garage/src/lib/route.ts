@@ -2,20 +2,21 @@
 import { useEffect, useState } from 'react';
 
 export type Route = { name: 'home' } | { name: 'job'; jobId: string } | { name: 'server-job'; jobId: string } | { name: 'staff' }
-  | { name: 'inspection'; id: string } | { name: 'server-inspection'; id: string };
+  | { name: 'inspection'; id: string } | { name: 'server-inspection'; id: string } | { name: 'concerns' };
 
 function parse(hash: string): Route {
   const [, a, b] = hash.replace(/^#/, '').split('/');
   if (a === 'job' && b) return { name: 'job', jobId: b };
   if (a === 'jobs' && b) return { name: 'server-job', jobId: b };
   if (a === 'staff') return { name: 'staff' };
+  if (a === 'concerns') return { name: 'concerns' };
   if (a === 'inspection' && b) return { name: 'inspection', id: b };
   if (a === 'inspections' && b) return { name: 'server-inspection', id: b };
   return { name: 'home' };
 }
 
 export function go(route: Route, replace = false): void {
-  const hash = route.name === 'job' ? `#/job/${route.jobId}` : route.name === 'server-job' ? `#/jobs/${route.jobId}` : route.name === 'staff' ? '#/staff'
+  const hash = route.name === 'job' ? `#/job/${route.jobId}` : route.name === 'server-job' ? `#/jobs/${route.jobId}` : route.name === 'staff' ? '#/staff' : route.name === 'concerns' ? '#/concerns'
     : route.name === 'inspection' ? `#/inspection/${route.id}` : route.name === 'server-inspection' ? `#/inspections/${route.id}` : '#/';
   if (replace) location.replace(hash);
   else location.hash = hash;
