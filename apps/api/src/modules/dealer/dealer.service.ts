@@ -6,13 +6,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PARAMS } from '@sazo/trust-engine';
 import { IamService, type Actor } from '../iam/index.js';
 import { IngestionError, IngestionService } from '../ingest/index.js';
+import { EvidenceService } from '../obs/index.js';
 import { ReportsService } from '../report/index.js';
 import { VehicleRegistry } from '../vehicle/index.js';
 import { DealerRepository, type StockRow, type StockStatus } from './dealer.repository.js';
 
 export class DealerError extends Error {
   constructor(
-    readonly code: 'stock_not_found' | 'vehicle_not_found' | 'identifiers_required' | 'already_in_stock' | 'vehicle_needs_review' | 'listing_rejected' | 'not_in_stock' | 'organisation_not_approved',
+    readonly code: 'stock_not_found' | 'vehicle_not_found' | 'identifiers_required' | 'odometer_photo_required' | 'too_many_listings' | 'already_in_stock' | 'vehicle_needs_review' | 'listing_rejected' | 'not_in_stock' | 'organisation_not_approved',
     message: string,
     readonly details: unknown[] = [],
   ) {
@@ -20,7 +21,9 @@ export class DealerError extends Error {
   }
 }
 
-export interface AddStock { vehicleRef?: string; plate?: string; vin?: string; chassisNumber?: string; askingPriceUgx: number; mileageKm?: number; notes?: string }
+export interface AddStock { vehicleRef?: string; plate?: string; vin?: string; chassisNumber?: string; askingPriceUgx: number; mileageKm?: number; odometerPhotoId?: string; notes?: string }
+/** New listings a dealer can add per day (Security S3: stops one dealer flooding many cars' histories). */
+export const DAILY_LISTINGS = 50;
 
 const sourceCodeFor = (organisationId: string) => `DLR-${organisationId.replace(/-/g, '').slice(0, 10).toUpperCase()}`;
 const money = (amount: number) => ({ amount, currency: 'UGX' as const });
@@ -33,6 +36,7 @@ export class DealerService {
     @Inject(IngestionService) private readonly ingestion: IngestionService,
     @Inject(ReportsService) private readonly reports: ReportsService,
     @Inject(IamService) private readonly iam: IamService,
+    @Inject(EvidenceService) private readonly evidence: EvidenceService,
   ) {}
 
   private async ensureSource(organisationId: string): Promise<string> {
@@ -62,7 +66,7 @@ export class DealerService {
     return { ids: { ...(input.vin ? { vin: input.vin } : { chassisNumber: input.chassisNumber! }), ...(input.plate ? { plate: input.plate } : {}) } };
   }
 
-  private async send(actor: Actor, organisationId: string, ids: Record<string, string>, records: { type: string; attributes: Record<string, unknown> }[], at = new Date().toISOString()) {
+  private async send(actor: Actor, organisationId: string, ids: Record<string, string>, records: { type: string; attributes: Record<string, unknown>; evidenceIds?: string[] }[], at = new Date().toISOString()) {
     const source = await this.ensureSource(organisationId);
     try {
       const res = await this.ingestion.submit(source, { schemaVersion: 1, items: [{ identifiers: ids, records: records.map((r) => ({ ...r, time: { at, precision: 'day' as const } })) }] },
@@ -75,11 +79,19 @@ export class DealerService {
   }
 
   async add(actor: Actor, organisationId: string, input: AddStock): Promise<StockRow> {
+    if ((await this.repo.listedToday(organisationId)) >= DAILY_LISTINGS) throw new DealerError('too_many_listings', `A dealer can add up to ${DAILY_LISTINGS} cars a day. Call SAZO if you need more.`);
+    // Security S3: a mileage from a dealer needs a photo of the odometer taken by someone at this dealer, like a garage's.
+    if (input.mileageKm !== undefined) {
+      const [photo] = input.odometerPhotoId ? await this.evidence.view([input.odometerPhotoId]) : [];
+      if (!photo || photo.kind !== 'odometer_photo' || !photo.uploadedBy || !(await this.iam.isActiveMember(photo.uploadedBy, organisationId))) {
+        throw new DealerError('odometer_photo_required', 'Add a photo of the odometer with the mileage');
+      }
+    }
     const { vehicleId: known, ids } = await this.identifiers(input);
     if (known && (await this.repo.live(organisationId, known))) throw new DealerError('already_in_stock', 'This car is already in your stock');
     const records = [
       { type: 'listing_published', attributes: { askingPrice: money(input.askingPriceUgx) } },
-      ...(input.mileageKm !== undefined ? [{ type: 'odometer_reading', attributes: { km: input.mileageKm, originalValue: input.mileageKm, originalUnit: 'km', method: 'dashboard' } }] : []),
+      ...(input.mileageKm !== undefined ? [{ type: 'odometer_reading', evidenceIds: [input.odometerPhotoId!], attributes: { km: input.mileageKm, originalValue: input.mileageKm, originalUnit: 'km', method: 'dashboard' } }] : []),
     ];
     const item = await this.send(actor, organisationId, ids, records);
     if (item.status === 'needs_review') throw new DealerError('vehicle_needs_review', 'SAZO needs to check which car this is. It will appear in the car’s history once a reviewer has matched it; add it to your stock then.');

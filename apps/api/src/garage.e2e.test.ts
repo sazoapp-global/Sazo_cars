@@ -240,4 +240,23 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     expect(list.body.items.every((j: { status: string }) => j.status === 'accepted')).toBe(true);
     expect(list.body.items[1].jobId).toBe(jobId);
   });
+
+  it('Security S1: a garage cannot send records to its own source directly (only the app builds them)', async () => {
+    const code = `GAR-${garageId.replace(/-/g, '').slice(0, 10).toUpperCase()}`;
+    const res = await http.post('/v1/ingest/submissions').set(bearer(managerToken)).set('Idempotency-Key', randomUUID()).set('X-Source-Code', code)
+      .send({ schemaVersion: 1, items: [{ identifiers: { plate: 'UBQ 101A' }, records: [
+        { type: 'ownership_transferred', attributes: { ownerPhone: '+256772300001' }, time: { at: '2026-05-01T00:00:00Z', precision: 'day' } }] }] }).expect(403);
+    expect(res.body.code).toBe('source_not_permitted');
+  });
+
+  it('Security S2: a garage sees only the customer name it typed, never one another garage typed for the same phone', async () => {
+    const owner2 = await signIn('+256772300020', 'Other garage owner');
+    const garage2 = (await http.post('/v1/organisations').set(bearer(owner2)).send({ type: 'garage', legalName: 'Other Garage Ltd' }).expect(201)).body.id;
+    await http.post(`/v1/admin/organisations/${garage2}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(200);
+    const job = await http.put(`/v1/garage/jobs/${randomUUID()}`).set({ ...bearer(owner2), 'X-Organisation-Id': garage2 })
+      .send({ plateEntered: 'UBQ 101A', workTypes: ['service'], clientCreatedAt: new Date().toISOString(), form: { customer: { phone: CUSTOMER } } }).expect(200);
+    expect(JSON.stringify(job.body)).not.toContain('Peter');
+    expect(job.body.form.customer).toEqual({ phoneMasked: '+256 77• ••• 123', smsConsent: false });
+  });
 });
+

@@ -59,6 +59,8 @@ jobs:
     env:
       DATABASE_URL: postgres://sazo:sazo@localhost:5432/sazo_e2e
       E2E_DATABASE_URL: postgres://sazo:sazo@localhost:5432/sazo_e2e
+      # The API under test connects with the limited production login (db/privileges.sql), like in production.
+      E2E_APP_DATABASE_URL: postgres://sazo_app:sazo_app@localhost:5432/sazo_e2e
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +72,9 @@ jobs:
       - name: Build shared packages
         run: npm run build
       - name: Migrate and load the scenario vehicles
-        run: npm run db:migrate && npm run seed -w @sazo/api
+        run: |
+          npm run db:migrate && npm run seed -w @sazo/api
+          psql "$DATABASE_URL" -c "ALTER ROLE sazo_app LOGIN PASSWORD 'sazo_app'"
       - name: Build the web app (includes its type-check)
         run: npm run build -w @sazo/web
       - name: Install the browser

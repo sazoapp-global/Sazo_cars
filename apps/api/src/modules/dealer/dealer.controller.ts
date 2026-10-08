@@ -14,16 +14,17 @@ const Add = z.object({
   chassisNumber: z.string().trim().min(5).max(30).optional(),
   askingPriceUgx: Price,
   mileageKm: z.number().int().min(0).max(2_000_000).optional(),
+  odometerPhotoId: z.string().uuid().optional(),
   notes: z.string().trim().max(500).optional(),
 });
 
 function problem(err: unknown): never {
   if (err instanceof DealerError) {
     const status = ({
-      stock_not_found: 404, vehicle_not_found: 404, identifiers_required: 400, already_in_stock: 409, not_in_stock: 409,
+      stock_not_found: 404, vehicle_not_found: 404, identifiers_required: 400, odometer_photo_required: 422, too_many_listings: 429, already_in_stock: 409, not_in_stock: 409,
       vehicle_needs_review: 422, listing_rejected: 422, organisation_not_approved: 403,
     } as const)[err.code];
-    throw new Problem(status, err.code, status === 404 ? 'Not found' : status === 409 ? 'Conflict' : status === 403 ? 'Forbidden' : status === 400 ? 'Invalid request' : 'Unprocessable', err.message, err.details);
+    throw new Problem(status, err.code, status === 404 ? 'Not found' : status === 409 ? 'Conflict' : status === 403 ? 'Forbidden' : status === 400 ? 'Invalid request' : status === 429 ? 'Too many requests' : 'Unprocessable', err.message, err.details);
   }
   throw err;
 }

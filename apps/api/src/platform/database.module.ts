@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { APP_CONFIG, type AppConfig } from '../config.js';
 import { EventBus } from './event-bus.js';
+import { PII_KEYRING, loadKeyring } from './keyring.js';
 import { DB, DB_POOL, type Db } from './tokens.js';
 
 export { DB, DB_POOL, type Db };
@@ -31,9 +32,11 @@ class PoolCloser implements OnApplicationShutdown {
       },
     },
     { provide: DB, inject: [DB_POOL], useFactory: (pool: pg.Pool): Db => drizzle(pool) },
+    // Personal-data keys: loaded once at start-up (from AWS KMS in production) and kept only in memory.
+    { provide: PII_KEYRING, inject: [APP_CONFIG], useFactory: (cfg: AppConfig) => loadKeyring(cfg) },
     PoolCloser,
     EventBus,
   ],
-  exports: [DB_POOL, DB, EventBus],
+  exports: [DB_POOL, DB, EventBus, PII_KEYRING],
 })
 export class DatabaseModule {}

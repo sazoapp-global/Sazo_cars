@@ -58,6 +58,11 @@ export class IngestionController {
     if (!sourceCode) throw badRequest('source_required', 'Send an X-Source-Code header');
     const source = await this.ingestion.sourceByCode(sourceCode);
     if (!source) throw new Problem(403, 'source_not_permitted', 'Forbidden', 'You cannot use this source');
+    // Security S1: a garage's, inspector's or dealer's own source is written only by its workspace, which builds
+    // the records itself (and checks photos, warnings, stock). Sending to it directly would bypass all of that.
+    if (source.channel === 'garage_app' || source.channel === 'inspector_app' || (source.domain === 'dealer' && !source.isSimulated)) {
+      throw new Problem(403, 'source_not_permitted', 'Forbidden', 'Records for this source are sent from its own workspace, not here');
+    }
     const access = canForOrg(actor, source.organisationId, 'submission.create');
     if (!access.ok) deny(access);
 

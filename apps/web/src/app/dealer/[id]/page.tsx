@@ -48,7 +48,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
-      <details className="card p-4 md:p-5" open={items.length === 0 && show === 'in_stock'}>
+      <details className="card p-4 md:p-5" open={(items.length === 0 && show === 'in_stock') || !!sp.error}>
         <summary className="cursor-pointer font-display text-lg font-semibold">Add a car</summary>
         <form action={addStock} className="mt-3 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="org" value={id} />
@@ -57,6 +57,8 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
             <p className="mt-1 text-sm text-muted">Needed if SAZO doesn&apos;t know the car yet.</p></div>
           <div><label htmlFor="price" className="label">Asking price (UGX) *</label><input id="price" name="price" required inputMode="numeric" className="field tabular-nums" placeholder="38,500,000" /></div>
           <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" /></div>
+          <div className="sm:col-span-2"><label htmlFor="odometer" className="label">Odometer photo (needed with a mileage)</label>
+            <input id="odometer" name="odometer" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
           <div className="sm:col-span-2"><label htmlFor="notes" className="label">Notes for your team (not shown to buyers)</label><input id="notes" name="notes" maxLength={500} className="field" /></div>
           <div className="sm:col-span-2"><button className="btn btn-primary"><Icon name="add" />Add to stock</button>
             <p className="mt-2 text-sm text-muted">The asking price and mileage are added to the car&apos;s history as a dealer listing. A car new to SAZO shows as &ldquo;not yet confirmed&rdquo; until an official record matches it.</p></div>

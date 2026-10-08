@@ -3,6 +3,8 @@
 //   node db/migrate.mjs          apply pending migrations in db/migrations (in filename order)
 //   node db/migrate.mjs --test   apply migrations, then run every db/tests/*.sql (each must roll itself back)
 //
+// After migrating it applies db/privileges.sql: the limited `sazo_app` login the API uses in production.
+//
 // Each migration runs in its own transaction and is recorded in public.sazo_migrations with a
 // SHA-256 checksum. Editing an already-applied migration is refused: write a new migration instead.
 import { readdir, readFile } from 'node:fs/promises';
@@ -51,6 +53,15 @@ try {
     count++;
   }
   console.log(count ? `${count} migration(s) applied.` : 'Database is up to date.');
+
+  // The API's limited login (sazo_app) gets exactly the rights it needs on whatever now exists.
+  try {
+    await client.query(await readFile(path.join(here, 'privileges.sql'), 'utf8'));
+    console.log('Privileges for sazo_app are up to date.');
+  } catch (err) {
+    if (err.code !== '42501') throw err;
+    console.warn(`! Could not set up the sazo_app login (${err.message}). Ask a database administrator to run db/privileges.sql.`);
+  }
 
   if (runTests) {
     const tdir = path.join(here, 'tests');

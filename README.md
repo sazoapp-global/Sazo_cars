@@ -46,6 +46,15 @@ Browser tests: `npm run build -w @sazo/web` then `E2E_DATABASE_URL=<migrated+see
 
 End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this automatically).
 
+### Database logins and keys (production)
+
+- **Two logins.** Migrations run as the database owner. The API uses `sazo_app`, which `db/migrate.mjs` creates and grants after every migration run (`db/privileges.sql`). It can read and write rows but can't change history tables, switch off their protection or change the structure. Give it a password once (`ALTER ROLE sazo_app LOGIN PASSWORD '…'`) and use it in the API's `DATABASE_URL`. To browser-test with it, set `E2E_APP_DATABASE_URL`.
+- **Personal-data keys** come from AWS KMS in production (`PII_KEY_SOURCE=kms`, `PII_KMS_DATA_KEYS`); the API refuses to start otherwise.
+  - Make a new key with `KMS_KEY_ID=… npm run pii:new-key -w @sazo/api -- --version N`.
+  - Set `PII_CURRENT_KEY_VERSION=N`, then run `npm run pii:rotate -w @sazo/api`.
+  - Remove the old key once it reports 0 left.
+- **Security reviews:** see `docs/security/` (checklist and reviews) and run `node scripts/security-scan.mjs`.
+
 ## What works so far
 
 | Area | Status |

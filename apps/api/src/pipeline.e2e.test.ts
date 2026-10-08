@@ -94,22 +94,22 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
     const body = { schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZSU60-0071234' }, records: [
       { type: 'service_performed', attributes: { items: ['wiper_blades'] }, time: { at: '2026-09-30T10:00:00Z', precision: 'day' } }] }] };
     const key = '0192a000-0000-7000-8000-0000000000aa';
-    const first = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'DLR').send(body).expect(202);
-    const second = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'DLR').send(body).expect(202);
+    const first = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'RENT').send(body).expect(202);
+    const second = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'RENT').send(body).expect(202);
     expect(second.body.submissionId).toBe(first.body.submissionId);
     expect(first.body.items[0]).not.toHaveProperty('vehicleId');
-    await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'DLR')
+    await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'RENT')
       .send({ ...body, schemaVersion: 2 }).expect(409);
   });
 
-  it('a garage job without the required odometer photo is rejected (D-057)', async () => {
-    const res = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth)
-      .set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000bb').set('X-Source-Code', 'GAR-MUT')
-      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'NZT260-3048271' }, records: [
-        { type: 'odometer_reading', attributes: { km: 152000, originalValue: 152000, originalUnit: 'km' }, time: { at: '2026-09-30T10:00:00Z', precision: 'day' } }] }] })
-      .expect(202);
-    expect(res.body.status).toBe('rejected');
-    expect(res.body.items[0].errors[0].code).toBe('evidence_required');
+  it('a garage job without the required odometer photo is rejected (D-057); garage sources only take records from the app (S1)', async () => {
+    const body = { schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'NZT260-3048271' }, records: [
+      { type: 'odometer_reading', attributes: { km: 152000, originalValue: 152000, originalUnit: 'km' }, time: { at: '2026-09-30T10:00:00Z', precision: 'day' } }] }] };
+    await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth)
+      .set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000bb').set('X-Source-Code', 'GAR-MUT').send(body).expect(403);
+    const res = await app.get(IngestionService).submit('GAR-MUT', body as Parameters<IngestionService['submit']>[1], { idempotencyKey: '0192a000-0000-7000-8000-0000000000bc' });
+    expect(res.status).toBe('rejected');
+    expect(res.items[0]!.errors[0]!.code).toBe('evidence_required');
   });
 
   it('the full report needs a sign-in; the public summary does not', async () => {

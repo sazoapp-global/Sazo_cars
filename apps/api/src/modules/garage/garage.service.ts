@@ -126,7 +126,10 @@ export class GarageService {
         throw new GarageError('version_conflict', 'This job was changed on another device; reload it first');
       }
       if (customer && (customer.name || customer.phone)) {
-        const partyId = await this.parties.upsertPerson({ name: customer.name, phone: customer.phone }, tx);
+        // Each job keeps the customer exactly as this garage typed them (Security S2); unchanged details reuse the record.
+        const same = existing?.partyId ? await this.parties.reveal(existing.partyId) : undefined;
+        const partyId = same && (same.name ?? undefined) === (customer.name ?? undefined) && (same.phone ?? undefined) === (customer.phone ?? undefined)
+          ? existing!.partyId! : await this.parties.recordPerson({ name: customer.name, phone: customer.phone }, tx);
         const consent = !!customer.phone && !!customer.smsConsent;
         if (consent) await this.parties.recordConsent(partyId, 'attestation_sms', 'garage_app', tx);
         await this.repo.setCustomer(tx, jobId, { partyId, phoneProvided: !!customer.phone, smsConsent: consent });

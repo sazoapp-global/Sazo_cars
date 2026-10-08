@@ -28,7 +28,7 @@ export default defineConfig({
       command: `sh -c "npx tsx src/main.ts > ${API_LOG} 2>&1"`,
       cwd: '../api',
       url: `http://localhost:${API_PORT}/v1/health`,
-      env: { DATABASE_URL: process.env.E2E_DATABASE_URL ?? '', PORT: String(API_PORT), NODE_ENV: 'development' },
+      env: { DATABASE_URL: process.env.E2E_APP_DATABASE_URL ?? process.env.E2E_DATABASE_URL ?? '', PORT: String(API_PORT), NODE_ENV: 'development' },
       reuseExistingServer: false,
       timeout: 60_000,
     },

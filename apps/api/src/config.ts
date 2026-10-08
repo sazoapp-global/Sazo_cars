@@ -22,9 +22,20 @@ const Env = z.object({
   AT_API_KEY: z.string().optional(),
   AT_SENDER_ID: z.string().optional(),
   AT_SANDBOX: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
-  /** AES-256-GCM key (base64, 32 bytes) for names and phone numbers in the personal-data store (DM-15). KMS later. */
+  /**
+   * Keys for names and phone numbers in the personal-data store (DM-15) — see platform/keyring.ts.
+   * env: PII_KEYS="1:<base64>,2:<base64>" (or PII_ENCRYPTION_KEY as version 1). kms: PII_KMS_DATA_KEYS, decrypted by AWS KMS at start-up.
+   */
+  PII_KEY_SOURCE: z.enum(['env', 'kms']).default('env'),
   PII_ENCRYPTION_KEY: z.string().default(DEV_PII_KEY)
     .refine((k) => Buffer.from(k, 'base64').length === 32, 'must be 32 bytes, base64-encoded'),
+  PII_KEYS: z.string().optional(),
+  PII_KMS_DATA_KEYS: z.string().optional(),
+  /** The key version new values are encrypted with (default: the highest available). */
+  PII_CURRENT_KEY_VERSION: z.coerce.number().int().positive().optional(),
+  /** AWS KMS key that wraps the data keys (needed only to make new data keys: npm run pii:new-key). */
+  KMS_KEY_ID: z.string().optional(),
+  AWS_REGION: z.string().optional(),
   /** Where evidence photos are stored (write-once). Local folder now; S3 later. */
   EVIDENCE_DIR: z.string().default('./var/evidence'),
   /** Public web address used in SMS links, e.g. the owner-confirmation page. */
@@ -45,8 +56,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (cfg.NODE_ENV === 'production') {
     if (cfg.JWT_SECRET === DEV_SECRET || cfg.HMAC_SECRET === DEV_SECRET) throw new Error('Set JWT_SECRET and HMAC_SECRET in production');
     if (cfg.SMS_PROVIDER === 'console') throw new Error('SMS_PROVIDER=console is not allowed in production');
-    if (cfg.PII_ENCRYPTION_KEY === DEV_PII_KEY) throw new Error('Set PII_ENCRYPTION_KEY in production');
+    // In production the personal-data keys come from a key vault, never from plain settings (stolen settings + a stolen database must not be enough).
+    if (cfg.PII_KEY_SOURCE !== 'kms') throw new Error('Set PII_KEY_SOURCE=kms and PII_KMS_DATA_KEYS in production');
   }
+  if (cfg.PII_KEY_SOURCE === 'kms' && !cfg.PII_KMS_DATA_KEYS) throw new Error('PII_KEY_SOURCE=kms needs PII_KMS_DATA_KEYS');
   if (cfg.SMS_PROVIDER === 'africastalking' && (!cfg.AT_USERNAME || !cfg.AT_API_KEY)) {
     throw new Error("SMS_PROVIDER=africastalking needs AT_USERNAME and AT_API_KEY");
   }

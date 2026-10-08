@@ -19,6 +19,8 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('button', { name: 'Register business' }).click();
   await expect(dealer.getByText(`${NAME} is registered`)).toBeVisible();
   const businessUrl = dealer.url();
+  /** The "Add a car" panel stays open after a mistake; open it only if it is closed. */
+  const openAdd = async () => { if (!(await dealer.getByLabel('Number plate').isVisible())) await dealer.getByText('Add a car').click(); };
 
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN, { next: '/admin/organisations' });
@@ -37,18 +39,25 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Asking price (UGX) *').fill('25,500,000');
   await dealer.getByLabel('Mileage now (km)').fill('150000');
   await dealer.getByRole('button', { name: 'Add to stock' }).click();
+  await expect(dealer.getByText('Add a photo of the odometer with the mileage.')).toBeVisible();
+  await openAdd();
+  await dealer.getByLabel('Number plate').fill('uba 905t');
+  await dealer.getByLabel('Asking price (UGX) *').fill('25,500,000');
+  await dealer.getByLabel('Mileage now (km)').fill('150000');
+  await dealer.getByLabel(/Odometer photo/).setInputFiles({ name: 'odo.jpg', mimeType: 'image/jpeg', buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 9, 9, 9]) });
+  await dealer.getByRole('button', { name: 'Add to stock' }).click();
   await expect(dealer.getByRole('status')).toContainText('Added to your stock');
   const car = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });
   await expect(car).toContainText('UGX 25.5M');
   await expect(car.getByRole('list', { name: 'What the records show' })).toBeVisible();
 
   // A car SAZO does not know: the plate alone is not enough.
-  await dealer.getByText('Add a car').click();
+  await openAdd();
   await dealer.getByLabel('Number plate').fill('UBX 777Q');
   await dealer.getByLabel('Asking price (UGX) *').fill('18000000');
   await dealer.getByRole('button', { name: 'Add to stock' }).click();
   await expect(dealer.getByText('SAZO does not know UBX 777Q yet. Enter its VIN or chassis number too.')).toBeVisible();
-  await dealer.getByText('Add a car').click();
+  await openAdd();
   await dealer.getByLabel('Number plate').fill('UBX 777Q');
   await dealer.getByLabel('VIN or chassis number').fill('NZE141-9022222');
   await dealer.getByLabel('Asking price (UGX) *').fill('18000000');

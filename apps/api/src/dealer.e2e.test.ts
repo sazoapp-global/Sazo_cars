@@ -1,7 +1,7 @@
 // The dealer journey over HTTP on a fresh database (P-005): approval, listing known and new cars, price
 // changes, a sale (price kept confidential), buyer links, and what buyers see.
 import { execFileSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -41,6 +41,14 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
     const code = sms(phone)!.match(/\b(\d{6})\b/)![1];
     return (await http.post('/v1/auth/otp/verify').send({ phone, code, displayName }).expect(200)).body.accessToken as string;
+  }
+
+  async function upload(token: string, kind: string, content: string): Promise<string> {
+    const bytes = Buffer.from(content);
+    const slot = await http.post('/v1/evidence/uploads').set(bearer(token))
+      .send({ kind, mimeType: 'image/jpeg', sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }).expect(201);
+    await http.put(new URL(slot.body.uploadUrl).pathname).set(bearer(token)).set('Content-Type', 'image/jpeg').send(bytes).expect(204);
+    return (await http.post(`/v1/evidence/${slot.body.evidenceId}/complete`).set(bearer(token)).expect(200)).body.evidenceId;
   }
 
   beforeAll(async () => {
@@ -93,7 +101,12 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
 
   it('lists a known car: the asking price and mileage join its history; listing twice is refused', async () => {
     knownRef = (await http.get('/v1/vehicles/search').query({ q: 'UBS 303C' }).expect(200)).body.matches[0].vehicleRef;
-    const res = await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, mileageKm: 131000 }).expect(201);
+    // Security S3: a mileage needs an odometer photo taken by someone at this dealer.
+    expect((await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, mileageKm: 131000 }).expect(422)).body.code).toBe('odometer_photo_required');
+    const outsiderPhoto = await upload(await signIn('+256772500077', 'Not a dealer'), 'odometer_photo', 'someone else');
+    await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, mileageKm: 131000, odometerPhotoId: outsiderPhoto }).expect(422);
+    const odometer = await upload(staffToken, 'odometer_photo', 'odometer 131000');
+    const res = await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, mileageKm: 131000, odometerPhotoId: odometer }).expect(201);
     stockId = res.body.stockId;
     expect(res.body).toMatchObject({ vehicleRef: knownRef, status: 'in_stock', askingPriceUgx: 38_500_000, listedMileageKm: 131000, vehicle: { make: 'Toyota' } });
     expect(res.body.questions).toHaveLength(7);

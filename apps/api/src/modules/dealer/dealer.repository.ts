@@ -43,6 +43,10 @@ export class DealerRepository {
     }
   }
 
+  async listedToday(organisationId: string): Promise<number> {
+    return (await this.pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM dealer.stock_items WHERE organisation_id = $1 AND listed_at > now() - interval '1 day'`, [organisationId])).rows[0]!.n;
+  }
+
   async setPrice(id: string, price: number): Promise<void> {
     await this.pool.query(`UPDATE dealer.stock_items SET asking_price_ugx = $2 WHERE id = $1 AND status = 'in_stock'`, [id, price]);
   }

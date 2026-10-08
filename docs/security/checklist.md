@@ -55,3 +55,10 @@ Used by every security review (the `sazo-security-review` skill). Each line is a
 - `config.ts` refuses development secrets when `NODE_ENV=production`.
 - No secrets in the repository (`git log -p | grep -i secret` for new ones).
 - `npm audit --omit=dev` clean, or each finding explained.
+
+## 8. Database
+
+- The API connects as `sazo_app` (db/privileges.sql), never as the owner. `db/tests/app_role.sql` proves it cannot update/delete history, disable triggers, create/drop/truncate, or read the migration ledger. New tables are covered automatically (privileges are re-applied after every migration run).
+- A business's own source (garage, inspector, real dealer) is written only by its workspace; the HTTP submission API refuses it (S1).
+- Each business keeps its own copy of a person it told SAZO about (`recordPerson`); look for any new code that returns a stored name to someone who didn't type it (S2).
+- Personal-data keys: KMS in production (config refuses otherwise); values carry their key version; rotation with `pii:new-key` + `pii:rotate`.

@@ -36,7 +36,7 @@
 | Rebuilds | `POST /admin/rebuilds` and source changes recompute in-process, synchronously | Run as a BullMQ job with progress |
 | Admin lists | Simple `limit`, no cursor yet (`nextCursor: null`) | Cursor pagination when queues grow |
 | Evidence storage | Local folder, write-once files; upload URL points at the API | S3 with Object Lock + pre-signed URLs (same client flow) |
-| Personal-data encryption | AES-256-GCM with one app key (`PII_ENCRYPTION_KEY`) | Cloud KMS envelope keys, per-party keys for crypto-shredding |
+| Personal-data encryption | AES-256-GCM with versioned keys; in production the keys come from AWS KMS (envelope: only encrypted data keys in the settings); `pii:new-key` / `pii:rotate` replace keys | Per-party keys for crypto-shredding |
 | Receipt reading (OCR, D-027) | Returns 501 | Build with the garage app |
 | Suspicious-activity reports | Not built (categories still open, O-002) | After O-002 is decided |
 | Summary caching | Computed on read | `report.public_summary_cache` refreshed on `trust.vehicle_updated` |
