@@ -56,16 +56,44 @@ export class PartiesService {
     return rows[0]!.id;
   }
 
+  /** Record consent — unless the person has told SAZO not to text them (their choice wins over a garage's form). */
   async recordConsent(partyId: string, purpose: 'attestation_sms' | 'service_reminders' | 'marketing', channel: string, sql: Sql = this.pool): Promise<void> {
     await sql.query(
       `INSERT INTO pii.party_consents (party_id, purpose, channel)
-       SELECT $1, $2, $3 WHERE NOT EXISTS (SELECT 1 FROM pii.party_consents WHERE party_id = $1 AND purpose = $2 AND revoked_at IS NULL)`,
+       SELECT $1, $2, $3 WHERE NOT EXISTS (SELECT 1 FROM pii.party_consents WHERE party_id = $1 AND purpose = $2 AND revoked_at IS NULL)
+         AND NOT EXISTS (SELECT 1 FROM pii.parties WHERE id = $1 AND sms_opt_out_at IS NOT NULL)`,
       [partyId, purpose, channel]);
   }
 
   async hasConsent(partyId: string, purpose: 'attestation_sms'): Promise<boolean> {
-    const { rows } = await this.pool.query('SELECT 1 FROM pii.party_consents WHERE party_id = $1 AND purpose = $2 AND revoked_at IS NULL', [partyId, purpose]);
+    const { rows } = await this.pool.query(
+      `SELECT 1 FROM pii.party_consents c JOIN pii.parties p ON p.id = c.party_id
+        WHERE c.party_id = $1 AND c.purpose = $2 AND c.revoked_at IS NULL AND p.sms_opt_out_at IS NULL AND p.erased_at IS NULL`, [partyId, purpose]);
     return rows.length > 0;
+  }
+
+  /** "Text me to confirm garage visits" on or off, for the person with this phone (account settings). */
+  async setVisitTexts(phone: string, allowed: boolean): Promise<void> {
+    const partyId = await this.upsertPerson({ phone });
+    await this.pool.query(`UPDATE pii.parties SET sms_opt_out_at = CASE WHEN $2 THEN NULL ELSE now() END WHERE id = $1`, [partyId, allowed]);
+    if (!allowed) await this.pool.query(`UPDATE pii.party_consents SET revoked_at = now() WHERE party_id = $1 AND revoked_at IS NULL`, [partyId]);
+  }
+
+  async visitTextsAllowed(phone: string): Promise<boolean> {
+    const { rows } = await this.pool.query(`SELECT 1 FROM pii.parties WHERE phone_hash = $1 AND sms_opt_out_at IS NOT NULL AND erased_at IS NULL`, [this.phoneHash(phone)]);
+    return rows.length === 0;
+  }
+
+  /**
+   * Erase what SAZO holds about the person with this phone: name and number are deleted, consents revoked.
+   * Records that mention them stay (history is append-only) but no longer point to anyone identifiable.
+   */
+  async eraseByPhone(phone: string): Promise<void> {
+    const hash = this.phoneHash(phone);
+    await this.pool.query(`UPDATE pii.party_consents SET revoked_at = now() WHERE revoked_at IS NULL AND party_id IN (SELECT id FROM pii.parties WHERE phone_hash = $1)`, [hash]);
+    await this.pool.query(
+      `UPDATE pii.parties SET name_ciphertext = NULL, phone_ciphertext = NULL, phone_hash = NULL, erasure_requested_at = now(), erased_at = now()
+        WHERE phone_hash = $1 AND erased_at IS NULL`, [hash]);
   }
 
   /** Does this party's phone match a number (compared by keyed hash; nothing is decrypted)? */

@@ -72,7 +72,8 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | **Dealer workspace (P-005, website `/dealer/…`):** list cars for sale (known car by plate, or a new one by VIN/chassis), asking price and mileage become dealer listings in the car's history, price changes, record a sale (price kept private), buyer report links, team members | ✅ |
 | **Reported problems (O-002):** garages, inspectors and dealers report signs of fraud from the phone app; the car shows a neutral "being checked" notice while a serious report is open; SAZO staff uphold or dismiss at `/admin/concerns`; buyers see only what was upheld | ✅ |
 | **Model reviews and creator videos (D-063, P-008):** on each full report, "What owners say about the <model>" — star reviews (first names only; "verified owner" when SAZO has confirmed they own one) and TikTok/YouTube/Instagram videos; everything waits for a moderator at `/admin/moderation` | ✅ |
-| Account settings, server-made PDFs, launch preparation | ⏳ next |
+| **Account settings (`/account`):** change name; move to a new phone number (code to the new number; other devices signed out; old number warned); stop texts asking to confirm garage visits; signed-in devices with sign-out; download my data (JSON); delete my account (personal details erased, history kept without the name) | ✅ |
+| Launch preparation: hosting, file storage, retries for texts and background work, server-made PDFs, error tracking, data-residency check (P-013) | ⏳ next |
 
 ### Load the demo vehicles
 

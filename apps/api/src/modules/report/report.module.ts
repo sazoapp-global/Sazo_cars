@@ -18,6 +18,6 @@ import { ReportsService } from './reports.service.js';
   imports: [IamModule, ConcernModule, NotifyModule, VehicleModule, ObservationsModule, IngestModule, TrustModule, ReferenceModule],
   controllers: [ReportsController, BuyerController, OwnershipController],
   providers: [ReportsService, BuyerService, OwnershipService],
-  exports: [ReportsService, OwnershipService],
+  exports: [ReportsService, OwnershipService, BuyerService],
 })
 export class ReportModule {}

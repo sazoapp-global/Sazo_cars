@@ -9,5 +9,6 @@ import { CommunityService } from './community.service.js';
   imports: [IamModule, ReferenceModule, ReportModule],
   controllers: [CommunityController],
   providers: [CommunityService],
+  exports: [CommunityService],
 })
 export class CommunityModule {}

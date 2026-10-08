@@ -5,7 +5,7 @@ import { expect, type Page } from '@playwright/test';
 import { API_LOG } from '../playwright.config';
 
 export const API = 'http://localhost:3100/v1';
-const codes = () => [...readFileSync(API_LOG, 'utf8').matchAll(/Your SAZO code is (\d{6})/g)];
+const codes = () => [...readFileSync(API_LOG, 'utf8').matchAll(/Your SAZO code (?:to move your account to this number )?is (\d{6})/g)];
 export const codesSoFar = () => codes().length;
 export const lastCode = () => codes().at(-1)![1]!;
 

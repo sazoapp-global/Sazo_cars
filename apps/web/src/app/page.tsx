@@ -6,9 +6,11 @@ const QUESTION_ICONS: Record<string, IconName> = {
   identity: 'verified', care: 'build', damage: 'car_crash', mileage: 'speed', provenance: 'public', legal_financial: 'account_balance', valuation: 'sell',
 };
 
-export default function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+  const { deleted } = await searchParams;
   return (
     <>
+      {deleted && <p role="status" className="bg-ok-fill px-4 py-3 text-center font-semibold text-ok-text">Your account has been deleted. Thank you for using SAZO.</p>}
       <section className="bg-primary text-white">
         <div className="mx-auto max-w-[1280px] px-4 py-10 md:px-8 md:py-16 lg:px-12">
           <h1 className="max-w-2xl font-display text-3xl font-extrabold leading-tight md:text-5xl md:leading-[1.1]">Know the car before you buy it.</h1>

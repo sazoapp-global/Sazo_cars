@@ -130,4 +130,10 @@ export class BuyerService {
     const r = await this.pool.query('UPDATE report.shared_links SET revoked_at = now() WHERE id = $1 AND created_by_user_id = $2 AND revoked_at IS NULL', [linkId, userId]);
     return r.rowCount === 1;
   }
+
+  /** Account deletion: saved cars go, share links stop working. */
+  async forget(userId: string): Promise<void> {
+    await this.pool.query('DELETE FROM report.saved_checks WHERE user_id = $1', [userId]);
+    await this.pool.query('UPDATE report.shared_links SET revoked_at = now() WHERE created_by_user_id = $1 AND revoked_at IS NULL', [userId]);
+  }
 }

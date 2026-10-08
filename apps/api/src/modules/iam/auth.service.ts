@@ -14,7 +14,7 @@ import { IamRepository } from './iam.repository.js';
 const REFRESH_GRACE_SECONDS = 10;
 
 export class AuthError extends Error {
-  constructor(readonly code: 'rate_limited' | 'invalid_code' | 'display_name_required' | 'invalid_token' | 'account_suspended' | 'refresh_in_progress', message: string) {
+  constructor(readonly code: 'rate_limited' | 'invalid_code' | 'display_name_required' | 'invalid_token' | 'account_suspended' | 'refresh_in_progress' | 'phone_in_use' | 'same_phone', message: string) {
     super(message);
   }
 }
@@ -80,6 +80,34 @@ export class AuthService {
     }
     if (user.status !== 'active') throw new AuthError('account_suspended', 'This account is not active');
     return { ...(await this.issueTokens(user.id, userAgent)), created };
+  }
+
+  // ---------- changing the phone number (the code goes to the NEW number, proving the person has it)
+
+  async requestPhoneChange(userId: string, newPhone: string): Promise<void> {
+    const user = await this.repo.userById(userId);
+    if (user?.phone === newPhone) throw new AuthError('same_phone', 'That is already your number');
+    if ((await this.repo.recentOtpCount(newPhone, 60)) >= OTP_MAX_PER_HOUR) throw new AuthError('rate_limited', 'Too many codes requested; try again later');
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    await this.repo.createOtp(newPhone, this.codeHmac(newPhone, code), OTP_TTL_MINUTES, 'change_phone', userId);
+    await this.notify.sendSmsToPhone(newPhone, 'phone_change_code', { code }, 'otp', userId);
+  }
+
+  /** Move the account to the new number. Other devices are signed out; the old number gets a warning text. */
+  async confirmPhoneChange(userId: string, sessionId: string, newPhone: string, code: string): Promise<void> {
+    const challenge = await this.repo.latestOpenOtp(newPhone, 'change_phone', userId);
+    if (!challenge || challenge.attempts >= OTP_MAX_ATTEMPTS) throw new AuthError('invalid_code', 'Code is wrong or expired');
+    const a = Buffer.from(challenge.codeHmac, 'hex');
+    const b = Buffer.from(this.codeHmac(newPhone, code), 'hex');
+    if (!(a.length === b.length && timingSafeEqual(a, b))) {
+      await this.repo.otpAttempt(challenge.id, false);
+      throw new AuthError('invalid_code', 'Code is wrong or expired');
+    }
+    await this.repo.otpAttempt(challenge.id, true);
+    const old = (await this.repo.userById(userId))?.phone;
+    if (!(await this.repo.setPhone(userId, newPhone))) throw new AuthError('phone_in_use', 'Another SAZO account uses that number');
+    await this.repo.revokeAllSessions(userId, 'phone_changed', sessionId);
+    if (old) await this.notify.sendSmsToPhone(old, 'phone_changed', {}, 'account', userId).catch(() => false);
   }
 
   async issueTokens(userId: string, userAgent?: string): Promise<Tokens> {

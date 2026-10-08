@@ -172,3 +172,13 @@
 | Video links | Only https links to TikTok, YouTube or Instagram; each video once per model. Opened in a new tab, marked as user content (nofollow). Not embedded (keeps pages light on mobile data). |
 | Seeded reviews | None — SAZO does not invent reviews, even in testing. |
 
+## Behaviour choices made while building account settings (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Changing phone number | A code goes to the NEW number (sign-in codes don't work for this). On success: the account signs in with the new number, other devices are signed out, the old number gets a warning text. The old number becomes free (signing in with it starts a new account). Another account's number can't be taken. Car ownership confirmed by phone match must be confirmed again. |
+| Texts | One setting: "Ask me to confirm garage visits". Off wins over any consent a garage records at the counter. Sign-in codes and texts about the person's own requests are always sent. |
+| Devices | Each signed-in browser or phone, named from its browser ("Chrome on Android"); sign out one, or all others. |
+| Download my data | A JSON file: details, businesses, preferences, devices, saved cars, shared reports, cars owned, reviews and video suggestions. Car histories are not personal data of the user and are not included. |
+| Delete my account | Typed confirmation ("DELETE"). Refused while the person is the only manager of a business that has other staff. Removed: name, phone, sign-ins, saved cars, share links (they stop working), car claims, reviews and video suggestions; the encrypted personal record for their phone (name/number given by garages) is erased. Kept without the name: records they entered for a business (append-only history), and the audit log. |
+

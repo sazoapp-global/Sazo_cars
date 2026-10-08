@@ -176,4 +176,9 @@ export class OwnershipService {
     if (phone) await this.notify.sendSmsToPhone(phone, decision === 'approve' ? 'ownership_approved' : 'ownership_rejected', { plate: plate ?? 'your car' }, 'account', c.userId).catch(() => false);
     return true;
   }
+
+  /** Account deletion: every claim is withdrawn. */
+  async withdrawAll(userId: string): Promise<void> {
+    await this.pool.query(`UPDATE report.ownership_claims SET status = 'withdrawn', ended_at = now() WHERE user_id = $1 AND status IN ('pending','verified')`, [userId]);
+  }
 }

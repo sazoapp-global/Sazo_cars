@@ -1,5 +1,5 @@
 'use server';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ACCESS_COOKIE, ApiError, REFRESH_COOKIE, api } from '@/lib/api';
 import { safeNext, toE164 } from '@/lib/phone';
@@ -41,7 +41,9 @@ export async function signIn(prev: SignInState, form: FormData): Promise<SignInS
     if (prev.step === 'code' && code.length !== 6) return { ...prev, error: 'Enter the 6-digit code from the SMS.' };
     if (prev.step === 'name' && !displayName) return { ...prev, error: 'Tell us your name.' };
     try {
-      await storeTokens(await api('/auth/otp/verify', { method: 'POST', body: { phone: prev.phone, code, displayName } }));
+      // Pass the browser's description on, so "Signed-in devices" can say "Chrome on Android".
+      const ua = (await headers()).get('user-agent')?.slice(0, 300);
+      await storeTokens(await api('/auth/otp/verify', { method: 'POST', body: { phone: prev.phone, code, displayName }, ...(ua ? { headers: { 'User-Agent': ua } } : {}) }));
     } catch (err) {
       if (err instanceof ApiError && err.code === 'display_name_required') return { step: 'name', phone: prev.phone, code };
       if (err instanceof ApiError && err.status === 401) return { step: 'code', phone: prev.phone, error: 'That code is wrong or has expired. Check the SMS or send a new code.' };

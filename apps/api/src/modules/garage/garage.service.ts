@@ -338,7 +338,7 @@ export class GarageService {
 
   /** D-058: SMS the customer a confirm/dispute link — only with a phone number and their consent. */
   private async requestOwnerConfirmation(j: JobRow, observationId: string): Promise<void> {
-    if (!j.partyId || !j.smsConsent) return;
+    if (!j.partyId || !j.smsConsent || !(await this.parties.hasConsent(j.partyId, 'attestation_sms'))) return;
     const person = await this.parties.reveal(j.partyId);
     const eventId = await this.attestations.eventOf(observationId);
     if (!person?.phone || !eventId) return;

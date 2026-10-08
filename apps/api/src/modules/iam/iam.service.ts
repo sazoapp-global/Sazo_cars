@@ -124,4 +124,38 @@ export class IamService {
     await this.notify.sendSmsToPhone(s.phone, 'staff_added', { organisation: org?.tradingName ?? org?.legalName ?? 'a business' }, 'account', userId);
     return (await this.repo.members(organisationId)).find((m) => m.userId === userId)!;
   }
+
+  // ---------- account settings
+  async rename(actor: Actor, name: string): Promise<void> {
+    await this.repo.setDisplayName(actor.userId, name);
+    await this.audit({ actor, action: 'account.rename', targetType: 'user', targetId: actor.userId });
+  }
+
+  async devices(userId: string, currentSessionId: string) {
+    return (await this.repo.sessions(userId)).map((s) => ({
+      sessionId: s.id, device: s.userAgent, signedInAt: s.createdAt.toISOString(), lastUsedAt: s.lastUsedAt.toISOString(), current: s.id === currentSessionId,
+    }));
+  }
+
+  signOutDevice(userId: string, sessionId: string) {
+    return this.repo.revokeUserSession(userId, sessionId, 'signed_out_by_user');
+  }
+
+  signOutOthers(userId: string, currentSessionId: string) {
+    return this.repo.revokeAllSessions(userId, 'signed_out_by_user', currentSessionId);
+  }
+
+  soleManagerOf(userId: string) {
+    return this.repo.soleManagerOf(userId);
+  }
+
+  async profile(userId: string) {
+    const [u, orgs] = await Promise.all([this.repo.userById(userId), this.repo.myOrganisations(userId)]);
+    return { displayName: u?.displayName, phone: u?.phone, email: u?.email, businesses: orgs.map((o) => ({ name: o.tradingName ?? o.legalName, type: o.type, role: o.role })) };
+  }
+
+  async anonymise(actor: Actor): Promise<void> {
+    await this.audit({ actor, action: 'account.delete', targetType: 'user', targetId: actor.userId });
+    await this.repo.anonymise(actor.userId);
+  }
 }

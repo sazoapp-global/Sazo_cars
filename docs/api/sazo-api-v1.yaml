@@ -42,6 +42,8 @@ tags:
     description: Signs of fraud reported by businesses (O-002), reviewed by SAZO staff.
   - name: Community
     description: Model reviews and creator videos (D-063, P-008) — about a model, never one car; moderated before publishing.
+  - name: Account
+    description: The signed-in person's own settings and data (Data Protection and Privacy Act 2019 — access, correction, objection, erasure).
   - name: My cars
     description: Owners prove a car is theirs (phone match or logbook photo, O-007) and answer for garage visits.
   - name: Garage
@@ -180,6 +182,29 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   # -------------------------------------------------------------- VEHICLES
+    patch:
+      tags: [Account]
+      operationId: renameMe
+      summary: Change the name SAZO shows
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [displayName], properties: { displayName: { type: string, minLength: 2, maxLength: 120 } } }
+      responses:
+        '204': { description: Changed }
+    delete:
+      tags: [Account]
+      operationId: deleteMe
+      summary: Delete my account (personal details erased; records entered for a business kept without the name)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [confirm], properties: { confirm: { type: string, enum: [DELETE] } } }
+      responses:
+        '204': { description: Deleted }
+        '409': { description: hand_over_first (only manager of a business with staff) }
   /vehicles/search:
     get:
       tags: [Vehicles]
@@ -816,6 +841,98 @@ paths:
       responses:
         '200': { description: Decided }
         '404': { description: case_not_found }
+
+  /me/profile:
+    get:
+      tags: [Account]
+      operationId: myProfile
+      summary: Name, phone number and businesses
+      responses:
+        '200': { description: '{ displayName, phone, email, businesses }' }
+
+  /me/phone/code:
+    post:
+      tags: [Account]
+      operationId: requestPhoneChange
+      summary: Send a code to the NEW phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [phone], properties: { phone: { type: string } } }
+      responses:
+        '202': { description: Sent }
+        '400': { description: same_phone }
+        '429': { description: rate_limited }
+
+  /me/phone:
+    post:
+      tags: [Account]
+      operationId: confirmPhoneChange
+      summary: Move the account to the new number (other devices signed out; old number warned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [phone, code], properties: { phone: { type: string }, code: { type: string, pattern: '^\\d{6}$' } } }
+      responses:
+        '204': { description: Changed }
+        '409': { description: phone_in_use }
+        '422': { description: invalid_code }
+
+  /me/preferences:
+    get:
+      tags: [Account]
+      operationId: myPreferences
+      summary: Text preferences
+      responses:
+        '200': { description: '{ visitConfirmationTexts }' }
+    put:
+      tags: [Account]
+      operationId: setMyPreferences
+      summary: Turn texts asking to confirm garage visits on or off (off wins over garage-recorded consent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [visitConfirmationTexts], properties: { visitConfirmationTexts: { type: boolean } } }
+      responses:
+        '200': { description: '{ visitConfirmationTexts }' }
+
+  /me/sessions:
+    get:
+      tags: [Account]
+      operationId: mySessions
+      summary: Signed-in devices
+      responses:
+        '200': { description: '{ items: [{ sessionId, device, signedInAt, lastUsedAt, current }] }' }
+
+  /me/sessions/{sessionId}:
+    delete:
+      tags: [Account]
+      operationId: signOutDevice
+      summary: Sign out one device
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Signed out }
+        '404': { description: session_not_found }
+
+  /me/sessions/sign-out-others:
+    post:
+      tags: [Account]
+      operationId: signOutOthers
+      summary: Sign out every other device
+      responses:
+        '201': { description: '{ signedOut }' }
+
+  /me/export:
+    get:
+      tags: [Account]
+      operationId: exportMyData
+      summary: Download my data (JSON)
+      responses:
+        '200': { description: Everything SAZO holds about the person }
 
   /admin/ownership-claims:
     get:

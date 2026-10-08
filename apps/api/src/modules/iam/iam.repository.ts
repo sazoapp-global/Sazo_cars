@@ -1,6 +1,7 @@
 // Data access for Identity & Access. Owns the `iam` schema.
 import { Inject, Injectable } from '@nestjs/common';
 import pg from 'pg';
+import { withTx } from '../../platform/sql.js';
 import type { Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 
@@ -127,17 +128,74 @@ export class IamRepository {
     return rows[0]!.n;
   }
 
-  async createOtp(phone: string, codeHmac: string, ttlMinutes: number): Promise<void> {
+  async createOtp(phone: string, codeHmac: string, ttlMinutes: number, purpose: 'sign_in' | 'change_phone' = 'sign_in', userId: string | null = null): Promise<void> {
     await this.pool.query(
-      `INSERT INTO iam.otp_challenges (phone_e164, code_hmac, expires_at) VALUES ($1, $2, now() + make_interval(mins => $3))`,
-      [phone, codeHmac, ttlMinutes]);
+      `INSERT INTO iam.otp_challenges (phone_e164, code_hmac, expires_at, purpose, user_id) VALUES ($1, $2, now() + make_interval(mins => $3), $4, $5)`,
+      [phone, codeHmac, ttlMinutes, purpose, userId]);
   }
 
-  async latestOpenOtp(phone: string): Promise<{ id: string; codeHmac: string; attempts: number } | undefined> {
+  async latestOpenOtp(phone: string, purpose: 'sign_in' | 'change_phone' = 'sign_in', userId: string | null = null): Promise<{ id: string; codeHmac: string; attempts: number } | undefined> {
     const { rows } = await this.pool.query(
       `SELECT id, code_hmac AS "codeHmac", attempts FROM iam.otp_challenges
-        WHERE phone_e164 = $1 AND consumed_at IS NULL AND expires_at > now() ORDER BY created_at DESC LIMIT 1`, [phone]);
+        WHERE phone_e164 = $1 AND purpose = $2 AND user_id IS NOT DISTINCT FROM $3 AND consumed_at IS NULL AND expires_at > now()
+        ORDER BY created_at DESC LIMIT 1`, [phone, purpose, userId]);
     return rows[0];
+  }
+
+  // ---------- account settings
+  async setDisplayName(userId: string, name: string): Promise<void> {
+    await this.pool.query(`UPDATE iam.users SET display_name = $2 WHERE id = $1 AND status = 'active'`, [userId, name]);
+  }
+
+  /** False if another account already has this number. */
+  async setPhone(userId: string, phone: string): Promise<boolean> {
+    try {
+      await withTx(this.pool, async (tx) => {
+        await tx.query(`UPDATE iam.users SET phone_e164 = $2 WHERE id = $1`, [userId, phone]);
+        await tx.query(`UPDATE iam.auth_identities SET subject = $2 WHERE user_id = $1 AND provider = 'phone_otp'`, [userId, phone]);
+      });
+      return true;
+    } catch (err) {
+      if ((err as { code?: string }).code === '23505') return false;
+      throw err;
+    }
+  }
+
+  async sessions(userId: string): Promise<{ id: string; userAgent: string | null; createdAt: Date; lastUsedAt: Date }[]> {
+    const { rows } = await this.pool.query(
+      `SELECT id, user_agent AS "userAgent", created_at AS "createdAt", COALESCE(rotated_at, created_at) AS "lastUsedAt" FROM iam.sessions
+        WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now() ORDER BY COALESCE(rotated_at, created_at) DESC`, [userId]);
+    return rows;
+  }
+
+  async revokeUserSession(userId: string, sessionId: string, reason: string): Promise<boolean> {
+    const r = await this.pool.query(`UPDATE iam.sessions SET revoked_at = now(), revoked_reason = $3 WHERE id = $2 AND user_id = $1 AND revoked_at IS NULL`, [userId, sessionId, reason]);
+    return r.rowCount === 1;
+  }
+
+  async revokeAllSessions(userId: string, reason: string, exceptId?: string): Promise<number> {
+    const r = await this.pool.query(`UPDATE iam.sessions SET revoked_at = now(), revoked_reason = $2 WHERE user_id = $1 AND revoked_at IS NULL AND id IS DISTINCT FROM $3`,
+      [userId, reason, exceptId ?? null]);
+    return r.rowCount ?? 0;
+  }
+
+  /** Organisations where this person is the only active manager (they must hand over before leaving). */
+  async soleManagerOf(userId: string): Promise<string[]> {
+    const { rows } = await this.pool.query<{ name: string }>(
+      `SELECT COALESCE(o.trading_name, o.legal_name) AS name FROM iam.memberships m JOIN iam.roles r ON r.id = m.role_id JOIN iam.organisations o ON o.id = m.organisation_id
+        WHERE m.user_id = $1 AND m.status = 'active' AND r.code = 'org_manager'
+          AND EXISTS (SELECT 1 FROM iam.memberships x WHERE x.organisation_id = m.organisation_id AND x.user_id <> $1 AND x.status = 'active')
+          AND NOT EXISTS (SELECT 1 FROM iam.memberships x JOIN iam.roles xr ON xr.id = x.role_id
+                           WHERE x.organisation_id = m.organisation_id AND x.user_id <> $1 AND x.status = 'active' AND xr.code = 'org_manager')`, [userId]);
+    return rows.map((r) => r.name);
+  }
+
+  /** Remove the person: no name, phone or email; memberships ended; every device signed out. Their id stays on records they entered. */
+  async anonymise(userId: string): Promise<void> {
+    await this.pool.query(`UPDATE iam.users SET status = 'deleted', deleted_at = now(), display_name = 'Deleted account', phone_e164 = NULL, email = NULL WHERE id = $1`, [userId]);
+    await this.pool.query(`UPDATE iam.memberships SET status = 'removed' WHERE user_id = $1`, [userId]);
+    await this.pool.query(`UPDATE iam.auth_identities SET subject = 'deleted:' || id, secret_hash = NULL WHERE user_id = $1`, [userId]);
+    await this.revokeAllSessions(userId, 'account_deleted');
   }
 
   async otpAttempt(id: string, success: boolean): Promise<void> {

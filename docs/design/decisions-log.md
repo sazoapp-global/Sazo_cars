@@ -182,3 +182,4 @@ Physical inspection booking and inspector escort · telematics · fleet manageme
 | 2026-10-08 | Dealer workspace built (P-005) on the website. Cars first seen through a dealer listing are provisional until an official record matches (P-010 extended to dealers). |
 | 2026-10-08 | O-002 decided and built: concerns reported by businesses, reviewed by SAZO staff, with a "being checked" notice while serious ones are open. |
 | 2026-10-08 | Community built (D-063, P-008): model reviews and creator videos, moderated before publishing; verified-owner mark from My cars. |
+| 2026-10-08 | Account settings built: change name and phone, visit-text opt-out, devices, download my data, delete account (DPPA 2019 rights). |

@@ -135,4 +135,19 @@ export class CommunityService {
     });
     await this.iam.audit({ actor: moderator, action: `moderation.${decision}`, targetType: 'moderation_case', targetId: caseId, details: { reason } });
   }
+
+  /** For "download my data". */
+  async contributions(userId: string) {
+    const reviews = (await this.pool.query(`SELECT model_id AS "modelId", rating, body, status, created_at AS "createdAt" FROM community.model_reviews WHERE author_user_id = $1`, [userId])).rows;
+    const videos = (await this.pool.query(`SELECT model_id AS "modelId", url, title, status, created_at AS "createdAt" FROM community.creator_links WHERE submitted_by_user_id = $1`, [userId])).rows;
+    return { reviews, videos };
+  }
+
+  /** Account deletion: the person's reviews and suggestions are taken down. */
+  async removeAll(userId: string): Promise<void> {
+    await this.pool.query(`UPDATE community.model_reviews SET status = 'removed' WHERE author_user_id = $1 AND status IN ('pending','published')`, [userId]);
+    await this.pool.query(`UPDATE community.creator_links SET status = 'removed' WHERE submitted_by_user_id = $1 AND status IN ('pending','published')`, [userId]);
+    await this.pool.query(`UPDATE community.moderation_cases SET status = 'rejected', reason = 'author deleted their account', decided_at = now()
+      WHERE status = 'open' AND target_id IN (SELECT id FROM community.model_reviews WHERE author_user_id = $1 UNION SELECT id FROM community.creator_links WHERE submitted_by_user_id = $1)`, [userId]);
+  }
 }
