@@ -5,7 +5,7 @@ import { repaintedPanels } from '@sazo/contracts';
 import { ConcernService } from '../concern/index.js';
 import { IngestionService } from '../ingest/index.js';
 import { ObservationsService, type StoredObservation } from '../obs/index.js';
-import { ReferenceService } from '../ref/index.js';
+import { ReferenceService, modelLabel } from '../ref/index.js';
 import { TrustService, type TrustSnapshot } from '../trust/index.js';
 import { VehicleRegistry, type VehicleCard } from '../vehicle/index.js';
 
@@ -95,6 +95,8 @@ export class ReportsService {
       openConflicts: snap.openConflicts.map((c) => ({ topic: c.topic, headlineKey: `conflict.${c.topic}.open` })),
       latestInspection: await this.latestInspection(id, snap),
       notices: await this.notices(id),
+      model: await this.reference.findModel(fact('make') as string, fact('model') as string, fact('year') as number)
+        .then((m) => (m ? { modelId: m.modelId, label: modelLabel(m) } : null)),
       asOf: snap.asOf,
       ruleSetVersion: snap.ruleSetVersion,
     };

@@ -40,6 +40,8 @@ tags:
     description: Dealer workspace (P-005) — cars for sale, prices, sales (confidential). Listings and sales go through Ingestion on the dealer's own source.
   - name: Concerns
     description: Signs of fraud reported by businesses (O-002), reviewed by SAZO staff.
+  - name: Community
+    description: Model reviews and creator videos (D-063, P-008) — about a model, never one car; moderated before publishing.
   - name: My cars
     description: Owners prove a car is theirs (phone match or logbook photo, O-007) and answer for garage visits.
   - name: Garage
@@ -729,6 +731,91 @@ paths:
       responses:
         '200': { description: Decided }
         '404': { description: concern_not_found (or already decided) }
+
+  /models/{modelId}/community:
+    get:
+      tags: [Community]
+      operationId: modelCommunity
+      summary: Published reviews (first names) and creator videos for a model; myReviewStatus when signed in
+      security: [{}, { bearerAuth: [] }]
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ model, reviewCount, averageRating (null under 3 reviews), reviews, creatorLinks, myReviewStatus }' }
+
+  /models/{modelId}/reviews:
+    post:
+      tags: [Community]
+      operationId: reviewModel
+      summary: Review a model (one per person); waits for a moderator
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating, body]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                body: { type: string, minLength: 30, maxLength: 2000 }
+      responses:
+        '201': { description: '{ reviewId, status: pending, verifiedOwner }' }
+        '409': { description: already_reviewed }
+
+  /models/{modelId}/creator-links:
+    post:
+      tags: [Community]
+      operationId: suggestCreatorLink
+      summary: Suggest a TikTok / YouTube / Instagram video about the model; waits for a moderator
+      parameters:
+        - { name: modelId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, format: uri }
+                title: { type: string, maxLength: 120 }
+      responses:
+        '201': { description: '{ linkId, status: pending, platform }' }
+        '409': { description: link_exists }
+        '422': { description: link_not_allowed }
+
+  /admin/moderation:
+    get:
+      tags: [Admin]
+      operationId: moderationQueue
+      summary: Reviews and video links by status (moderation.decide)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [open, approved, rejected] } }
+      responses:
+        '200': { description: '{ items }' }
+
+  /admin/moderation/{caseId}/decision:
+    post:
+      tags: [Admin]
+      operationId: decideModeration
+      summary: Publish or reject, with a reason
+      parameters:
+        - { name: caseId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                reason: { type: string, minLength: 3 }
+      responses:
+        '200': { description: Decided }
+        '404': { description: case_not_found }
 
   /admin/ownership-claims:
     get:

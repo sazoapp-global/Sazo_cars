@@ -81,7 +81,7 @@ function InspectionCard({ x }: { x: LatestInspection }) {
       </div>
       <p className="text-sm text-muted">{x.sourceLabel} · {formatDate(x.date)}{x.photos ? ` · ${x.photos} photos kept by SAZO` : ''}</p>
       <dl className="mt-3 divide-y divide-line">
-        {rows.map(([k, v, tone]) => (
+        {rows.filter(([, , tone]) => tone !== 'na').map(([k, v, tone]) => (
           <div key={k} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:justify-between sm:gap-4"><dt className="text-muted">{k}</dt><dd className={`font-semibold sm:text-right ${cls[tone]}`}>{v}</dd></div>
         ))}
         <div className="py-2"><dt className="text-muted">Defects noted</dt>

@@ -161,3 +161,14 @@
 | Reviewer decisions | Uphold or dismiss, always with a reason (kept in the audit log, shown to the reporting business in its app). |
 | Effect on scores | None yet — the notice sits beside the answers. A confirmed report could later become a record that changes an answer. |
 
+## Behaviour choices made while building model reviews and creator videos (easy to change)
+
+| Topic | What the code does |
+|---|---|
+| What a review is about | The model (make + model, and generation where SAZO has one), never one car (D-063). Shown on every full report of a car of that model, under "What owners say about …", clearly labelled as opinions, not records. |
+| Who can post | Any signed-in person. One review per person per model (1–5 stars, 30–2,000 characters). Reviews by people SAZO has confirmed own a car of that model (My cars, O-007) get a "Verified owner" mark and are listed first. |
+| Moderation | Everything — reviews and video links — waits for a SAZO moderator (P-008), who publishes or rejects with a reason (audit log). Moderators reject names, phone numbers, claims about a specific car or person, and adverts. |
+| What readers see | First names only. An average rating only once a model has 3 or more published reviews. |
+| Video links | Only https links to TikTok, YouTube or Instagram; each video once per model. Opened in a new tab, marked as user content (nofollow). Not embedded (keeps pages light on mobile data). |
+| Seeded reviews | None — SAZO does not invent reviews, even in testing. |
+

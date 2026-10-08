@@ -51,3 +51,30 @@ export async function addCar(_prev: AddCarState, form: FormData): Promise<AddCar
   if (!vehicleRef) return { error: 'SAZO needs to check this car before it appears. We will show it once it is matched.' };
   redirect(`/v/${vehicleRef}`);
 }
+
+/** A review of the MODEL (D-063); it waits for a SAZO moderator (P-008). */
+export async function postReview(form: FormData) {
+  const r = ref(form);
+  const rating = Number(form.get('rating'));
+  const body = String(form.get('body') ?? '').trim();
+  const to = (q: string) => redirect(`/v/${r}?${q}#community`);
+  if (!(rating >= 1 && rating <= 5)) to('cerror=Choose a rating from 1 to 5.');
+  if (body.length < 30) to('cerror=Write at least 30 characters about the model.');
+  try {
+    await api(`/models/${String(form.get('modelId'))}/reviews`, { method: 'POST', auth: true, body: { rating, body } });
+  } catch (err) {
+    to(`cerror=${encodeURIComponent(err instanceof ApiError && err.detail ? err.detail : 'Could not send your review.')}`);
+  }
+  to(`cdone=${encodeURIComponent('Thank you. Your review will appear once SAZO has checked it.')}`);
+}
+
+export async function suggestVideo(form: FormData) {
+  const r = ref(form);
+  const to = (q: string) => redirect(`/v/${r}?${q}#community`);
+  try {
+    await api(`/models/${String(form.get('modelId'))}/creator-links`, { method: 'POST', auth: true, body: { url: String(form.get('url') ?? '').trim(), ...(String(form.get('title') ?? '').trim() ? { title: String(form.get('title')).trim() } : {}) } });
+  } catch (err) {
+    to(`cerror=${encodeURIComponent(err instanceof ApiError && err.detail ? err.detail : 'Could not send the link.')}`);
+  }
+  to(`cdone=${encodeURIComponent('Thank you. The video will appear once SAZO has checked it.')}`);
+}

@@ -181,3 +181,4 @@ Physical inspection booking and inspector escort · telematics · fleet manageme
 | 2026-10-08 | Inspector workspace built (P-004, P-005) in the shared phone app. Rule Set v1.1 (`rs-2026.10-v1.1`): inspection paint readings add a repaint note to the damage answer; structural damage seen by an inspector counts as a damage record. |
 | 2026-10-08 | Dealer workspace built (P-005) on the website. Cars first seen through a dealer listing are provisional until an official record matches (P-010 extended to dealers). |
 | 2026-10-08 | O-002 decided and built: concerns reported by businesses, reviewed by SAZO staff, with a "being checked" notice while serious ones are open. |
+| 2026-10-08 | Community built (D-063, P-008): model reviews and creator videos, moderated before publishing; verified-owner mark from My cars. |

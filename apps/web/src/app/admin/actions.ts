@@ -89,3 +89,13 @@ export async function decideConcern(form: FormData) {
   } catch (err) { back('/admin/concerns', failure(err), false); }
   back('/admin/concerns', decision === 'uphold' ? 'Upheld. Buyers now see what SAZO confirmed.' : 'Dismissed. The "being checked" notice is gone.');
 }
+
+export async function decideModeration(form: FormData) {
+  const decision = text(form, 'decision');
+  const reason = text(form, 'reason');
+  if (reason.length < 3) back('/admin/moderation', 'Write a reason (at least 3 characters).', false);
+  try {
+    await api(`/admin/moderation/${text(form, 'id')}/decision`, { method: 'POST', auth: true, body: { decision, reason } });
+  } catch (err) { back('/admin/moderation', failure(err), false); }
+  back('/admin/moderation', decision === 'approve' ? 'Published.' : 'Rejected.');
+}

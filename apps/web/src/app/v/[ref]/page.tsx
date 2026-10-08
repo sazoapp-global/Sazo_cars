@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ConcernNotices } from '@/components/concern-notices';
 import { Confidence } from '@/components/confidence';
 import { FullReportView, NextSteps } from '@/components/full-report';
+import { ModelCommunity } from '@/components/model-community';
 import { Icon } from '@/components/icon';
 import { QuestionCard } from '@/components/question-card';
 import { VehicleHeader } from '@/components/vehicle-header';
@@ -13,7 +14,7 @@ import { saveCar, shareReport, unsaveCar } from '../../buyer-actions';
 import { claimCar } from '../../my-cars/actions';
 import { loadVehicle } from './load';
 
-type Props = { params: Promise<{ ref: string }>; searchParams: Promise<{ error?: string }> };
+type Props = { params: Promise<{ ref: string }>; searchParams: Promise<{ error?: string; cdone?: string; cerror?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { ref } = await params;
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function VehiclePage({ params, searchParams }: Props) {
   const { ref } = await params;
-  const { error } = await searchParams;
+  const { error, cdone, cerror } = await searchParams;
   const data = await loadVehicle(ref);
 
   if (data.kind === 'summary') {
@@ -75,6 +76,7 @@ export default async function VehiclePage({ params, searchParams }: Props) {
           <Link href={`/v/${ref}/timeline`} className="btn btn-ghost"><Icon name="timeline" />See the timeline</Link>
           <Link href={`/v/${ref}/evidence`} className="btn btn-ghost"><Icon name="receipt_long" />See every record</Link>
         </div>
+        {r.model && <ModelCommunity vehicleRef={ref} modelId={r.model.modelId} done={cdone} error={cerror} />}
         <NextSteps />
         <p className="text-xs text-muted">Rule set {r.ruleSetVersion} · Calculated {factValue('first_registration_date', r.asOf.slice(0, 10))}</p>
       </div>

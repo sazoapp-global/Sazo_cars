@@ -6,6 +6,10 @@ import pg from 'pg';
 import type { Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 
+export interface ModelRef { modelId: string; make: string; model: string; generation: string; yearFrom: number; yearTo: number | null }
+/** "Toyota Harrier" or "Toyota Harrier XU60 (2013–2020)". */
+export const modelLabel = (m: Pick<ModelRef, 'make' | 'model' | 'generation'>) => [m.make, m.model, m.generation === 'all' ? '' : m.generation].filter(Boolean).join(' ');
+
 @Injectable()
 export class ReferenceService {
   constructor(@Inject(DB_POOL) private readonly pool: pg.Pool) {}
@@ -17,6 +21,23 @@ export class ReferenceService {
       [make, model, generation, yearFrom, yearTo ?? null, modelCodes],
     );
     return rows[0]!.id;
+  }
+
+  /** The model (and generation) a car belongs to, for model-level reviews and creator videos (D-063). */
+  async findModel(make: string | undefined, model: string | undefined, year: number | undefined): Promise<ModelRef | undefined> {
+    if (!make || !model) return undefined;
+    const { rows } = await this.pool.query<ModelRef>(
+      `SELECT id AS "modelId", make, model, generation, year_from AS "yearFrom", year_to AS "yearTo" FROM ref.vehicle_models
+        WHERE lower(make) = lower($1) AND lower(model) = lower($2)
+        ORDER BY ($3::int IS NOT NULL AND $3 BETWEEN year_from AND COALESCE(year_to, 9999)) DESC, (generation = 'all'), year_from DESC LIMIT 1`,
+      [make, model, year ?? null]);
+    return rows[0];
+  }
+
+  async model(id: string): Promise<ModelRef | undefined> {
+    const { rows } = await this.pool.query<ModelRef>(
+      `SELECT id AS "modelId", make, model, generation, year_from AS "yearFrom", year_to AS "yearTo" FROM ref.vehicle_models WHERE id = $1`, [id]);
+    return rows[0];
   }
 
   /** Seed/demo helper: add simulated comparable sales (basis = 'simulated', D-011). */

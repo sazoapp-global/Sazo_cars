@@ -51,6 +51,7 @@ export interface FullReport {
   openConflicts: { topic: string; headlineKey: string }[];
   latestInspection?: LatestInspection | null;
   notices?: VehicleNotice[];
+  model?: { modelId: string; label: string } | null;
   asOf: string;
   ruleSetVersion: string;
 }
@@ -145,4 +146,14 @@ export interface StaffMember { userId: string; displayName: string; role: string
 export interface ConcernQueueItem {
   concernId: string; plate: string; vehicleRef?: string; category: import('@sazo/contracts').ConcernCategory; severity: 'serious' | 'attention'; description: string;
   status: 'open' | 'upheld' | 'dismissed'; decisionReason: string | null; createdAt: string; evidenceIds: string[]; reporter: string; organisation: string; organisationType?: string;
+}
+export interface ModelCommunity {
+  model: { modelId: string; label: string }; reviewCount: number; averageRating: number | null;
+  reviews: { reviewId: string; author: string; verifiedOwner: boolean; rating: number; body: string; createdAt: string }[];
+  creatorLinks: { linkId: string; url: string; platform: 'tiktok' | 'youtube' | 'instagram'; title: string | null }[];
+  myReviewStatus: 'pending' | 'published' | null;
+}
+export interface ModerationCase {
+  caseId: string; type: 'model_review' | 'creator_link'; model: string; author: string; submittedAt: string; reason: string | null;
+  rating?: number; body?: string; verifiedOwner?: boolean; url?: string; platform?: string; title?: string | null;
 }
