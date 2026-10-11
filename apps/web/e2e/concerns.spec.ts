@@ -1,7 +1,7 @@
 // A garage reports a problem with a car (O-002): buyers see a neutral "being checked" notice; a SAZO
 // reviewer upholds it and buyers then see what was confirmed — never who reported it.
 import { expect, test, type APIRequestContext } from '@playwright/test';
-import { API, a11y, codesSoFar, createAdmin, lastCode, shot, signIn } from './helpers';
+import { API, a11y, apiToken as signInApi, createAdmin, shot, signIn } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567110${stamp}`;
@@ -9,11 +9,7 @@ const OWNER = `+2567120${stamp}`;
 const PLATE = 'UBC 144V';
 
 async function apiToken(request: APIRequestContext, phone: string, displayName: string) {
-  const before = codesSoFar();
-  await request.post(`${API}/auth/otp/request`, { data: { phone } });
-  await expect.poll(codesSoFar).toBeGreaterThan(before);
-  const res = await request.post(`${API}/auth/otp/verify`, { data: { phone, code: lastCode(), displayName } });
-  return { Authorization: `Bearer ${(await res.json()).accessToken}` };
+  return { Authorization: `Bearer ${await signInApi(request, phone, displayName)}` };
 }
 
 test.beforeAll(async ({ request }) => {

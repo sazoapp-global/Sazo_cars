@@ -1,57 +1,95 @@
 'use server';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ACCESS_COOKIE, ApiError, REFRESH_COOKIE, api } from '@/lib/api';
 import { safeNext, toE164 } from '@/lib/phone';
+import { SECOND_STEP_COOKIE, afterLogin, clientHeaders, deviceToken, pendingSecondStep, type LoginResult } from '@/lib/session';
 
-export type SignInState =
-  | { step: 'phone'; error?: string; phoneInput?: string }
-  | { step: 'code'; phone: string; error?: string }
-  | { step: 'name'; phone: string; code: string; error?: string };
+export type PasswordLoginState = { error?: string; email?: string; noAccount?: boolean };
+export type PhoneLoginState =
+  | { step: 'phone'; error?: string; phoneInput?: string; noAccount?: boolean }
+  | { step: 'code'; phone: string; error?: string };
+export type SecondStepState = { error?: string };
 
-const secure = process.env.NODE_ENV === 'production';
+const tooMany = 'Too many tries. Wait a while and try again.';
 
-async function storeTokens(t: { accessToken: string; refreshToken: string; expiresIn: number }) {
-  const jar = await cookies();
-  jar.set(ACCESS_COOKIE, t.accessToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: t.expiresIn });
-  jar.set(REFRESH_COOKIE, t.refreshToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 30 * 86400 });
+/** Log in with email and password (D-100). */
+export async function loginWithPassword(_prev: PasswordLoginState, form: FormData): Promise<PasswordLoginState> {
+  const email = String(form.get('email') ?? '').trim();
+  const password = String(form.get('password') ?? '');
+  const next = safeNext(form.get('next'));
+  if (!email || !password) return { email, error: 'Enter your email and password.' };
+  let to: string;
+  try {
+    const r = await api<LoginResult>('/auth/password/sign-in', { method: 'POST', body: { email, password, deviceToken: await deviceToken() }, headers: await clientHeaders() });
+    to = await afterLogin(r, next);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.code === 'no_account') return { email, noAccount: true, error: 'No SAZO account uses this email.' };
+      if (err.code === 'invalid_credentials') return { email, error: err.detail ?? 'Wrong email or password.' };
+      if (err.code === 'account_locked') return { email, error: err.detail ?? 'Too many wrong passwords. Try again later.' };
+      if (err.code === 'account_suspended') return { email, error: 'This account is not active. Contact SAZO.' };
+      if (err.status === 400) return { email, error: 'Enter a valid email address.' };
+      if (err.status === 429) return { email, error: tooMany };
+    }
+    return { email, error: 'Something went wrong. Please try again.' };
+  }
+  redirect(to);
 }
 
-/** One action for the three small steps: phone → code → (first time only) name. */
-export async function signIn(prev: SignInState, form: FormData): Promise<SignInState> {
+/** Log in with a phone code: phone → code (D-100). Numbers with no account are sent to sign up. */
+export async function loginWithPhone(prev: PhoneLoginState, form: FormData): Promise<PhoneLoginState> {
   const intent = String(form.get('intent') ?? '');
   const next = safeNext(form.get('next'));
 
   if (intent === 'send' || intent === 'resend') {
-    const raw = intent === 'resend' && prev.step !== 'phone' ? prev.phone : String(form.get('phone') ?? '');
+    const raw = intent === 'resend' && prev.step === 'code' ? prev.phone : String(form.get('phone') ?? '');
     const phone = toE164(raw);
     if (!phone) return { step: 'phone', phoneInput: raw, error: 'Enter a phone number like 0772 123 456.' };
     try {
-      await api('/auth/otp/request', { method: 'POST', body: { phone } });
+      await api('/auth/otp/request', { method: 'POST', body: { phone, intent: 'login' } });
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'no_account') return { step: 'phone', phoneInput: raw, noAccount: true, error: 'No SAZO account uses this number.' };
       if (err instanceof ApiError && err.status === 429) return { step: 'phone', phoneInput: raw, error: 'Too many codes requested. Wait a while and try again.' };
       return { step: 'phone', phoneInput: raw, error: 'We could not send a code right now. Please try again.' };
     }
     return { step: 'code', phone };
   }
 
-  if (intent === 'verify' && prev.step !== 'phone') {
-    const code = prev.step === 'name' ? prev.code : String(form.get('code') ?? '').replace(/\D/g, '');
-    const displayName = String(form.get('displayName') ?? '').trim() || undefined;
-    if (prev.step === 'code' && code.length !== 6) return { ...prev, error: 'Enter the 6-digit code from the SMS.' };
-    if (prev.step === 'name' && !displayName) return { ...prev, error: 'Tell us your name.' };
+  if (intent === 'verify' && prev.step === 'code') {
+    const code = String(form.get('code') ?? '').replace(/\D/g, '');
+    if (code.length !== 6) return { ...prev, error: 'Enter the 6-digit code from the SMS.' };
+    let to: string;
     try {
-      // Pass the browser's description on, so "Signed-in devices" can say "Chrome on Android".
-      const ua = (await headers()).get('user-agent')?.slice(0, 300);
-      await storeTokens(await api('/auth/otp/verify', { method: 'POST', body: { phone: prev.phone, code, displayName }, ...(ua ? { headers: { 'User-Agent': ua } } : {}) }));
+      const r = await api<LoginResult>('/auth/otp/verify', { method: 'POST', body: { phone: prev.phone, code, deviceToken: await deviceToken() }, headers: await clientHeaders() });
+      to = await afterLogin(r, next);
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'display_name_required') return { step: 'name', phone: prev.phone, code };
-      if (err instanceof ApiError && err.status === 401) return { step: 'code', phone: prev.phone, error: 'That code is wrong or has expired. Check the SMS or send a new code.' };
+      if (err instanceof ApiError && err.status === 401) return { ...prev, error: 'That code is wrong or has expired. Check the SMS or send a new code.' };
+      if (err instanceof ApiError && err.code === 'account_suspended') return { ...prev, error: 'This account is not active. Contact SAZO.' };
       return { ...prev, error: 'Something went wrong. Please try again.' };
     }
-    redirect(next);
+    redirect(to);
   }
   return { step: 'phone' };
+}
+
+/** The second step for sensitive roles on a new device (D-105). */
+export async function completeSecondStep(_prev: SecondStepState, form: FormData): Promise<SecondStepState> {
+  const pending = await pendingSecondStep();
+  if (!pending) redirect('/sign-in');
+  const code = String(form.get('code') ?? '').replace(/\D/g, '');
+  if (code.length !== 6) return { error: 'Enter the 6-digit code.' };
+  let to: string;
+  try {
+    const r = await api<LoginResult>('/auth/second-step', {
+      method: 'POST', body: { challengeId: pending.challengeId, code, rememberDevice: form.get('remember') === 'on' }, headers: await clientHeaders(),
+    });
+    to = await afterLogin(r, pending.next);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return { error: 'That code is wrong or has expired. Check it, or log in again for a new code.' };
+    return { error: 'Something went wrong. Please try again.' };
+  }
+  redirect(to);
 }
 
 export async function signOut(): Promise<void> {
@@ -59,5 +97,6 @@ export async function signOut(): Promise<void> {
   await api('/auth/sign-out', { method: 'POST', auth: true }).catch(() => undefined);
   jar.delete(ACCESS_COOKIE);
   jar.delete(REFRESH_COOKIE);
+  jar.delete(SECOND_STEP_COOKIE);
   redirect('/');
 }

@@ -204,3 +204,17 @@
 |---|---|
 | Already registered? | The "For businesses" page has a sign-in section under "Register your business". Signed in, it links to "Your businesses" instead. Mechanics and inspectors are pointed to the Garage app. |
 | Download my data | Opens a readable page of everything SAZO holds about the person, including each business they belong to (names, type, registration number, district, status, their role, date registered, documents sent). "Save as PDF" prints it; the JSON file is still offered for a machine-readable copy (DPPA 2019). |
+
+## Accounts — behaviour choices made while building (11 Oct 2026, easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Email sign-up | Logged in at once; a link (24 hours, single use) confirms the email. Unconfirmed emails still allow logging in with the password. |
+| Progress bar | Four parts: your details, confirmed phone, confirmed email, password. Phone sign-ups start at 50%, email sign-ups at 50% (75% once the email is confirmed), Google sign-ups at 50%. |
+| Lock-out | 10 wrong passwords in 15 minutes (5 for sensitive roles) locks password log-in for 15 minutes; setting a new password ends it. Phone code and Google still work. |
+| Second step | Sensitive roles (managers, dealer staff, partner data entry, SAZO staff): a 6-digit code on a new device, by SMS — or by email when they logged in with a phone code and have a confirmed email, so a stolen SIM alone is not enough. "Remember this device" lasts 90 days. |
+| Email links | Confirming an email needs a button press on the page (email scanners that open links can't use them up). Reset links last 1 hour; at most 3 emails an hour per address. |
+| Gender and date of birth | Set once; changes go through SAZO staff (a staff screen comes with the system console). |
+| Older accounts | Asked to finish their details (surname, gender, date of birth) at next log-in, on the website and in the garage app. |
+| Mechanics | Still added by name and phone by their manager (invites come in part 3); they finish their details at first log-in in the app. |
+| Garage app | Log-in only (phone code or email and password); no sign-up and no Google there yet. |

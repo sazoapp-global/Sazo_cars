@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { isSignedIn } from '@/lib/api';
+import { api, isSignedIn } from '@/lib/api';
+import type { Me } from '@/lib/types';
 import { RegisterForm } from './form';
 
 export const metadata: Metadata = { title: 'Register your business' };
 
 export default async function Register() {
   if (!(await isSignedIn())) redirect('/sign-in?next=/business/register');
+  const me = await api<Me>('/me', { auth: true }).catch(() => undefined);
+  if (me?.needsDetails.length) redirect('/account/complete?next=/business/register');
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-8">
       <h1 className="font-display text-2xl font-bold">Register your business</h1>

@@ -1,12 +1,9 @@
 // The mechanic's day on a phone: sign in, record a service with an odometer photo, send it; then lose
 // signal halfway through the next job and watch it sync when the signal comes back.
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
-import { API_LOG, API_PORT } from '../playwright.config';
+import { expect, test, type Page } from '@playwright/test';
+import { API, apiSignIn, createAdmin, signInInApp } from './helpers';
 
-const API = `http://localhost:${API_PORT}/v1`;
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567010${stamp}`;
 const MANAGER = `+2567020${stamp}`;
@@ -16,34 +13,43 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR
 
 /** Set SHOTS=<folder> to save screenshots of each step (design review). */
 const shot = async (page: Page, name: string) => { if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name}.png`, fullPage: true }); };
-const lastCode = () => [...readFileSync(API_LOG, 'utf8').matchAll(/Your SAZO code is (\d{6})/g)].at(-1)![1]!;
 
-async function apiSignIn(request: APIRequestContext, phone: string, displayName: string): Promise<string> {
-  await request.post(`${API}/auth/otp/request`, { data: { phone } });
-  await new Promise((r) => setTimeout(r, 200));
-  const res = await request.post(`${API}/auth/otp/verify`, { data: { phone, code: lastCode(), displayName } });
-  expect(res.ok()).toBeTruthy();
-  return (await res.json()).accessToken;
-}
 
-async function signInInApp(page: Page, localPhone: string) {
-  await page.goto('/');
-  await page.getByLabel('Your phone number').fill(localPhone);
-  await page.getByRole('button', { name: 'Send code' }).click();
-  await expect(page.getByLabel('6-digit code')).toBeVisible();
-  await page.getByLabel('6-digit code').fill(lastCode());
-  await page.getByRole('button', { name: 'Sign in' }).click();
-}
+
+const MECHANIC = `+2567025${stamp}`;
+let managerToken: string;
+let orgId: string;
 
 test.beforeAll(async ({ request }) => {
   // A SAZO admin (made with the create-admin script) approves a new garage registered by its manager.
-  execFileSync('npx', ['tsx', 'src/scripts/create-admin.ts', '--phone', ADMIN, '--name', 'E2E Admin'], { cwd: '../api', env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL }, stdio: 'pipe' });
-  const adminToken = await apiSignIn(request, ADMIN, 'E2E Admin');
-  const managerToken = await apiSignIn(request, MANAGER, 'Sarah Manager');
+  createAdmin(ADMIN, 'E2E Admin');
+  const adminToken = await apiSignIn(request, ADMIN);
+  managerToken = await apiSignIn(request, MANAGER, 'Sarah Manager');
   const org = await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${managerToken}` }, data: { type: 'garage', legalName: `Kansanga Motors ${stamp} Ltd`, tradingName: 'Kansanga Motors' } });
   expect(org.ok()).toBeTruthy();
-  const approved = await request.post(`${API}/admin/organisations/${(await org.json()).id}/decision`, { headers: { Authorization: `Bearer ${adminToken}` }, data: { decision: 'approve', reason: 'E2E' } });
+  orgId = (await org.json()).id;
+  const approved = await request.post(`${API}/admin/organisations/${orgId}/decision`, { headers: { Authorization: `Bearer ${adminToken}` }, data: { decision: 'approve', reason: 'E2E' } });
   expect(approved.ok()).toBeTruthy();
+});
+
+test('no sign-up in the app: unknown numbers are told to ask their manager; an added mechanic finishes their details once', async ({ page, request }) => {
+  await page.goto('/');
+  await page.getByLabel('Your phone number').fill('0709999999');
+  await page.getByRole('button', { name: 'Send code' }).click();
+  await expect(page.getByRole('alert')).toContainText('Ask your manager to add you');
+
+  // The manager adds a mechanic by name and phone; at first log-in the mechanic gives the details now required (D-101).
+  const added = await request.post(`${API}/garage/staff`, { headers: { Authorization: `Bearer ${managerToken}`, 'X-Organisation-Id': orgId }, data: { phone: MECHANIC, displayName: 'Musa Mechanic', role: 'org_staff' } });
+  expect(added.ok()).toBeTruthy();
+  await signInInApp(page, `0${MECHANIC.slice(4)}`);
+  await expect(page.getByRole('heading', { name: 'Finish your details' })).toBeVisible();
+  await page.getByLabel('Surname').fill('Kato');
+  await page.getByLabel('First name').fill('musa');
+  await page.getByLabel('Male', { exact: true }).check();
+  await page.getByLabel('Date of birth').fill('1995-07-07');
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await expect(page.getByRole('button', { name: 'New job' })).toBeVisible();
+  await shot(page, '0-mechanic-home');
 });
 
 test('record a service with an odometer photo and send it', async ({ page }) => {
@@ -93,7 +99,7 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   const job = page.getByRole('button', { name: /UBJ 214K/ }).first();
   await expect(job).toContainText('In vehicle history');
   await expect(job).toContainText('Waiting for customer');
-  await expect(job).toContainText('by Sarah Manager');
+  await expect(job).toContainText('by Manager Sarah');
   await shot(page, '6-home');
 });
 

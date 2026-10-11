@@ -64,3 +64,13 @@ Used by every security review (the `sazo-security-review` skill). Each line is a
 - A business's own source (garage, inspector, real dealer) is written only by its workspace; the HTTP submission API refuses it (S1).
 - Each business keeps its own copy of a person it told SAZO about (`recordPerson`); look for any new code that returns a stored name to someone who didn't type it (S2).
 - Personal-data keys: KMS in production (config refuses otherwise); values carry their key version; rotation with `pii:new-key` + `pii:rotate`.
+
+## Accounts and log-in (added 11 Oct 2026)
+
+- Passwords only as scrypt hashes (`iam/passwords.ts`); never logged, never in `iam.login_attempts`.
+- Every log-in attempt is recorded (`iam.login_attempts`, append-only); lock-outs count failures since the last success or password change.
+- Sensitive roles (`AuthService.isSensitive`): 12+ character passwords and a second step on new devices. Any new role that can change car history or SAZO itself must be added there (and, from part 2, in role settings).
+- Email links and second-step codes are single use, short-lived, stored only as hashes. Reset links are checked before a weak new password can use them up.
+- Google: state + PKCE + nonce; the API only accepts the registered redirect address; ID tokens checked for signature, issuer, audience, expiry and nonce.
+- Date of birth is encrypted with the personal-data keyring and included in key rotation (`npm run pii:rotate`).
+- Messages after redirects use fixed texts chosen by code (`?done=password_reset`), not text from the address.

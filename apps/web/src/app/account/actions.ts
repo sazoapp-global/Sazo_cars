@@ -10,12 +10,29 @@ const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const back = (q: Record<string, string>): never => redirect(`/account?${new URLSearchParams(q)}`);
 const why = (err: unknown, fallback: string) => (err instanceof ApiError && err.detail ? err.detail : fallback);
 
+/** Names (D-103): shown everywhere as "Surname M. First"; the change is recorded. */
 export async function rename(form: FormData) {
-  const name = text(form, 'name');
-  if (name.length < 2) back({ error: 'Your name must be at least 2 characters.' });
-  try { await api('/me', { method: 'PATCH', auth: true, body: { displayName: name } }); } catch (err) { back({ error: why(err, 'Could not change your name.') }); }
+  const body = { surname: text(form, 'surname'), firstName: text(form, 'firstName'), middleName: text(form, 'middleName') };
+  try { await api('/me', { method: 'PATCH', auth: true, body }); } catch (err) { back({ error: why(err, 'Could not change your names.') }); }
   revalidatePath('/', 'layout'); // the name in the header
-  back({ done: 'Name changed.' });
+  back({ done: 'Names saved.' });
+}
+
+/** Add or change the email: saved once the emailed link is opened. */
+export async function setEmail(form: FormData) {
+  const email = text(form, 'email');
+  try { await api('/me/email', { method: 'POST', auth: true, body: { email } }); } catch (err) { back({ error: why(err, 'Could not send the link.') }); }
+  back({ done: `We sent a link to ${email}. Open it to confirm your email.` });
+}
+
+/** Set a password (phone and Google accounts), or change it (needs the current one). */
+export async function setPassword(form: FormData) {
+  const newPassword = String(form.get('newPassword') ?? '');
+  if (newPassword !== String(form.get('confirmPassword') ?? '')) back({ error: 'The two new passwords are different.' });
+  try {
+    await api('/me/password', { method: 'PUT', auth: true, body: { currentPassword: String(form.get('currentPassword') ?? '') || undefined, newPassword } });
+  } catch (err) { back({ error: why(err, 'Could not save the password.') }); }
+  back({ done: 'Password saved.' });
 }
 
 /** Step 1: send a code to the NEW number. */

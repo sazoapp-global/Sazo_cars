@@ -45,14 +45,24 @@ test('an unknown plate explains what to try next', async ({ page }) => {
 test('sign in with a phone code, then read the full report, timeline and evidence', async ({ page }) => {
   const phone = `07${String(Date.now()).slice(-8)}`;
   await page.goto('/check?q=UBJ214K');
-  await page.getByRole('link', { name: 'Sign in to see details' }).click();
-  await page.getByLabel('Your phone number').fill(phone);
-  await page.getByRole('button', { name: 'Send code' }).click();
-  await expect(page.getByLabel('6-digit code')).toBeVisible();
-  await page.getByLabel('6-digit code').fill(latestCode());
-  await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByLabel('Your name').fill('Test Buyer');
-  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByRole('link', { name: 'Log in to see details' }).click();
+  // No account yet: the log-in page says so and points to sign-up (D-100).
+  await page.getByRole('tab', { name: 'Phone code' }).click();
+  await page.getByRole('tabpanel', { name: 'Phone code' }).getByLabel('Your phone number').fill(phone);
+  await page.getByRole('tabpanel', { name: 'Phone code' }).getByRole('button', { name: 'Send code' }).click();
+  await expect(page.getByText('No SAZO account uses this number.')).toBeVisible();
+  await page.getByRole('tabpanel', { name: 'Phone code' }).getByRole('link', { name: 'Create an account' }).click();
+  await page.getByRole('tab', { name: 'Phone code' }).click();
+  const panel = page.getByRole('tabpanel', { name: 'Phone code' });
+  await panel.getByLabel('Surname').fill('Buyer');
+  await panel.getByLabel('First name').fill('Test');
+  await panel.getByLabel('Male', { exact: true }).check();
+  await panel.getByLabel('Date of birth').fill('1988-08-08');
+  await panel.getByLabel('Phone number').fill(phone);
+  await panel.getByRole('button', { name: 'Send code' }).click();
+  await expect(panel.getByLabel('6-digit code')).toBeVisible();
+  await panel.getByLabel('6-digit code').fill(latestCode());
+  await panel.getByRole('button', { name: 'Create account' }).click();
 
   // Back on the car, now with details.
   await expect(page.getByRole('heading', { name: 'Vehicle Health' })).toBeVisible();
@@ -63,7 +73,7 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   await expect(inspection).toContainText('Passed');
   await expect(inspection).toContainText('No structural damage found');
   await expect(inspection).toContainText('60% tread left on the most worn tyre');
-  await expect(page.getByRole('link', { name: /Test Buyer/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Buyer Test/ })).toBeVisible();
   await noSeriousA11yIssues(page);
 
   await page.getByRole('link', { name: 'Timeline', exact: true }).click();
@@ -78,5 +88,5 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
 
   await page.goto('/account');
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
 });

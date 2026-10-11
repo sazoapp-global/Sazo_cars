@@ -1,34 +1,23 @@
 // An inspector's job on a phone (P-004): find the car, mileage with a photo, what the car shows (colour,
 // paint thickness), condition, photos, result — then a finding that differs from the records is explained and sent.
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
-import { API_LOG, API_PORT } from '../playwright.config';
+import { expect, test, type Page } from '@playwright/test';
+import { API, apiSignIn, createAdmin, signInInApp } from './helpers';
 
-const API = `http://localhost:${API_PORT}/v1`;
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567030${stamp}`;
 const MANAGER = `+2567040${stamp}`;
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8DwnwEJMDEgARQGAG2jA/2T4ZbXAAAAAElFTkSuQmCC', 'base64');
 const shot = async (page: Page, name: string) => { if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name}.png`, fullPage: true }); };
-const lastCode = () => [...readFileSync(API_LOG, 'utf8').matchAll(/Your SAZO code is (\d{6})/g)].at(-1)![1]!;
 const a11y = async (page: Page) => {
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
 };
 
-async function apiSignIn(request: APIRequestContext, phone: string, displayName: string): Promise<string> {
-  await request.post(`${API}/auth/otp/request`, { data: { phone } });
-  await new Promise((r) => setTimeout(r, 200));
-  const res = await request.post(`${API}/auth/otp/verify`, { data: { phone, code: lastCode(), displayName } });
-  expect(res.ok()).toBeTruthy();
-  return (await res.json()).accessToken;
-}
 
 test.beforeAll(async ({ request }) => {
-  execFileSync('npx', ['tsx', 'src/scripts/create-admin.ts', '--phone', ADMIN, '--name', 'E2E Admin 2'], { cwd: '../api', env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL }, stdio: 'pipe' });
-  const adminToken = await apiSignIn(request, ADMIN, 'E2E Admin 2');
+  createAdmin(ADMIN, 'E2E Admin 2');
+  const adminToken = await apiSignIn(request, ADMIN);
   const managerToken = await apiSignIn(request, MANAGER, 'Denis Inspector');
   const org = await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${managerToken}` }, data: { type: 'inspection_centre', legalName: `Bugolobi Inspection ${stamp} Ltd`, tradingName: 'Bugolobi Inspection' } });
   expect(org.ok()).toBeTruthy();
@@ -37,12 +26,7 @@ test.beforeAll(async ({ request }) => {
 });
 
 test('inspect a car and send the checklist', async ({ page }) => {
-  await page.goto('/');
-  await page.getByLabel('Your phone number').fill(`0${MANAGER.slice(4)}`);
-  await page.getByRole('button', { name: 'Send code' }).click();
-  await expect(page.getByLabel('6-digit code')).toBeVisible();
-  await page.getByLabel('6-digit code').fill(lastCode());
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await signInInApp(page, `0${MANAGER.slice(4)}`);
   await expect(page.getByText('SAZO Inspect')).toBeVisible();
   await expect(page.getByText('Bugolobi Inspection')).toBeVisible();
   await a11y(page);
@@ -110,12 +94,7 @@ test('inspect a car and send the checklist', async ({ page }) => {
 });
 
 test('report a problem with a car (O-002) and follow what SAZO decides', async ({ page }) => {
-  await page.goto('/');
-  await page.getByLabel('Your phone number').fill(`0${MANAGER.slice(4)}`);
-  await page.getByRole('button', { name: 'Send code' }).click();
-  await expect(page.getByLabel('6-digit code')).toBeVisible();
-  await page.getByLabel('6-digit code').fill(lastCode());
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await signInInApp(page, `0${MANAGER.slice(4)}`);
   await page.getByRole('button', { name: 'Report a problem with a car' }).click();
   await expect(page.getByRole('heading', { name: 'Report a problem with a car' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Send to SAZO' })).toBeDisabled();

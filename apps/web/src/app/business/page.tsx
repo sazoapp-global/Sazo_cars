@@ -32,12 +32,12 @@ export default async function Business() {
             <h2 id="have-account" className="font-display text-xl font-bold">Already registered?</h2>
             <p className="text-muted">{signedIn
               ? 'Your businesses are in your account: check approval, send documents or open your workspace.'
-              : 'Sign in with your phone number to see your business, send documents or open your workspace. Mechanics and inspectors sign in on the phone app.'}</p>
+              : 'Log in to see your business, send documents or open your workspace. Mechanics and inspectors log in on the phone app.'}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {signedIn
               ? <Link href="/account" className="btn btn-primary"><Icon name="person" />Your businesses</Link>
-              : <Link href="/sign-in?next=/account" className="btn btn-primary"><Icon name="person" />Sign in</Link>}
+              : <Link href="/sign-in?next=/account" className="btn btn-primary"><Icon name="person" />Log in</Link>}
             <a href={GARAGE_APP_URL} className="btn btn-ghost"><Icon name="garage" />Open the Garage app</a>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default async function Business() {
         </ul>
         <h2 className="mt-10 font-display text-2xl font-bold">How approval works</h2>
         <ol className="mt-3 space-y-2">
-          {['Register your business here (5 minutes).', 'Send your trading licence or registration certificate, and a photo of your premises.', 'SAZO checks your details — we may call or visit. You get an SMS with the decision.', 'Once approved, you and your staff sign in to the SAZO Garage app with your phones.'].map((t, i) => (
+          {['Register your business here (5 minutes).', 'Send your trading licence or registration certificate, and a photo of your premises.', 'SAZO checks your details — we may call or visit. You get an SMS with the decision.', 'Once approved, you and your staff log in to the SAZO Garage app on your phones.'].map((t, i) => (
             <li key={t} className="flex gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-container text-sm font-bold text-white">{i + 1}</span><span className="pt-0.5">{t}</span></li>
           ))}
         </ol>

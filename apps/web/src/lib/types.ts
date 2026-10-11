@@ -88,6 +88,10 @@ export interface LedgerItem {
 export interface Me {
   id: string;
   displayName: string;
+  /** The circle: first letters of surname and first name (D-103). */
+  initials: string;
+  /** Details an older account must still give before using SAZO (D-101). */
+  needsDetails: string[];
   platformRoles: string[];
   memberships: { organisationId: string; organisationName: string; organisationType: string; organisationStatus: string; role: string; status: string }[];
 }

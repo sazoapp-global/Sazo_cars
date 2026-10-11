@@ -44,9 +44,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
             {me && <Link href="/saved" className="text-sm font-semibold text-muted hover:text-primary-container">Saved</Link>}
             {me ? (
-              <Link href="/account" className="btn btn-ghost !min-h-10 !px-3 text-sm"><Icon name="person" size={18} /><span className="max-w-[10rem] truncate">{me.displayName}</span></Link>
+              <Link href="/account" className="btn btn-ghost !min-h-10 !gap-2 !pl-1.5 !pr-3 text-sm" aria-label={`Settings — ${me.displayName}`}>
+                <span className="avatar" aria-hidden>{me.initials}</span><span className="hidden max-w-[10rem] truncate sm:inline">{me.displayName}</span>
+              </Link>
             ) : (
-              <Link href="/sign-in" className="btn btn-ghost !min-h-10 text-sm">Sign in</Link>
+              <>
+                <Link href="/sign-in" className="btn btn-ghost !min-h-10 text-sm">Log in</Link>
+                <Link href="/sign-up" className="btn btn-primary !min-h-10 hidden text-sm sm:inline-flex">Sign up</Link>
+              </>
             )}
           </div>
         </header>

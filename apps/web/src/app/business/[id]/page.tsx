@@ -63,8 +63,8 @@ export default async function BusinessStatus({ params, searchParams }: { params:
         <section className="card p-4">
           <h2 className="font-display text-lg font-semibold">You&apos;re ready</h2>
           <p className="text-muted">{org.type === 'garage'
-            ? <>Open the SAZO Garage app on your phone and sign in with this phone number. Add your mechanics from the app&apos;s Staff screen.</>
-            : <>Open the SAZO app on your phone and sign in with this phone number to record inspections. Add your inspectors from the app&apos;s Staff screen.</>}</p>
+            ? <>Open the SAZO Garage app on your phone and log in with this phone number or your email. Add your mechanics from the app&apos;s Staff screen.</>
+            : <>Open the SAZO app on your phone and log in with this phone number or your email to record inspections. Add your inspectors from the app&apos;s Staff screen.</>}</p>
           <a href={GARAGE_APP_URL} className="btn btn-primary mt-3"><Icon name="garage" />{org.type === 'garage' ? 'Open the Garage app' : 'Open the SAZO app'}</a>
         </section>
       )}

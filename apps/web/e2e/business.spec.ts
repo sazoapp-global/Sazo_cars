@@ -67,10 +67,10 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   const later = await (await browser.newContext()).newPage();
   await later.goto('/business');
   await expect(later.getByRole('heading', { name: 'Already registered?' })).toBeVisible();
-  await later.getByRole('main').getByRole('link', { name: 'Sign in' }).click();
+  await later.getByRole('main').getByRole('link', { name: 'Log in' }).click();
   await expect(later).toHaveURL(/sign-in\?next=%2Faccount|sign-in\?next=\/account/);
   await signIn(later, OWNER, { next: '/account' });
-  await expect(later.getByRole('heading', { name: 'Hello, Joseph Owner' })).toBeVisible();
+  await expect(later.getByRole('heading', { name: 'Owner Joseph' })).toBeVisible();
 
   // "Download my data" opens a readable page that includes the business; the JSON file is still offered.
   await later.getByRole('link', { name: 'Download my data' }).click();

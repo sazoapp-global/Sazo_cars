@@ -1,7 +1,7 @@
 // SAZO staff work their queues in the browser: approve a garage, settle a cloned plate, see the sources.
 // Expects a freshly seeded database (CI makes one), because settling the plate changes data.
 import { expect, test } from '@playwright/test';
-import { API, a11y, codesSoFar, createAdmin, lastCode, shot, signIn as signInAs } from './helpers';
+import { API, a11y, apiToken, createAdmin, shot, signIn as signInAs } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567030${stamp}`;
@@ -18,11 +18,8 @@ test('people who are not SAZO staff cannot open the console', async ({ page }) =
 test('approve a garage that registered', async ({ page, request }) => {
   // A garage manager registers through the API (their sign-up screen comes later).
   const phone = `+2567050${stamp}`;
-  const before = codesSoFar();
-  await request.post(`${API}/auth/otp/request`, { data: { phone } });
-  await expect.poll(codesSoFar).toBeGreaterThan(before);
-  const t = await (await request.post(`${API}/auth/otp/verify`, { data: { phone, code: lastCode(), displayName: 'Musa Manager' } })).json();
-  await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${t.accessToken}` }, data: { type: 'garage', legalName: `Bugolobi Car Care ${stamp} Ltd`, district: 'Kampala' } });
+  const t = await apiToken(request, phone, 'Musa Manager');
+  await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${t}` }, data: { type: 'garage', legalName: `Bugolobi Car Care ${stamp} Ltd`, district: 'Kampala' } });
 
   await signIn(page, ADMIN);
   await expect(page.getByRole('heading', { name: /Good to see you/ })).toBeVisible();

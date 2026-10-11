@@ -41,7 +41,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           <h2 id="how-h" className="sr-only">How it works</h2>
           {[
             { icon: 'search' as const, title: 'Search', text: 'Type the plate or VIN. If the plate is on more than one car, we show you all of them — and warn you.' },
-            { icon: 'list_alt' as const, title: 'Read the verdict', text: 'Each question gets a clear status and one line of explanation. Sign in to see the evidence behind it.' },
+            { icon: 'list_alt' as const, title: 'Read the verdict', text: 'Each question gets a clear status and one line of explanation. Log in to see the evidence behind it.' },
             { icon: 'garage' as const, title: 'Then inspect', text: 'Records help you ask the right questions. Always see the car, check its papers and get an inspection.' },
           ].map((s) => (
             <div key={s.title} className="flex gap-3">

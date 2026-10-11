@@ -6,12 +6,18 @@ import { api, isSignedIn } from '@/lib/api';
 import { deviceName, localPhone } from '@/lib/phone';
 import type { Me } from '@/lib/types';
 import { signOut } from '../sign-in/actions';
-import { confirmPhone, deleteAccount, rename, sendPhoneCode, setTexts, signOutDevice, signOutOthers } from './actions';
+import { confirmPhone, deleteAccount, rename, sendPhoneCode, setEmail, setPassword, setTexts, signOutDevice, signOutOthers } from './actions';
 
 export const metadata: Metadata = { title: 'Your account', robots: { index: false } };
 
 const ORG_STATUS: Record<string, string> = { pending_verification: 'Waiting for SAZO approval', approved: 'Approved', rejected: 'Not approved', suspended: 'Suspended' };
-type Profile = { displayName: string; phone: string | null };
+type Profile = {
+  displayName: string; initials: string; surname: string | null; firstName: string | null; middleName: string | null;
+  gender: 'male' | 'female' | null; dateOfBirth: string | null; phone: string | null; email: string | null; emailVerified: boolean;
+  hasPassword: boolean; hasGoogle: boolean; strongPasswordRequired: boolean;
+  progress: { percent: number; items: { key: string; label: string; done: boolean }[] };
+};
+const PROGRESS_LINK: Record<string, string> = { details: '#details', phone: '#phone-heading', email: '#email-heading', password: '#password-heading' };
 type Device = { sessionId: string; device: string | null; signedInAt: string; lastUsedAt: string; current: boolean };
 type SP = Promise<{ done?: string; error?: string; newPhone?: string }>;
 
@@ -20,6 +26,7 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const me = await api<Me>('/me', { auth: true }).catch(() => undefined);
   if (!me) redirect('/sign-in?next=/account');
+  if (me.needsDetails.length) redirect('/account/complete?next=/account');
   const [profile, prefs, devices] = await Promise.all([
     api<Profile>('/me/profile', { auth: true }),
     api<{ visitConfirmationTexts: boolean }>('/me/preferences', { auth: true }),
@@ -29,9 +36,30 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 px-4 py-8 md:px-8">
-      <h1 className="font-display text-2xl font-bold">Hello, {me.displayName}</h1>
+      <div className="flex items-center gap-3">
+        <span className="avatar avatar-lg" aria-hidden>{profile.initials}</span>
+        <div><h1 className="font-display text-2xl font-bold">{profile.displayName}</h1><p className="text-sm text-muted">Settings</p></div>
+      </div>
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
+
+      <section className="card p-5" aria-labelledby="progress">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="progress" className="font-display text-lg font-semibold">Your profile</h2>
+          <span className="font-display text-lg font-bold text-primary-container">{profile.progress.percent}%</span>
+        </div>
+        <div role="progressbar" aria-labelledby="progress" aria-valuenow={profile.progress.percent} aria-valuemin={0} aria-valuemax={100} className="mt-2 h-2.5 overflow-hidden rounded-full bg-soft-3">
+          <div className="h-full rounded-full bg-primary-container" style={{ width: `${profile.progress.percent}%` }} />
+        </div>
+        <ul className="mt-3 grid gap-1 sm:grid-cols-2">
+          {profile.progress.items.map((i) => (
+            <li key={i.key} className="flex items-center gap-2 text-sm">
+              <Icon name={i.done ? 'check_circle' : 'info'} size={18} className={i.done ? 'text-ok-text' : 'text-label'} />
+              {i.done ? <span>{i.label}</span> : <a href={PROGRESS_LINK[i.key]} className="link">Add: {i.label.toLowerCase()}</a>}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <div className="flex flex-wrap gap-2">
         <a href="/my-cars" className="btn btn-ghost">My cars</a>
@@ -57,15 +85,26 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
 
       <section className="card space-y-3 p-5" aria-labelledby="details">
         <h2 id="details" className="font-display text-lg font-semibold">Your details</h2>
-        <form action={rename} className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="flex-1"><label htmlFor="name" className="label">Your name</label>
-            <input id="name" name="name" required minLength={2} maxLength={120} defaultValue={profile.displayName} className="field" autoComplete="name" /></div>
-          <button className="btn btn-ghost">Save name</button>
+        <form action={rename} className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div><label htmlFor="surname" className="label">Surname</label>
+              <input id="surname" name="surname" required maxLength={60} defaultValue={profile.surname ?? ''} className="field" autoComplete="family-name" /></div>
+            <div><label htmlFor="firstName" className="label">First name</label>
+              <input id="firstName" name="firstName" required maxLength={60} defaultValue={profile.firstName ?? ''} className="field" autoComplete="given-name" /></div>
+            <div><label htmlFor="middleName" className="label">Middle name</label>
+              <input id="middleName" name="middleName" maxLength={60} defaultValue={profile.middleName ?? ''} className="field" autoComplete="additional-name" /></div>
+          </div>
+          <button className="btn btn-ghost">Save names</button>
         </form>
-        <p className="text-sm text-muted">Garages you work with see your name. On reviews, only your first name is shown.</p>
+        <p className="text-sm text-muted">Shown as “{profile.displayName}”. Garages you work with see your name; on reviews only your first name is shown.</p>
+        <dl className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
+          <div><dt className="label">Gender</dt><dd>{profile.gender === 'male' ? 'Male' : profile.gender === 'female' ? 'Female' : '—'}</dd></div>
+          <div><dt className="label">Date of birth</dt><dd className="tabular-nums">{profile.dateOfBirth ? formatDate(profile.dateOfBirth) : '—'}</dd></div>
+        </dl>
+        <p className="text-sm text-muted">Gender and date of birth identify you, so only SAZO staff can change them. Contact SAZO if they are wrong.</p>
 
         <div className="border-t border-line pt-3">
-          <p className="label">Phone number</p>
+          <p id="phone-heading" className="label">Phone number</p>
           <p className="font-semibold tabular-nums">{profile.phone ? localPhone(profile.phone) : '—'}</p>
           {newPhone ? (
             <form action={confirmPhone} className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -77,9 +116,9 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
             </form>
           ) : (
             <details className="mt-2">
-              <summary className="cursor-pointer font-semibold text-primary-container">Change phone number</summary>
+              <summary className="cursor-pointer font-semibold text-primary-container">{profile.phone ? 'Change phone number' : 'Add a phone number'}</summary>
               <form action={sendPhoneCode} className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
-                <div className="flex-1"><label htmlFor="phone" className="label">New phone number</label>
+                <div className="flex-1"><label htmlFor="phone" className="label">{profile.phone ? 'New phone number' : 'Phone number'}</label>
                   <input id="phone" name="phone" type="tel" inputMode="tel" required placeholder="0772 123 456" className="field" autoComplete="tel" /></div>
                 <button className="btn btn-ghost">Send a code</button>
               </form>
@@ -87,6 +126,41 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
             </details>
           )}
         </div>
+      </section>
+
+      <section className="card space-y-3 p-5" aria-labelledby="email-heading">
+        <h2 id="email-heading" className="font-display text-lg font-semibold">Email</h2>
+        {profile.email ? (
+          <p><span className="font-semibold">{profile.email}</span>{' '}
+            {profile.emailVerified
+              ? <span className="chip border-ok-line bg-ok-fill text-ok-text">Confirmed</span>
+              : <span className="chip border-warn-line bg-warn-fill text-warn-text">Waiting for you to open the link</span>}</p>
+        ) : <p className="text-muted">No email yet. Add one so you can log in with a password and reset it if you forget.</p>}
+        <form action={setEmail} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1"><label htmlFor="email" className="label">{profile.email && profile.emailVerified ? 'New email address' : 'Email address'}</label>
+            <input id="email" name="email" type="email" required autoComplete="email" defaultValue={profile.emailVerified ? '' : profile.email ?? ''} className="field" /></div>
+          <button className="btn btn-ghost">{profile.email && !profile.emailVerified ? 'Send the link again' : 'Send a confirmation link'}</button>
+        </form>
+      </section>
+
+      <section className="card space-y-3 p-5" aria-labelledby="password-heading">
+        <h2 id="password-heading" className="font-display text-lg font-semibold">Password</h2>
+        <p className="text-muted">{profile.hasPassword ? 'You can log in with your email and password.' : 'No password yet. Set one to log in with your email.'}
+          {profile.hasGoogle && ' You can also continue with Google.'}</p>
+        <form action={setPassword} className="space-y-3">
+          {profile.hasPassword && (
+            <div><label htmlFor="currentPassword" className="label">Current password</label>
+              <input id="currentPassword" name="currentPassword" type="password" required autoComplete="current-password" className="field" /></div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><label htmlFor="newPassword" className="label">New password</label>
+              <input id="newPassword" name="newPassword" type="password" required minLength={profile.strongPasswordRequired ? 12 : 8} autoComplete="new-password" className="field" aria-describedby="newpw-help" /></div>
+            <div><label htmlFor="confirmPassword" className="label">New password again</label>
+              <input id="confirmPassword" name="confirmPassword" type="password" required autoComplete="new-password" className="field" /></div>
+          </div>
+          <p id="newpw-help" className="text-sm text-muted">At least {profile.strongPasswordRequired ? 12 : 8} characters{profile.strongPasswordRequired ? ' — your role can change car histories, so it needs a longer password' : ''}.</p>
+          <button className="btn btn-ghost">{profile.hasPassword ? 'Change password' : 'Set password'}</button>
+        </form>
       </section>
 
       <section className="card p-5" aria-labelledby="texts">

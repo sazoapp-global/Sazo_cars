@@ -73,7 +73,7 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | Customer details encrypted in the personal-data store; confirmation links single-use and never logged | ✅ |
 | **Consumer website (Next.js):** search by plate/VIN/chassis, several-cars and not-found guidance, public summary (no figures), phone-code sign-in, full report (Vehicle Health + Record Confidence with reasons, key facts, 7 questions, price range estimate), timeline, evidence ledger with filters, customer confirmation page for garage SMS links | ✅ |
 | Browser tests on a phone-sized screen, with automatic accessibility checks (axe, WCAG 2 AA) | ✅ |
-| **Garage phone app (installable, works offline):** sign in by phone, find the car by plate (or carry on without signal), work-type tiles, mileage + odometer photo, details per type of work, customer + consent + cost, check-and-send with explained warnings, job list with customer-confirmation status, staff management. Drafts and photos are kept on the phone and sync when the signal returns | ✅ |
+| **Garage phone app (installable, works offline):** log in by phone code or email and password (second step for managers), find the car by plate (or carry on without signal), work-type tiles, mileage + odometer photo, details per type of work, customer + consent + cost, check-and-send with explained warnings, job list with customer-confirmation status, staff management. Drafts and photos are kept on the phone and sync when the signal returns | ✅ |
 | **Admin console (website `/admin`, SAZO staff only):** overview of what needs a person, business approvals, conflict review (records side by side, resolve/dismiss with reasoning, mark a record as a mistake or duplicate, settle a cloned plate, notes), uncertain vehicle matches, data sources (pause/retire/replace simulated feeds), recalculation | ✅ |
 | **Business sign-up (website `/business`):** for-businesses page, registration, approval progress, sending verification documents, SAZO's questions shown to the business, SMS on every decision; reviewers open the documents from the approval queue | ✅ |
 | **Partner data-entry console (website `/partner`):** for each data source (registry, customs, police, lender, insurer, auction, rental, manufacturer, dealer, inspection), enter one record with a form built from the record catalogue, or upload a CSV file (template per source; every row checked; good rows sent in batches; re-sending a file never duplicates); recent submissions with per-record results | ✅ |
@@ -94,19 +94,20 @@ npm run seed -w @sazo/api          # loads all scenario vehicles through the rea
 npm run seed:check -w @sazo/api    # verifies every vehicle's verdict against the scenario dataset
 ```
 
-### Sign in (development)
+### Accounts and log-in (development)
 
-Outside production, SMS codes are not sent — they are printed in the API log (`(dev) SMS to …`).
+People create an account first, then log in (D-100): email + password, phone + code, or Google (off until `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are set — see `docs/GOOGLE_SIGN_IN.md`). Sign-up asks surname, first name, middle name (optional), gender and date of birth (18+). Outside production, SMS codes and emails are not sent — they are printed in the API log (`(dev) SMS to …`, `(dev) Email to …`).
 
 ```bash
-npm run create-admin -w @sazo/api -- --phone +256772000001 --name "Your Name"   # gives a SAZO admin role
-curl -X POST localhost:3000/v1/auth/otp/request -H 'content-type: application/json' -d '{"phone":"+256772000001"}'
+npm run create-admin -w @sazo/api -- --phone +256772000001 --surname Anguzu --first Mike --gender male --dob 1990-05-17   # a SAZO admin
+curl -X POST localhost:3000/v1/auth/otp/request -H 'content-type: application/json' -d '{"phone":"+256772000001","intent":"login"}'
 curl -X POST localhost:3000/v1/auth/otp/verify  -H 'content-type: application/json' -d '{"phone":"+256772000001","code":"<from log>"}'
+# SAZO staff, managers and dealers get {"status":"second_step","challengeId":…}: send the second code to /v1/auth/second-step.
 # then: -H "Authorization: Bearer <accessToken>" on /v1/me, /v1/vehicles/<ref>/report, /v1/admin/...
 ```
 
-Public without sign-in: health, search, public summary. Everything else needs a token; admin routes need the matching permission.
-In production set `JWT_SECRET`, `HMAC_SECRET` (32+ chars each) and `SMS_PROVIDER=africastalking` with `AT_USERNAME`/`AT_API_KEY` — the API refuses to start otherwise.
+Public without logging in: health, search, public summary. Everything else needs a token; admin routes need the matching permission.
+In production set `JWT_SECRET`, `HMAC_SECRET` (32+ chars each), `SMS_PROVIDER=africastalking` with `AT_USERNAME`/`AT_API_KEY`, and `EMAIL_PROVIDER=ses` with `EMAIL_FROM` (a sender verified in AWS SES) — the API refuses to start otherwise.
 
 ## Architecture in one paragraph
 

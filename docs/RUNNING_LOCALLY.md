@@ -32,10 +32,10 @@ No settings file is needed — the defaults point at the Docker database. (`.env
 ## 4. Make yourself a SAZO admin
 
 ```bash
-npm run create-admin -w @sazo/api -- --phone +256772000001 --name "Your Name"
+npm run create-admin -w @sazo/api -- --phone +256772000001 --surname Anguzu --first Mike --gender male --dob 1990-05-17
 ```
 
-Use your own number in `+256…` form. It is only stored on your computer.
+Use your own number in `+256…` form and your own details (you must be 18 or older). They are only stored on your computer.
 
 ## 5. Start the three apps — one terminal window each
 
@@ -49,14 +49,17 @@ Leave them running. Stop with `Ctrl + C`.
 
 ## 6. Try it
 
-- **Sign in:** enter your phone number on the website. The code appears in **window 1** as `Your SAZO code is 123456`.
-- **Admin console:** http://localhost:3001/admin (after signing in with the admin number from step 4).
+- **Create an account:** "Sign up" on the website — with email and password, or with your phone number and a code. Then "Log in" any time with either.
+- **Codes and emails are not really sent on your computer.** They appear in **window 1**:
+  - SMS codes as `Your SAZO code is 123456` (or `Your SAZO sign-in code is …` for the second step);
+  - emails (confirm your email, reset password) as `Email to you@example.com: …` with the link — copy it into the browser.
+- **Admin console:** http://localhost:3001/admin — log in with the admin number from step 4 (phone code). Because admins can change car histories, a second code is asked for on each new browser; tick "Remember this device" to skip it next time.
 - **Sample plates to search:**
   - `UBJ 214K` — clean Toyota Harrier
   - `UAX 123A` — cloned (copied) plate
   - `UBC 718P` — mileage rolled back
   - `UBK 482M` — Toyota Premio with service history
-- **Garage app:** sign up a business on the website ("For businesses"), approve it yourself in the admin console, then sign in at http://localhost:3002.
+- **Garage app:** create an account and register a business on the website ("For businesses"), approve it yourself in the admin console, then log in at http://localhost:3002. The app has no sign-up: mechanics are added by their manager from the Staff screen.
 - **Phone testing:** on the same Wi-Fi, open `http://<your computer's IP>:3002` on the phone.
 
 ## 7. Run the tests (optional)

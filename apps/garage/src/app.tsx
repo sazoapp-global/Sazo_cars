@@ -11,6 +11,7 @@ import { InspectionWizard } from './screens/inspection-wizard';
 import { ServerInspectionView } from './screens/server-inspection';
 import { JobWizard } from './screens/job-wizard';
 import { ServerJobView } from './screens/server-job';
+import { FinishDetails } from './screens/finish-details';
 import { SignIn } from './screens/sign-in';
 import { Staff } from './screens/staff';
 import { Concerns } from './screens/concerns';
@@ -54,6 +55,7 @@ export function App() {
 
   if (session.state === 'loading') return <div className="p-6 text-muted" aria-busy="true">Loading…</div>;
   if (session.state === 'signed_out') return <SignIn onSignedIn={() => void load()} />;
+  if (session.me.needsDetails?.length && online) return <FinishDetails onDone={() => void load()} onSignOut={leave} />;
 
   const garage = session.garages.find((g) => g.id === garageId);
   return (

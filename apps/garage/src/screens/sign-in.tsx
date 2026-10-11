@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ApiError, OfflineError, requestCode, verifyCode } from '../lib/api';
+import { ApiError, OfflineError, passwordLogin, requestCode, secondStep, verifyCode, type SecondStep } from '../lib/api';
 
 function toE164(input: string): string | undefined {
   const d = input.replace(/[\s\-().]/g, '');
@@ -7,48 +7,101 @@ function toE164(input: string): string | undefined {
   return /^\+[1-9]\d{7,14}$/.test(e) ? e : undefined;
 }
 
+const WEBSITE = import.meta.env.VITE_SAZO_WEB_URL ?? 'http://localhost:3001';
+
+/**
+ * Log in (D-100): phone code or email and password. No sign-up here: mechanics are added by their manager,
+ * and managers register their business on the SAZO website. Managers get a second step on a new phone (D-105).
+ */
 export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
-  const [step, setStep] = useState<'phone' | 'code' | 'name'>('phone');
+  const [method, setMethod] = useState<'phone' | 'email'>('phone');
+  const [step, setStep] = useState<'start' | 'code' | 'second'>('start');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
-  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [second, setSecond] = useState<SecondStep>();
+  const [secondCode, setSecondCode] = useState('');
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
   async function run(fn: () => Promise<void>) {
     setBusy(true); setError(undefined);
     try { await fn(); } catch (err) {
-      if (err instanceof OfflineError) setError('No signal. Signing in needs the internet once; after that the app works offline.');
-      else if (err instanceof ApiError && err.code === 'display_name_required') setStep('name');
+      if (err instanceof OfflineError) setError('No signal. Logging in needs the internet once; after that the app works offline.');
+      else if (err instanceof ApiError && err.code === 'no_account') setError(method === 'phone'
+        ? 'No SAZO account uses this number. Ask your manager to add you, or register your business on the SAZO website.'
+        : 'No SAZO account uses this email.');
+      else if (err instanceof ApiError && err.code === 'invalid_credentials') setError(err.message || 'Wrong email or password.');
+      else if (err instanceof ApiError && err.code === 'account_locked') setError(err.message || 'Too many wrong passwords. Try again later.');
       else if (err instanceof ApiError && err.status === 401) setError('That code is wrong or has expired.');
-      else if (err instanceof ApiError && err.status === 429) setError('Too many codes requested. Wait a while and try again.');
+      else if (err instanceof ApiError && err.status === 429) setError('Too many tries. Wait a while and try again.');
+      else if (err instanceof ApiError && err.code === 'account_suspended') setError('This account is not active. Contact SAZO.');
       else setError('Something went wrong. Please try again.');
     } finally { setBusy(false); }
   }
+
+  const afterFirstStep = (s: SecondStep | undefined) => { if (s) { setSecond(s); setStep('second'); } else onSignedIn(); };
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (step === 'second' && second) {
+      void run(async () => { await secondStep(second.challengeId, secondCode, remember); onSignedIn(); });
+    } else if (method === 'email') {
+      if (!email.trim() || !password) { setError('Enter your email and password.'); return; }
+      void run(async () => afterFirstStep(await passwordLogin(email.trim(), password)));
+    } else if (step === 'start') {
+      const e164 = toE164(phone);
+      if (!e164) { setError('Enter a phone number like 0772 123 456.'); return; }
+      void run(async () => { await requestCode(e164); setPhone(e164); setStep('code'); });
+    } else {
+      void run(async () => afterFirstStep(await verifyCode(phone, code)));
+    }
+  }
+
+  const switchTo = (m: 'phone' | 'email') => { setMethod(m); setStep('start'); setError(undefined); };
 
   return (
     <div className="mx-auto max-w-md p-4 pt-10">
       <p className="font-display text-3xl font-extrabold text-primary">SAZO Garage</p>
       <p className="mt-1 text-muted">Record jobs for your customers&apos; cars. Works without signal.</p>
-      <form className="card mt-6 space-y-4 p-5" onSubmit={(e) => {
-        e.preventDefault();
-        if (step === 'phone') {
-          const e164 = toE164(phone);
-          if (!e164) { setError('Enter a phone number like 0772 123 456.'); return; }
-          void run(async () => { await requestCode(e164); setPhone(e164); setStep('code'); });
-        } else void run(async () => { await verifyCode(phone, code, step === 'name' ? name : undefined); onSignedIn(); });
-      }}>
-        {step === 'phone' && (<div><label htmlFor="phone" className="label">Your phone number</label>
+      <form className="card mt-6 space-y-4 p-5" onSubmit={submit} noValidate>
+        <h1 className="font-display text-xl font-bold">{step === 'second' ? 'Confirm it’s you' : 'Log in'}</h1>
+        {step !== 'second' && (
+          <div role="tablist" aria-label="How to log in" className="grid grid-cols-2 gap-1 rounded-lg bg-soft p-1">
+            {(['phone', 'email'] as const).map((m) => (
+              <button key={m} type="button" role="tab" aria-selected={method === m} onClick={() => switchTo(m)}
+                className={`min-h-10 rounded-md text-sm font-semibold ${method === m ? 'bg-white text-primary-container shadow' : 'text-muted'}`}>
+                {m === 'phone' ? 'Phone code' : 'Email and password'}
+              </button>
+            ))}
+          </div>
+        )}
+        {step === 'second' && second && (<div>
+          <p className="text-sm">This is a new phone, and your role can change car histories. We sent a code {second.channel === 'sms' ? 'by SMS to' : 'by email to'} <span className="font-semibold">{second.sentTo}</span>.</p>
+          <label htmlFor="second-code" className="label mt-2">6-digit code</label>
+          <input id="second-code" className="field text-center !text-2xl tracking-[0.5em] tabular-nums" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={secondCode} onChange={(e) => setSecondCode(e.target.value.replace(/\D/g, ''))} autoFocus />
+          <label className="mt-3 flex items-start gap-2 text-sm"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="mt-1 h-4 w-4" />Remember this phone for 90 days (only if it&apos;s yours)</label>
+        </div>)}
+        {step !== 'second' && method === 'phone' && step === 'start' && (<div><label htmlFor="phone" className="label">Your phone number</label>
           <input id="phone" className="field" type="tel" inputMode="tel" autoComplete="tel" placeholder="0772 123 456" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>)}
         {step === 'code' && (<div><p className="text-sm">Code sent to <span className="font-semibold tabular-nums">{phone}</span></p>
           <label htmlFor="code" className="label mt-2">6-digit code</label>
           <input id="code" className="field text-center !text-2xl tracking-[0.5em] tabular-nums" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} autoFocus /></div>)}
-        {step === 'name' && (<div><label htmlFor="name" className="label">Your name</label>
-          <input id="name" className="field" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-          <p className="mt-1 text-sm text-muted">Shown on every job you record (D-056).</p></div>)}
+        {step !== 'second' && method === 'email' && (<>
+          <div><label htmlFor="email" className="label">Email</label>
+            <input id="email" className="field" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div><label htmlFor="password" className="label">Password</label>
+            <input id="password" className="field" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+        </>)}
         {error && <p role="alert" className="text-sm font-semibold text-bad-text">{error}</p>}
-        <button className="btn btn-primary w-full" type="submit" disabled={busy}>{step === 'phone' ? 'Send code' : step === 'code' ? 'Sign in' : 'Continue'}</button>
+        <button className="btn btn-primary w-full" type="submit" disabled={busy}>
+          {step === 'second' ? 'Confirm' : method === 'phone' && step === 'start' ? 'Send code' : 'Log in'}
+        </button>
+        {method === 'email' && step !== 'second' && <p className="text-center text-sm"><a href={`${WEBSITE}/forgot-password`} className="font-semibold text-primary-container underline">Forgot password?</a></p>}
       </form>
+      <p className="mt-4 text-center text-sm text-muted">No account? Your manager adds you from the Staff screen. Managers: <a href={`${WEBSITE}/sign-up`} className="font-semibold text-primary-container underline">create an account</a> and register your business on the SAZO website.</p>
     </div>
   );
 }

@@ -38,7 +38,7 @@ export default async function VehiclePage({ params, searchParams }: Props) {
             <div className="rounded-lg bg-soft p-4 md:max-w-sm">
               <p className="font-semibold">See the evidence behind each answer</p>
               <p className="text-sm text-muted">Sign in (free) for the health score, price estimate, mileage history and every record.</p>
-              <Link href={`/sign-in?next=/v/${ref}`} className="btn btn-primary mt-3 w-full">Sign in to see details</Link>
+              <Link href={`/sign-in?next=/v/${ref}`} className="btn btn-primary mt-3 w-full">Log in to see details</Link>
             </div>
           </div>
           {s.questions.map((q) => <QuestionCard key={q.question} q={q} detailed={false} />)}

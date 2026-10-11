@@ -71,13 +71,33 @@ export async function request<T>(path: string, opts: { method?: string; body?: u
   return data as T;
 }
 
-export async function requestCode(phone: string): Promise<void> {
-  await request('/auth/otp/request', { method: 'POST', body: { phone } });
+type LoginResult = (Tokens & { status: 'signed_in'; deviceToken?: string }) | { status: 'second_step'; challengeId: string; channel: 'sms' | 'email'; sentTo: string };
+export type SecondStep = { challengeId: string; channel: 'sms' | 'email'; sentTo: string };
+
+/** A remembered device skips the second step for 90 days (D-105). Kept on this phone only. */
+async function finish(r: LoginResult): Promise<SecondStep | undefined> {
+  if (r.status === 'second_step') return { challengeId: r.challengeId, channel: r.channel, sentTo: r.sentTo };
+  if (r.deviceToken) await kv.set('deviceToken', r.deviceToken);
+  await store(r);
+  listeners.forEach((l) => l(true));
+  return undefined;
 }
 
-export async function verifyCode(phone: string, code: string, displayName?: string): Promise<void> {
-  await store(await request<Tokens>('/auth/otp/verify', { method: 'POST', body: { phone, code, displayName } }));
-  listeners.forEach((l) => l(true));
+/** Log in only: staff accounts are created by their manager (D-109). Unknown numbers get `no_account`. */
+export async function requestCode(phone: string): Promise<void> {
+  await request('/auth/otp/request', { method: 'POST', body: { phone, intent: 'login' } });
+}
+
+export async function verifyCode(phone: string, code: string): Promise<SecondStep | undefined> {
+  return finish(await request<LoginResult>('/auth/otp/verify', { method: 'POST', body: { phone, code, deviceToken: await kv.get<string>('deviceToken') } }));
+}
+
+export async function passwordLogin(email: string, password: string): Promise<SecondStep | undefined> {
+  return finish(await request<LoginResult>('/auth/password/sign-in', { method: 'POST', body: { email, password, deviceToken: await kv.get<string>('deviceToken') } }));
+}
+
+export async function secondStep(challengeId: string, code: string, rememberDevice: boolean): Promise<void> {
+  await finish(await request<LoginResult>('/auth/second-step', { method: 'POST', body: { challengeId, code, rememberDevice } }));
 }
 
 export async function signOut(): Promise<void> {

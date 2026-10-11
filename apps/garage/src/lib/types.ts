@@ -1,6 +1,9 @@
 export interface Me {
   id: string;
   displayName: string;
+  initials?: string;
+  /** Details an account made before 11 Oct 2026 must still give (D-101). */
+  needsDetails?: string[];
   memberships: { organisationId: string; organisationName: string; organisationType: string; organisationStatus: string; role: string; status: string }[];
 }
 
