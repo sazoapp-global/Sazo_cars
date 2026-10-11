@@ -23,7 +23,7 @@ export interface ServerJob {
   plateEntered: string;
   vehicleRef?: string;
   workTypes: string[];
-  form: Record<string, unknown> & { mileage?: { value: number; unit: string }; customer?: { name?: string; phoneMasked?: string; smsConsent?: boolean } };
+  form: Record<string, unknown> & { description?: string; mileage?: { value: number; unit: string }; customer?: { name?: string; phoneMasked?: string; smsConsent?: boolean } };
   createdBy: { userId: string; displayName: string };
   clientCreatedAt: string;
   submittedAt: string | null;

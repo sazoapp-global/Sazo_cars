@@ -61,6 +61,7 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await page.getByRole('button', { name: 'Next' }).click();
 
   await page.getByRole('button', { name: 'Service' }).click();
+  await page.getByLabel('Describe the job (optional)').fill('Full service. Front brake pads worn, advised the customer.');
   await shot(page, '2-work');
   await page.getByRole('button', { name: 'Next' }).click();
 
@@ -82,6 +83,7 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await page.getByRole('button', { name: 'Next' }).click();
 
   await expect(page.getByText('Peter Okello · will get an SMS')).toBeVisible();
+  await expect(page.getByText('Full service. Front brake pads worn, advised the customer.')).toBeVisible();
   await shot(page, '5-review');
   await page.getByRole('button', { name: 'Send to SAZO' }).click();
   await expect(page.getByRole('heading', { name: 'Added to the car’s history' })).toBeVisible();

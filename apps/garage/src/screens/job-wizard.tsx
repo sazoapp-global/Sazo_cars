@@ -73,7 +73,7 @@ export function JobWizard({ jobId, garage, me }: { jobId: string; garage: Garage
       </div>
       <div className="flex-1 space-y-5 p-4">
         {step === 0 && <CarStep d={d} garage={garage} online={online} update={update} />}
-        {step === 1 && <WorkStep d={d} update={update} />}
+        {step === 1 && <WorkStep d={d} setForm={setForm} update={update} />}
         {step === 2 && <MileageStep d={d} setForm={setForm} update={update} />}
         {step === 3 && <DetailsStep d={d} setForm={setForm} update={update} />}
         {step === 4 && <CustomerStep d={d} setForm={setForm} update={update} />}
@@ -174,7 +174,7 @@ function CarStep({ d, garage, online, update }: StepProps & { garage: Garage; on
   );
 }
 
-function WorkStep({ d, update }: StepProps) {
+function WorkStep({ d, update, setForm }: FormProps) {
   const toggle = (w: WorkType) => update((x) => ({ ...x, workTypes: x.workTypes.includes(w) ? x.workTypes.filter((y) => y !== w) : [...x.workTypes, w] }));
   return (
     <>
@@ -186,6 +186,13 @@ function WorkStep({ d, update }: StepProps) {
             <Icon name={WORK_ICONS[w]} size={26} />{WORK_LABELS[w]}
           </button>
         ))}
+      </div>
+      <div>
+        <label htmlFor="job-description" className="label">Describe the job (optional)</label>
+        <textarea id="job-description" rows={3} maxLength={1000} className="field !min-h-24 py-3"
+          placeholder="e.g. Full service: engine oil and filter, air filter, front brake pads. Checked suspension."
+          value={d.form.description ?? ''} onChange={(e) => setForm((x) => ({ ...x, description: e.target.value || undefined }))} />
+        <p className="mt-1 text-xs text-muted">For your garage's records. Not shown to buyers.</p>
       </div>
     </>
   );
@@ -420,6 +427,7 @@ function ReviewStep({ d, garage, me, online, update, goStep }: StepProps & { gar
       <div className="card divide-y divide-line">
         <Row label="Car" onEdit={() => goStep(0)}><PlateText value={d.plateEntered} /> <span className="text-sm">{d.vehicleLabel ?? (d.newToSazo ? 'New to SAZO' : 'Matched when sent')}</span></Row>
         <Row label="Work" onEdit={() => goStep(1)}>{d.workTypes.map((w) => WORK_LABELS[w]).join(', ')}</Row>
+        {d.form.description && <Row label="Description" onEdit={() => goStep(1)}><span className="whitespace-pre-line text-sm">{d.form.description}</span></Row>}
         <Row label="Mileage" onEdit={() => goStep(2)}>{d.form.mileage ? `${d.form.mileage.value.toLocaleString('en-UG')} ${d.form.mileage.unit}${d.form.mileage.unit === 'mi' ? ` (${formatKm(kmOf(d.form.mileage))})` : ''}` : '—'}{d.photos.odometer ? ' · with photo' : ''}</Row>
         <Row label="Customer" onEdit={() => goStep(4)}>{d.form.customer?.name ?? 'Not given'}{willSms ? ' · will get an SMS' : ''}</Row>
         <Row label="Recorded by">{me.displayName}</Row>

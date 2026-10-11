@@ -11,6 +11,9 @@ const Phone = z.string().regex(/^\+[1-9][0-9]{7,14}$/, 'Use international format
 const text = (max: number) => z.string().trim().max(max);
 
 export const JobForm = z.object({
+  /** The mechanic's own words about the job ("Full service: oil and filter, front brake pads…"). Kept with the
+   *  garage's job record; not added to the car's history that buyers see. */
+  description: text(1000).optional(),
   mileage: z.object({
     value: z.number().int().min(0).max(2_000_000),
     unit: z.enum(['km', 'mi']).default('km'),

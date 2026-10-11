@@ -191,3 +191,9 @@
 | Business sign-ups | 3 a day per person. `ORG_SIGNUPS_PER_DAY` in `iam.service.ts`. |
 | Share links | 20 a day per person; saving a report without a link is not limited. `SHARES_PER_DAY` in `buyer.service.ts`. |
 | What buyers see of partner records | Only the fields each record type declares. Customs-cleared, total-loss and flood records show that they exist, with no details. |
+
+## Job description in the garage app (11 Oct 2026, easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Describe the job | Optional box on the "What work was done?" step, up to 1,000 characters, in the mechanic's own words. Shown on the review step and on the sent job. Kept with the garage's job record only — not added to the car's history, so buyers don't see it (free text can contain names or prices). |

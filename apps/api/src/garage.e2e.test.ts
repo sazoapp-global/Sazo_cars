@@ -148,8 +148,10 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     expect(v1.body.form.customer).toEqual({ name: 'Peter Okello', phoneMasked: '+256 77• ••• 123', smsConsent: true });
 
     const v2 = await http.put(`/v1/garage/jobs/${jobId}`).set(asGarage(mechanicToken))
-      .send({ ...draft, version: 1, form: { ...draft.form, service: { items: ['engine_oil', 'oil_filter'] } } }).expect(200);
+      .send({ ...draft, version: 1, form: { ...draft.form, description: 'Full service: oil and filter. Front pads worn, advised replacing next visit.', service: { items: ['engine_oil', 'oil_filter'] } } }).expect(200);
     expect(v2.body.version).toBe(2);
+    expect(v2.body.form.description).toBe('Full service: oil and filter. Front pads worn, advised replacing next visit.');
+    expect((await http.put(`/v1/garage/jobs/${randomUUID()}`).set(asGarage(mechanicToken)).send({ ...draft, form: { ...draft.form, description: 'x'.repeat(1001) } })).status).toBe(400);
     expect((await http.put(`/v1/garage/jobs/${jobId}`).set(asGarage(managerToken)).send({ ...draft, version: 1 }).expect(409)).body.code).toBe('version_conflict');
 
     const { rows } = await db.query(`SELECT form FROM garage.jobs WHERE id = $1`, [jobId]);
@@ -181,6 +183,9 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     const types = ledger.body.items.map((i: { type: string }) => i.type);
     expect(types).toEqual(expect.arrayContaining(['odometer_reading', 'service_performed']));
     expect(types).not.toContain('cost_recorded');
+    // The mechanic's description stays with the garage's job; it is not part of the car's history.
+    expect(JSON.stringify(ledger.body)).not.toContain('advised replacing');
+    expect((await http.get(`/v1/garage/jobs/${jobId}`).set(asGarage(managerToken)).expect(200)).body.form.description).toContain('Full service');
   });
 
   it('the customer confirms by SMS link — once, without signing in (D-058)', async () => {
