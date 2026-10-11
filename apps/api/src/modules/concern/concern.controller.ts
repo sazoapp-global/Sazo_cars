@@ -1,6 +1,6 @@
 // Concerns API (O-002): businesses report from their apps; SAZO staff review.
 import { Body, Controller, Get, Headers, HttpCode, Inject, Param, Post, Query } from '@nestjs/common';
-import { CONCERN_CATEGORIES } from '@sazo/contracts';
+import { CONCERN_CATEGORIES, tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest } from '../../platform/problem.js';
 import { canForOrg, CurrentActor, IamService, RequirePermission, type Actor } from '../iam/index.js';
@@ -12,7 +12,7 @@ const Report = z.object({
   plate: z.string().trim().min(2).max(15),
   vehicleRef: z.string().regex(/^SZV-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/).optional(),
   category: z.enum(CONCERN_CATEGORIES),
-  description: z.string().trim().min(10).max(2000),
+  description: z.string().trim().min(10).max(2000).transform(tidySentence),
   evidenceIds: z.array(Uuid).max(10).default([]),
 });
 
@@ -70,7 +70,7 @@ export class ConcernController {
   @RequirePermission('concern.review')
   async decide(@CurrentActor() actor: Actor, @Param('id') id: string, @Body() body: unknown) {
     if (!Uuid.safeParse(id).success) problem(new ConcernError('concern_not_found', 'No such concern'));
-    const b = z.object({ decision: z.enum(['uphold', 'dismiss']), reason: z.string().trim().min(3).max(500),
+    const b = z.object({ decision: z.enum(['uphold', 'dismiss']), reason: z.string().trim().min(3).max(500).transform(tidySentence),
       vehicleRef: z.string().regex(/^SZV-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/).optional() }).safeParse(body);
     if (!b.success) throw badRequest('invalid_request', 'decision and reason are required');
     await this.concerns.decide(actor, id, b.data).catch(problem);

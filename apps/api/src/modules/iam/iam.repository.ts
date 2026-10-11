@@ -7,7 +7,18 @@ import { DB_POOL } from '../../platform/tokens.js';
 
 export type OrgStatus = 'pending_verification' | 'approved' | 'rejected' | 'suspended';
 
-export interface UserRow { id: string; displayName: string; phone: string | null; email: string | null; status: string }
+export interface UserRow {
+  id: string; displayName: string; phone: string | null; email: string | null; status: string;
+  surname: string | null; firstName: string | null; middleName: string | null; gender: 'male' | 'female' | null;
+  emailVerified: boolean; dobCiphertext: Buffer | null; dobKeyVersion: number | null;
+}
+const USER_COLS = `id, display_name AS "displayName", phone_e164 AS phone, email, status, surname, first_name AS "firstName",
+  middle_name AS "middleName", gender, email_verified_at IS NOT NULL AS "emailVerified", dob_ciphertext AS "dobCiphertext", dob_key_version AS "dobKeyVersion"`;
+
+export interface NewAccount {
+  surname: string; firstName: string; middleName?: string | null; displayName: string; gender: 'male' | 'female';
+  dobCiphertext: Buffer; dobKeyVersion: number; phone?: string | null; email?: string | null; emailVerified?: boolean;
+}
 export interface MembershipRow {
   organisationId: string; organisationName: string; organisationType: string; organisationStatus: OrgStatus;
   role: string; status: 'invited' | 'active' | 'removed'; permissions: string[];
@@ -27,19 +38,27 @@ export class IamRepository {
   // ---------- users
   async userByPhone(phone: string): Promise<UserRow | undefined> {
     const { rows } = await this.pool.query<UserRow>(
-      `SELECT id, display_name AS "displayName", phone_e164 AS phone, email, status FROM iam.users WHERE phone_e164 = $1`, [phone]);
+      `SELECT ${USER_COLS} FROM iam.users WHERE phone_e164 = $1`, [phone]);
     return rows[0];
   }
 
   async userById(id: string): Promise<UserRow | undefined> {
     const { rows } = await this.pool.query<UserRow>(
-      `SELECT id, display_name AS "displayName", phone_e164 AS phone, email, status FROM iam.users WHERE id = $1`, [id]);
+      `SELECT ${USER_COLS} FROM iam.users WHERE id = $1`, [id]);
     return rows[0];
   }
 
+  async userByEmail(email: string): Promise<UserRow | undefined> {
+    const { rows } = await this.pool.query<UserRow>(`SELECT ${USER_COLS} FROM iam.users WHERE lower(email) = lower($1) AND status <> 'deleted'`, [email]);
+    return rows[0];
+  }
+
+  /** Scripts, tests and staff added by a manager: a phone account with a display name only (details completed at first log-in). */
   async createUser(sql: Sql, displayName: string, phone: string): Promise<string> {
+    const first = displayName.trim().split(/\s+/)[0] ?? displayName;
+    const rest = displayName.trim().slice(first.length).trim();
     const { rows } = await sql.query<{ id: string }>(
-      `INSERT INTO iam.users (display_name, phone_e164) VALUES ($1, $2) RETURNING id`, [displayName, phone]);
+      `INSERT INTO iam.users (display_name, phone_e164, first_name, surname) VALUES ($1, $2, $3, $4) RETURNING id`, [displayName, phone, first, rest || null]);
     await sql.query(`INSERT INTO iam.auth_identities (user_id, provider, subject, verified_at) VALUES ($1, 'phone_otp', $2, now())`, [rows[0]!.id, phone]);
     return rows[0]!.id;
   }
@@ -121,6 +140,14 @@ export class IamRepository {
     return new Map(rows.map((r) => [r.id, r.display_name]));
   }
 
+  /** First names only (public review authors): the stored first name, or the first word of older display names. */
+  async firstNames(userIds: string[]): Promise<Map<string, string>> {
+    if (!userIds.length) return new Map();
+    const { rows } = await this.pool.query<{ id: string; name: string }>(
+      `SELECT id, COALESCE(first_name, split_part(display_name, ' ', 1)) AS name FROM iam.users WHERE id = ANY($1) AND status <> 'deleted'`, [userIds]);
+    return new Map(rows.map((r) => [r.id, r.name]));
+  }
+
   // ---------- one-time codes
   async recentOtpCount(phone: string, minutes: number): Promise<number> {
     const { rows } = await this.pool.query<{ n: number }>(
@@ -143,10 +170,6 @@ export class IamRepository {
   }
 
   // ---------- account settings
-  async setDisplayName(userId: string, name: string): Promise<void> {
-    await this.pool.query(`UPDATE iam.users SET display_name = $2 WHERE id = $1 AND status = 'active'`, [userId, name]);
-  }
-
   /** False if another account already has this number. */
   async setPhone(userId: string, phone: string): Promise<boolean> {
     try {
@@ -192,9 +215,14 @@ export class IamRepository {
 
   /** Remove the person: no name, phone or email; memberships ended; every device signed out. Their id stays on records they entered. */
   async anonymise(userId: string): Promise<void> {
-    await this.pool.query(`UPDATE iam.users SET status = 'deleted', deleted_at = now(), display_name = 'Deleted account', phone_e164 = NULL, email = NULL WHERE id = $1`, [userId]);
+    await this.pool.query(
+      `UPDATE iam.users SET status = 'deleted', deleted_at = now(), display_name = 'Deleted account', phone_e164 = NULL, email = NULL, email_verified_at = NULL,
+              surname = NULL, first_name = NULL, middle_name = NULL, gender = NULL, dob_ciphertext = NULL, dob_key_version = NULL WHERE id = $1`, [userId]);
+    await this.pool.query(`DELETE FROM iam.auth_identities WHERE user_id = $1 AND provider IN ('password', 'google')`, [userId]);
+    await this.pool.query(`UPDATE iam.email_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`, [userId]);
+    await this.forgetDevices(userId);
     await this.pool.query(`UPDATE iam.memberships SET status = 'removed' WHERE user_id = $1`, [userId]);
-    await this.pool.query(`UPDATE iam.auth_identities SET subject = 'deleted:' || id, secret_hash = NULL WHERE user_id = $1`, [userId]);
+    await this.pool.query(`UPDATE iam.auth_identities SET subject = 'deleted:' || id WHERE user_id = $1`, [userId]);
     await this.revokeAllSessions(userId, 'account_deleted');
   }
 
@@ -291,5 +319,174 @@ export class IamRepository {
     await sql.query(
       `INSERT INTO iam.audit_entries (actor_user_id, acting_for_organisation_id, action, target_type, target_id, details) VALUES ($1,$2,$3,$4,$5,$6)`,
       [e.actorUserId, e.organisationId ?? null, e.action, e.targetType, e.targetId ?? null, JSON.stringify(e.details ?? {})]);
+  }
+
+  // ---------- accounts (D-100 – D-105)
+
+  /** Create a full account (sign-up). Returns undefined if the phone or email is already used. */
+  async createAccount(sql: Sql, a: NewAccount): Promise<string | undefined> {
+    try {
+      const { rows } = await sql.query<{ id: string }>(
+        `INSERT INTO iam.users (display_name, surname, first_name, middle_name, gender, dob_ciphertext, dob_key_version, phone_e164, email, email_verified_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, CASE WHEN $10 THEN now() END) RETURNING id`,
+        [a.displayName, a.surname, a.firstName, a.middleName ?? null, a.gender, a.dobCiphertext, a.dobKeyVersion, a.phone ?? null, a.email ?? null, !!a.emailVerified]);
+      if (a.phone) await sql.query(`INSERT INTO iam.auth_identities (user_id, provider, subject, verified_at) VALUES ($1, 'phone_otp', $2, now())`, [rows[0]!.id, a.phone]);
+      return rows[0]!.id;
+    } catch (err) {
+      if ((err as { code?: string }).code === '23505') return undefined;
+      throw err;
+    }
+  }
+
+  async setNames(userId: string, n: { surname: string; firstName: string; middleName: string | null; displayName: string }): Promise<void> {
+    await this.pool.query(`UPDATE iam.users SET surname = $2, first_name = $3, middle_name = $4, display_name = $5 WHERE id = $1 AND status = 'active'`,
+      [userId, n.surname, n.firstName, n.middleName, n.displayName]);
+  }
+
+  /** Gender and date of birth are set once (identification, D-101); later changes go through SAZO staff. */
+  async setIdentityOnce(userId: string, gender: 'male' | 'female', dobCiphertext: Buffer, dobKeyVersion: number): Promise<void> {
+    await this.pool.query(
+      `UPDATE iam.users SET gender = COALESCE(gender, $2),
+              dob_ciphertext = COALESCE(dob_ciphertext, $3), dob_key_version = CASE WHEN dob_ciphertext IS NULL THEN $4 ELSE dob_key_version END
+        WHERE id = $1 AND status = 'active'`, [userId, gender, dobCiphertext, dobKeyVersion]);
+  }
+
+  /** Date-of-birth values not yet on the current key (key rotation). */
+  async dobsToReencrypt(currentVersion: number, limit: number): Promise<{ id: string; dobCiphertext: Buffer; dobKeyVersion: number }[]> {
+    const { rows } = await this.pool.query(
+      `SELECT id, dob_ciphertext AS "dobCiphertext", dob_key_version AS "dobKeyVersion" FROM iam.users
+        WHERE dob_ciphertext IS NOT NULL AND dob_key_version <> $1 LIMIT $2`, [currentVersion, limit]);
+    return rows;
+  }
+
+  async replaceDob(userId: string, oldVersion: number, dobCiphertext: Buffer, dobKeyVersion: number): Promise<void> {
+    await this.pool.query(`UPDATE iam.users SET dob_ciphertext = $3, dob_key_version = $4 WHERE id = $1 AND dob_key_version = $2`, [userId, oldVersion, dobCiphertext, dobKeyVersion]);
+  }
+
+  /** False if another account already uses this email. */
+  async setEmail(userId: string, email: string, verified: boolean): Promise<boolean> {
+    try {
+      await this.pool.query(`UPDATE iam.users SET email = $2, email_verified_at = CASE WHEN $3 THEN now() END WHERE id = $1`, [userId, email, verified]);
+      return true;
+    } catch (err) {
+      if ((err as { code?: string }).code === '23505') return false;
+      throw err;
+    }
+  }
+
+  async markEmailVerified(userId: string, email: string): Promise<boolean> {
+    const r = await this.pool.query(`UPDATE iam.users SET email_verified_at = now() WHERE id = $1 AND lower(email) = lower($2)`, [userId, email]);
+    return r.rowCount === 1;
+  }
+
+  async password(userId: string): Promise<{ hash: string; strong: boolean } | undefined> {
+    const { rows } = await this.pool.query<{ hash: string; strong: boolean }>(
+      `SELECT secret_hash AS hash, strong FROM iam.auth_identities WHERE user_id = $1 AND provider = 'password'`, [userId]);
+    return rows[0];
+  }
+
+  async setPassword(sql: Sql, userId: string, hash: string, strong: boolean): Promise<void> {
+    await sql.query(
+      `INSERT INTO iam.auth_identities (user_id, provider, subject, secret_hash, strong, verified_at) VALUES ($1::uuid, 'password', $4, $2, $3, now())
+       ON CONFLICT (provider, subject) DO UPDATE SET secret_hash = EXCLUDED.secret_hash, strong = EXCLUDED.strong, updated_at = now()`, [userId, hash, strong, userId]);
+  }
+
+  async identities(userId: string): Promise<string[]> {
+    const { rows } = await this.pool.query<{ provider: string }>(`SELECT provider FROM iam.auth_identities WHERE user_id = $1 AND subject NOT LIKE 'deleted:%'`, [userId]);
+    return rows.map((r) => r.provider);
+  }
+
+  async userByGoogle(subject: string): Promise<string | undefined> {
+    const { rows } = await this.pool.query<{ userId: string }>(`SELECT user_id AS "userId" FROM iam.auth_identities WHERE provider = 'google' AND subject = $1`, [subject]);
+    return rows[0]?.userId;
+  }
+
+  async linkGoogle(sql: Sql, userId: string, subject: string, email: string | null): Promise<void> {
+    await sql.query(`INSERT INTO iam.auth_identities (user_id, provider, subject, email, verified_at) VALUES ($1, 'google', $2, $3, now()) ON CONFLICT (provider, subject) DO NOTHING`,
+      [userId, subject, email]);
+  }
+
+  // email links
+  async createEmailToken(userId: string, purpose: 'verify_email' | 'reset_password', email: string, tokenHash: string, ttlMinutes: number): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO iam.email_tokens (user_id, purpose, email, token_hash, expires_at) VALUES ($1,$2,$3,$4, now() + make_interval(mins => $5))`,
+      [userId, purpose, email, tokenHash, ttlMinutes]);
+  }
+
+  async recentEmailTokens(email: string, purpose: 'verify_email' | 'reset_password', minutes: number): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM iam.email_tokens WHERE lower(email) = lower($1) AND purpose = $2 AND created_at > now() - make_interval(mins => $3)`, [email, purpose, minutes]);
+    return rows[0]!.n;
+  }
+
+  /** Check a link without using it up (e.g. before checking the new password is acceptable). */
+  async peekEmailToken(tokenHash: string, purpose: 'verify_email' | 'reset_password'): Promise<{ userId: string; email: string } | undefined> {
+    const { rows } = await this.pool.query<{ userId: string; email: string }>(
+      `SELECT user_id AS "userId", email FROM iam.email_tokens WHERE token_hash = $1 AND purpose = $2 AND used_at IS NULL AND expires_at > now()`, [tokenHash, purpose]);
+    return rows[0];
+  }
+
+  /** Use a link once: marks it used and returns who it was for, or undefined if wrong, used or expired. */
+  async useEmailToken(tokenHash: string, purpose: 'verify_email' | 'reset_password'): Promise<{ userId: string; email: string } | undefined> {
+    const { rows } = await this.pool.query<{ userId: string; email: string }>(
+      `UPDATE iam.email_tokens SET used_at = now() WHERE token_hash = $1 AND purpose = $2 AND used_at IS NULL AND expires_at > now()
+       RETURNING user_id AS "userId", email`, [tokenHash, purpose]);
+    return rows[0];
+  }
+
+  // log-in attempts (append-only)
+  async recordLoginAttempt(a: { userId: string | null; identifierHash: Buffer | null; method: 'password' | 'phone_code' | 'google' | 'second_step'; success: boolean; failureReason?: string; ip?: string | null; userAgent?: string | null }): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO iam.login_attempts (user_id, identifier_hash, method, success, failure_reason, ip, user_agent) VALUES ($1,$2,$3,$4,$5,$6::inet,$7)`,
+      [a.userId, a.identifierHash, a.method, a.success, a.failureReason ?? null, a.ip ?? null, a.userAgent?.slice(0, 300) ?? null]);
+  }
+
+  /** Failed password / second-step attempts since the last success, within the last `minutes`. */
+  async recentFailures(userId: string, minutes: number): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM iam.login_attempts
+        WHERE user_id = $1 AND NOT success AND method IN ('password', 'second_step') AND at > now() - make_interval(mins => $2)
+          AND at > GREATEST(COALESCE((SELECT max(at) FROM iam.login_attempts WHERE user_id = $1 AND success), '-infinity'),
+                            COALESCE((SELECT updated_at FROM iam.auth_identities WHERE user_id = $1 AND provider = 'password'), '-infinity'))`, [userId, minutes]);
+    return rows[0]!.n;
+  }
+
+  // second step and trusted devices
+  async createSecondStep(userId: string, channel: 'sms' | 'email', method: 'password' | 'phone_code' | 'google', codeHmac: string, ttlMinutes: number): Promise<string> {
+    const { rows } = await this.pool.query<{ id: string }>(
+      `INSERT INTO iam.second_step_challenges (user_id, channel, method, code_hmac, expires_at) VALUES ($1,$2,$3,$4, now() + make_interval(mins => $5)) RETURNING id`,
+      [userId, channel, method, codeHmac, ttlMinutes]);
+    return rows[0]!.id;
+  }
+
+  async recentSecondSteps(userId: string, minutes: number): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM iam.second_step_challenges WHERE user_id = $1 AND created_at > now() - make_interval(mins => $2)`, [userId, minutes]);
+    return rows[0]!.n;
+  }
+
+  async secondStep(id: string): Promise<{ id: string; userId: string; codeHmac: string; attempts: number; method: string } | undefined> {
+    const { rows } = await this.pool.query(
+      `SELECT id, user_id AS "userId", code_hmac AS "codeHmac", attempts, method FROM iam.second_step_challenges
+        WHERE id = $1 AND consumed_at IS NULL AND expires_at > now()`, [id]);
+    return rows[0];
+  }
+
+  async secondStepAttempt(id: string, success: boolean): Promise<void> {
+    await this.pool.query(`UPDATE iam.second_step_challenges SET attempts = attempts + 1, consumed_at = CASE WHEN $2 THEN now() END WHERE id = $1`, [id, success]);
+  }
+
+  async trustDevice(userId: string, tokenHash: string, userAgent: string | undefined, days: number): Promise<void> {
+    await this.pool.query(`INSERT INTO iam.trusted_devices (user_id, token_hash, user_agent, expires_at) VALUES ($1,$2,$3, now() + make_interval(days => $4))`,
+      [userId, tokenHash, userAgent?.slice(0, 300) ?? null, days]);
+  }
+
+  async isTrustedDevice(userId: string, tokenHash: string): Promise<boolean> {
+    const r = await this.pool.query(`UPDATE iam.trusted_devices SET last_used_at = now() WHERE user_id = $1 AND token_hash = $2 AND revoked_at IS NULL AND expires_at > now()`, [userId, tokenHash]);
+    return r.rowCount === 1;
+  }
+
+  async forgetDevices(userId: string): Promise<void> {
+    await this.pool.query(`UPDATE iam.trusted_devices SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [userId]);
   }
 }

@@ -11,10 +11,10 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { signInWithCode } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
-import { ConsoleSmsSender } from './modules/notify/index.js';
 
 const base = process.env.TEST_DATABASE_URL;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -30,14 +30,9 @@ describe.skipIf(!base)('limits (e2e, security S5)', () => {
   let adminToken: string;
 
   const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
-  const sms = (phone: string) => app.get(ConsoleSmsSender, { strict: false }).latest(phone);
   const statuses = (rs: { status: number }[]) => rs.map((r) => r.status).sort();
 
-  async function signIn(phone: string, displayName?: string) {
-    await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
-    const code = sms(phone)!.match(/\b(\d{6})\b/)![1];
-    return (await http.post('/v1/auth/otp/verify').send({ phone, code, displayName }).expect(200)).body.accessToken as string;
-  }
+  const signIn = (phone: string, displayName?: string) => signInWithCode(app, http, phone, displayName);
 
   beforeAll(async () => {
     await admin.connect();

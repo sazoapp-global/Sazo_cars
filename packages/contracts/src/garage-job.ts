@@ -1,6 +1,7 @@
 // The garage job form (D-052, D-054, D-057), shared by the API and the garage phone app so both apply
 // exactly the same rules — the phone can say what's missing even when it's offline.
 import { z } from 'zod';
+import { tidyName, tidySentence } from './people.js';
 
 export const WORK_TYPES = ['service', 'repair', 'accident_damage', 'body_paint', 'engine', 'transmission', 'electrical', 'inspection', 'other'] as const;
 export type WorkType = (typeof WORK_TYPES)[number];
@@ -9,11 +10,13 @@ const Uuid = z.string().uuid();
 const Money = z.object({ amount: z.number().int().nonnegative().max(10_000_000_000), currency: z.literal('UGX') });
 const Phone = z.string().regex(/^\+[1-9][0-9]{7,14}$/, 'Use international format, e.g. +256772123456');
 const text = (max: number) => z.string().trim().max(max);
+/** Free text people write (descriptions, notes): tidied to sentence case (D-103). */
+const prose = (max: number) => z.string().trim().max(max).transform(tidySentence);
 
 export const JobForm = z.object({
   /** The mechanic's own words about the job ("Full service: oil and filter, front brake pads…"). Kept with the
    *  garage's job record; not added to the car's history that buyers see. */
-  description: text(1000).optional(),
+  description: prose(1000).optional(),
   mileage: z.object({
     value: z.number().int().min(0).max(2_000_000),
     unit: z.enum(['km', 'mi']).default('km'),
@@ -27,7 +30,7 @@ export const JobForm = z.object({
     newEngineNumber: text(40).optional(),
     newEngineNumberPhotoId: Uuid.optional(),
     engineSource: z.enum(['new', 'used_import', 'used_local', 'rebuilt']).optional(),
-    reason: text(500).optional(),
+    reason: prose(500).optional(),
   }).optional(),
   bodyPaint: z.object({
     areas: z.array(z.enum(['full_body', 'front', 'rear', 'left', 'right', 'roof', 'bonnet', 'other'])).max(8),
@@ -38,16 +41,16 @@ export const JobForm = z.object({
   repair: z.object({
     components: z.array(text(80).min(1)).max(40),
     structural: z.boolean().optional(),
-    description: text(2000).optional(),
+    description: prose(2000).optional(),
   }).optional(),
-  customer: z.object({ name: text(120).optional(), phone: Phone.optional(), smsConsent: z.boolean().optional() }).optional(),
+  customer: z.object({ name: text(120).transform(tidyName).optional(), phone: Phone.optional(), smsConsent: z.boolean().optional() }).optional(),
   cost: z.object({
     total: Money,
     paid: Money.optional(),
     method: z.enum(['cash', 'mtn_momo', 'airtel_money', 'bank', 'other']).optional(),
     receiptPhotoId: Uuid.optional(),
   }).optional(),
-  notes: text(2000).optional(),
+  notes: prose(2000).optional(),
   /** Other photos (e.g. the plate photo for a car new to SAZO, part photos). */
   evidenceIds: z.array(Uuid).max(20).optional(),
 });

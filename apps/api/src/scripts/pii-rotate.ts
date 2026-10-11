@@ -5,12 +5,19 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module.js';
 import { loadConfig } from '../config.js';
+import { AuthService } from '../modules/iam/index.js';
 import { PartiesService } from '../modules/obs/index.js';
 
 const app = await NestFactory.createApplicationContext(AppModule.forRoot(loadConfig()), { logger: ['error', 'warn'] });
 const parties = app.get(PartiesService);
 let total = 0;
 for (let n = await parties.reencryptBatch(); n > 0; n = await parties.reencryptBatch()) {
+  total += n;
+  process.stdout.write(`\rre-encrypted ${total}`);
+}
+// Dates of birth on accounts (D-101) use the same keys.
+const auth = app.get(AuthService);
+for (let n = await auth.reencryptDobBatch(); n > 0; n = await auth.reencryptDobBatch()) {
   total += n;
   process.stdout.write(`\rre-encrypted ${total}`);
 }

@@ -1,8 +1,9 @@
 // Account settings API: name, phone number, texts, devices, download my data, delete my account.
 import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Put } from '@nestjs/common';
+import { Email, PersonDetails } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
-import { AuthError, AuthService, CurrentActor, IamService, type Actor } from '../iam/index.js';
+import { AuthError, AuthService, CurrentActor, IamService, authProblem, type Actor } from '../iam/index.js';
 import { AccountError, AccountService } from './account.service.js';
 
 const Phone = z.string().regex(/^\+[1-9][0-9]{7,14}$/, 'Use international format, e.g. +256772123456');
@@ -24,13 +25,41 @@ export class AccountController {
     @Inject(AuthService) private readonly auth: AuthService,
   ) {}
 
-  /** PATCH /v1/me — change the name SAZO shows (to garages you work with, and on your reviews: first name only). */
+  /** PATCH /v1/me — change your names (shown as "Surname M. First"); the change is recorded with before and after. */
   @Patch()
   @HttpCode(204)
   async rename(@CurrentActor() actor: Actor, @Body() body: unknown) {
-    const b = z.object({ displayName: z.string().trim().min(2).max(120) }).safeParse(body);
-    if (!b.success) throw badRequest('invalid_request', 'Your name must be 2–120 characters');
-    await this.iam.rename(actor, b.data.displayName);
+    const b = PersonDetails.pick({ surname: true, firstName: true, middleName: true }).safeParse(body);
+    if (!b.success) throw badRequest('invalid_request', b.error.issues[0]?.message ?? 'Check your names', b.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })));
+    await this.auth.setNames(actor.userId, b.data);
+  }
+
+  /** PUT /v1/me/details — older accounts finish their details (names, gender, date of birth; 18+). Gender and date of birth are set once. */
+  @Put('details')
+  @HttpCode(204)
+  async details(@CurrentActor() actor: Actor, @Body() body: unknown) {
+    const b = PersonDetails.safeParse(body);
+    if (!b.success) throw badRequest('invalid_request', b.error.issues[0]?.message ?? 'Check your details', b.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })));
+    await this.auth.completeDetails(actor.userId, b.data).catch(authProblem);
+  }
+
+  /** POST /v1/me/email — add or change the email; it is saved once the emailed link is opened. */
+  @Post('email')
+  @HttpCode(202)
+  async email(@CurrentActor() actor: Actor, @Body() body: unknown) {
+    const b = z.object({ email: Email }).safeParse(body);
+    if (!b.success) throw badRequest('invalid_request', 'Enter a valid email address');
+    await this.auth.requestEmail(actor.userId, b.data.email).catch(authProblem);
+    return { status: 'sent' };
+  }
+
+  /** PUT /v1/me/password — set a password, or change it (the current one is needed). */
+  @Put('password')
+  @HttpCode(204)
+  async password(@CurrentActor() actor: Actor, @Body() body: unknown) {
+    const b = z.object({ currentPassword: z.string().max(128).optional(), newPassword: z.string().min(1).max(128) }).safeParse(body);
+    if (!b.success) throw badRequest('invalid_request', 'Enter the new password');
+    await this.auth.changePassword(actor.userId, b.data.currentPassword || undefined, b.data.newPassword).catch(authProblem);
   }
 
   /** POST /v1/me/phone/code — send a code to the NEW number. */
@@ -52,10 +81,11 @@ export class AccountController {
     await this.auth.confirmPhoneChange(actor.userId, actor.sessionId, b.data.phone, b.data.code).catch(problem);
   }
 
-  /** GET /v1/me/profile — name, phone number and businesses, for the account screen. */
+  /** GET /v1/me/profile — details, progress bar and businesses, for Settings. */
   @Get('profile')
-  profile(@CurrentActor() actor: Actor) {
-    return this.iam.profile(actor.userId);
+  async profile(@CurrentActor() actor: Actor) {
+    const [p, sensitive] = await Promise.all([this.iam.profile(actor.userId), this.auth.isSensitive(actor.userId)]);
+    return { ...p, strongPasswordRequired: sensitive };
   }
 
   @Get('preferences')

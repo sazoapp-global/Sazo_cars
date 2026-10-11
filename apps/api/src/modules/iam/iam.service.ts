@@ -1,6 +1,8 @@
 // Identity & Access — public interface used by other modules and by scripts.
 import { Inject, Injectable } from '@nestjs/common';
 import pg from 'pg';
+import { personInitials } from '@sazo/contracts';
+import { PII_KEYRING, type Keyring } from '../../platform/keyring.js';
 import { enforceLimit } from '../../platform/limits.js';
 import { withTx, type Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
@@ -20,6 +22,7 @@ export class IamService {
     @Inject(DB_POOL) private readonly pool: pg.Pool,
     @Inject(IamRepository) private readonly repo: IamRepository,
     @Inject(NotificationsService) private readonly notify: NotificationsService,
+    @Inject(PII_KEYRING) private readonly keyring: Keyring,
   ) {}
 
   /** Write an audit entry (append-only). Pass a transaction to audit atomically with the change. */
@@ -111,6 +114,10 @@ export class IamService {
     return (await this.repo.members(organisationId)).some((m) => m.userId === userId && m.status === 'active');
   }
 
+  firstNames(userIds: string[]): Promise<Map<string, string>> {
+    return this.repo.firstNames([...new Set(userIds)]);
+  }
+
   displayNames(userIds: string[]): Promise<Map<string, string>> {
     return this.repo.displayNames([...new Set(userIds)]);
   }
@@ -138,11 +145,6 @@ export class IamService {
   }
 
   // ---------- account settings
-  async rename(actor: Actor, name: string): Promise<void> {
-    await this.repo.setDisplayName(actor.userId, name);
-    await this.audit({ actor, action: 'account.rename', targetType: 'user', targetId: actor.userId });
-  }
-
   async devices(userId: string, currentSessionId: string) {
     return (await this.repo.sessions(userId)).map((s) => ({
       sessionId: s.id, device: s.userAgent, signedInAt: s.createdAt.toISOString(), lastUsedAt: s.lastUsedAt.toISOString(), current: s.id === currentSessionId,
@@ -161,11 +163,31 @@ export class IamService {
     return this.repo.soleManagerOf(userId);
   }
 
+  /**
+   * The person's own details for Settings, with the profile progress bar (D-102): basic details (names,
+   * gender, date of birth) + confirmed phone + confirmed email + password. `needsDetails` lists what an older
+   * account must still give before using SAZO.
+   */
   async profile(userId: string) {
-    const [u, orgs] = await Promise.all([this.repo.userById(userId), this.repo.myOrganisations(userId)]);
+    const [u, orgs, identities] = await Promise.all([this.repo.userById(userId), this.repo.myOrganisations(userId), this.repo.identities(userId)]);
     const details = await Promise.all(orgs.map((o: { id: string }) => this.repo.organisation(o.id)));
+    const needsDetails = !u ? [] : [
+      ...(!u.surname ? ['surname'] : []), ...(!u.firstName ? ['firstName'] : []), ...(!u.gender ? ['gender'] : []), ...(!u.dobCiphertext ? ['dateOfBirth'] : []),
+    ];
+    const items = [
+      { key: 'details', label: 'Your details', done: needsDetails.length === 0 },
+      { key: 'phone', label: 'Confirmed phone number', done: !!u?.phone },
+      { key: 'email', label: 'Confirmed email', done: !!u?.emailVerified },
+      { key: 'password', label: 'Password', done: identities.includes('password') },
+    ];
     return {
-      displayName: u?.displayName, phone: u?.phone, email: u?.email,
+      displayName: u?.displayName, initials: personInitials(u ?? {}),
+      surname: u?.surname ?? null, firstName: u?.firstName ?? null, middleName: u?.middleName ?? null,
+      gender: u?.gender ?? null, dateOfBirth: u?.dobCiphertext ? this.keyring.decrypt(u.dobCiphertext, u.dobKeyVersion!) : null,
+      phone: u?.phone, email: u?.email ?? null, emailVerified: !!u?.emailVerified,
+      hasPassword: identities.includes('password'), hasGoogle: identities.includes('google'),
+      needsDetails,
+      progress: { percent: Math.round((100 * items.filter((i) => i.done).length) / items.length), items },
       businesses: orgs.map((o: { id: string; type: string; legalName: string; tradingName: string | null; status: string; role: string; documents: number }, i: number) => ({
         name: o.tradingName ?? o.legalName, legalName: o.legalName, tradingName: o.tradingName, type: o.type, yourRole: o.role, status: o.status,
         registrationNumber: details[i]?.registrationNumber ?? null, district: details[i]?.district ?? null,

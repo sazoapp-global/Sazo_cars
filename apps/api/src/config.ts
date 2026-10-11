@@ -36,6 +36,17 @@ const Env = z.object({
   /** AWS KMS key that wraps the data keys (needed only to make new data keys: npm run pii:new-key). */
   KMS_KEY_ID: z.string().optional(),
   AWS_REGION: z.string().optional(),
+  /** 'console' prints emails in the API window (development/tests); 'ses' sends through AWS SES (D-105). */
+  EMAIL_PROVIDER: z.enum(['console', 'ses']).default('console'),
+  EMAIL_FROM: z.string().default('SAZO <no-reply@sazo.ug>'),
+  /** Google sign-in (D-100). Off until both are set. Redirect URIs must be registered in the Google Cloud console. */
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  /** Google endpoints — overridable only so tests can use a stand-in. */
+  GOOGLE_AUTH_URL: z.string().url().default('https://accounts.google.com/o/oauth2/v2/auth'),
+  GOOGLE_TOKEN_URL: z.string().url().default('https://oauth2.googleapis.com/token'),
+  GOOGLE_JWKS_URL: z.string().url().default('https://www.googleapis.com/oauth2/v3/certs'),
+  GOOGLE_ISSUER: z.string().default('https://accounts.google.com'),
   /** Where evidence photos are stored (write-once). Local folder now; S3 later. */
   EVIDENCE_DIR: z.string().default('./var/evidence'),
   /** Public web address used in SMS links, e.g. the owner-confirmation page. */
@@ -58,6 +69,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (cfg.SMS_PROVIDER === 'console') throw new Error('SMS_PROVIDER=console is not allowed in production');
     // In production the personal-data keys come from a key vault, never from plain settings (stolen settings + a stolen database must not be enough).
     if (cfg.PII_KEY_SOURCE !== 'kms') throw new Error('Set PII_KEY_SOURCE=kms and PII_KMS_DATA_KEYS in production');
+    if (cfg.EMAIL_PROVIDER === 'console') throw new Error('EMAIL_PROVIDER=console is not allowed in production (use ses)');
   }
   if (cfg.PII_KEY_SOURCE === 'kms' && !cfg.PII_KMS_DATA_KEYS) throw new Error('PII_KEY_SOURCE=kms needs PII_KMS_DATA_KEYS');
   if (cfg.SMS_PROVIDER === 'africastalking' && (!cfg.AT_USERNAME || !cfg.AT_API_KEY)) {

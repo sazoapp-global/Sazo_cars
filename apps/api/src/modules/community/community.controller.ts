@@ -1,5 +1,6 @@
 // Community API (D-063, P-008): reading is public; writing needs sign-in; moderators publish.
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query } from '@nestjs/common';
+import { tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import { CurrentActor, Public, RequirePermission, type Actor } from '../iam/index.js';
@@ -30,7 +31,7 @@ export class CommunityController {
   @Post('models/:modelId/reviews')
   @RequirePermission('community.contribute')
   async review(@CurrentActor() actor: Actor, @Param('modelId') modelId: string, @Body() body: unknown) {
-    const b = z.object({ rating: z.number().int().min(1).max(5), body: z.string().trim().min(30).max(2000) }).safeParse(body);
+    const b = z.object({ rating: z.number().int().min(1).max(5), body: z.string().trim().min(30).max(2000).transform(tidySentence) }).safeParse(body);
     if (!b.success) throw badRequest('invalid_request', 'Give a rating from 1 to 5 and at least 30 characters');
     return this.community.review(actor, model(modelId), b.data).catch(problem);
   }
@@ -59,7 +60,7 @@ export class CommunityController {
   @RequirePermission('moderation.decide')
   async decide(@CurrentActor() actor: Actor, @Param('caseId') caseId: string, @Body() body: unknown) {
     if (!Uuid.safeParse(caseId).success) problem(new CommunityError('case_not_found', 'No such case'));
-    const b = z.object({ decision: z.enum(['approve', 'reject']), reason: z.string().trim().min(3).max(500) }).safeParse(body);
+    const b = z.object({ decision: z.enum(['approve', 'reject']), reason: z.string().trim().min(3).max(500).transform(tidySentence) }).safeParse(body);
     if (!b.success) throw badRequest('invalid_request', 'decision and reason are required');
     await this.community.decide(actor, caseId, b.data.decision, b.data.reason).catch(problem);
     return { ok: true };

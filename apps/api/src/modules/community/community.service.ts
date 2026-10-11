@@ -29,7 +29,6 @@ export function platformOf(url: string): 'tiktok' | 'youtube' | 'instagram' | un
   }
 }
 
-const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? 'SAZO user';
 
 @Injectable()
 export class CommunityService {
@@ -54,7 +53,7 @@ export class CommunityService {
         WHERE model_id = $1 AND status = 'published' ORDER BY verified_owner DESC, created_at DESC LIMIT 50`, [modelId]);
     const { rows: links } = await this.pool.query<{ id: string; url: string; platform: string; title: string | null }>(
       `SELECT id, url, platform, title FROM community.creator_links WHERE model_id = $1 AND status = 'published' ORDER BY created_at DESC LIMIT 20`, [modelId]);
-    const names = await this.iam.displayNames(reviews.map((r) => r.author));
+    const names = await this.iam.firstNames(reviews.map((r) => r.author));
     const mine = viewerId ? (await this.pool.query<{ status: string }>(
       `SELECT status FROM community.model_reviews WHERE model_id = $1 AND author_user_id = $2 AND status IN ('pending','published')`, [modelId, viewerId])).rows[0]?.status ?? null : null;
     return {
@@ -62,7 +61,7 @@ export class CommunityService {
       reviewCount: reviews.length,
       // An average only means something with a few reviews.
       averageRating: reviews.length >= 3 ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : null,
-      reviews: reviews.map((r) => ({ reviewId: r.id, author: firstName(names.get(r.author) ?? ''), verifiedOwner: r.verified, rating: r.rating, body: r.body, createdAt: new Date(r.createdAt).toISOString() })),
+      reviews: reviews.map((r) => ({ reviewId: r.id, author: names.get(r.author) || 'SAZO user', verifiedOwner: r.verified, rating: r.rating, body: r.body, createdAt: new Date(r.createdAt).toISOString() })),
       creatorLinks: links.map((l) => ({ linkId: l.id, url: l.url, platform: l.platform, title: l.title })),
       myReviewStatus: mine as 'pending' | 'published' | null,
     };

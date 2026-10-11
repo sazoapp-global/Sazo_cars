@@ -11,6 +11,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { signInWithCode } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -38,11 +39,7 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
   const asGarage = (t: string) => ({ ...bearer(t), 'X-Organisation-Id': garageId });
   const sms = (phone: string) => app.get(ConsoleSmsSender, { strict: false }).latest(phone);
 
-  async function signIn(phone: string, displayName?: string) {
-    await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
-    const code = sms(phone)!.match(/\b(\d{6})\b/)![1];
-    return (await http.post('/v1/auth/otp/verify').send({ phone, code, displayName }).expect(200)).body.accessToken as string;
-  }
+  const signIn = (phone: string, displayName?: string) => signInWithCode(app, http, phone, displayName);
 
   async function upload(token: string, kind: string, content: string): Promise<string> {
     const bytes = Buffer.from(content);
@@ -100,7 +97,7 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     expect(sms('+256772300002')).toContain('Ntinda Auto Clinic added you');
     mechanicToken = await signIn('+256772300002');
     const staff = await http.get('/v1/garage/staff').set(asGarage(managerToken)).expect(200);
-    expect(staff.body.map((m: { displayName: string }) => m.displayName)).toEqual(['Sarah (Manager)', 'Musa (Mechanic)']);
+    expect(staff.body.map((m: { displayName: string }) => m.displayName)).toEqual(['Manager Sarah', 'Musa (Mechanic)']);
 
     // Staff record jobs but cannot manage staff; outsiders get nothing; the header is required.
     await http.post('/v1/garage/staff').set(asGarage(mechanicToken)).send({ phone: '+256772300003', displayName: 'X', role: 'org_staff' }).expect(403);

@@ -11,6 +11,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { signInWithCode } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -34,11 +35,7 @@ describe.skipIf(!base)('account settings (e2e)', () => {
   const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
   const sms = (phone: string) => app.get(ConsoleSmsSender, { strict: false }).latest(phone);
 
-  async function signIn(phone: string, displayName?: string) {
-    await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
-    const code = sms(phone)!.match(/\b(\d{6})\b/)![1];
-    return (await http.post('/v1/auth/otp/verify').send({ phone, code, displayName }).expect(200)).body.accessToken as string;
-  }
+  const signIn = (phone: string, displayName?: string) => signInWithCode(app, http, phone, displayName);
 
   beforeAll(async () => {
     await admin.connect();
@@ -79,9 +76,12 @@ describe.skipIf(!base)('account settings (e2e)', () => {
   it('rename and move the account to a new phone number (code goes to the new number; other devices signed out)', async () => {
     token = await signIn(OLD, 'Sarah N');
     userId = (await http.get('/v1/me').set(bearer(token)).expect(200)).body.id;
-    await http.patch('/v1/me').set(bearer(token)).send({ displayName: 'S' }).expect(400);
-    await http.patch('/v1/me').set(bearer(token)).send({ displayName: 'Sarah Namukasa' }).expect(204);
-    expect((await http.get('/v1/me').set(bearer(token)).expect(200)).body.displayName).toBe('Sarah Namukasa');
+    await http.patch('/v1/me').set(bearer(token)).send({ surname: '', firstName: 'Sarah' }).expect(400);
+    await http.patch('/v1/me').set(bearer(token)).send({ surname: 'NAMUKASA', firstName: 'sarah', middleName: 'grace' }).expect(204);
+    expect((await http.get('/v1/me').set(bearer(token)).expect(200)).body).toMatchObject({ displayName: 'Namukasa G. Sarah', initials: 'NS' });
+    // The change is recorded with before and after (D-112).
+    const { rows: [audit] } = await db.query(`SELECT details FROM iam.audit_entries WHERE action = 'account.names_changed' AND target_id = $1`, [userId]);
+    expect(audit.details).toEqual({ before: { surname: 'N', firstName: 'Sarah', middleName: null }, after: { surname: 'Namukasa', firstName: 'Sarah', middleName: 'Grace' } });
 
     await http.post('/v1/auth/otp/request').send({ phone: OLD }).expect(202);
     const other = (await http.post('/v1/auth/otp/verify').send({ phone: OLD, code: sms(OLD)!.match(/\b(\d{6})\b/)![1] }).expect(200)).body.accessToken;
@@ -99,8 +99,7 @@ describe.skipIf(!base)('account settings (e2e)', () => {
     // The new number signs in to the same account; the old number is free.
     const viaNew = await signIn(NEW);
     expect((await http.get('/v1/me').set(bearer(viaNew)).expect(200)).body.id).toBe(userId);
-    await http.post('/v1/auth/otp/request').send({ phone: OLD }).expect(202);
-    expect((await http.post('/v1/auth/otp/verify').send({ phone: OLD, code: sms(OLD)!.match(/\b(\d{6})\b/)![1] }).expect(400)).body.code).toBe('display_name_required');
+    expect((await http.post('/v1/auth/otp/request').send({ phone: OLD }).expect(404)).body.code).toBe('no_account');
     // Another account's number can't be taken.
     await signIn('+256772800050', 'Someone else');
     await http.post('/v1/me/phone/code').set(bearer(token)).send({ phone: '+256772800050' }).expect(202);
@@ -124,7 +123,8 @@ describe.skipIf(!base)('account settings (e2e)', () => {
     await http.post('/v1/me/saved-checks').set(bearer(token)).send({ vehicleRef: ref }).expect(204);
     await http.post(`/v1/vehicles/${ref}/snapshots`).set(bearer(token)).send({ createShareLink: true }).expect(201);
     const data = (await http.get('/v1/me/export').set(bearer(token)).expect(200)).body;
-    expect(data).toMatchObject({ profile: { displayName: 'Sarah Namukasa', phone: NEW }, preferences: { visitConfirmationTexts: false }, savedCars: [{ vehicleRef: ref }] });
+    expect(data).toMatchObject({ profile: { displayName: 'Namukasa G. Sarah', surname: 'Namukasa', firstName: 'Sarah', middleName: 'Grace', gender: 'female', dateOfBirth: '1990-01-15', phone: NEW },
+      preferences: { visitConfirmationTexts: false }, savedCars: [{ vehicleRef: ref }] });
     expect(data.sharedReports).toHaveLength(1);
     expect(data.devices.some((d: { current: boolean }) => d.current)).toBe(true);
     const r = await http.post('/v1/me/sessions/sign-out-others').set(bearer(token)).expect(201);
@@ -146,15 +146,14 @@ describe.skipIf(!base)('account settings (e2e)', () => {
     await http.delete('/v1/me').set(bearer(token)).send({ confirm: 'DELETE' }).expect(204);
     await http.get('/v1/me').set(bearer(token)).expect(401);
     expect(sms(NEW)).toContain('account has been deleted');
-    const { rows: [u] } = await db.query(`SELECT display_name, phone_e164, status FROM iam.users WHERE id = $1`, [userId]);
-    expect(u).toEqual({ display_name: 'Deleted account', phone_e164: null, status: 'deleted' });
+    const { rows: [u] } = await db.query(`SELECT display_name, phone_e164, status, surname, first_name, middle_name, gender, dob_ciphertext FROM iam.users WHERE id = $1`, [userId]);
+    expect(u).toEqual({ display_name: 'Deleted account', phone_e164: null, status: 'deleted', surname: null, first_name: null, middle_name: null, gender: null, dob_ciphertext: null });
     const { rows: [p] } = await db.query(`SELECT phone_ciphertext, phone_hash, erased_at IS NOT NULL AS erased FROM pii.parties WHERE id IN (SELECT party_id FROM pii.party_consents) LIMIT 1`);
     expect(p).toEqual({ phone_ciphertext: null, phone_hash: null, erased: true });
     expect((await db.query(`SELECT count(*)::int AS n FROM report.saved_checks WHERE user_id = $1`, [userId])).rows[0].n).toBe(0);
     expect((await db.query(`SELECT count(*)::int AS n FROM report.shared_links WHERE created_by_user_id = $1 AND revoked_at IS NULL`, [userId])).rows[0].n).toBe(0);
     // The number can start afresh as a new account.
-    await http.post('/v1/auth/otp/request').send({ phone: NEW }).expect(202);
-    const fresh = (await http.post('/v1/auth/otp/verify').send({ phone: NEW, code: sms(NEW)!.match(/\b(\d{6})\b/)![1], displayName: 'Sarah again' }).expect(200)).body.accessToken;
+    const fresh = await signIn(NEW, 'Sarah again');
     expect((await http.get('/v1/me').set(bearer(fresh)).expect(200)).body.id).not.toBe(userId);
   });
 });

@@ -9,6 +9,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { testSignup } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -35,8 +36,8 @@ describe.skipIf(!base)('sign-in and access control (e2e)', () => {
   };
 
   async function signIn(phone: string, displayName: string) {
-    await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
-    const res = await http.post('/v1/auth/otp/verify').send({ phone, code: codeFor(phone), displayName }).expect(200);
+    await http.post('/v1/auth/otp/request').send({ phone, intent: 'signup' }).expect(202);
+    const res = await http.post('/v1/auth/otp/verify').send({ phone, code: codeFor(phone), signup: testSignup(displayName) }).expect(200);
     return res.body as { accessToken: string; refreshToken: string; expiresIn: number };
   }
 
@@ -65,20 +66,25 @@ describe.skipIf(!base)('sign-in and access control (e2e)', () => {
     await admin.end();
   });
 
-  it('first sign-in with a phone code creates a consumer account (name required)', async () => {
+  it('signing up with a phone code creates a consumer account only with the full details (D-100, D-101)', async () => {
     const phone = '+256772100001';
-    await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
+    // Logging in never creates an account.
+    expect((await http.post('/v1/auth/otp/request').send({ phone }).expect(404)).body.code).toBe('no_account');
+    await http.post('/v1/auth/otp/request').send({ phone, intent: 'signup' }).expect(202);
     const code = codeFor(phone);
     await http.post('/v1/auth/otp/verify').send({ phone, code: code === '000000' ? '111111' : '000000' }).expect(401);
-    const noName = await http.post('/v1/auth/otp/verify').send({ phone, code }).expect(400);
-    expect(noName.body.code).toBe('display_name_required');
-    const ok = await http.post('/v1/auth/otp/verify').send({ phone, code, displayName: 'Amina N.' }).expect(200);
-    expect(ok.body.accessToken).toBeTruthy();
-    // A code works once.
-    await http.post('/v1/auth/otp/verify').send({ phone, code, displayName: 'Amina N.' }).expect(401);
+    const noDetails = await http.post('/v1/auth/otp/verify').send({ phone, code }).expect(400);
+    expect(noDetails.body.code).toBe('signup_details_required');
+    const young = { surname: 'nakato', firstName: 'AMINA', gender: 'female', dateOfBirth: `${new Date().getUTCFullYear() - 16}-03-01` };
+    expect((await http.post('/v1/auth/otp/verify').send({ phone, code, signup: young }).expect(400)).body.detail).toBe('You must be 18 or older to use SAZO');
+    const ok = await http.post('/v1/auth/otp/verify').send({ phone, code, signup: { ...young, middleName: 'grace', dateOfBirth: '1995-03-01' } }).expect(200);
+    expect(ok.body).toMatchObject({ status: 'signed_in', created: true });
+    // A code works once; a second sign-up for the same number is refused.
+    await http.post('/v1/auth/otp/verify').send({ phone, code }).expect(401);
+    expect((await http.post('/v1/auth/otp/request').send({ phone, intent: 'signup' }).expect(409)).body.code).toBe('account_exists');
 
     const me = await http.get('/v1/me').set(bearer(ok.body.accessToken)).expect(200);
-    expect(me.body).toMatchObject({ displayName: 'Amina N.', platformRoles: ['consumer'], memberships: [] });
+    expect(me.body).toMatchObject({ displayName: 'Nakato G. Amina', initials: 'NA', needsDetails: [], platformRoles: ['consumer'], memberships: [] });
   });
 
   it('the OTP itself is never stored in the outbound message log', async () => {

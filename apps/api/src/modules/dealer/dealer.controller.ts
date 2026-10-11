@@ -1,5 +1,6 @@
 // Dealer workspace API. Every call acts for one dealer: X-Organisation-Id header.
 import { Body, Controller, Delete, Get, Headers, HttpCode, Inject, Param, Patch, Post, Query } from '@nestjs/common';
+import { tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest } from '../../platform/problem.js';
 import { canForOrg, CurrentActor, IamService, type Actor } from '../iam/index.js';
@@ -15,7 +16,7 @@ const Add = z.object({
   askingPriceUgx: Price,
   mileageKm: z.number().int().min(0).max(2_000_000).optional(),
   odometerPhotoId: z.string().uuid().optional(),
-  notes: z.string().trim().max(500).optional(),
+  notes: z.string().trim().max(500).transform(tidySentence).optional(),
 });
 
 function problem(err: unknown): never {

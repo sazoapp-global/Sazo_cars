@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query } from '@nestjs/common';
+import { tidyBusinessName, tidyPlace, tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import type { Actor } from './actor.js';
@@ -7,13 +8,13 @@ import { BUSINESS_ORG_TYPES, IamService } from './iam.service.js';
 
 const Register = z.object({
   type: z.enum(BUSINESS_ORG_TYPES),
-  legalName: z.string().trim().min(2).max(200),
-  tradingName: z.string().trim().max(200).optional(),
+  legalName: z.string().trim().min(2).max(200).transform(tidyBusinessName),
+  tradingName: z.string().trim().max(200).transform(tidyBusinessName).optional(),
   registrationNumber: z.string().trim().max(60).optional(),
-  district: z.string().trim().max(80).optional(),
+  district: z.string().trim().max(80).transform(tidyPlace).optional(),
   contactPhone: z.string().regex(/^\+[1-9][0-9]{7,14}$/).optional(),
 });
-const Decision = z.object({ decision: z.enum(['approve', 'reject', 'request_info', 'suspend']), reason: z.string().trim().min(3) });
+const Decision = z.object({ decision: z.enum(['approve', 'reject', 'request_info', 'suspend']), reason: z.string().trim().min(3).transform(tidySentence) });
 
 @Controller()
 export class OrganisationsController {

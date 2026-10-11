@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post } from '@nestjs/common';
+import { tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import { CurrentActor, RequirePermission, type Actor } from '../iam/index.js';
@@ -76,7 +77,7 @@ export class OwnershipController {
   @HttpCode(200)
   @RequirePermission('ownership.review')
   async decide(@CurrentActor() actor: Actor, @Param('id') id: string, @Body() body: unknown) {
-    const b = z.object({ decision: z.enum(['approve', 'reject']), reason: z.string().trim().min(3).max(500) }).safeParse(body);
+    const b = z.object({ decision: z.enum(['approve', 'reject']), reason: z.string().trim().min(3).max(500).transform(tidySentence) }).safeParse(body);
     if (!b.success) throw badRequest('invalid_request', 'decision and reason are required');
     if (!z.string().uuid().safeParse(id).success || !(await this.ownership.decide(actor, id, b.data.decision, b.data.reason))) throw notFound('claim_not_found', 'No such pending claim');
     return { status: b.data.decision === 'approve' ? 'verified' : 'rejected' };

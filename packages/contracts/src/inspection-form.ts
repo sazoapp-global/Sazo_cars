@@ -2,6 +2,7 @@
 // rules — the inspector can see what's missing even with no signal. An inspection records what a trained
 // person saw on the car on one day: identity, mileage, paint thickness, structure, tyres, battery, defects.
 import { z } from 'zod';
+import { tidySentence } from './people.js';
 
 /** Steel panels a paint-thickness gauge can read (bumpers are plastic and are left out). */
 export const PANELS = [
@@ -51,7 +52,7 @@ export const InspectionForm = z.object({
   tyres: z.object({ minTreadPercent: z.number().int().min(0).max(100) }).optional(),
   battery: z.object({ ok: z.boolean() }).optional(),
   defects: z.array(z.object({ item: text(80).min(1), severity: z.enum(['minor', 'major']) })).max(30).optional(),
-  result: z.object({ passed: z.boolean(), summary: text(1000).optional() }).optional(),
+  result: z.object({ passed: z.boolean(), summary: text(1000).transform(tidySentence).optional() }).optional(),
   /** Photos of the car (front, back, sides, damage). */
   photoIds: z.array(Uuid).max(20).optional(),
 });

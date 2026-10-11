@@ -30,9 +30,11 @@ describe('personal-data keyring', () => {
   });
 
   it('production refuses keys from plain settings', () => {
-    const prod = { NODE_ENV: 'production', JWT_SECRET: 'j'.repeat(40), HMAC_SECRET: 'h'.repeat(40), SMS_PROVIDER: 'africastalking', AT_USERNAME: 'u', AT_API_KEY: 'k' };
+    const prod = { NODE_ENV: 'production', JWT_SECRET: 'j'.repeat(40), HMAC_SECRET: 'h'.repeat(40), SMS_PROVIDER: 'africastalking', AT_USERNAME: 'u', AT_API_KEY: 'k', EMAIL_PROVIDER: 'ses' };
     expect(() => loadConfig(prod)).toThrow(/PII_KEY_SOURCE=kms/);
     expect(() => loadConfig({ ...prod, PII_KEY_SOURCE: 'kms' })).toThrow(/PII_KMS_DATA_KEYS/);
     expect(loadConfig({ ...prod, PII_KEY_SOURCE: 'kms', PII_KMS_DATA_KEYS: '1:abc=' }).PII_KEY_SOURCE).toBe('kms');
+    // Emails must really be sent in production (password resets, sign-in codes).
+    expect(() => loadConfig({ ...prod, PII_KEY_SOURCE: 'kms', PII_KMS_DATA_KEYS: '1:abc=', EMAIL_PROVIDER: 'console' })).toThrow(/EMAIL_PROVIDER/);
   });
 });
