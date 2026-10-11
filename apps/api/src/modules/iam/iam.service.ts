@@ -60,6 +60,10 @@ export class IamService {
     await this.repo.addMembership(this.pool, userId, organisationId, role, 'active');
   }
 
+  approvedCounts(): Promise<Record<string, number>> {
+    return this.repo.approvedCounts();
+  }
+
   listOrganisations(filter: { status?: string; type?: string }) {
     return this.repo.listOrganisations(filter);
   }

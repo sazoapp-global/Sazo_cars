@@ -12,10 +12,17 @@ const DEFAULT_NAMES = [
   'close', 'keyboard_arrow_down', 'chevron_forward', 'garage', 'description', 'local_police', 'account_balance', 'payments', 'timeline', 'travel_explore',
   'thumb_up', 'thumb_down', 'lock', 'science', 'warning', 'format_paint', 'car_crash', 'public', 'sell', 'list_alt',
   'add', 'delete', 'share', 'bookmark', 'bookmark_added', 'compare_arrows', 'key', 'upload_file', 'star', 'forum', 'play_circle', 'gavel',
+  // From the original interface designs (Oct 2026 redesign)
+  'add_circle', 'add_link', 'arrow_downward', 'show_chart', 'badge', 'battery_charging_full', 'calendar_month', 'chat', 'check', 'checklist',
+  'chevron_right', 'compare', 'difference', 'directions_boat', 'document_scanner', 'download', 'fact_check', 'flag', 'flight_land', 'handshake',
+  'handyman', 'help_center', 'home', 'hub', 'local_gas_station', 'local_shipping', 'minor_crash', 'notifications', 'open_in_new',
+  'photo_camera', 'picture_as_pdf', 'pin_drop', 'play_arrow', 'policy', 'psychology', 'savings', 'security', 'shield', 'smart_display',
+  'storefront', 'support_agent', 'tire_repair', 'translate', 'trending_down', 'trending_up', 'verified_user', 'visibility', 'visibility_off',
+  'oil_barrel', 'photo_library', 'workspace_premium', 'dark_mode', 'light_mode', 'menu', 'inventory_2', 'analytics',
 ];
 // Usage: node build-icons.mjs [output.ts] [name,name,...]  (defaults: the web app's icon set)
 const [, , outArg, namesArg] = process.argv;
-const NAMES = namesArg ? namesArg.split(',') : DEFAULT_NAMES;
+const NAMES = [...new Set(namesArg ? namesArg.split(',') : DEFAULT_NAMES)];
 const out = {};
 for (const name of NAMES) {
   const svg = readFileSync(path.join(dir, `${name}.svg`), 'utf8');

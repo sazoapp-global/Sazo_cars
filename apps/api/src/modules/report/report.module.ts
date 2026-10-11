@@ -13,10 +13,11 @@ import { OwnershipController } from './ownership.controller.js';
 import { OwnershipService } from './ownership.service.js';
 import { ReportsController } from './reports.controller.js';
 import { ReportsService } from './reports.service.js';
+import { StatsController } from './stats.controller.js';
 
 @Module({
   imports: [IamModule, ConcernModule, NotifyModule, VehicleModule, ObservationsModule, IngestModule, TrustModule, ReferenceModule],
-  controllers: [ReportsController, BuyerController, OwnershipController],
+  controllers: [ReportsController, BuyerController, OwnershipController, StatsController],
   providers: [ReportsService, BuyerService, OwnershipService],
   exports: [ReportsService, OwnershipService, BuyerService],
 })

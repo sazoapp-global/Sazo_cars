@@ -295,6 +295,12 @@ export class IamRepository {
     return rows[0];
   }
 
+  /** Public numbers for the website: approved businesses by type. */
+  async approvedCounts(): Promise<Record<string, number>> {
+    const { rows } = await this.pool.query<{ type: string; n: number }>(`SELECT type, count(*)::int AS n FROM iam.organisations WHERE status = 'approved' GROUP BY type`);
+    return Object.fromEntries(rows.map((r) => [r.type, r.n]));
+  }
+
   async listOrganisations(filter: { status?: string; type?: string }): Promise<OrganisationRow[]> {
     const { rows } = await this.pool.query<OrganisationRow>(
       `SELECT ${ORG_COLS} FROM iam.organisations WHERE ($1::text IS NULL OR status = $1) AND ($2::text IS NULL OR type = $2)

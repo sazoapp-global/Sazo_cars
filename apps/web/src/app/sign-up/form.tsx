@@ -1,70 +1,51 @@
 'use client';
-import Link from 'next/link';
 import { useActionState, useState } from 'react';
+import { Alert, AuthTabs, GoogleButton, ModeSwitch, PhoneInput, RememberDevice } from '@/components/auth/auth-bits';
+import { PasswordField } from '@/components/auth/password-field';
+import { Icon } from '@/components/icon';
 import { PersonFields } from '@/components/person-fields';
-import { GoogleMark } from '../sign-in/login-panel';
 import { signUpWithEmail, signUpWithPhone, type EmailSignUpState, type PhoneSignUpState } from './actions';
 
-/** Create an account (D-100): email + password or phone code, plus Google when it is switched on. */
+/** Create Account (D-100, D-101): mobile number + code or email + password, with names, gender and date of birth (18+). */
 export function SignUpPanel({ next, google }: { next: string; google: boolean }) {
-  const [method, setMethod] = useState<'email' | 'phone'>('email');
-  const login = `/sign-in?next=${encodeURIComponent(next)}`;
+  const [mode, setMode] = useState<'phone' | 'email'>('phone');
+  const login = `/sign-in${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`;
   return (
-    <div className="mt-6 space-y-5">
-      {google && (
-        <>
-          <a href={`/auth/google/start?next=${encodeURIComponent(next)}`} className="btn btn-ghost w-full"><GoogleMark />Sign up with Google</a>
-          <p className="divider">or</p>
-        </>
-      )}
-      <div role="tablist" aria-label="How to sign up" className="segmented">
-        <button type="button" role="tab" id="tab-email" aria-controls="panel-email" aria-selected={method === 'email'} onClick={() => setMethod('email')}>Email and password</button>
-        <button type="button" role="tab" id="tab-phone" aria-controls="panel-phone" aria-selected={method === 'phone'} onClick={() => setMethod('phone')}>Phone code</button>
-      </div>
-      <div role="tabpanel" id="panel-email" aria-labelledby="tab-email" hidden={method !== 'email'}><EmailForm next={next} login={login} /></div>
-      <div role="tabpanel" id="panel-phone" aria-labelledby="tab-phone" hidden={method !== 'phone'}><PhoneForm next={next} login={login} /></div>
-      <p className="text-center text-sm">Already have an account? <Link href={login} className="link">Log in</Link></p>
-    </div>
+    <>
+      <h1 className="mt-6 font-display text-3xl font-extrabold text-ink">Create your account</h1>
+      <p className="mt-1 text-muted">Check cars, compare them and avoid bad buys in Uganda. Free while SAZO is in testing.</p>
+      <AuthTabs active="sign-up" next={next} />
+      {google ? <GoogleButton next={next} label="Sign up with Google" /> : <div className="mt-5" />}
+      {mode === 'phone' ? <PhoneForm next={next} login={login} mode={mode} setMode={setMode} /> : <EmailForm next={next} login={login} mode={mode} setMode={setMode} />}
+    </>
   );
 }
 
-function Alert({ text, login }: { text?: string; login?: string }) {
-  if (!text) return null;
-  return <p role="alert" className="text-sm font-semibold text-bad-text">{text}{login && <> <Link href={login} className="link">Log in</Link></>}</p>;
-}
+type FormProps = { next: string; login: string; mode: 'phone' | 'email'; setMode: (m: 'phone' | 'email') => void };
 
-function EmailForm({ next, login }: { next: string; login: string }) {
+function EmailForm({ next, login, mode, setMode }: FormProps) {
   const [state, action, pending] = useActionState<EmailSignUpState, FormData>(signUpWithEmail, {});
   const e = state.errors ?? {};
   return (
     <form action={action} className="space-y-4" noValidate>
       <input type="hidden" name="next" value={next} />
-      <PersonFields values={state.values} errors={e} />
+      <PersonFields values={state.values} errors={e} idPrefix="em-" />
       <div>
-        <label htmlFor="email" className="label">Email</label>
-        <input id="email" name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} className="field" aria-invalid={!!e.email} />
+        <div className="mb-1.5 flex items-baseline justify-between"><label htmlFor="su-email" className="label !mb-0">Email</label><ModeSwitch mode={mode} onChange={setMode} /></div>
+        <input id="su-email" name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} className="field !bg-soft focus:!bg-white" aria-invalid={!!e.email} />
         {e.email && <p className="mt-1 text-sm font-semibold text-bad-text">{e.email}</p>}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="password" className="label">Password</label>
-          <input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} className="field" aria-describedby="pw-help" aria-invalid={!!e.password} />
-          {e.password && <p className="mt-1 text-sm font-semibold text-bad-text">{e.password}</p>}
-        </div>
-        <div>
-          <label htmlFor="confirm" className="label">Password again</label>
-          <input id="confirm" name="confirm" type="password" autoComplete="new-password" required className="field" aria-invalid={!!e.confirm} />
-          {e.confirm && <p className="mt-1 text-sm font-semibold text-bad-text">{e.confirm}</p>}
-        </div>
-      </div>
+      <PasswordField id="su-password" name="password" label="Password" autoComplete="new-password" minLength={8} error={e.password} describedBy="pw-help" />
+      <PasswordField id="su-confirm" name="confirm" label="Password again" autoComplete="new-password" error={e.confirm} />
       <p id="pw-help" className="-mt-2 text-sm text-muted">At least 8 characters. A short sentence is easy to remember and hard to guess.</p>
-      <Alert text={state.error} login={state.exists ? login : undefined} />
-      <button type="submit" className="btn btn-primary w-full" disabled={pending}>{pending ? 'Creating account…' : 'Create account'}</button>
+      <RememberDevice id="remember-su-email" />
+      <Alert text={state.error} link={state.exists ? { href: login, label: 'Sign in' } : undefined} />
+      <button type="submit" className="btn btn-focal w-full !text-base shadow-sm" disabled={pending}>{pending ? 'Creating account…' : <>Create Free Account<Icon name="arrow_forward" /></>}</button>
     </form>
   );
 }
 
-function PhoneForm({ next, login }: { next: string; login: string }) {
+function PhoneForm({ next, login, mode, setMode }: FormProps) {
   const [state, action, pending] = useActionState<PhoneSignUpState, FormData>(signUpWithPhone, { step: 'details' });
   return (
     <form action={action} className="space-y-4" noValidate>
@@ -73,13 +54,14 @@ function PhoneForm({ next, login }: { next: string; login: string }) {
         <>
           <PersonFields values={state.values} errors={state.errors} idPrefix="ph-" />
           <div>
-            <label htmlFor="su-phone" className="label">Phone number</label>
-            <input id="su-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" required placeholder="0772 123 456" defaultValue={state.values?.phone} className="field" aria-describedby="su-phone-help" />
+            <div className="mb-1.5 flex items-baseline justify-between"><label htmlFor="su-phone" className="label !mb-0">Mobile number</label><ModeSwitch mode={mode} onChange={setMode} /></div>
+            <PhoneInput id="su-phone" defaultValue={state.values?.phone} describedBy="su-phone-help" />
             <p id="su-phone-help" className="mt-1 text-sm text-muted">We&apos;ll send a 6-digit code by SMS. You can add an email and password later.</p>
             {state.errors?.phone && <p className="mt-1 text-sm font-semibold text-bad-text">{state.errors.phone}</p>}
           </div>
-          <Alert text={state.error} login={state.exists ? login : undefined} />
-          <button type="submit" name="intent" value="send" className="btn btn-primary w-full" disabled={pending}>{pending ? 'Sending…' : 'Send code'}</button>
+          <RememberDevice id="remember-su-phone" />
+          <Alert text={state.error} link={state.exists ? { href: login, label: 'Sign in' } : undefined} />
+          <button type="submit" name="intent" value="send" className="btn btn-focal w-full !text-base shadow-sm" disabled={pending}>{pending ? 'Sending…' : <>Send code<Icon name="arrow_forward" /></>}</button>
         </>
       ) : (
         <>
@@ -87,10 +69,10 @@ function PhoneForm({ next, login }: { next: string; login: string }) {
           <div>
             <label htmlFor="su-code" className="label">6-digit code</label>
             <input id="su-code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required autoFocus
-              className="field text-center !text-2xl tracking-[0.5em] tabular-nums" />
+              className="field !bg-soft text-center !text-2xl tracking-[0.5em] tabular-nums focus:!bg-white" />
           </div>
           <Alert text={state.error} />
-          <button type="submit" name="intent" value="verify" className="btn btn-primary w-full" disabled={pending}>{pending ? 'Creating account…' : 'Create account'}</button>
+          <button type="submit" name="intent" value="verify" className="btn btn-focal w-full !text-base shadow-sm" disabled={pending}>{pending ? 'Creating account…' : <>Create Free Account<Icon name="arrow_forward" /></>}</button>
           <div className="grid grid-cols-2 gap-2">
             <button type="submit" name="intent" value="back" className="btn btn-ghost" disabled={pending} formNoValidate>Change details</button>
             <button type="submit" name="intent" value="resend" className="btn btn-ghost" disabled={pending} formNoValidate>Send a new code</button>

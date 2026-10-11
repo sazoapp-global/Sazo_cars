@@ -72,4 +72,12 @@ export class InspectionRepository {
       `UPDATE inspection.inspections SET submission_id = $2, status = $3, vehicle_id = COALESCE($4, vehicle_id), report_evidence_id = $5, rejection_reason = $6 WHERE id = $1`,
       [id, o.submissionId, o.status, o.vehicleId, o.reportEvidenceId, o.rejectionReason]);
   }
+
+  /** Car photos from accepted inspections of these vehicles, newest inspection first (the checklist's car views). */
+  async carPhotos(vehicleIds: string[]): Promise<{ photoIds: string[]; at: string; organisationId: string }[]> {
+    const { rows } = await this.pool.query<{ photoIds: string[] | null; at: Date; organisationId: string }>(
+      `SELECT COALESCE(ARRAY(SELECT jsonb_array_elements_text(form->'photoIds')), '{}') AS "photoIds", client_created_at AS at, organisation_id AS "organisationId"
+         FROM inspection.inspections WHERE vehicle_id = ANY($1) AND status = 'accepted' ORDER BY client_created_at DESC LIMIT 10`, [vehicleIds]);
+    return rows.map((r) => ({ photoIds: r.photoIds ?? [], at: new Date(r.at).toISOString(), organisationId: r.organisationId }));
+  }
 }

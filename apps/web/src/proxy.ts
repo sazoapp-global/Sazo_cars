@@ -32,11 +32,13 @@ export async function proxy(request: NextRequest) {
   request.cookies.set('sazo_at', t.accessToken);
   request.cookies.set('sazo_rt', t.refreshToken);
   const out = NextResponse.next({ request: { headers: request.headers } });
-  out.cookies.set('sazo_at', t.accessToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: t.expiresIn });
-  out.cookies.set('sazo_rt', t.refreshToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 30 * 86400 });
+  // "Remember device" off at log-in: keep the cookies for this browser session only.
+  const remember = request.cookies.get('sazo_rm')?.value !== '0';
+  out.cookies.set('sazo_at', t.accessToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', ...(remember ? { maxAge: t.expiresIn } : {}) });
+  out.cookies.set('sazo_rt', t.refreshToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', ...(remember ? { maxAge: 30 * 86400 } : {}) });
   return out;
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.png|images/|robots.txt).*)'],
 };

@@ -278,4 +278,10 @@ export class ObservationsService implements OnModuleInit {
     );
     return rows.map((r) => ({ ...r, eventTime: r.eventTime ? new Date(r.eventTime).toISOString() : null }));
   }
+
+  /** Public numbers for the website: records held about cars. */
+  async countAll(): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM obs.observations`);
+    return rows[0]!.n;
+  }
 }

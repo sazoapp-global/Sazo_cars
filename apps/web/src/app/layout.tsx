@@ -8,6 +8,9 @@ import Link from 'next/link';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
+import { Logo } from '@/components/logo';
+import { MainNav } from '@/components/main-nav';
+import { MobileNav } from '@/components/mobile-nav';
 
 export const metadata: Metadata = {
   title: { default: 'SAZO — Check a car before you buy', template: '%s · SAZO' },
@@ -30,36 +33,57 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Icon name="science" size={14} className="mr-1 inline align-[-2px]" />
           SAZO is in testing. The vehicles and records shown are simulated and do not describe real cars.
         </div>
-        <header className="border-b border-line bg-white print:hidden">
-          <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-4 px-4 md:px-8 lg:px-12">
-            <Link href="/" className="font-display text-xl font-extrabold tracking-tight text-primary" aria-label="SAZO home">SAZO</Link>
-            <span className="flex-1 md:hidden" />
-            <nav aria-label="Main" className="mr-auto hidden gap-6 pl-4 text-sm font-semibold text-muted md:flex">
-              <Link href="/" className="hover:text-primary-container">Check a car</Link>
-              <Link href="/#how" className="hover:text-primary-container">How it works</Link>
-              <Link href="/business" className="hover:text-primary-container">For businesses</Link>
-            </nav>
+        <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md print:hidden">
+          <div className="relative mx-auto flex h-16 max-w-[1280px] items-center gap-2 px-4 sm:gap-4 md:h-20 md:px-8 lg:px-12">
+            <MobileNav signedIn={!!me} />
+            <Logo />
+            <div className="flex-1 md:ml-8"><MainNav /></div>
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
-              <Link href="/admin" className="text-sm font-semibold text-primary-container hover:underline">Admin</Link>
+              <Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link>
             )}
-            {me && <Link href="/saved" className="text-sm font-semibold text-muted hover:text-primary-container">Saved</Link>}
+            {me && (
+              <Link href="/saved" className="flex items-center gap-1 rounded-lg p-2 text-sm font-semibold text-muted hover:text-primary-container">
+                <Icon name="bookmark" size={20} className="sm:hidden" /><span className="sr-only sm:not-sr-only">Saved</span>
+              </Link>
+            )}
             {me ? (
-              <Link href="/account" className="btn btn-ghost !min-h-10 !gap-2 !pl-1.5 !pr-3 text-sm" aria-label={`Settings — ${me.displayName}`}>
+              <Link href="/account" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm font-semibold hover:bg-soft sm:pr-3" aria-label={`Settings — ${me.displayName}`}>
                 <span className="avatar" aria-hidden>{me.initials}</span><span className="hidden max-w-[10rem] truncate sm:inline">{me.displayName}</span>
               </Link>
             ) : (
               <>
-                <Link href="/sign-in" className="btn btn-ghost !min-h-10 text-sm">Log in</Link>
-                <Link href="/sign-up" className="btn btn-primary !min-h-10 hidden text-sm sm:inline-flex">Sign up</Link>
+                <Link href="/sign-in" className="px-2 text-sm font-semibold text-ink hover:text-primary-container">Log in</Link>
+                <Link href="/#check" className="btn btn-focal !min-h-10 hidden !px-4 text-sm shadow-sm sm:inline-flex">Check a Car<Icon name="arrow_forward" size={18} /></Link>
               </>
             )}
           </div>
         </header>
         <main id="main" className="flex-1">{children}</main>
-        <footer className="mt-12 border-t border-line bg-white">
-          <div className="mx-auto max-w-[1280px] px-4 py-6 text-sm text-muted md:px-8 lg:px-12">
-            <p>SAZO describes what the available records show. It does not certify a vehicle. Always inspect a car and check its documents before you pay.</p>
-            <p className="mt-2"><Link href="/business" className="link">For businesses</Link> · © {new Date().getFullYear()} SAZO</p>
+        <footer className="mt-16 border-t border-line bg-white print:hidden">
+          <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr] md:px-8 lg:px-12">
+            <div>
+              <Logo tagline="A clearer story for every car" />
+              <p className="mt-4 max-w-sm text-sm text-muted">SAZO describes what the available records show. It does not certify a vehicle. Always inspect a car and check its documents before you pay.</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-label">Check</p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li><Link href="/#check" className="hover:text-primary-container">Check a car</Link></li>
+                <li><Link href="/compare" className="hover:text-primary-container">Compare cars</Link></li>
+                <li><Link href="/#how" className="hover:text-primary-container">How it works</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-label">Businesses</p>
+              <ul className="mt-3 space-y-2 text-sm">
+                <li><Link href="/business" className="hover:text-primary-container">For businesses</Link></li>
+                <li><Link href="/business/register" className="hover:text-primary-container">Register a business</Link></li>
+                <li><Link href="/sign-in?next=/account" className="hover:text-primary-container">Business log-in</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-line">
+            <p className="mx-auto max-w-[1280px] px-4 py-4 text-xs text-label md:px-8 lg:px-12">© {new Date().getFullYear()} SAZO · Kampala, Uganda</p>
           </div>
         </footer>
       </body>

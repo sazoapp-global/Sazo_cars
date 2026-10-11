@@ -246,4 +246,9 @@ export class VehicleRepository {
     );
     return rows[0]!.id;
   }
+
+  async countActive(): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM vehicle.vehicles WHERE status <> 'retired'`);
+    return rows[0]!.n;
+  }
 }

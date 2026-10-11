@@ -163,6 +163,16 @@ describe.skipIf(!base)('inspector workspace (e2e)', () => {
     expect(result.evidence.map((e: { kind: string }) => e.kind)).toEqual(expect.arrayContaining(['inspection_report', 'vehicle_photo']));
     const sources = (await http.get('/v1/ingest/sources').set(bearer(managerToken)).expect(200)).body;
     expect(JSON.stringify(sources)).not.toContain('INS-');
+
+    // Signed-in buyers see the inspector's car photos (not the odometer or report); anyone else gets nothing.
+    const photos = (await http.get(`/v1/vehicles/${vehicleRef}/photos`).set(bearer(buyer)).expect(200)).body.items;
+    expect(photos).toEqual([expect.objectContaining({ takenBy: 'KVI Bugolobi' }), expect.objectContaining({ takenBy: 'KVI Bugolobi' })]);
+    const img = await http.get(`/v1/vehicles/${vehicleRef}/photos/${photos[0].photoId}`).set(bearer(buyer)).expect(200);
+    expect(img.headers['x-content-type-options']).toBe('nosniff');
+    expect(['front of car', 'back of car']).toContain(img.body.toString());
+    await http.get(`/v1/vehicles/${vehicleRef}/photos`).expect(401);
+    const { rows: [odo] } = await db.query(`SELECT form->'mileage'->>'odometerPhotoId' AS id FROM inspection.inspections WHERE vehicle_id IS NOT NULL LIMIT 1`);
+    await http.get(`/v1/vehicles/${vehicleRef}/photos/${odo.id}`).set(bearer(buyer)).expect(404);
   });
 
   it('a car new to SAZO needs the chassis number read off the car', async () => {

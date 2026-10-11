@@ -48,6 +48,12 @@ describe.skipIf(!url)('vehicle search (e2e)', () => {
     await app?.close();
   });
 
+  it('GET /v1/stats gives real public numbers (no sign-in)', async () => {
+    const res = await request(app.getHttpServer()).get('/v1/stats').expect(200);
+    expect(res.body).toEqual({ vehicles: expect.any(Number), records: expect.any(Number), garages: expect.any(Number), inspectors: expect.any(Number), dealers: expect.any(Number) });
+    expect(res.body.vehicles).toBeGreaterThan(0);
+  });
+
   it('GET /v1/health reports the database is reachable', async () => {
     const res = await request(app.getHttpServer()).get('/v1/health').expect(200);
     expect(res.body).toEqual({ status: 'ok', checks: { database: 'ok' } });

@@ -75,7 +75,7 @@ test('manage my account and delete it', async ({ page }) => {
   await page.getByLabel('Type DELETE to confirm').fill('DELETE');
   await page.getByRole('button', { name: 'Delete my account' }).click();
   await expect(page.getByText('Your account has been deleted.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Log in', exact: true })).toBeVisible();
 });
 
 test('create an account with email and password, then log in with it (D-100)', async ({ page }) => {
@@ -83,22 +83,23 @@ test('create an account with email and password, then log in with it (D-100)', a
   await page.goto('/sign-up');
   await a11y(page);
   await shot(page, 'sign-up');
-  const panel = page.getByRole('tabpanel', { name: 'Email and password' });
+  const panel = page.getByRole('main');
+  await panel.getByRole('button', { name: 'Use email instead' }).click();
   await panel.getByLabel('Surname').fill('anguzu');
   await panel.getByLabel('First name').fill('MIKE');
   await panel.getByLabel('Middle name').fill('james');
   await panel.getByLabel('Male', { exact: true }).check();
   // Under 18: refused with a clear reason.
   await panel.getByLabel('Date of birth').fill(`${new Date().getFullYear() - 16}-01-10`);
-  await panel.getByLabel('Email').fill(email);
+  await panel.getByLabel('Email', { exact: true }).fill(email);
   await panel.getByLabel('Password', { exact: true }).fill('river-stone-7');
   await panel.getByLabel('Password again').fill('river-stone-7');
-  await panel.getByRole('button', { name: 'Create account' }).click();
+  await panel.getByRole('button', { name: 'Create Free Account' }).click();
   await expect(panel.getByText('You must be 18 or older to use SAZO')).toBeVisible();
   await panel.getByLabel('Date of birth').fill('1991-04-20');
   await panel.getByLabel('Password', { exact: true }).fill('river-stone-7');
   await panel.getByLabel('Password again').fill('river-stone-7');
-  await panel.getByRole('button', { name: 'Create account' }).click();
+  await panel.getByRole('button', { name: 'Create Free Account' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('link', { name: 'Settings — Anguzu J. Mike' })).toContainText('AM');
   await shot(page, 'signed-up');
@@ -108,14 +109,15 @@ test('create an account with email and password, then log in with it (D-100)', a
   await page.goto('/sign-in?next=/account');
   await a11y(page);
   await shot(page, 'log-in');
-  const login = page.getByRole('tabpanel', { name: 'Email and password' });
-  await login.getByLabel('Email').fill('nobody@example.com');
-  await login.getByLabel('Password').fill('whatever-1234');
-  await login.getByRole('button', { name: 'Log in' }).click();
+  const login = page.getByRole('main');
+  await login.getByRole('button', { name: 'Use email instead' }).click();
+  await login.getByLabel('Email', { exact: true }).fill('nobody@example.com');
+  await login.getByLabel('Password', { exact: true }).fill('whatever-1234');
+  await login.getByRole('button', { name: 'Log in to SAZO' }).click();
   await expect(login.getByText('No SAZO account uses this email.')).toBeVisible();
-  await login.getByLabel('Email').fill(email.toUpperCase());
-  await login.getByLabel('Password').fill('river-stone-7');
-  await login.getByRole('button', { name: 'Log in' }).click();
+  await login.getByLabel('Email', { exact: true }).fill(email.toUpperCase());
+  await login.getByLabel('Password', { exact: true }).fill('river-stone-7');
+  await login.getByRole('button', { name: 'Log in to SAZO' }).click();
   await expect(page.getByRole('heading', { name: 'Anguzu J. Mike' })).toBeVisible();
   await expect(page.getByRole('progressbar', { name: 'Your profile' })).toHaveAttribute('aria-valuenow', '50');
 });

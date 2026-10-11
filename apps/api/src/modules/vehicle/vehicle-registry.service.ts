@@ -364,4 +364,9 @@ export class VehicleRegistry {
     }
     return alerts;
   }
+
+  /** Public numbers for the website: cars on record (not retired). */
+  countActive(): Promise<number> {
+    return this.repo.countActive();
+  }
 }

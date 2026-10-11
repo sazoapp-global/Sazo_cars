@@ -37,30 +37,28 @@ export async function signIn(page: Page, phone: string, opts: { name?: string; n
   const next = encodeURIComponent(opts.next ?? '/');
   if (opts.name) {
     await page.goto(`/sign-up?next=${next}`);
-    await page.getByRole('tab', { name: 'Phone code' }).click();
-    const panel = page.getByRole('tabpanel', { name: 'Phone code' });
+    const panel = page.getByRole('main'); // phone code is the default
     const p = personFor(opts.name);
     await panel.getByLabel('Surname').fill(p.surname);
     await panel.getByLabel('First name').fill(p.firstName);
     await panel.getByLabel('Female').check();
     await panel.getByLabel('Date of birth').fill('1990-03-15');
-    await panel.getByLabel('Phone number').fill(`0${phone.slice(4)}`);
+    await panel.getByLabel('Mobile number').fill(`0${phone.slice(4)}`);
     const before = codesSoFar();
     await panel.getByRole('button', { name: 'Send code' }).click();
     await expect(panel.getByLabel('6-digit code')).toBeVisible();
     await typeNextCode(page, before);
-    await panel.getByRole('button', { name: 'Create account' }).click();
+    await panel.getByRole('button', { name: 'Create Free Account' }).click();
   } else {
     await page.goto(`/sign-in?next=${next}`);
-    await page.getByRole('tab', { name: 'Phone code' }).click();
-    const panel = page.getByRole('tabpanel', { name: 'Phone code' });
-    await panel.getByLabel('Your phone number').fill(`0${phone.slice(4)}`);
+    const panel = page.getByRole('main');
+    await panel.getByLabel('Mobile number').fill(`0${phone.slice(4)}`);
     let before = codesSoFar();
     await panel.getByRole('button', { name: 'Send code' }).click();
     await expect(panel.getByLabel('6-digit code')).toBeVisible();
     await typeNextCode(page, before);
     before = codesSoFar();
-    await panel.getByRole('button', { name: 'Log in' }).click();
+    await panel.getByRole('button', { name: 'Log in to SAZO' }).click();
     // SAZO staff, managers and dealers: a second step on a new device (D-105).
     await page.waitForURL((u) => !/\/sign-in$/.test(u.pathname) || u.pathname === '/sign-in/verify');
     if (new URL(page.url()).pathname === '/sign-in/verify') {

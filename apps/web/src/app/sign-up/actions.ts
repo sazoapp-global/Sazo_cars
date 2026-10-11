@@ -8,7 +8,9 @@ import { afterLogin, clientHeaders, fieldErrors, type LoginResult } from '@/lib/
 export type EmailSignUpState = { error?: string; errors?: Record<string, string>; values?: PersonValues & { email?: string }; exists?: boolean };
 export type PhoneSignUpState =
   | { step: 'details'; error?: string; errors?: Record<string, string>; values?: PersonValues & { phone?: string }; exists?: boolean }
-  | { step: 'code'; phone: string; details: ReturnType<typeof personFrom>; error?: string };
+  | { step: 'code'; phone: string; details: ReturnType<typeof personFrom>; remember: boolean; error?: string };
+
+const remembered = (form: FormData) => form.get('remember') === 'on';
 
 function problem(err: unknown): { error: string; errors?: Record<string, string>; exists?: boolean } {
   if (err instanceof ApiError) {
@@ -31,7 +33,7 @@ export async function signUpWithEmail(_prev: EmailSignUpState, form: FormData): 
   let to: string;
   try {
     const r = await api<LoginResult>('/auth/signup/email', { method: 'POST', body: { ...details, email, password }, headers: await clientHeaders() });
-    to = await afterLogin(r, safeNext(form.get('next')));
+    to = await afterLogin(r, safeNext(form.get('next')), remembered(form));
   } catch (err) {
     return { values, ...problem(err) };
   }
@@ -55,7 +57,7 @@ export async function signUpWithPhone(prev: PhoneSignUpState, form: FormData): P
     } catch (err) {
       return { step: 'details', values, ...problem(err) };
     }
-    return { step: 'code', phone, details };
+    return { step: 'code', phone, details, remember: prev.step === 'code' && intent === 'resend' ? prev.remember : remembered(form) };
   }
   if (intent === 'verify' && prev.step === 'code') {
     const code = String(form.get('code') ?? '').replace(/\D/g, '');
@@ -63,7 +65,7 @@ export async function signUpWithPhone(prev: PhoneSignUpState, form: FormData): P
     let to: string;
     try {
       const r = await api<LoginResult>('/auth/otp/verify', { method: 'POST', body: { phone: prev.phone, code, signup: prev.details }, headers: await clientHeaders() });
-      to = await afterLogin(r, safeNext(form.get('next')));
+      to = await afterLogin(r, safeNext(form.get('next')), prev.remember);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return { ...prev, error: 'That code is wrong or has expired. Check the SMS or send a new code.' };
       const p = problem(err);
