@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Icon, type IconName } from '@/components/icon';
+import { isSignedIn } from '@/lib/api';
+
+const GARAGE_APP_URL = process.env.SAZO_GARAGE_APP_URL ?? 'http://localhost:3002';
 
 export const metadata: Metadata = { title: 'For businesses', description: 'Garages: record jobs for your customers’ cars, build a trusted reputation, and keep your own history of every car.' };
 
@@ -11,7 +14,8 @@ const GARAGE_POINTS: { icon: IconName; title: string; text: string }[] = [
   { icon: 'verified', title: 'A verified garage', text: 'SAZO checks every garage before it can record history, so buyers can trust what you add.' },
 ];
 
-export default function Business() {
+export default async function Business() {
+  const signedIn = await isSignedIn();
   return (
     <>
       <section className="bg-primary text-white">
@@ -20,6 +24,22 @@ export default function Business() {
           <h1 className="mt-1 max-w-2xl font-display text-3xl font-extrabold md:text-5xl">Your garage&apos;s work, on every car&apos;s record.</h1>
           <p className="mt-3 max-w-xl text-white/85 md:text-lg">Free while SAZO is in testing. Register your garage, SAZO checks it, and your mechanics start recording jobs from their phones.</p>
           <Link href="/business/register" className="btn btn-focal mt-6">Register your business</Link>
+        </div>
+      </section>
+      <section className="border-b border-line bg-soft" aria-labelledby="have-account">
+        <div className="mx-auto flex max-w-[1280px] flex-col gap-3 px-4 py-6 md:flex-row md:items-center md:justify-between md:px-8 lg:px-12">
+          <div>
+            <h2 id="have-account" className="font-display text-xl font-bold">Already registered?</h2>
+            <p className="text-muted">{signedIn
+              ? 'Your businesses are in your account: check approval, send documents or open your workspace.'
+              : 'Sign in with your phone number to see your business, send documents or open your workspace. Mechanics and inspectors sign in on the phone app.'}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {signedIn
+              ? <Link href="/account" className="btn btn-primary"><Icon name="person" />Your businesses</Link>
+              : <Link href="/sign-in?next=/account" className="btn btn-primary"><Icon name="person" />Sign in</Link>}
+            <a href={GARAGE_APP_URL} className="btn btn-ghost"><Icon name="garage" />Open the Garage app</a>
+          </div>
         </div>
       </section>
       <section className="mx-auto max-w-[1280px] px-4 py-10 md:px-8 lg:px-12" aria-labelledby="garages">

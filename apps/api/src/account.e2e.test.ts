@@ -136,6 +136,9 @@ describe.skipIf(!base)('account settings (e2e)', () => {
     const manager = await signIn('+256772800070', 'Garage boss');
     const orgId = (await http.post('/v1/organisations').set(bearer(manager)).send({ type: 'garage', legalName: 'Kyanja Motors Ltd' }).expect(201)).body.id;
     await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(200);
+    // "My data" includes the business: its details, status and this person's role.
+    const mine = (await http.get('/v1/me/export').set(bearer(manager)).expect(200)).body.profile.businesses;
+    expect(mine).toEqual([expect.objectContaining({ name: 'Kyanja Motors Ltd', legalName: 'Kyanja Motors Ltd', type: 'garage', yourRole: 'org_manager', status: 'approved', registeredAt: expect.any(String) })]);
     await http.post('/v1/garage/staff').set({ ...bearer(manager), 'X-Organisation-Id': orgId }).send({ phone: '+256772800071', displayName: 'Mechanic', role: 'org_staff' }).expect(201);
     await http.delete('/v1/me').set(bearer(manager)).send({}).expect(400);
     expect((await http.delete('/v1/me').set(bearer(manager)).send({ confirm: 'DELETE' }).expect(409)).body).toMatchObject({ code: 'hand_over_first', errors: ['Kyanja Motors Ltd'] });

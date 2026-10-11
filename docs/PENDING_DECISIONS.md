@@ -197,3 +197,10 @@
 | Topic | What the code does |
 |---|---|
 | Describe the job | Optional box on the "What work was done?" step, up to 1,000 characters, in the mechanic's own words. Shown on the review step and on the sent job. Kept with the garage's job record only — not added to the car's history, so buyers don't see it (free text can contain names or prices). |
+
+## Sign-in for registered businesses and a readable "my data" (11 Oct 2026, easy to change)
+
+| Topic | What the code does |
+|---|---|
+| Already registered? | The "For businesses" page has a sign-in section under "Register your business". Signed in, it links to "Your businesses" instead. Mechanics and inspectors are pointed to the Garage app. |
+| Download my data | Opens a readable page of everything SAZO holds about the person, including each business they belong to (names, type, registration number, district, status, their role, date registered, documents sent). "Save as PDF" prints it; the JSON file is still offered for a machine-readable copy (DPPA 2019). |

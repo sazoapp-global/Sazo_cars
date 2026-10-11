@@ -58,4 +58,30 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await owner.reload();
   await expect(owner.getByRole('heading', { name: /You.re ready/ })).toBeVisible();
   await expect(owner.getByRole('link', { name: 'Open the Garage app' })).toBeVisible();
+
+  // Signed in, the business page points to their businesses instead of sign-in.
+  await owner.goto('/business');
+  await expect(owner.getByRole('link', { name: 'Your businesses' })).toBeVisible();
+
+  // Coming back on another device: "Already registered?" leads to sign-in, then to the account.
+  const later = await (await browser.newContext()).newPage();
+  await later.goto('/business');
+  await expect(later.getByRole('heading', { name: 'Already registered?' })).toBeVisible();
+  await later.getByRole('main').getByRole('link', { name: 'Sign in' }).click();
+  await expect(later).toHaveURL(/sign-in\?next=%2Faccount|sign-in\?next=\/account/);
+  await signIn(later, OWNER, { next: '/account' });
+  await expect(later.getByRole('heading', { name: 'Hello, Joseph Owner' })).toBeVisible();
+
+  // "Download my data" opens a readable page that includes the business; the JSON file is still offered.
+  await later.getByRole('link', { name: 'Download my data' }).click();
+  await expect(later.getByRole('heading', { name: 'Your data held by SAZO' })).toBeVisible();
+  const biz = later.getByRole('region', { name: 'Your businesses' });
+  await expect(biz).toContainText(NAME);
+  await expect(biz).toContainText('Approved');
+  await expect(biz).toContainText('Manager');
+  await expect(biz).toContainText('Kampala');
+  await expect(later.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
+  await expect(later.getByRole('link', { name: 'Download as a JSON file' })).toHaveAttribute('href', '/account/export');
+  await a11y(later);
+  await shot(later, 'my-data');
 });

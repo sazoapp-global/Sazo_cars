@@ -120,8 +120,8 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
 
       <section className="card p-5" aria-labelledby="data">
         <h2 id="data" className="font-display text-lg font-semibold">Your data</h2>
-        <p className="mt-1 text-muted">Download a copy of what SAZO holds about you: your details, saved cars, shared reports, cars you own, reviews and devices.</p>
-        <a href="/account/export" className="btn btn-ghost mt-3" download><Icon name="description" />Download my data</a>
+        <p className="mt-1 text-muted">See what SAZO holds about you: your details, your businesses, saved cars, shared reports, cars you own, reviews and devices. Print it, save it as a PDF, or download it as a file.</p>
+        <a href="/account/data" className="btn btn-ghost mt-3"><Icon name="description" />Download my data</a>
 
         <details className="mt-5 rounded-lg border border-bad-line p-3">
           <summary className="cursor-pointer font-semibold text-bad-text">Delete my account</summary>

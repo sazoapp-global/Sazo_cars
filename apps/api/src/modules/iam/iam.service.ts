@@ -163,7 +163,15 @@ export class IamService {
 
   async profile(userId: string) {
     const [u, orgs] = await Promise.all([this.repo.userById(userId), this.repo.myOrganisations(userId)]);
-    return { displayName: u?.displayName, phone: u?.phone, email: u?.email, businesses: orgs.map((o) => ({ name: o.tradingName ?? o.legalName, type: o.type, role: o.role })) };
+    const details = await Promise.all(orgs.map((o: { id: string }) => this.repo.organisation(o.id)));
+    return {
+      displayName: u?.displayName, phone: u?.phone, email: u?.email,
+      businesses: orgs.map((o: { id: string; type: string; legalName: string; tradingName: string | null; status: string; role: string; documents: number }, i: number) => ({
+        name: o.tradingName ?? o.legalName, legalName: o.legalName, tradingName: o.tradingName, type: o.type, yourRole: o.role, status: o.status,
+        registrationNumber: details[i]?.registrationNumber ?? null, district: details[i]?.district ?? null,
+        registeredAt: details[i]?.createdAt ?? null, documentsSent: Number(o.documents),
+      })),
+    };
   }
 
   async anonymise(actor: Actor): Promise<void> {
