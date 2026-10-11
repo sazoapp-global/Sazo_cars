@@ -100,7 +100,9 @@ test('create an account with email and password, then log in with it (D-100)', a
   await panel.getByLabel('Password', { exact: true }).fill('river-stone-7');
   await panel.getByLabel('Password again').fill('river-stone-7');
   await panel.getByRole('button', { name: 'Create Free Account' }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page.getByRole('heading', { name: 'Welcome to SAZO, Mike' })).toBeVisible();
+  await a11y(page);
   await expect(page.getByRole('link', { name: 'Settings — Anguzu J. Mike' })).toContainText('AM');
   await shot(page, 'signed-up');
 

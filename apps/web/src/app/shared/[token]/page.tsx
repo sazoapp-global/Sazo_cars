@@ -1,9 +1,7 @@
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
-import { FullReportView, NextSteps } from '@/components/full-report';
-import { Plate } from '@/components/plate';
+import { NegotiateCard, QuestionNav, ReportHero, ReportSections } from '@/components/report/report-view';
 import { PrintButton } from '@/components/share-buttons';
-import { vehicleName } from '@/components/vehicle-card';
 import { ApiError, api } from '@/lib/api';
 import type { SharedReport } from '@/lib/types';
 
@@ -27,20 +25,21 @@ export default async function Shared({ params }: { params: Promise<{ token: stri
       </div>
     );
   }
-  const v = s.report.vehicle;
   return (
-    <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 md:px-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          {v.currentPlate && <Plate value={v.currentPlate} />}
-          <h1 className="mt-2 font-display text-2xl font-bold md:text-3xl">{vehicleName(v)}</h1>
-          <p className="text-sm text-muted">Report <span className="sazo-id">{s.snapshotRef}</span> · a copy frozen on {formatDate(s.createdAt)}. Records may have changed since.</p>
+    <>
+      <div className="border-b border-line bg-white print:hidden">
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8 lg:px-12">
+          <p className="text-sm text-muted">Shared report <span className="sazo-id">{s.snapshotRef}</span> · a copy frozen on {formatDate(s.createdAt)}. Records may have changed since.</p>
+          <PrintButton />
         </div>
-        <PrintButton />
       </div>
-      <FullReportView r={s.report} />
-      <NextSteps />
-      <p className="text-xs text-muted">SAZO describes what the available records showed on {formatDate(s.createdAt)}. It does not certify a vehicle.</p>
-    </div>
+      <ReportHero r={s.report} x={{}} />
+      <QuestionNav questions={s.report.questions} />
+      <div className="mx-auto max-w-[1280px] space-y-6 px-4 py-6 md:px-8 md:py-10 lg:px-12">
+        <ReportSections r={s.report} x={{}} />
+        <NegotiateCard />
+        <p className="text-xs text-muted">SAZO describes what the available records showed on {formatDate(s.createdAt)}. It does not certify a vehicle.</p>
+      </div>
+    </>
   );
 }

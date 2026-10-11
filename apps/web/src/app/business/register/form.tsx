@@ -10,7 +10,7 @@ const TYPES = [
 ];
 const DISTRICTS = ['Kampala', 'Wakiso', 'Mukono', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu', 'Mbale', 'Masaka', 'Lira', 'Arua', 'Fort Portal', 'Hoima', 'Kabale', 'Soroti'];
 
-export function RegisterForm() {
+export function RegisterForm({ defaultType = 'garage' }: { defaultType?: string }) {
   const [state, action, pending] = useActionState<RegisterState, FormData>(registerBusiness, {});
   const f = state.fields ?? {};
   return (
@@ -20,7 +20,7 @@ export function RegisterForm() {
         <div className="grid gap-2 sm:grid-cols-2">
           {TYPES.map((t) => (
             <label key={t.v} className="flex cursor-pointer gap-3 rounded-lg border-2 border-line bg-white p-3 has-[:checked]:border-primary-container has-[:checked]:bg-soft">
-              <input type="radio" name="type" value={t.v} defaultChecked={(f.type ?? 'garage') === t.v} className="mt-1 h-5 w-5" />
+              <input type="radio" name="type" value={t.v} defaultChecked={(f.type ?? defaultType) === t.v} className="mt-1 h-5 w-5" />
               <span><span className="block font-semibold">{t.label}</span><span className="text-sm text-muted">{t.hint}</span></span>
             </label>
           ))}

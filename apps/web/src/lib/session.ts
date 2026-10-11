@@ -55,7 +55,9 @@ export async function afterLogin(r: LoginResult, next: string, remember = true):
   await storeTokens(r, remember);
   jar.delete(SECOND_STEP_COOKIE);
   const me = await api<{ needsDetails: string[] }>('/me', { headers: { Authorization: `Bearer ${r.accessToken}` } }).catch(() => undefined);
-  return me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(safeNext(next))}` : safeNext(next);
+  // A brand-new account with nowhere particular to go: ask what brought them (the design's onboarding step).
+  const to = r.created && safeNext(next) === '/' ? '/welcome' : safeNext(next);
+  return me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(to)}` : to;
 }
 
 export async function pendingSecondStep(): Promise<SecondStepPending | undefined> {
