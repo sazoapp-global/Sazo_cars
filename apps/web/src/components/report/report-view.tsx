@@ -439,7 +439,7 @@ function InfoCard({ icon, eyebrow, title, children }: { icon: IconName; eyebrow:
   return (
     <div className="rounded-xl border border-line p-4">
       <span className="grid size-10 place-items-center rounded-lg bg-soft text-primary-container"><Icon name={icon} size={22} /></span>
-      <p className="mt-3"><Eyebrow>{eyebrow}</Eyebrow></p>
+      <div className="mt-3"><Eyebrow>{eyebrow}</Eyebrow></div>
       <p className="font-display text-lg font-bold">{title}</p>
       {children && <div className="mt-1 text-sm text-muted">{children}</div>}
     </div>
