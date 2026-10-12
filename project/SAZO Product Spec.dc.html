@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>SAZO — Product Design Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&amp;display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background-color:#eef2f1;background-image:linear-gradient(#14201c0b 1px,transparent 1px),linear-gradient(90deg,#14201c0b 1px,transparent 1px);background-size:48px 48px;color:#14201c;font-family:"Archivo",system-ui,sans-serif;font-size:15px;line-height:1.6;text-wrap:pretty}
+h1,h2,h3,h4,p,ul,ol{margin:0}
+a{color:#173da3;text-underline-offset:3px}
+a:hover{color:#1f4fcf}
+:focus-visible{outline:2px solid #1f4fcf;outline-offset:2px}
+::selection{background:#bccdfd}
+</style>
+</helmet>
+
+<header style="position:sticky;top:0;z-index:10;background:#0f214f;color:#ffffff;border-bottom:4px solid #3ccf82;box-shadow:0 4px 16px rgba(15,33,79,0.25)">
+  <div style="max-width:1240px;margin:0 auto;padding:12px clamp(20px,4vw,48px);display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;margin-right:auto">
+      <span style="width:22px;height:22px;background:#3ccf82;display:block;box-shadow:8px 8px 0 #5f8cf5"></span>
+      <span style="font-weight:800;font-size:19px;letter-spacing:-0.01em;margin-left:8px">SAZO</span>
+      <span style="font-size:13px;color:#bccdfd">Product design specification · v1.0 · Oct 2026</span>
+    </div>
+    <nav style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px">
+      <a href="SAZO Product Spec.dc.html" style="color:#ffffff;font-weight:600;text-decoration:none;border-bottom:2px solid #a2dfbc">Spec</a>
+      <a href="SAZO Screens - Buyer.dc.html" style="color:#ffffff;text-decoration:none">Buyer screens</a>
+      <a href="SAZO Screens - Partners.dc.html" style="color:#ffffff;text-decoration:none">Partner &amp; admin screens</a>
+      <a href="SAZO Design System.dc.html" style="color:#ffffff;text-decoration:none">Design system</a>
+    </nav>
+  </div>
+</header>
+
+<main style="max-width:1240px;margin:0 auto;padding:0 clamp(20px,4vw,48px)">
+
+  <section style="margin:24px 0;padding:64px clamp(20px,3vw,40px) 48px;display:flex;flex-direction:column;gap:24px;background:#0f214f;color:#ffffff;box-shadow:0 2px 4px rgba(15,33,79,0.2), 0 24px 56px rgba(15,33,79,0.28);position:relative;overflow:hidden"><span style="position:absolute;right:-40px;top:-40px;width:220px;height:220px;background:#1f4fcf"></span><span style="position:absolute;right:120px;top:120px;width:90px;height:90px;background:#3ccf82"></span>
+    <h1 style="font-weight:800;font-size:clamp(40px,6vw,76px);line-height:1.04;letter-spacing:-0.025em;max-width:16ch;position:relative">Know the car before you buy it.</h1>
+    <p style="font-size:18px;max-width:62ch;color:#dbe5ff;position:relative">SAZO turns a number plate into a sourced, timestamped history — repairs, accidents, inspections, mileage and ownership — contributed by the garages, dealers and inspection centres that actually touched the vehicle.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));border-top:2px solid #ffffff66;margin-top:16px;position:relative">
+      <a href="#s1" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">01 Product overview</a>
+      <a href="#s2" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">02 Goals &amp; metrics</a>
+      <a href="#s3" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">03 User personas</a>
+      <a href="#s4" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">04 Information architecture</a>
+      <a href="#s5" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">05 Core user journeys</a>
+      <a href="#s6" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">06 Screens &amp; layouts</a>
+      <a href="#s7" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">07 Partner dashboard features</a>
+      <a href="#s8" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">08 Vehicle health summary</a>
+      <a href="#s9" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">09 Trust &amp; transparency</a>
+      <a href="#s10" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">10 Search, alerts &amp; reporting</a>
+      <a href="#s11" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">11 Responsive behaviour</a>
+      <a href="#s12" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">12 Accessibility</a>
+      <a href="#s13" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">13 Privacy &amp; security</a>
+      <a href="#s14" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">14 States &amp; disputes</a>
+      <a href="#s15" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">15 Design system</a>
+      <a href="#s16" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">16 Interface copy</a>
+      <a href="#s17" style="padding:12px 16px 12px 0;color:#ffffff;text-decoration:none;font-size:14px;border-bottom:1px solid #ffffff33" style-hover="color:#a2dfbc">17 MVP &amp; roadmap</a>
+    </div>
+  </section>
+
+  <!-- 01 -->
+  <section id="s1" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">01</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Product overview</h2></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="font-weight:800;font-size:20px">Vision</h3>
+        <p style="max-width:68ch">Every used-car sale in the region happens with the same information on both sides of the table. A buyer should be able to verify a seller’s claims in two minutes, from a phone, standing next to the car.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="font-weight:800;font-size:20px">Value proposition</h3>
+        <p style="max-width:68ch;font-size:18px;font-weight:600">One plate. Every verified record. Clearly sourced, honestly incomplete.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:0;border-top:2px solid #14201c66">
+        <div style="padding:16px 16px 16px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Buyers</p><p style="font-size:14px;color:#3a423e">A plain-language history with every claim traced to who recorded it and when — and an explicit list of what SAZO could not find.</p></div>
+        <div style="padding:16px 16px 16px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Garages</p><p style="font-size:14px;color:#3a423e">A fast job-card tool that doubles as a public credential: “Serviced by a SAZO Verified garage” sells their work.</p></div>
+        <div style="padding:16px 16px 16px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Dealers</p><p style="font-size:14px;color:#3a423e">Inventory with shareable, verified history links that shorten sales conversations and justify pricing.</p></div>
+        <div style="padding:16px 16px 16px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Inspection centres</p><p style="font-size:14px;color:#3a423e">Structured result upload that replaces paper certificates and reduces fraudulent copies.</p></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="font-weight:800;font-size:20px">Product principles</h3>
+        <ol style="padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:72ch">
+          <li><strong>Source before score.</strong> Every fact shows its contributor, date and verification level. No unsourced summary is ever shown.</li>
+          <li><strong>Absence is not evidence.</strong> “No accident records found” is never shown as “No accidents”.</li>
+          <li><strong>Calm by default, direct when it matters.</strong> Red is reserved for findings a buyer must act on.</li>
+          <li><strong>Contributing must be faster than paper.</strong> A garage record takes under 90 seconds.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section id="s2" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">02</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Goals and success metrics</h2></div>
+    <div style="flex:999 1 480px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:560px">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Goal</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Metric</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">MVP target (6 mo)</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Fast answers for buyers</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Plate entered → overview rendered</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">p95 &lt; 3 s</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Useful coverage</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Searches returning ≥ 1 verified record</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">≥ 60%</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Revenue</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Free overview → full report conversion</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">8–12%</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Comprehension</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Buyers correctly stating “no record ≠ no event” in usability test</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">≥ 90%</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Partner adoption</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Active contributing partners (≥ 10 records / month)</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">150 garages · 40 dealers · 10 centres</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Low contribution effort</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Median time to submit a repair record</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">&lt; 90 s</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Data quality</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Records later corrected via dispute</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">&lt; 1.5%</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Fair disputes</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Disputes resolved within SLA</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">95% in 10 working days</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 03 -->
+  <section id="s3" style="background:#eef3ff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">03</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">User personas</h2></div>
+    <div style="flex:999 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:2px;background:#14201c66;border:2px solid #14201c66;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10)">
+      <div style="background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#0f6639;font-weight:600">Buyer · primary</p>
+        <p style="font-weight:800;font-size:19px">Amina, 31 — first private purchase</p>
+        <p style="font-size:14px;color:#3a423e">Buying from a stranger online with savings. Not a car expert; checks on her phone at the viewing.</p>
+        <p style="font-size:14px"><strong>Goals:</strong> spot red flags fast; know what to ask the seller; not overpay.</p>
+        <p style="font-size:14px"><strong>Fears:</strong> rolled-back mileage, hidden accident, being misled by jargon.</p>
+      </div>
+      <div style="background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#0f6639;font-weight:600">Buyer · power</p>
+        <p style="font-weight:800;font-size:19px">David, 44 — family upgrade, comparing 3 cars</p>
+        <p style="font-size:14px;color:#3a423e">Shortlists on desktop in the evening, wants side-by-side facts.</p>
+        <p style="font-size:14px"><strong>Goals:</strong> compare like for like; save cars; get alerts if a record changes.</p>
+        <p style="font-size:14px"><strong>Fears:</strong> paying for reports on cars that turn out empty.</p>
+      </div>
+      <div style="background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#173da3;font-weight:600">Garage</p>
+        <p style="font-weight:800;font-size:19px">Joseph — owner, 6-bay independent garage</p>
+        <p style="font-size:14px;color:#3a423e">Works on a shared tablet in the workshop, gloves on, poor Wi-Fi.</p>
+        <p style="font-size:14px"><strong>Goals:</strong> log jobs in seconds; give mechanics limited access; show reputation.</p>
+        <p style="font-size:14px"><strong>Fears:</strong> admin overhead, liability for a customer’s dispute.</p>
+      </div>
+      <div style="background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#173da3;font-weight:600">Dealer</p>
+        <p style="font-weight:800;font-size:19px">Grace — sales manager, 120-car lot</p>
+        <p style="font-size:14px;color:#3a423e">Manages stock intake, prep and listings across two branches.</p>
+        <p style="font-size:14px"><strong>Goals:</strong> history on every car at intake; shareable links on listings; see what buyers view.</p>
+        <p style="font-size:14px"><strong>Fears:</strong> a damaging record surfacing after she has priced a car.</p>
+      </div>
+      <div style="background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#173da3;font-weight:600">Inspection centre</p>
+        <p style="font-weight:800;font-size:19px">Peter — lane supervisor</p>
+        <p style="font-size:14px;color:#3a423e">Runs 60+ inspections a day; results already live in lane equipment.</p>
+        <p style="font-size:14px"><strong>Goals:</strong> bulk upload; certificate generation; prevent forged certificates.</p>
+        <p style="font-size:14px"><strong>Fears:</strong> double entry, mistakes under time pressure.</p>
+      </div>
+      <div style="background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#3a423e;font-weight:600">SAZO admin</p>
+        <p style="font-weight:800;font-size:19px">Lina — trust &amp; data quality lead</p>
+        <p style="font-size:14px;color:#3a423e">Approves partners, resolves disputes, watches for anomalies.</p>
+        <p style="font-size:14px"><strong>Goals:</strong> a queue ordered by risk; full audit trail; bulk actions.</p>
+        <p style="font-size:14px"><strong>Fears:</strong> a bad partner poisoning thousands of reports.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 -->
+  <section id="s4" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">04</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Information architecture</h2><p style="font-size:14px;color:#4a5550;margin-top:12px">Two products on one data core: a public buyer site and a role-based partner console.</p></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));border-top:2px solid #14201c">
+        <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px">
+          <p style="font-weight:800">sazo.com (public)</p>
+          <p style="font-size:14px">Home / Search</p><p style="font-size:14px">How it works</p><p style="font-size:14px">Pricing</p><p style="font-size:14px">For businesses</p><p style="font-size:14px">Help &amp; disputes</p>
+        </div>
+        <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px">
+          <p style="font-weight:800">Vehicle /v/{plate}</p>
+          <p style="font-size:14px">Overview (free)</p><p style="font-size:14px">Full report → Summary · Accidents · Repairs · Inspections · Mileage · Ownership · Specs · Sources</p><p style="font-size:14px">Compare</p><p style="font-size:14px">Report a correction</p>
+        </div>
+        <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px">
+          <p style="font-weight:800">My SAZO (buyer)</p>
+          <p style="font-size:14px">Saved vehicles</p><p style="font-size:14px">Purchased reports</p><p style="font-size:14px">Alerts</p><p style="font-size:14px">Disputes</p><p style="font-size:14px">Account, privacy &amp; billing</p>
+        </div>
+        <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px">
+          <p style="font-weight:800">Partner console</p>
+          <p style="font-size:14px">Home · Vehicles · Records (Add) · Documents · Reports · Notifications · Analytics · Team &amp; permissions · Organisation settings</p>
+          <p style="font-size:13px;color:#4a5550">Same shell for garages, dealers and centres; modules switch by role.</p>
+        </div>
+        <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px">
+          <p style="font-weight:800">Admin console</p>
+          <p style="font-size:14px">Overview · Review queue · Disputes · Partners · Users · Vehicles · Data quality · Audit log · Pricing &amp; plans</p>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:620px">
+          <thead><tr>
+            <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Role</th>
+            <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Primary nav (desktop: left rail · mobile: bottom bar, 4 + More)</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Buyer</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Search · Saved · Compare · Reports · Account (top bar, no rail)</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Garage</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Home · Job records · Vehicles · Documents · Team · Analytics</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Dealer</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Home · Inventory · Intake checks · Shared reports · Leads · Team · Analytics</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Inspection centre</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Home · Inspections · Bulk upload · Certificates · Lanes &amp; staff · Analytics</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Admin</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Overview · Review queue · Disputes · Partners · Users · Data quality · Audit log</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 -->
+  <section id="s5" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">05</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Core user journeys</h2><p style="font-size:14px;color:#4a5550;margin-top:12px">Happy path in four to six steps. Key decision or risk point noted per journey.</p></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column">
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:2px solid #14201c66">
+        <p style="font-weight:800">A · Search by plate</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Enters plate on home (input auto-uppercases, strips spaces, validates format live).</li>
+          <li>Optional: confirms region if the format is ambiguous.</li>
+          <li>Sees match card: make, model, year, colour, photo-free silhouette — “Is this the car you’re looking at?”</li>
+          <li>Confirms → free overview. Mismatch → “Check the plate” help and VIN search.</li>
+        </ol>
+        <p style="font-size:13px;color:#4a5550;grid-column:2">Risk point: wrong-car confusion. The colour + model confirmation step prevents paying for the wrong vehicle.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid #14201c33">
+        <p style="font-weight:800">B · Review a history report</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Lands on Summary: findings list sorted by severity, coverage meter, “What we couldn’t check”.</li>
+          <li>Taps a finding → jumps to its section with the record expanded.</li>
+          <li>Each record shows source, verification badge, date recorded vs date of event.</li>
+          <li>Ends on “Questions to ask the seller”, generated from findings; can save, share or download PDF.</li>
+        </ol>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid #14201c33">
+        <p style="font-weight:800">C · Compare vehicles</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>“Add to compare” from any overview or saved list (max 3 on desktop, 2 on mobile).</li>
+          <li>Comparison grid: findings first, then mileage/km per year, owners, service regularity, specs.</li>
+          <li>Rows where cars differ meaningfully are marked; “Hide identical rows” toggle.</li>
+          <li>Unlock full report per column, or all at a bundle price.</li>
+        </ol>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid #14201c33">
+        <p style="font-weight:800">D · Purchase a full report</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Overview shows locked sections with honest counts: “14 service records · 1 accident record”.</li>
+          <li>Choose Single report / 3-pack / Dealer plan. Price shown before sign-in.</li>
+          <li>Pay with card or mobile money; account created by email or phone OTP.</li>
+          <li>Report unlocks instantly; receipt + 30 days of free updates and alerts.</li>
+        </ol>
+        <p style="font-size:13px;color:#4a5550;grid-column:2">If a vehicle has zero verified records, purchase is disabled and the buyer is told so — never sell an empty report.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid #14201c33">
+        <p style="font-weight:800">E · Garage adds a repair record</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>“New record” → plate (or scan plate with camera) → vehicle confirmed.</li>
+          <li>Record type: Service · Repair · Accident repair · Diagnostic. Odometer reading is mandatory.</li>
+          <li>Pick work items from a catalogue (parts, labour) with free-text notes.</li>
+          <li>Attach invoice/photos; tick customer-consent box; submit. Offline drafts sync later.</li>
+          <li>Record shows as “Partner-submitted” immediately; becomes “Verified” after automated checks.</li>
+        </ol>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid #14201c33">
+        <p style="font-weight:800">F · Dealer manages inventory</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Adds stock by plate or CSV; SAZO runs an intake check on each car.</li>
+          <li>Inventory table flags cars with new findings since intake.</li>
+          <li>Adds prep work and photos; marks Listed / Reserved / Sold.</li>
+          <li>Generates a share link or QR for listings; sees view count per car.</li>
+          <li>On Sold, ownership transfer is recorded with buyer consent.</li>
+        </ol>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid #14201c33">
+        <p style="font-weight:800">G · Centre uploads inspection</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Single: plate → checklist by system (brakes, lights, emissions…) → Pass / Advisory / Fail per item.</li>
+          <li>Bulk: CSV or lane-equipment export → mapping preview → row-level validation errors.</li>
+          <li>Inspector signs; SAZO issues a certificate with QR verification.</li>
+          <li>Result goes live as “Verified source” immediately (centres are pre-accredited).</li>
+        </ol>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:8px 24px;padding:16px 0;border-top:1px solid #14201c33">
+        <p style="font-weight:800">H · Admin reviews data</p>
+        <ol style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Queue sorted by risk: mileage rollback flags, disputes, new partner applications, anomalies.</li>
+          <li>Opens item → side-by-side evidence (record, documents, prior records, partner history).</li>
+          <li>Approve · Request info · Correct · Reject — reason required, contributor notified.</li>
+          <li>Every action written to an immutable audit log; affected report owners alerted.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 -->
+  <section id="s6" style="background:#e9f7ef;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">06</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Screens and page layouts</h2><p style="font-size:14px;color:#4a5550;margin-top:12px">Hi-fi mocks live in the two screen files. Layout intent below.</p></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <a href="SAZO Screens - Buyer.dc.html" style="display:inline-flex;align-items:center;gap:8px;background:#1f4fcf;color:#ffffff;text-decoration:none;font-weight:800;font-size:14px;padding:10px 16px;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Open buyer screens →</a>
+        <a href="SAZO Screens - Partners.dc.html" style="display:inline-flex;align-items:center;gap:8px;border:1px solid #14201c66;color:#14201c;text-decoration:none;font-weight:800;font-size:14px;padding:10px 16px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Open partner &amp; admin screens →</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));border-top:2px solid #14201c66">
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Landing</p><p style="font-size:14px;color:#3a423e">Plate input is the hero — first focusable element. Below: how it works (3 steps), source network, sample report, pricing, business CTA.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Plate search</p><p style="font-size:14px;color:#3a423e">Plate-shaped input, region selector, VIN fallback, recent searches. Confirmation card before results.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Vehicle overview</p><p style="font-size:14px;color:#3a423e">Identity band (plate, model, colour, status) → findings summary → record counts per section (locked) → unlock CTA.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Full report</p><p style="font-size:14px;color:#3a423e">Sticky section nav left (tabs on mobile), content right. Summary first; every section ends with sources.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Accident &amp; damage</p><p style="font-size:14px;color:#3a423e">Event cards with severity, impact zone diagram (labelled, not colour-only), linked repair records.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Repairs timeline</p><p style="font-size:14px;color:#3a423e">Vertical timeline grouped by year; gaps &gt; 12 months drawn as explicit “No records” spans.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Inspections</p><p style="font-size:14px;color:#3a423e">Latest result hero, item checklist by system, history table, certificate verification.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Mileage &amp; ownership</p><p style="font-size:14px;color:#3a423e">Step chart of odometer readings with source markers; rollback anomaly annotated. Ownership as periods, never names.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Comparison</p><p style="font-size:14px;color:#3a423e">Up to 3 sticky columns; findings rows first; differences highlighted.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Account &amp; saved</p><p style="font-size:14px;color:#3a423e">Saved vehicles with change badges, purchased reports, alert settings, privacy controls.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Partner dashboards</p><p style="font-size:14px;color:#3a423e">Left rail · KPI row · primary task CTA · work table · notifications column.</p></div>
+        <div style="padding:12px 16px 12px 0;border-bottom:1px solid #14201c33"><p style="font-weight:800">Admin dashboard</p><p style="font-size:14px;color:#3a423e">Risk-ordered queue as the home view; evidence panel; audit log always one click away.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 -->
+  <section id="s7" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">07</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Partner dashboard features</h2></div>
+    <div style="flex:999 1 480px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:680px">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Feature</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Garage</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Dealer</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Inspection centre</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Data entry</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Job card: type, odometer, work items, parts, cost (private)</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Intake, prep work, status, sale/transfer</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Checklist by system, Pass/Advisory/Fail, measurements</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Documents</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Invoices, before/after photos (auto EXIF-strip)</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Purchase docs, photos, prior reports</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Signed certificate PDF, lane printouts</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Bulk</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">DMS / CSV import (v2)</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">CSV stock import, batch intake check</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">CSV &amp; equipment export with mapping</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Vehicle lists</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Customer vehicles, due-for-service</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Inventory by status &amp; branch</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Today’s lane queue, retests due</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Reports</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Records submitted, verification rate</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Share links, buyer views, days-to-sale</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Pass rate, top failure items, throughput</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Notifications</td><td colspan="3" style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Record verified / needs info / disputed · staff activity · plan &amp; billing · new finding on owned stock (dealer). In-app, email, SMS; per-type preferences.</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Staff &amp; permissions</td><td colspan="3" style="padding:10px 8px;border-bottom:1px solid #14201c33;vertical-align:top">Roles: <strong>Owner</strong> (all, billing) · <strong>Manager</strong> (approve, edit, team) · <strong>Contributor</strong> (create drafts, submit) · <strong>Viewer</strong> (read). Per-branch scoping, 2FA enforced for Owner/Manager, every action attributed to a named staff member.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 08 -->
+  <section id="s8" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">08</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Vehicle health summary</h2></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:20px">
+      <p style="max-width:70ch">SAZO does <strong>not</strong> publish a single 0–100 score. A score implies completeness we can’t guarantee and invites buyers to skip the detail. Instead the summary is a <strong>findings list</strong> plus a <strong>coverage meter</strong>.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:2px;background:#14201c66;border:2px solid #14201c66;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10)">
+        <div style="background:#fff2ef;padding:16px;display:flex;flex-direction:column;gap:6px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-weight:800;color:#7c1405">Act on this</p><p style="font-size:14px;color:#4d170e">Mileage inconsistency, structural damage, open safety recall, failed inspection, reported stolen/written off.</p></div>
+        <div style="background:#fff4e0;padding:16px;display:flex;flex-direction:column;gap:6px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-weight:800;color:#6e4200">Worth checking</p><p style="font-size:14px;color:#4a2c00">Repaired moderate accident, advisories, service gap &gt; 12 mo, frequent ownership changes.</p></div>
+        <div style="background:#e9f7ef;padding:16px;display:flex;flex-direction:column;gap:6px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-weight:800;color:#0c4b2b">Consistent</p><p style="font-size:14px;color:#08301c">Regular servicing, mileage consistent across sources, latest inspection passed.</p></div>
+        <div style="background:#f2f5f4;padding:16px;display:flex;flex-direction:column;gap:6px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-weight:800;color:#3a423e">Not checked / no records</p><p style="font-size:14px;color:#3a423e">Categories with no data. Always listed — never hidden.</p></div>
+      </div>
+      <ul style="padding-left:18px;display:flex;flex-direction:column;gap:6px;max-width:72ch;font-size:14px">
+        <li>Each finding = <em>what</em> + <em>when</em> + <em>who recorded it</em> + <em>why it matters</em> + link to evidence.</li>
+        <li>Coverage meter: “Records from 7 sources covering 2019–2026 · 1 gap of 14 months”. Not a grade.</li>
+        <li>Severity is rule-based and published in Help (“How we classify findings”), never ML-opaque.</li>
+        <li>Neutral verbs: “Recorded”, “Reported by”, “Not found” — never “Clean”, “Safe”, “Perfect”.</li>
+        <li>Persistent disclaimer under the summary: “SAZO shows what partners have recorded. Always have the car inspected before you buy.”</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 09 -->
+  <section id="s9" style="background:#eef3ff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">09</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Trust and transparency</h2></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:20px">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:600px">
+          <thead><tr>
+            <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Badge</th>
+            <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Meaning</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33"><span style="display:inline-flex;align-items:center;gap:6px;background:#e9f7ef;color:#0c4b2b;font-size:12px;font-weight:600;padding:3px 8px;white-space:nowrap">✓ Verified source</span></td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">From an accredited partner and passed automated checks (plate/VIN match, odometer plausibility, document present).</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33"><span style="display:inline-flex;align-items:center;gap:6px;background:#eef3ff;color:#132f7a;font-size:12px;font-weight:600;padding:3px 8px;white-space:nowrap">◆ Partner-submitted</span></td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">From a registered partner; checks pending or no supporting document.</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33"><span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #56605b;color:#3a423e;font-size:12px;font-weight:600;padding:2px 8px;white-space:nowrap">○ Owner-submitted</span></td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Added by a vehicle owner. Shown in a separate list, never counted in findings.</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33"><span style="display:inline-flex;align-items:center;gap:6px;background:#fff4e0;color:#6e4200;font-size:12px;font-weight:600;padding:3px 8px;white-space:nowrap">! Under review</span></td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">A dispute or anomaly is open. Record stays visible with the reason shown.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));border-top:2px solid #14201c66">
+        <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Source attribution</p><p style="font-size:14px;color:#3a423e">Partner name, type, location and accreditation on every record; tap for partner profile.</p></div>
+        <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Two timestamps</p><p style="font-size:14px;color:#3a423e">“Event date” and “Recorded on”. Back-dated entries (&gt; 30 days) are labelled.</p></div>
+        <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Confidence level</p><p style="font-size:14px;color:#3a423e">Per section: High (≥ 2 independent verified sources agree), Medium (1 verified), Low (partner/owner only). Shown as text + 3-bar glyph.</p></div>
+        <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Missing information</p><p style="font-size:14px;color:#3a423e">“What we couldn’t check” block on every report: finance, theft, import history if not available in that market.</p></div>
+        <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Report freshness</p><p style="font-size:14px;color:#3a423e">“Report generated 12 Oct 2026, 14:02. Data current to …” printed on PDF and screen.</p></div>
+        <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Change log</p><p style="font-size:14px;color:#3a423e">Corrections are visible: “Record amended 3 Feb 2026 after review” — never silently edited.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section id="s10" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">10</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Search, filters, alerts and reporting</h2></div>
+    <div style="flex:999 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));border-top:2px solid #14201c66">
+      <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Search</p><p style="font-size:14px;color:#3a423e">Plate (normalised, fuzzy on O/0, I/1 with “Did you mean”), VIN, partner-side search by plate, customer ref, staff, date range. Recent searches stored locally only.</p></div>
+      <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Filters</p><p style="font-size:14px;color:#3a423e">Report: record type, source, verification level, date range. Partner lists: status, branch, staff, verification state. Admin: risk type, partner, age in queue. Active filters shown as removable chips.</p></div>
+      <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Sorting</p><p style="font-size:14px;color:#3a423e">Timelines default newest-first with toggle; findings by severity; tables by any column with visible sort direction (aria-sort).</p></div>
+      <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Alerts (buyers)</p><p style="font-size:14px;color:#3a423e">Watch a saved car: new record, new finding, inspection due, dispute outcome. Free for 30 days after purchase.</p></div>
+      <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Notifications</p><p style="font-size:14px;color:#3a423e">Bell with unread count; grouped by day; each actionable. Severity-coded with text label. Digest option for partners.</p></div>
+      <div style="padding:14px 16px 14px 0;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Reporting</p><p style="font-size:14px;color:#3a423e">Buyer: PDF report with QR authenticity check. Partner: CSV/PDF exports of records &amp; analytics. Admin: coverage, quality and dispute reports, scheduled.</p></div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section id="s11" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">11</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Responsive behaviour</h2><p style="font-size:14px;color:#4a5550;margin-top:12px">Buyer side is mobile-first (viewings happen on phones). Partner side is tablet-first (workshops).</p></div>
+    <div style="flex:999 1 480px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:640px">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Element</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Mobile &lt; 640</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Tablet 640–1024</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Desktop &gt; 1024</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Grid</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">4 col, 16 px gutter</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">8 col, 24 px</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">12 col, 24 px, max 1280</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Report nav</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Horizontal scroll tabs, sticky</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Tabs</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Sticky left list with counts</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Unlock CTA</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Sticky bottom bar</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Sticky bottom bar</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Right column card</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Comparison</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">2 cars, swipe; row labels above values</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">3 cars, sticky label column</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">3 cars + label column</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Partner nav</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Bottom bar + floating “New record”</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Collapsed icon rail</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Full left rail</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Tables</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Become stacked row cards</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Priority columns, rest in row expand</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Full table</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600">Touch targets</td><td colspan="3" style="padding:10px 8px;border-bottom:1px solid #14201c33">≥ 44 × 44 px everywhere; ≥ 56 px on partner forms (gloved hands).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 12 -->
+  <section id="s12" style="background:#e9f7ef;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">12</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Accessibility (WCAG 2.2 AA)</h2></div>
+    <div style="flex:999 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));border-top:2px solid #14201c66">
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Perceivable</p><ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:4px;margin-top:4px"><li>Text ≥ 4.5:1; UI and large text ≥ 3:1. Status uses icon + label + colour — never colour alone.</li><li>Charts have a data-table alternative and a written summary.</li><li>Damage diagrams carry text lists of affected zones.</li></ul></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Operable</p><ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:4px;margin-top:4px"><li>Full keyboard path; visible 2 px focus ring; skip-to-report link.</li><li>No timeouts on forms; drafts autosave.</li><li>Targets ≥ 24 px (2.5.8), 44 px on touch.</li></ul></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Understandable</p><ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:4px;margin-top:4px"><li>Plain language, reading age ~12; glossary tooltips for “advisory”, “odometer”.</li><li>Errors say what happened and how to fix it, next to the field.</li><li>Consistent navigation across roles.</li></ul></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Robust</p><ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:4px;margin-top:4px"><li>Semantic HTML; tables for tabular data; ARIA live regions for search results and upload progress.</li><li>Tested with VoiceOver, TalkBack, NVDA; 200% zoom and 320 px reflow.</li><li>Respects reduced motion.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- 13 -->
+  <section id="s13" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">13</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Privacy, security and consent</h2></div>
+    <div style="flex:999 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));border-top:2px solid #14201c66">
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Vehicle ≠ person</p><p style="font-size:14px;color:#3a423e">Reports describe the vehicle only. Owners appear as “Owner 2 · private · Mar 2021 – Aug 2023”. Names, phone numbers, addresses and invoice amounts are never shown to buyers.</p></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Consent at source</p><p style="font-size:14px;color:#3a423e">Partners confirm the customer was informed (job card checkbox + signage kit). Owners can request redaction of personal data inside documents.</p></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Data minimisation</p><p style="font-size:14px;color:#3a423e">Uploads auto-redact faces/other plates in photos and strip EXIF location. Cost fields stored but partner-private.</p></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Access control</p><p style="font-size:14px;color:#3a423e">Role-based permissions, branch scoping, 2FA for managers and admins, session timeouts on partner devices, admin actions require reason codes.</p></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Security</p><p style="font-size:14px;color:#3a423e">TLS 1.3, encryption at rest, signed records (hash per entry), immutable audit log, rate-limited plate search to prevent scraping.</p></div>
+      <div style="padding:14px 16px 14px 0"><p style="font-weight:800">Rights &amp; compliance</p><p style="font-size:14px;color:#3a423e">Export / delete account, alert opt-outs, cookie choices with equal-weight Reject. Aligned to local data protection law and GDPR principles; retention schedule published.</p></div>
+    </div>
+  </section>
+
+  <!-- 14 -->
+  <section id="s14" style="background:#eef3ff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">14</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">States, errors and disputes</h2><p style="font-size:14px;color:#4a5550;margin-top:12px">Rendered examples in the buyer screens file, “States”.</p></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:20px">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:600px">
+          <thead><tr>
+            <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">State</th>
+            <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Treatment</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Loading</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Skeleton matching final layout; progressive status “Checking 4 of 7 sources…”. No spinners over 1 s without text.</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Empty (no vehicle)</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“We don’t have records for this plate yet.” Offer: check spelling, search by VIN, get notified when records appear.</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Unavailable section</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Grey block with reason: “Finance checks aren’t available in this region yet.” Never removed silently.</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Invalid input</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Inline, on blur: “Plates have 2–8 letters and numbers. Check for extra symbols.”</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">System error</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Something went wrong on our side. You haven’t been charged.” + Retry + reference code.</td></tr>
+            <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Offline (partner)</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">Banner “You’re offline. Records are saved on this device and will upload automatically.” Draft count visible.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="font-weight:800;font-size:20px">Dispute / correction flow</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:2px;background:#14201c66;border:2px solid #14201c66;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10)">
+          <div style="background:#ffffff;padding:14px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-size:12px;color:#173da3;font-weight:600">1</p><p style="font-weight:800;font-size:14px">Flag a record</p><p style="font-size:13px;color:#3a423e">“Something wrong?” on every record. Who: buyer, owner, or partner.</p></div>
+          <div style="background:#ffffff;padding:14px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-size:12px;color:#173da3;font-weight:600">2</p><p style="font-weight:800;font-size:14px">Describe + evidence</p><p style="font-size:13px;color:#3a423e">Reason list, free text, upload documents. Owners verify via ownership doc.</p></div>
+          <div style="background:#ffffff;padding:14px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-size:12px;color:#173da3;font-weight:600">3</p><p style="font-weight:800;font-size:14px">Under review</p><p style="font-size:13px;color:#3a423e">Record badged; contributor has 5 days to respond.</p></div>
+          <div style="background:#ffffff;padding:14px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-size:12px;color:#173da3;font-weight:600">4</p><p style="font-weight:800;font-size:14px">Admin decision</p><p style="font-size:13px;color:#3a423e">Upheld · Corrected · Rejected, with written reason.</p></div>
+          <div style="background:#ffffff;padding:14px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-size:12px;color:#173da3;font-weight:600">5</p><p style="font-weight:800;font-size:14px">Notify &amp; log</p><p style="font-size:13px;color:#3a423e">All report holders alerted; change log visible on the record.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 -->
+  <section id="s15" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #1f4fcf;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">15</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Design system</h2></div>
+    <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:16px">
+      <p style="max-width:70ch">Built on the Modernist grammar — Archivo throughout, square corners, strong 2 px rules, flush-left labels — re-keyed to SAZO’s palette: <strong>blue for action</strong>, <strong>green for verified/brand</strong>, <strong>white ground</strong>. Red and amber are semantic only, reserved for findings.</p>
+      <div style="display:flex;height:56px;border:2px solid #14201c66">
+        <div style="flex:3;background:#ffffff"></div><div style="flex: 2; background-color: #081B4D"></div><div style="flex:2;background:#3ccf82"></div><div style="flex:1;background:#14201c"></div><div style="flex:0.5;background:#e09a1a"></div><div style="flex:0.5;background:#ec3013"></div>
+      </div>
+      <a href="SAZO Design System.dc.html" style="display:inline-flex;align-self:flex-start;align-items:center;gap:8px;background:#1f4fcf;color:#ffffff;text-decoration:none;font-weight:800;font-size:14px;padding:10px 16px;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Open design system →</a>
+    </div>
+  </section>
+
+  <!-- 16 -->
+  <section id="s16" style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:48px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">16</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">Sample interface copy</h2><p style="font-size:14px;color:#4a5550;margin-top:12px">Voice: calm, specific, never alarmist, never salesy.</p></div>
+    <div style="flex:999 1 480px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:600px">
+        <thead><tr>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf;width:200px">Where</th>
+          <th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#173da3;background:#dbe5ff;padding:10px 8px;border-bottom:2px solid #1f4fcf">Copy</th>
+        </tr></thead>
+        <tbody>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Hero</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Know the car before you buy it. Enter a number plate to see its recorded history.”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Search button</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Check this car”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Confirm match</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Is this the car you’re looking at? Silver Toyota RAV4, 2019.” → “Yes, show history” / “No, that’s not it”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">High-risk finding</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Mileage went down between two records. In Jan 2024 a garage recorded 61,400 km; in Jun 2024 a dealer recorded 48,900 km. Ask the seller to explain before you continue.”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">No accident records</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“No accidents have been recorded by SAZO partners. Accidents repaired outside our network may not appear.”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Unlock</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“See all 23 records — full report, PDF and 30 days of alerts.”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Empty report blocked</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“There isn’t enough history to make a full report worth buying. We’ll tell you for free when records arrive.”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Garage submit</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Submit record” → toast “Record added to KDA 482Q. It will show as Verified once checks finish (usually under a minute).”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Consent checkbox</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“The customer has been told this work will be recorded on SAZO. No personal details are shared.”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Dispute submitted</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Thanks — we’ve marked this record as Under review. We’ll reply by 26 Oct 2026.”</td></tr>
+          <tr><td style="padding:10px 8px;border-bottom:1px solid #14201c33;font-weight:600;vertical-align:top">Admin reject</td><td style="padding:10px 8px;border-bottom:1px solid #14201c33">“Reject record? The contributor will see your reason. This can’t be undone, but they can resubmit.”</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 17 -->
+  <section id="s17" style="background:#0f214f;color:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:4px solid #3ccf82;padding-top:48px;padding-bottom:96px;display:flex;flex-wrap:wrap;gap:24px 48px">
+    <div style="flex:1 1 200px;max-width:260px"><p style="font-size:13px;letter-spacing:0.08em;font-weight:800;color:#ffffff;background:#1f4fcf;display:inline-block;padding:4px 10px;box-shadow:4px 4px 0 #3ccf82">17</p><h2 style="font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-0.015em;margin-top:6px">MVP and roadmap</h2></div>
+    <div style="flex:999 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:2px;background:#ffffff40;border:2px solid #ffffff40;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10)">
+      <div style="background:#ffffff;color:#14201c;padding:18px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#ffffff;background:#1f4fcf;align-self:flex-start;padding:3px 8px;font-weight:600">MVP · 0–4 mo</p>
+        <ul style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Plate search + confirm + free overview</li><li>Full report: summary, repairs, accidents, inspections, mileage, ownership periods</li><li>Single-report purchase, PDF</li><li>Garage + inspection centre consoles (single entry)</li><li>Verification badges, sources, two timestamps</li><li>Dispute form + admin review queue, audit log</li><li>Staff roles (Owner / Contributor)</li>
+        </ul>
+      </div>
+      <div style="background:#ffffff;color:#14201c;padding:18px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#0c4b2b;background:#cdeedb;align-self:flex-start;padding:3px 8px;font-weight:600">Next · 4–8 mo</p>
+        <ul style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Dealer console, inventory, share links</li><li>Compare (3 cars), saved vehicles, alerts</li><li>Bulk CSV upload for centres</li><li>Offline drafts, plate camera scan</li><li>Full permissions model + branches</li><li>Partner analytics</li>
+        </ul>
+      </div>
+      <div style="background:#ffffff;color:#14201c;padding:18px;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#3a423e;background:#e7ebe9;align-self:flex-start;padding:3px 8px;font-weight:600">Later · 8–18 mo</p>
+        <ul style="padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px">
+          <li>Garage DMS &amp; lane-equipment APIs</li><li>Insurer, finance and theft-register data</li><li>Valuation guidance from history</li><li>Owner app: claim car, add records, service reminders</li><li>Public partner profiles &amp; reviews</li><li>Multi-language, additional markets</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+</x-dc>
+</body>
+</html>

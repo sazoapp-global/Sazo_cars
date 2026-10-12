@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>SAZO — Design system</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#f2f5f4;color:#14201c;font-family:"Archivo",system-ui,sans-serif;font-size:15px;line-height:1.55;text-wrap:pretty}
+h1,h2,h3,h4,p,ul,ol{margin:0}
+a{color:#173da3;text-underline-offset:3px}
+a:hover{color:#1f4fcf}
+:focus-visible{outline:2px solid #1f4fcf;outline-offset:2px}
+</style>
+</helmet>
+
+<header style="position:sticky;top:0;z-index:10;background:#ffffff;border-bottom:2px solid #14201c66;box-shadow:0 1px 2px rgba(20,32,28,0.14)">
+  <div style="max-width:1240px;margin:0 auto;padding:12px clamp(16px,3vw,40px);display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;margin-right:auto">
+      <span style="width:22px;height:22px;background:#1f9d5c;display:block;box-shadow:8px 8px 0 #1f4fcf"></span>
+      <span style="font-weight:800;font-size:19px;margin-left:8px">SAZO</span>
+      <span style="font-size:13px;color:#4a5550">Design system</span>
+    </div>
+    <nav style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px">
+      <a href="SAZO Product Spec.dc.html" style="color:#14201c;text-decoration:none">Spec</a>
+      <a href="SAZO Screens - Buyer.dc.html" style="color:#14201c;text-decoration:none">Buyer screens</a>
+      <a href="SAZO Screens - Partners.dc.html" style="color:#14201c;text-decoration:none">Partner &amp; admin screens</a>
+      <a href="SAZO Design System.dc.html" style="color:#14201c;font-weight:600;text-decoration:none;border-bottom:2px solid #1f4fcf">Design system</a>
+    </nav>
+  </div>
+</header>
+
+<main style="max-width:1240px;margin:0 auto;padding:0 clamp(16px,3vw,40px) 96px">
+
+  <section style="margin:24px 0;padding:56px clamp(20px,3vw,40px) 48px;display:flex;flex-direction:column;gap:16px;background:#0f214f;color:#ffffff;box-shadow:0 2px 4px rgba(15,33,79,0.2), 0 24px 56px rgba(15,33,79,0.28);position:relative;overflow:hidden"><span style="position:absolute;right:-40px;top:-40px;width:200px;height:200px;background:#1f4fcf"></span><span style="position:absolute;right:110px;top:110px;width:80px;height:80px;background:#1f9d5c"></span>
+    <h1 style="font-weight:800;font-size:clamp(36px,5vw,64px);line-height:1.04;letter-spacing:-0.025em;max-width:18ch;position:relative">Flat, ruled, and honest about uncertainty.</h1>
+    <p style="font-size:17px;max-width:64ch;color:#dbe5ff;position:relative">Modernist structure — Archivo, 0 px radius, 2 px rules, flush-left labels, visible grid — keyed to SAZO’s blue, green and white. Colour carries meaning, so it is spent sparingly.</p>
+  </section>
+
+  <!-- COLOR -->
+  <section style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:2px solid #14201c66;padding-top:40px;padding-bottom:40px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><h2 style="font-weight:800;font-size:28px">Colour</h2><p style="font-size:14px;color:#4a5550">Ramps generated in OKLCH on a shared lightness scale. 100–300 fills · 500/600 base · 700–900 text on tints.</p></div>
+    <div style="display:grid;grid-template-columns:120px repeat(6,minmax(0,1fr));gap:2px;font-size:11px;min-width:0;overflow-x:auto">
+      <span></span><span style="color:#4a5550">100</span><span style="color:#4a5550">200</span><span style="color:#4a5550">300</span><span style="color:#4a5550">500</span><span style="color:#4a5550">700</span><span style="color:#4a5550">900</span>
+      <span style="font-weight:800;font-size:13px;align-self:center">Blue · action</span><span style="background:#eef3ff;height:52px;padding:4px">#eef3ff</span><span style="background:#dbe5ff;height:52px;padding:4px">#dbe5ff</span><span style="background:#bccdfd;height:52px;padding:4px">#bccdfd</span><span style="background:#1f4fcf;height:52px;padding:4px;color:#ffffff">#1f4fcf</span><span style="background:#173da3;height:52px;padding:4px;color:#ffffff">#173da3</span><span style="background:#0f214f;height:52px;padding:4px;color:#ffffff">#0f214f</span>
+      <span style="font-weight:800;font-size:13px;align-self:center">Green · verified</span><span style="background:#e9f7ef;height:52px;padding:4px">#e9f7ef</span><span style="background:#cdeedb;height:52px;padding:4px">#cdeedb</span><span style="background:#a2dfbc;height:52px;padding:4px">#a2dfbc</span><span style="background:#1f9d5c;height:52px;padding:4px;color:#ffffff">#1f9d5c</span><span style="background:#0f6639;height:52px;padding:4px;color:#ffffff">#0f6639</span><span style="background:#08301c;height:52px;padding:4px;color:#ffffff">#08301c</span>
+      <span style="font-weight:800;font-size:13px;align-self:center">Ink · neutral</span><span style="background:#f2f5f4;height:52px;padding:4px">#f2f5f4</span><span style="background:#e7ebe9;height:52px;padding:4px">#e7ebe9</span><span style="background:#d3d9d6;height:52px;padding:4px">#d3d9d6</span><span style="background:#8a948f;height:52px;padding:4px">#8a948f</span><span style="background:#3a423e;height:52px;padding:4px;color:#ffffff">#3a423e</span><span style="background:#14201c;height:52px;padding:4px;color:#ffffff">#14201c</span>
+      <span style="font-weight:800;font-size:13px;align-self:center">Amber · check</span><span style="background:#fff4e0;height:52px;padding:4px">#fff4e0</span><span style="background:#ffe4b3;height:52px;padding:4px">#ffe4b3</span><span style="background:#ffd79a;height:52px;padding:4px">#ffd79a</span><span style="background:#e09a1a;height:52px;padding:4px">#e09a1a</span><span style="background:#6e4200;height:52px;padding:4px;color:#ffffff">#6e4200</span><span style="background:#2b1a00;height:52px;padding:4px;color:#ffffff">#2b1a00</span>
+      <span style="font-weight:800;font-size:13px;align-self:center">Red · act</span><span style="background:#fff2ef;height:52px;padding:4px">#fff2ef</span><span style="background:#ffe0d9;height:52px;padding:4px">#ffe0d9</span><span style="background:#ffc4b8;height:52px;padding:4px">#ffc4b8</span><span style="background:#ec3013;height:52px;padding:4px;color:#ffffff">#ec3013</span><span style="background:#ae1800;height:52px;padding:4px;color:#ffffff">#ae1800</span><span style="background:#4d170e;height:52px;padding:4px;color:#ffffff">#4d170e</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));border-top:2px solid #14201c66">
+      <div style="padding:12px 16px 12px 0"><p style="font-weight:800">White ground</p><p style="font-size:14px;color:#3a423e">#ffffff page, #f2f5f4 surface. Ink #14201c (16:1).</p></div>
+      <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Blue = do something</p><p style="font-size:14px;color:#3a423e">Primary buttons, links, selection, focus. #1f4fcf on white 6.6:1.</p></div>
+      <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Green = verified / brand</p><p style="font-size:14px;color:#3a423e">Verification badges, “Consistent” findings, brand mark. Never on buttons — green must not mean “go buy”.</p></div>
+      <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Amber &amp; red = findings only</p><p style="font-size:14px;color:#3a423e">Reserved for vehicle findings and destructive actions. Small text always uses the 700 step.</p></div>
+    </div>
+  </section>
+
+  <!-- TYPE -->
+  <section style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:2px solid #14201c66;padding-top:40px;padding-bottom:40px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap"><h2 style="font-weight:800;font-size:28px">Typography</h2><p style="font-size:14px;color:#4a5550">Archivo 400 / 600 / 800 · tabular figures for km, dates and prices</p></div>
+    <div style="display:flex;flex-direction:column;border-top:1px solid #14201c33">
+      <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:baseline"><span style="font-size:12px;color:#4a5550">Display · 64/1.04 · 800</span><span style="font-weight:800;font-size:clamp(36px,5vw,64px);line-height:1.04;letter-spacing:-0.025em">Know the car.</span></div>
+      <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:baseline"><span style="font-size:12px;color:#4a5550">H1 · 42 · 800</span><span style="font-weight:800;font-size:42px;line-height:1.1;letter-spacing:-0.02em">2019 Toyota RAV4</span></div>
+      <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:baseline"><span style="font-size:12px;color:#4a5550">H2 · 28 · 800</span><span style="font-weight:800;font-size:28px">Repairs &amp; maintenance</span></div>
+      <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:baseline"><span style="font-size:12px;color:#4a5550">H3 · 20 · 800</span><span style="font-weight:800;font-size:20px">Mileage went down between two records</span></div>
+      <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:baseline"><span style="font-size:12px;color:#4a5550">Body · 15/1.55 · 400</span><span style="font-size:15px;max-width:64ch">Every record shows who added it and when. If we couldn’t check something, we say so.</span></div>
+      <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:baseline"><span style="font-size:12px;color:#4a5550">Label · 11 caps · 600–800</span><span style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-weight:800">Act on this · Worth checking</span></div>
+      <div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:baseline"><span style="font-size:12px;color:#4a5550">Plate · 800 · +0.08em</span><span style="font-weight:800;letter-spacing:0.08em;border:2px solid #14201c;padding:2px 10px;font-size:20px;justify-self:start">KDA 482Q</span></div>
+    </div>
+  </section>
+
+  <!-- BUTTONS / FORMS -->
+  <section style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:2px solid #14201c66;padding-top:40px;padding-bottom:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="font-weight:800;font-size:28px">Buttons</h2>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <button type="button" style="font-family:inherit;background:#1f4fcf;color:#ffffff;border:0;font-weight:800;font-size:14px;padding:11px 16px;cursor:pointer;text-align:left;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)" style-hover="background:#173da3" style-active="background:#132f7a">Check this car</button>
+        <button type="button" style="font-family:inherit;background:transparent;color:#14201c;border:1px solid #14201c66;font-weight:800;font-size:14px;padding:10px 16px;cursor:pointer;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)" style-hover="background:#14201c12">Save</button>
+        <button type="button" style="font-family:inherit;background:transparent;color:#173da3;border:0;font-weight:800;font-size:14px;padding:10px 4px;cursor:pointer;border-radius:4px" style-hover="background:#eef3ff">View sources →</button>
+        <button type="button" style="font-family:inherit;background:transparent;color:#ae1800;border:1px solid #ae1800;font-weight:800;font-size:14px;padding:10px 16px;cursor:pointer;border-radius:4px" style-hover="background:#fff2ef">Reject record</button>
+        <button type="button" disabled style="font-family:inherit;background:#1f4fcf;color:#ffffff;border:0;font-weight:800;font-size:14px;padding:11px 16px;opacity:0.45;cursor:not-allowed;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Submit</button>
+      </div>
+      <button type="button" style="font-family:inherit;background:#1f4fcf;color:#ffffff;border:0;font-weight:800;font-size:15px;padding:0 16px;min-height:52px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)" style-hover="background:#173da3"><span>See all 23 records</span><span>KSh 1,200</span></button>
+      <p style="font-size:13px;color:#3a423e">Labels flush left, even in wide buttons. One primary per view. Destructive actions are outlined red and always confirm.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <h2 style="font-weight:800;font-size:28px">Forms</h2>
+      <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:600">Odometer (km) *</label><input value="84,560" style="font-family:inherit;font-size:15px;min-height:44px;padding:0 12px;border:1px solid #14201c66;background:#f2f5f4;color:#14201c;border-radius:0" style-focus="outline:2px solid #1f4fcf;outline-offset:0;border-color:#1f4fcf"><p style="font-size:12px;color:#4a5550">Read from the dashboard, not the invoice.</p></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><label style="font-size:13px;font-weight:600">Plate *</label><input value="KD#482" style="font-family:inherit;font-size:15px;min-height:44px;padding:0 12px;border:2px solid #ae1800;background:#ffffff;color:#14201c;border-radius:0"><p style="font-size:12px;color:#ae1800;font-weight:600">! Use letters and numbers only.</p></div>
+      <div style="display:flex;border:1px solid #14201c66;align-self:flex-start;font-size:13px"><span style="padding:8px 12px;background:#1f4fcf;color:#ffffff">Service</span><span style="padding:8px 12px;border-left:1px solid #14201c66">Repair</span><span style="padding:8px 12px;border-left:1px solid #14201c66">Diagnostic</span></div>
+      <p style="font-size:13px;color:#3a423e">Labels above fields, never placeholder-only. Errors inline, on blur, with icon + text.</p>
+    </div>
+  </section>
+
+  <!-- BADGES / STATUS -->
+  <section style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:2px solid #14201c66;padding-top:40px;padding-bottom:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <h2 style="font-weight:800;font-size:28px">Verification badges</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="background:#e9f7ef;color:#0c4b2b;font-size:12px;font-weight:600;padding:3px 8px">✓ Verified source</span>
+        <span style="background:#eef3ff;color:#132f7a;font-size:12px;font-weight:600;padding:3px 8px">◆ Partner-submitted</span>
+        <span style="border:1px solid #56605b;color:#3a423e;font-size:12px;font-weight:600;padding:2px 8px">○ Owner-submitted</span>
+        <span style="background:#fff4e0;color:#6e4200;font-size:12px;font-weight:600;padding:3px 8px">! Under review</span>
+      </div>
+      <h3 style="font-weight:800;font-size:18px;margin-top:8px">Confidence</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+        <span style="display:flex;align-items:center;gap:10px"><span style="display:flex;gap:2px"><span style="width:18px;height:8px;background:#1f9d5c"></span><span style="width:18px;height:8px;background:#1f9d5c"></span><span style="width:18px;height:8px;background:#1f9d5c"></span></span>High — 2+ verified sources agree</span>
+        <span style="display:flex;align-items:center;gap:10px"><span style="display:flex;gap:2px"><span style="width:18px;height:8px;background:#1f9d5c"></span><span style="width:18px;height:8px;background:#1f9d5c"></span><span style="width:18px;height:8px;background:#d3d9d6"></span></span>Medium — 1 verified source</span>
+        <span style="display:flex;align-items:center;gap:10px"><span style="display:flex;gap:2px"><span style="width:18px;height:8px;background:#1f9d5c"></span><span style="width:18px;height:8px;background:#d3d9d6"></span><span style="width:18px;height:8px;background:#d3d9d6"></span></span>Low — partner or owner only</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <h2 style="font-weight:800;font-size:28px">Status indicators</h2>
+      <div style="display:flex;flex-direction:column;border-top:2px solid #14201c66;font-size:14px">
+        <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="width:10px;height:10px;background:#ec3013"></span><span style="flex:1">Act on this</span><span style="color:#ae1800;font-weight:600">square + label</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="width:10px;height:10px;background:#e09a1a"></span><span style="flex:1">Worth checking</span><span style="color:#6e4200;font-weight:600">square + label</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="width:10px;height:10px;background:#1f9d5c"></span><span style="flex:1">Consistent</span><span style="color:#0f6639;font-weight:600">square + label</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="width:10px;height:10px;border:1.5px dashed #56605b"></span><span style="flex:1">Not checked / no records</span><span style="color:#3a423e;font-weight:600">dashed</span></div>
+        <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="color:#0f6639;font-weight:800">✓ Pass</span><span style="color:#6e4200;font-weight:800">! Advisory</span><span style="color:#ae1800;font-weight:800">✕ Fail</span><span style="margin-left:auto;color:#3a423e">inspection items</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ALERTS / WARNINGS -->
+  <section style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:2px solid #14201c66;padding-top:40px;padding-bottom:40px;display:flex;flex-direction:column;gap:16px">
+    <h2 style="font-weight:800;font-size:28px">Alerts and high-risk information</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px">
+      <div style="border:2px solid #ec3013;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)"><div style="background:#ec3013;color:#ffffff;padding:6px 12px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-weight:800">! Act on this</div><div style="background:#fff2ef;padding:12px;font-size:14px;color:#4d170e"><strong>What · when · who · why · next step.</strong> Mileage dropped 12,500 km between Jan and Jun 2024. Ask for invoices.</div></div>
+      <div style="border:1px solid #e09a1a;background:#fff4e0;padding:12px;font-size:14px;color:#4a2c00;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-weight:800;color:#6e4200">Worth checking</p><p>Accident repaired, 2022. No structural damage recorded.</p></div>
+      <div style="background:#eef3ff;padding:12px;font-size:14px;color:#0f214f;display:flex;flex-direction:column;gap:4px"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-weight:800;color:#132f7a">Info</p><p>Report updated 10 Oct — 1 new service record.</p></div>
+      <div style="background:#f2f5f4;border:1px dashed #56605b;padding:12px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:4px"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-weight:800">Not available</p><p>Finance checks aren’t available in this region yet.</p></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));border-top:2px solid #14201c66">
+      <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Do</p><ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:3px;margin-top:4px"><li>State the fact and its source first; interpretation second.</li><li>Give one concrete next step (“Ask for…”, “Have it inspected”).</li><li>Show high-risk items at the top of the summary, always expanded.</li><li>Use icon + label + colour together.</li></ul></div>
+      <div style="padding:12px 16px 12px 0"><p style="font-weight:800">Don’t</p><ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:3px;margin-top:4px"><li>Say “fraud”, “dangerous” or “clean” — say what was recorded.</li><li>Use red for marketing, prices or countdowns.</li><li>Hide a finding behind a paywall entirely — its existence is always free.</li><li>Stack more than one red block; group findings in a single panel.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- CARDS / TABLES / TABS -->
+  <section style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:2px solid #14201c66;padding-top:40px;padding-bottom:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:40px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <h2 style="font-weight:800;font-size:28px">Cards</h2>
+      <div style="background:#f2f5f4;padding:16px;display:flex;flex-direction:column;gap:6px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1"><p style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#173da3;font-weight:800">Saved vehicle</p><p style="font-weight:800;font-size:17px">2019 Toyota RAV4 Hybrid</p><p style="font-size:13px;color:#3a423e">84,210 km · 3 owners · 1 new record</p><p style="font-size:11px;color:#4a5550">Updated 10 Oct 2026</p></div>
+      <p style="font-size:13px;color:#3a423e">Flat surface fill, no radius. Shadow only for floating layers (menus, dialogs, FAB).</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <h2 style="font-weight:800;font-size:28px">Tabs</h2>
+      <div style="display:flex;border-bottom:2px solid #14201c66;font-size:14px;overflow:hidden"><span style="padding:10px 14px;font-weight:800;border-bottom:3px solid #1f4fcf;margin-bottom:-2px">Summary</span><span style="padding:10px 14px">Accidents <span style="color:#6e4200;font-weight:600">1</span></span><span style="padding:10px 14px">Repairs 14</span><span style="padding:10px 14px">Mileage <span style="color:#ae1800;font-weight:600">!</span></span></div>
+      <p style="font-size:13px;color:#3a423e">Counts and severity marks inside tabs, so findings are visible before opening.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <h2 style="font-weight:800;font-size:28px">Tables</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr><th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;padding:8px 8px 8px 0;border-bottom:2px solid #14201c66">Date ▾</th><th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;padding:8px;border-bottom:2px solid #14201c66">km</th><th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;padding:8px;border-bottom:2px solid #14201c66">Source</th></tr></thead><tbody><tr><td style="padding:9px 8px 9px 0;border-bottom:1px solid #14201c33">14 Mar 2026</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">84,210</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">Likoni Rd ✓</td></tr><tr><td style="padding:9px 8px 9px 0;border-bottom:1px solid #14201c33">02 Feb 2026</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">80,940</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">Toyota Westlands ✓</td></tr></tbody></table>
+    </div>
+  </section>
+
+  <!-- CHARTS / TIMELINE / ICONS -->
+  <section style="background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 10px 28px rgba(20,32,28,0.10);margin-bottom:24px;padding-left:clamp(20px,3vw,40px);padding-right:clamp(20px,3vw,40px);border-top:2px solid #14201c66;padding-top:40px;padding-bottom:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:40px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="font-weight:800;font-size:28px">Charts</h2>
+      <ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:4px"><li>Blue line, square markers; hollow = verified, filled red = inconsistent.</li><li>Gaps drawn as shaded “No records” bands with dashed line — never interpolated silently.</li><li>Direct labels over legends; every chart has a table view and a one-line summary.</li><li>Ownership as a segmented bar; never pie charts.</li></ul>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="font-weight:800;font-size:28px">Timeline</h2>
+      <div style="display:grid;grid-template-columns:72px 14px minmax(0,1fr);gap:0 10px;font-size:13px">
+        <span style="color:#4a5550;padding-top:2px">Feb 26</span><span style="display:flex;flex-direction:column;align-items:center"><span style="width:10px;height:10px;background:#1f9d5c;margin-top:5px"></span><span style="width:2px;flex:1;background:#14201c66"></span></span><span style="padding-bottom:12px"><strong>Service</strong> · verified</span>
+        <span style="color:#4a5550;padding-top:2px">Aug 25</span><span style="display:flex;flex-direction:column;align-items:center"><span style="width:10px;height:10px;background:#1f4fcf;margin-top:5px"></span><span style="width:2px;flex:1;background:#14201c66"></span></span><span style="padding-bottom:12px"><strong>Repair</strong> · partner-submitted</span>
+        <span style="color:#4a5550;padding-top:2px">Jul 22</span><span style="display:flex;flex-direction:column;align-items:center"><span style="width:10px;height:10px;background:#e09a1a;margin-top:5px"></span><span style="width:0;flex:1;border-left:2px dashed #8a948f"></span></span><span style="padding-bottom:12px"><strong>Accident repair</strong></span>
+      </div>
+      <p style="font-size:13px;color:#3a423e">Square node colour = record type/severity; badge = verification.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h2 style="font-weight:800;font-size:28px">Icons &amp; illustration</h2>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;color:#14201c">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ae1800" stroke-width="2" stroke-linecap="square"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+      </div>
+      <ul style="padding-left:18px;font-size:14px;color:#3a423e;display:flex;flex-direction:column;gap:4px"><li>Lucide, 2 px stroke, square caps, 20/24 px. Always paired with a text label in status contexts.</li><li>Illustration: flat geometric vehicle diagrams (top/side view) for damage zones only. No stock-photo cars, no mascots.</li><li>Partner photos print as uploaded; marketing photography in black and white.</li></ul>
+    </div>
+  </section>
+</main>
+</x-dc>
+</body>
+</html>

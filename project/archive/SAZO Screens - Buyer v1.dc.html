@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>SAZO — Buyer screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#f2f5f4;color:#14201c;font-family:"Archivo",system-ui,sans-serif;font-size:15px;line-height:1.55;text-wrap:pretty}
+h1,h2,h3,h4,p,ul,ol{margin:0}
+a{color:#173da3;text-underline-offset:3px}
+a:hover{color:#1f4fcf}
+button{font-family:inherit}
+:focus-visible{outline:2px solid #1f4fcf;outline-offset:2px}
+</style>
+</helmet>
+
+<header style="position:sticky;top:0;z-index:10;background:#ffffff;border-bottom:2px solid #14201c66;box-shadow:0 1px 2px rgba(20,32,28,0.14)">
+  <div style="max-width:1320px;margin:0 auto;padding:12px clamp(16px,3vw,40px);display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;margin-right:auto">
+      <span style="width:22px;height:22px;background:#1f9d5c;display:block;box-shadow:8px 8px 0 #1f4fcf"></span>
+      <span style="font-weight:800;font-size:19px;margin-left:8px">SAZO</span>
+      <span style="font-size:13px;color:#4a5550">Buyer screens</span>
+    </div>
+    <nav style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px">
+      <a href="SAZO Product Spec.dc.html" style="color:#14201c;text-decoration:none">Spec</a>
+      <a href="SAZO Screens - Buyer.dc.html" style="color:#14201c;font-weight:600;text-decoration:none;border-bottom:2px solid #1f4fcf">Buyer screens</a>
+      <a href="SAZO Screens - Partners.dc.html" style="color:#14201c;text-decoration:none">Partner &amp; admin screens</a>
+      <a href="SAZO Design System.dc.html" style="color:#14201c;text-decoration:none">Design system</a>
+    </nav>
+  </div>
+</header>
+
+<main style="max-width:1320px;margin:0 auto;padding:32px clamp(16px,3vw,40px) 96px;display:flex;flex-direction:column;gap:56px">
+
+  <!-- B1 LANDING -->
+  <section data-screen-label="B1 Landing" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B1</span><h2 style="font-weight:800;font-size:22px">Public landing page</h2><span style="font-size:13px;color:#4a5550">sazo.com · desktop</span></div>
+    <div style="border:2px solid #14201c;background:#ffffff;overflow:hidden;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 32px;border-bottom:2px solid #14201c66;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:18px;height:18px;background:#1f9d5c;display:block;box-shadow:6px 6px 0 #1f4fcf"></span><span style="font-weight:800;font-size:18px;margin-left:6px">SAZO</span></div>
+        <div style="display:flex;gap:24px;font-size:14px;flex-wrap:wrap;align-items:center"><span>How it works</span><span>Pricing</span><span>For businesses</span><span>Help</span><span style="border:1px solid #14201c66;padding:7px 14px;font-weight:800">Sign in</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));border-bottom:2px solid #14201c66">
+        <div style="padding:64px 32px 56px;display:flex;flex-direction:column;gap:20px">
+          <h1 style="font-weight:800;font-size:clamp(38px,4.6vw,64px);line-height:1.02;letter-spacing:-0.025em">Know the car<br>before you buy it.</h1>
+          <p style="font-size:17px;max-width:44ch;color:#2b3631">Enter a number plate to see its recorded repairs, accidents, inspections and mileage — from the garages, dealers and inspection centres that worked on it.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:0;max-width:520px;border:2px solid #14201c">
+            <div style="display:flex;align-items:stretch;flex:1 1 260px">
+              <span style="background:#1f4fcf;color:#ffffff;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 8px">SZ</span>
+              <span style="flex:1;padding:14px 16px;font-weight:800;font-size:24px;letter-spacing:0.08em;color:#8a948f">AB 123 CD</span>
+            </div>
+            <span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px;padding:0 20px;min-height:56px;flex:0 0 auto;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Check this car →</span>
+          </div>
+          <p style="font-size:13px;color:#4a5550">Free overview. No account needed. <span style="text-decoration:underline">Search by VIN instead</span></p>
+        </div>
+        <div style="background:#f2f5f4;border-left:2px solid #14201c66;padding:32px;display:flex;flex-direction:column;gap:12px;justify-content:center">
+          <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5550;font-weight:600">Sample report</p>
+          <div style="background:#ffffff;border:2px solid #14201c66;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><p style="font-weight:800;font-size:18px">2019 Toyota RAV4 Hybrid</p><span style="font-weight:800;letter-spacing:0.08em;border:2px solid #14201c;padding:1px 8px;font-size:13px">KDA 482Q</span></div>
+            <div style="display:flex;flex-direction:column;border-top:2px solid #14201c66">
+              <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="background:#ec3013;width:10px;height:10px;flex:none"></span><span style="font-size:14px;flex:1">Mileage inconsistency</span><span style="font-size:12px;color:#ae1800;font-weight:600">Act on this</span></div>
+              <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="background:#e09a1a;width:10px;height:10px;flex:none"></span><span style="font-size:14px;flex:1">Repaired accident, 2022</span><span style="font-size:12px;color:#6e4200;font-weight:600">Worth checking</span></div>
+              <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #14201c33"><span style="background:#1f9d5c;width:10px;height:10px;flex:none"></span><span style="font-size:14px;flex:1">Inspection passed, Mar 2026</span><span style="font-size:12px;color:#0f6639;font-weight:600">Consistent</span></div>
+            </div>
+            <p style="font-size:12px;color:#4a5550">23 records · 7 sources · 2019–2026</p>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))">
+        <div style="padding:28px 32px;border-right:2px solid #14201c66;display:flex;flex-direction:column;gap:6px"><p style="font-size:13px;color:#173da3;font-weight:800">01</p><p style="font-weight:800;font-size:18px">Enter the plate</p><p style="font-size:14px;color:#3a423e">Confirm it’s the right car by model and colour.</p></div>
+        <div style="padding:28px 32px;border-right:2px solid #14201c66;display:flex;flex-direction:column;gap:6px"><p style="font-size:13px;color:#173da3;font-weight:800">02</p><p style="font-weight:800;font-size:18px">See what’s recorded</p><p style="font-size:14px;color:#3a423e">Every record shows who added it, and when.</p></div>
+        <div style="padding:28px 32px;border-right:2px solid #14201c66;display:flex;flex-direction:column;gap:6px"><p style="font-size:13px;color:#173da3;font-weight:800">03</p><p style="font-weight:800;font-size:18px">Ask better questions</p><p style="font-size:14px;color:#3a423e">Take a checklist to the viewing, based on the findings.</p></div>
+        <div style="padding:28px 32px;background:#1f9d5c;color:#ffffff;display:flex;flex-direction:column;gap:8px"><p style="font-weight:800;font-size:18px">Run a garage, dealership or inspection centre?</p><p style="font-size:14px">Record work in seconds and show buyers you’re verified.</p><p style="font-weight:800;font-size:14px;margin-top:auto">Become a partner →</p></div>
+      </div>
+    </div>
+    <sc-if value="{{ notes }}" hint-placeholder-val="{{ true }}">
+      <ul style="font-size:13px;color:#3a423e;padding-left:18px;display:flex;flex-direction:column;gap:2px;max-width:90ch"><li>Plate input is the first focus target; auto-uppercases and strips spaces. Region strip doubles as region selector.</li><li>Sample report teaches the finding grammar (colour + label) before the user searches.</li><li>Green field is reserved for the partner pitch — the brand moment, not a status.</li></ul>
+    </sc-if>
+  </section>
+
+  <!-- B2 SEARCH + CONFIRM -->
+  <section data-screen-label="B2 Search" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B2</span><h2 style="font-weight:800;font-size:22px">Number plate search · confirm match</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:24px">
+      <div style="border:2px solid #14201c;background:#ffffff;padding:32px;display:flex;flex-direction:column;gap:18px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5550;font-weight:600">Search</p>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:13px;font-weight:600">Number plate</label>
+          <div style="display:flex;border:2px solid #1f4fcf;outline:2px solid #bccdfd">
+            <span style="background:#1f4fcf;color:#ffffff;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 8px">SZ ▾</span>
+            <span style="flex:1;padding:12px 14px;font-weight:800;font-size:24px;letter-spacing:0.08em">KDA 482Q</span>
+          </div>
+          <p style="font-size:12px;color:#4a5550">Letters and numbers only. Spaces don’t matter.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:13px;font-weight:600">Number plate <span style="font-weight:400;color:#4a5550">(error state)</span></label>
+          <div style="display:flex;border:2px solid #ae1800">
+            <span style="background:#14201c;color:#ffffff;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 8px">SZ ▾</span>
+            <span style="flex:1;padding:12px 14px;font-weight:800;font-size:24px;letter-spacing:0.08em">KD#482</span>
+          </div>
+          <p style="font-size:13px;color:#ae1800;font-weight:600">! Plates use letters and numbers only. Remove “#” and try again.</p>
+        </div>
+        <span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:15px;padding:14px 18px;min-height:48px;display:flex;align-items:center;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Check this car →</span>
+        <div style="border-top:2px solid #14201c66;padding-top:12px;display:flex;flex-direction:column;gap:8px">
+          <p style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;font-weight:600">Recent on this device</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="border:1px solid #14201c66;padding:4px 10px;font-size:13px;font-weight:600;letter-spacing:0.05em">KCX 120T</span><span style="border:1px solid #14201c66;padding:4px 10px;font-size:13px;font-weight:600;letter-spacing:0.05em">KDB 77A</span><span style="font-size:13px;color:#173da3;text-decoration:underline;padding:4px 0">Clear</span></div>
+        </div>
+      </div>
+      <div style="border:2px solid #14201c;background:#ffffff;padding:32px;display:flex;flex-direction:column;gap:18px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5550;font-weight:600">Step 2 of 2 · Confirm</p>
+        <h3 style="font-weight:800;font-size:26px;line-height:1.15">Is this the car you’re looking at?</h3>
+        <div style="display:grid;grid-template-columns:120px 1fr;border-top:2px solid #14201c66">
+          <span style="padding:10px 0;border-bottom:1px solid #14201c33;font-size:13px;color:#4a5550">Plate</span><span style="padding:10px 0;border-bottom:1px solid #14201c33;font-weight:800;letter-spacing:0.06em">KDA 482Q</span>
+          <span style="padding:10px 0;border-bottom:1px solid #14201c33;font-size:13px;color:#4a5550">Vehicle</span><span style="padding:10px 0;border-bottom:1px solid #14201c33;font-weight:600">Toyota RAV4 2.5 Hybrid XLE</span>
+          <span style="padding:10px 0;border-bottom:1px solid #14201c33;font-size:13px;color:#4a5550">Year</span><span style="padding:10px 0;border-bottom:1px solid #14201c33">2019</span>
+          <span style="padding:10px 0;border-bottom:1px solid #14201c33;font-size:13px;color:#4a5550">Colour</span><span style="padding:10px 0;border-bottom:1px solid #14201c33;display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;background:#c3c7c9;border:1px solid #14201c66"></span>Silver metallic</span>
+          <span style="padding:10px 0;border-bottom:1px solid #14201c33;font-size:13px;color:#4a5550">VIN ends</span><span style="padding:10px 0;border-bottom:1px solid #14201c33">…4A 21907</span>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:15px;padding:12px 18px;min-height:48px;display:flex;align-items:center;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Yes, show history</span>
+          <span style="border:1px solid #14201c66;font-weight:800;font-size:15px;padding:12px 18px;min-height:48px;display:flex;align-items:center;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">No, that’s not it</span>
+        </div>
+        <p style="font-size:13px;color:#4a5550">Tip: compare the last 5 characters of the VIN with the one on the windscreen or door frame.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- B3 OVERVIEW -->
+  <section data-screen-label="B3 Overview" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B3</span><h2 style="font-weight:800;font-size:22px">Search result · free vehicle overview</h2><span style="font-size:13px;color:#4a5550">sazo.com/v/KDA482Q</span></div>
+    <div style="border:2px solid #14201c;background:#ffffff;overflow:hidden;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <div style="display:flex;align-items:center;gap:20px;padding:12px 28px;border-bottom:2px solid #14201c66;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;margin-right:auto"><span style="width:16px;height:16px;background:#1f9d5c;display:block;box-shadow:5px 5px 0 #1f4fcf"></span><span style="font-weight:800;font-size:17px;margin-left:6px">SAZO</span></div>
+        <span style="border:1px solid #14201c66;padding:6px 12px;font-size:13px;color:#4a5550;min-width:180px">Search another plate</span><span style="font-size:14px">Compare (1)</span><span style="font-size:14px">Saved</span><span style="font-size:14px;font-weight:800">Sign in</span>
+      </div>
+      <div style="padding:28px;display:flex;flex-wrap:wrap;gap:20px 32px;align-items:flex-end;border-bottom:2px solid #14201c66">
+        <div style="flex:1 1 360px;display:flex;flex-direction:column;gap:8px">
+          <span style="font-weight:800;letter-spacing:0.08em;border:2px solid #14201c;padding:2px 10px;font-size:15px;align-self:flex-start">KDA 482Q</span>
+          <h1 style="font-weight:800;font-size:clamp(28px,3.4vw,42px);line-height:1.05;letter-spacing:-0.02em">2019 Toyota RAV4 2.5 Hybrid XLE</h1>
+          <p style="font-size:14px;color:#3a423e">Silver metallic · Petrol hybrid · Automatic · SUV</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span style="border:1px solid #14201c66;font-weight:800;font-size:14px;padding:9px 14px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Save</span>
+          <span style="border:1px solid #14201c66;font-weight:800;font-size:14px;padding:9px 14px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Add to compare</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));border-bottom:2px solid #14201c66">
+        <div style="padding:16px 28px;border-right:1px solid #14201c33"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550">Last mileage</p><p style="font-weight:800;font-size:22px">84,210 km</p><p style="font-size:12px;color:#4a5550">Mar 2026 · inspection</p></div>
+        <div style="padding:16px 28px;border-right:1px solid #14201c33"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550">Owners</p><p style="font-weight:800;font-size:22px">3</p><p style="font-size:12px;color:#4a5550">+ 1 dealer period</p></div>
+        <div style="padding:16px 28px;border-right:1px solid #14201c33"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550">Registration</p><p style="font-weight:800;font-size:22px">Active</p><p style="font-size:12px;color:#4a5550">First reg. Jun 2019</p></div>
+        <div style="padding:16px 28px"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550">Latest inspection</p><p style="font-weight:800;font-size:22px;color:#0f6639">Passed</p><p style="font-size:12px;color:#4a5550">14 Mar 2026 · 2 advisories</p></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+        <div style="padding:28px;display:flex;flex-direction:column;gap:14px;border-right:2px solid #14201c66">
+          <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-weight:800;font-size:20px">What we found</h3><span style="font-size:13px;color:#4a5550">Free preview</span></div>
+          <div style="background:#fff2ef;border:2px solid #ec3013;padding:14px 16px;display:flex;gap:12px;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ae1800" stroke-width="2.5" style="flex:none;margin-top:2px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+            <div style="display:flex;flex-direction:column;gap:4px"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#7c1405;font-weight:800">Act on this · 1</p><p style="font-weight:800;color:#4d170e">Mileage went down between two records</p><p style="font-size:14px;color:#4d170e">Details in the full report.</p></div>
+          </div>
+          <div style="background:#fff4e0;border:1px solid #e09a1a;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#6e4200;font-weight:800">Worth checking · 3</p><p style="font-size:14px;color:#4a2c00">1 accident record · 2 inspection advisories · 1 gap in records</p></div>
+          <div style="background:#e9f7ef;border:1px solid #1f9d5c;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#0c4b2b;font-weight:800">Consistent · 2</p><p style="font-size:14px;color:#08301c">Regular servicing since 2022 · latest inspection passed</p></div>
+          <div style="background:#f2f5f4;border:1px dashed #56605b;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#3a423e;font-weight:800">Not checked · 2</p><p style="font-size:14px;color:#3a423e">Outstanding finance · theft register — not yet available in this region</p></div>
+          <p style="font-size:12px;color:#4a5550">SAZO shows what partners have recorded. Always have the car inspected before you buy.</p>
+        </div>
+        <div style="padding:28px;display:flex;flex-direction:column;gap:14px;background:#f2f5f4">
+          <h3 style="font-weight:800;font-size:20px">In the full report</h3>
+          <div style="display:flex;flex-direction:column;border-top:2px solid #14201c66;background:#ffffff">
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #14201c33;font-size:14px"><span>Repairs &amp; maintenance</span><span style="font-weight:800">14 records</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #14201c33;font-size:14px"><span>Accidents &amp; damage</span><span style="font-weight:800">1 record</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #14201c33;font-size:14px"><span>Inspections</span><span style="font-weight:800">4 reports</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #14201c33;font-size:14px"><span>Mileage readings</span><span style="font-weight:800">9 readings</span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #14201c33;font-size:14px"><span>Ownership periods</span><span style="font-weight:800">4 periods</span></div>
+          </div>
+          <p style="font-size:13px;color:#3a423e">Records from <strong>7 sources</strong>: 4 garages, 1 dealer, 2 inspection centres.</p>
+          <span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:15px;padding:14px 18px;display:flex;justify-content:space-between;gap:12px;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)"><span>See all 23 records</span><span>KSh 1,200</span></span>
+          <p style="font-size:12px;color:#4a5550">Includes PDF and 30 days of alerts. 3-pack available.</p>
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{ notes }}" hint-placeholder-val="{{ true }}">
+      <ul style="font-size:13px;color:#3a423e;padding-left:18px;display:flex;flex-direction:column;gap:2px;max-width:90ch"><li>Free tier reveals the <em>existence</em> and severity of findings, not details — users know what they’re paying for.</li><li>“Not checked” is a first-class category with a dashed border: absence is shown, not hidden.</li><li>Currency shown is illustrative; localise per market.</li></ul>
+    </sc-if>
+  </section>
+
+  <!-- B4 FULL REPORT SUMMARY -->
+  <section data-screen-label="B4 Report summary" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B4</span><h2 style="font-weight:800;font-size:22px">Detailed history report · summary</h2></div>
+    <div style="border:2px solid #14201c;background:#ffffff;display:flex;flex-wrap:wrap;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <aside style="flex:1 1 220px;max-width:260px;background:#f8faf9;border-right:2px solid #14201c66;padding:24px 0;display:flex;flex-direction:column">
+        <div style="padding:0 20px 16px;border-bottom:2px solid #14201c66;display:flex;flex-direction:column;gap:4px"><span style="font-weight:800;letter-spacing:0.08em;border:2px solid #14201c;padding:1px 8px;font-size:13px;align-self:flex-start">KDA 482Q</span><p style="font-weight:800">2019 Toyota RAV4</p><p style="font-size:12px;color:#4a5550">Generated 12 Oct 2026, 14:02</p></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;font-weight:800;background:#eef3ff;border-left:4px solid #1f4fcf"><span>Summary</span></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;border-bottom:1px solid #14201c1a"><span>Accidents &amp; damage</span><span style="color:#6e4200;font-weight:600">1</span></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;border-bottom:1px solid #14201c1a"><span>Repairs &amp; maintenance</span><span style="color:#4a5550">14</span></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;border-bottom:1px solid #14201c1a"><span>Inspections</span><span style="color:#4a5550">4</span></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;border-bottom:1px solid #14201c1a"><span>Mileage</span><span style="color:#ae1800;font-weight:600">! 9</span></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;border-bottom:1px solid #14201c1a"><span>Ownership</span><span style="color:#4a5550">4</span></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;border-bottom:1px solid #14201c1a"><span>Specifications</span></div>
+        <div style="display:flex;justify-content:space-between;padding:11px 20px;font-size:14px;border-bottom:1px solid #14201c1a"><span>Sources</span><span style="color:#4a5550">7</span></div>
+        <div style="padding:16px 20px;display:flex;flex-direction:column;gap:8px;margin-top:auto"><span style="border:1px solid #14201c66;font-weight:800;font-size:13px;padding:8px 12px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Download PDF</span><span style="border:1px solid #14201c66;font-weight:800;font-size:13px;padding:8px 12px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Share link</span></div>
+      </aside>
+      <div style="flex:999 1 520px;padding:28px;display:flex;flex-direction:column;gap:22px">
+        <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end">
+          <h3 style="font-weight:800;font-size:28px;letter-spacing:-0.015em">Summary</h3>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span>Coverage</span><span style="display:flex;gap:2px"><span style="width:22px;height:10px;background:#1f9d5c"></span><span style="width:22px;height:10px;background:#1f9d5c"></span><span style="width:22px;height:10px;background:#d3d9d6"></span></span><span style="font-weight:600">Medium — 7 sources, 2019–2026, 1 gap of 14 months</span></div>
+        </div>
+        <div style="border:2px solid #ec3013;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)">
+          <div style="background:#ec3013;color:#ffffff;padding:8px 16px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;font-weight:800;display:flex;gap:8px;align-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Act on this</div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:8px;background:#fff2ef">
+            <p style="font-weight:800;font-size:17px;color:#4d170e">Mileage went down between two records</p>
+            <p style="font-size:14px;color:#4d170e;max-width:70ch">In Jan 2024 a garage recorded <strong>61,400 km</strong>. In Jun 2024 a dealer recorded <strong>48,900 km</strong>. Later readings continue from the higher figure, which may mean a data-entry error — or a tampered odometer.</p>
+            <p style="font-size:14px;color:#4d170e"><strong>Ask the seller:</strong> “Do you have service invoices from 2024 showing the odometer?”</p>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;align-items:center"><span style="display:inline-flex;align-items:center;gap:5px;background:#e9f7ef;color:#0c4b2b;font-size:12px;font-weight:600;padding:2px 8px">✓ Verified source ×2</span><span style="color:#7c1405;text-decoration:underline;font-weight:600">View mileage records →</span></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;border-top:2px solid #14201c66">
+          <p style="padding:10px 0;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#6e4200;font-weight:800;border-bottom:1px solid #14201c33">Worth checking</p>
+          <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:start"><span style="width:10px;height:10px;background:#e09a1a;margin-top:6px"></span><div><p style="font-weight:600">Accident repaired · rear impact · Jul 2022</p><p style="font-size:13px;color:#3a423e">Moderate. Rear bumper, boot lid and tail lamp replaced at Mwangi Auto Works.</p></div><span style="font-size:13px;color:#173da3;text-decoration:underline">Details</span></div>
+          <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:start"><span style="width:10px;height:10px;background:#e09a1a;margin-top:6px"></span><div><p style="font-weight:600">2 advisories at last inspection · Mar 2026</p><p style="font-size:13px;color:#3a423e">Front brake pads near limit · minor oil seep, rear differential.</p></div><span style="font-size:13px;color:#173da3;text-decoration:underline">Details</span></div>
+          <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:4px 12px;padding:12px 0;border-bottom:1px solid #14201c33;align-items:start"><span style="width:10px;height:10px;background:#e09a1a;margin-top:6px"></span><div><p style="font-weight:600">No records for 14 months · Apr 2021 – Jul 2022</p><p style="font-size:13px;color:#3a423e">The car may have been serviced outside SAZO’s network.</p></div><span style="font-size:13px;color:#173da3;text-decoration:underline">Details</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px">
+          <div style="border-top:2px solid #1f9d5c;padding-top:10px;display:flex;flex-direction:column;gap:6px"><p style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#0f6639;font-weight:800">Consistent</p><p style="font-size:14px">✓ Serviced every 9–12 months since Jul 2022</p><p style="font-size:14px">✓ Inspection passed 14 Mar 2026</p></div>
+          <div style="border-top:2px dashed #56605b;padding-top:10px;display:flex;flex-direction:column;gap:6px"><p style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#3a423e;font-weight:800">What we couldn’t check</p><p style="font-size:14px">— Outstanding finance</p><p style="font-size:14px">— Theft register</p><p style="font-size:13px;color:#4a5550">Not yet available in this region. <span style="text-decoration:underline">Why?</span></p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- B5 ACCIDENT -->
+  <section data-screen-label="B5 Accident" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B5</span><h2 style="font-weight:800;font-size:22px">Accident and damage history</h2></div>
+    <div style="border:2px solid #14201c;background:#ffffff;padding:28px;display:flex;flex-direction:column;gap:20px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-weight:800;font-size:26px">Accidents &amp; damage</h3><span style="font-size:13px;color:#3a423e">1 record · Confidence: <strong>High</strong> (2 sources agree)</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));border:2px solid #14201c66">
+        <div style="padding:20px;display:flex;flex-direction:column;gap:12px;border-right:2px solid #14201c66">
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:#fff4e0;color:#6e4200;font-size:12px;font-weight:800;padding:3px 8px">Moderate</span><span style="background:#e9f7ef;color:#0c4b2b;font-size:12px;font-weight:600;padding:3px 8px">✓ Verified source</span><span style="background:#f2f5f4;color:#3a423e;font-size:12px;font-weight:600;padding:3px 8px">Repaired</span></div>
+          <p style="font-weight:800;font-size:19px">Rear impact · 18 Jul 2022</p>
+          <div style="display:grid;grid-template-columns:130px 1fr;font-size:14px;border-top:1px solid #14201c33">
+            <span style="padding:7px 0;border-bottom:1px solid #14201c1a;color:#4a5550">Areas</span><span style="padding:7px 0;border-bottom:1px solid #14201c1a">Rear bumper, boot lid, right tail lamp</span>
+            <span style="padding:7px 0;border-bottom:1px solid #14201c1a;color:#4a5550">Structural</span><span style="padding:7px 0;border-bottom:1px solid #14201c1a">No structural damage recorded</span>
+            <span style="padding:7px 0;border-bottom:1px solid #14201c1a;color:#4a5550">Airbags</span><span style="padding:7px 0;border-bottom:1px solid #14201c1a">Not deployed</span>
+            <span style="padding:7px 0;border-bottom:1px solid #14201c1a;color:#4a5550">Odometer</span><span style="padding:7px 0;border-bottom:1px solid #14201c1a">52,300 km</span>
+            <span style="padding:7px 0;border-bottom:1px solid #14201c1a;color:#4a5550">Repaired by</span><span style="padding:7px 0;border-bottom:1px solid #14201c1a">Mwangi Auto Works · Verified garage · <span style="color:#173da3;text-decoration:underline">linked repair</span></span>
+          </div>
+          <p style="font-size:12px;color:#4a5550">Event 18 Jul 2022 · Recorded 22 Jul 2022 · <span style="text-decoration:underline">Something wrong?</span></p>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:12px;background:#f2f5f4">
+          <p style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;font-weight:600">Impact zones (top view)</p>
+          <div style="display:flex;justify-content:center;padding:8px">
+            <div style="width:150px;display:grid;grid-template-rows:44px 34px 90px 34px 44px;border:2px solid #14201c;background:#ffffff">
+              <div style="border-bottom:1px solid #14201c66;font-size:10px;display:flex;align-items:center;justify-content:center;color:#4a5550">FRONT</div>
+              <div style="border-bottom:1px solid #14201c66"></div>
+              <div style="border-bottom:1px solid #14201c66;display:grid;grid-template-columns:1fr 1fr"><span style="border-right:1px solid #14201c66"></span><span></span></div>
+              <div style="border-bottom:1px solid #14201c66;background:#ffd79a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#4a2c00">BOOT</div>
+              <div style="background:#e09a1a;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#2b1a00">REAR ●</div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:#3a423e">Highlighted: rear (moderate), boot lid (minor). Same list as text on the left for screen readers.</p>
+        </div>
+      </div>
+      <div style="background:#f2f5f4;padding:14px 16px;font-size:14px;color:#3a423e;border-left:0;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">No other accidents have been recorded by SAZO partners. Accidents repaired outside our network may not appear.</div>
+    </div>
+  </section>
+
+  <!-- B6 REPAIRS TIMELINE -->
+  <section data-screen-label="B6 Repairs timeline" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B6</span><h2 style="font-weight:800;font-size:22px">Repairs and maintenance timeline</h2></div>
+    <div style="border:2px solid #14201c;background:#ffffff;padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+        <h3 style="font-weight:800;font-size:26px">Repairs &amp; maintenance</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:13px">
+          <span style="display:flex;border:1px solid #14201c66"><span style="padding:6px 12px;background:#1f4fcf;color:#ffffff">All 14</span><span style="padding:6px 12px;border-left:1px solid #14201c66">Service 9</span><span style="padding:6px 12px;border-left:1px solid #14201c66">Repair 5</span></span>
+          <span style="border:1px solid #14201c66;padding:6px 12px">Verified only</span>
+          <span style="border:1px solid #14201c66;padding:6px 12px">Newest first ▾</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <p style="font-weight:800;font-size:15px;padding:8px 0;border-bottom:2px solid #14201c66">2026</p>
+        <div style="display:grid;grid-template-columns:96px 20px minmax(0,1fr);gap:0 12px">
+          <p style="font-size:13px;color:#4a5550;padding-top:14px">02 Feb</p>
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="width:2px;height:16px;background:#14201c66"></span><span style="width:12px;height:12px;background:#1f9d5c;flex:none"></span><span style="width:2px;flex:1;background:#14201c66"></span></div>
+          <div style="padding:10px 0 16px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #14201c1a"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><p style="font-weight:800">Scheduled service · 80,000 km</p><span style="background:#e9f7ef;color:#0c4b2b;font-size:11px;font-weight:600;padding:2px 7px">✓ Verified source</span></div><p style="font-size:14px;color:#3a423e">Engine oil &amp; filter, cabin filter, hybrid system check, tyre rotation.</p><p style="font-size:12px;color:#4a5550">80,940 km · Toyota Kenya Service, Westlands · invoice attached</p></div>
+        </div>
+        <p style="font-weight:800;font-size:15px;padding:8px 0;border-bottom:2px solid #14201c66">2025</p>
+        <div style="display:grid;grid-template-columns:96px 20px minmax(0,1fr);gap:0 12px">
+          <p style="font-size:13px;color:#4a5550;padding-top:14px">11 Aug</p>
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="width:2px;height:16px;background:#14201c66"></span><span style="width:12px;height:12px;background:#1f4fcf;flex:none"></span><span style="width:2px;flex:1;background:#14201c66"></span></div>
+          <div style="padding:10px 0 16px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #14201c1a"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><p style="font-weight:800">Repair · front suspension</p><span style="background:#eef3ff;color:#132f7a;font-size:11px;font-weight:600;padding:2px 7px">◆ Partner-submitted</span></div><p style="font-size:14px;color:#3a423e">Front stabiliser links replaced (pair).</p><p style="font-size:12px;color:#4a5550">76,020 km · QuickFix Garage, Thika Rd · no document · recorded 2 Sep 2025 (back-dated)</p></div>
+        </div>
+        <p style="font-weight:800;font-size:15px;padding:8px 0;border-bottom:2px solid #14201c66">2022</p>
+        <div style="display:grid;grid-template-columns:96px 20px minmax(0,1fr);gap:0 12px">
+          <p style="font-size:13px;color:#4a5550;padding-top:14px">22 Jul</p>
+          <div style="display:flex;flex-direction:column;align-items:center"><span style="width:2px;height:16px;background:#14201c66"></span><span style="width:12px;height:12px;background:#e09a1a;flex:none"></span><span style="width:2px;flex:1;background:#14201c66"></span></div>
+          <div style="padding:10px 0 16px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #14201c1a"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><p style="font-weight:800">Accident repair · rear</p><span style="background:#e9f7ef;color:#0c4b2b;font-size:11px;font-weight:600;padding:2px 7px">✓ Verified source</span></div><p style="font-size:14px;color:#3a423e">Rear bumper and boot lid replaced, right tail lamp replaced, paint blend.</p><p style="font-size:12px;color:#4a5550">52,300 km · Mwangi Auto Works · 6 photos · <span style="color:#173da3;text-decoration:underline">linked accident</span></p></div>
+        </div>
+        <div style="display:grid;grid-template-columns:96px 20px minmax(0,1fr);gap:0 12px">
+          <p style="font-size:13px;color:#4a5550;padding-top:14px">Apr 21 – Jul 22</p>
+          <div style="display:flex;justify-content:center"><span style="width:0;border-left:2px dashed #8a948f;height:100%"></span></div>
+          <div style="padding:14px 16px;margin:8px 0;background:#f2f5f4;border:1px dashed #56605b;display:flex;flex-direction:column;gap:2px"><p style="font-weight:800;font-size:14px">No records for 14 months</p><p style="font-size:13px;color:#3a423e">Work during this period may have been done outside SAZO’s network. Ask the seller for receipts.</p></div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#173da3;text-decoration:underline">Show 10 earlier records</p>
+    </div>
+  </section>
+
+  <!-- B7 INSPECTIONS + B8 MILEAGE -->
+  <section data-screen-label="B7 Inspections" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B7</span><h2 style="font-weight:800;font-size:22px">Inspection reports</h2></div>
+    <div style="border:2px solid #14201c;background:#ffffff;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <div style="padding:28px;display:flex;flex-direction:column;gap:14px;border-right:2px solid #14201c66">
+        <p style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;font-weight:600">Latest inspection</p>
+        <div style="display:flex;align-items:center;gap:14px"><span style="background:#1f9d5c;color:#ffffff;font-weight:800;font-size:22px;padding:6px 14px">Passed</span><div><p style="font-weight:800">14 Mar 2026 · 84,210 km</p><p style="font-size:13px;color:#3a423e">NTSA Likoni Rd Centre · Inspector #2241</p></div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:#e9f7ef;color:#0c4b2b;font-size:12px;font-weight:600;padding:3px 8px">✓ Verified source</span><span style="border:1px solid #14201c66;font-size:12px;padding:2px 8px">Certificate SZ-IC-88213 · QR valid</span></div>
+        <div style="display:flex;flex-direction:column;border-top:2px solid #14201c66">
+          <div style="display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid #14201c1a;font-size:14px"><span>Brakes</span><span style="color:#6e4200;font-weight:600">! Advisory</span></div>
+          <div style="display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid #14201c1a;font-size:14px"><span>Steering &amp; suspension</span><span style="color:#0f6639;font-weight:600">✓ Pass</span></div>
+          <div style="display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid #14201c1a;font-size:14px"><span>Lights &amp; signalling</span><span style="color:#0f6639;font-weight:600">✓ Pass</span></div>
+          <div style="display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid #14201c1a;font-size:14px"><span>Emissions</span><span style="color:#0f6639;font-weight:600">✓ Pass</span></div>
+          <div style="display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid #14201c1a;font-size:14px"><span>Tyres &amp; wheels</span><span style="color:#0f6639;font-weight:600">✓ Pass</span></div>
+          <div style="display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid #14201c1a;font-size:14px"><span>Body &amp; underside</span><span style="color:#6e4200;font-weight:600">! Advisory</span></div>
+        </div>
+        <div style="background:#fff4e0;padding:12px 14px;font-size:14px;color:#4a2c00"><strong>Advisories</strong> aren’t failures — they’re items the inspector expects to need attention soon. Budget for front brake pads.</div>
+      </div>
+      <div style="padding:28px;display:flex;flex-direction:column;gap:14px">
+        <p style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;font-weight:600">History</p>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:340px">
+          <thead><tr><th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;padding:8px 8px 8px 0;border-bottom:2px solid #14201c66">Date</th><th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;padding:8px;border-bottom:2px solid #14201c66">Result</th><th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;padding:8px;border-bottom:2px solid #14201c66">km</th><th style="text-align:left;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;padding:8px;border-bottom:2px solid #14201c66">Centre</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:9px 8px 9px 0;border-bottom:1px solid #14201c33">14 Mar 2026</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33;color:#0f6639;font-weight:600">✓ Pass · 2 adv.</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">84,210</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">Likoni Rd</td></tr>
+            <tr><td style="padding:9px 8px 9px 0;border-bottom:1px solid #14201c33">20 Feb 2025</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33;color:#0f6639;font-weight:600">✓ Pass</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">71,200</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">Likoni Rd</td></tr>
+            <tr><td style="padding:9px 8px 9px 0;border-bottom:1px solid #14201c33">03 Feb 2025</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33;color:#ae1800;font-weight:600">✕ Fail · headlamp aim</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">71,050</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">Likoni Rd</td></tr>
+            <tr><td style="padding:9px 8px 9px 0;border-bottom:1px solid #14201c33">15 Mar 2023</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33;color:#0f6639;font-weight:600">✓ Pass</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">58,800</td><td style="padding:9px 8px;border-bottom:1px solid #14201c33">Industrial Area</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p style="font-size:13px;color:#3a423e">Fail on 3 Feb 2025 was fixed and passed on retest 17 days later.</p>
+        <span style="border:1px solid #14201c66;font-weight:800;font-size:14px;padding:9px 14px;align-self:flex-start;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Verify a paper certificate</span>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen-label="B8 Mileage & ownership" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B8</span><h2 style="font-weight:800;font-size:22px">Mileage and ownership history</h2></div>
+    <div style="border:2px solid #14201c;background:#ffffff;padding:28px;display:flex;flex-direction:column;gap:20px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-weight:800;font-size:26px">Mileage</h3><span style="font-size:13px;color:#3a423e">9 readings · avg <strong>12,000 km / year</strong> (typical for age) · <span style="color:#173da3;text-decoration:underline">View as table</span></span></div>
+      <div style="border:2px solid #14201c66;padding:12px 8px 4px">
+        <svg viewBox="0 0 800 260" style="width:100%;height:auto;display:block" role="img" aria-label="Odometer readings 2019 to 2026, with one reading in June 2024 lower than the previous one">
+          <g stroke="#14201c1f" stroke-width="1"><line x1="40" y1="230" x2="780" y2="230" stroke="#14201c66" stroke-width="2"></line><line x1="40" y1="160" x2="780" y2="160"></line><line x1="40" y1="90" x2="780" y2="90"></line><line x1="40" y1="20" x2="780" y2="20"></line></g>
+          <g font-family="Archivo" font-size="11" fill="#4a5550"><text x="34" y="234" text-anchor="end">0</text><text x="34" y="164" text-anchor="end">30k</text><text x="34" y="94" text-anchor="end">60k</text><text x="34" y="24" text-anchor="end">90k</text>
+          <text x="102" y="250" text-anchor="middle">2020</text><text x="205" y="250" text-anchor="middle">2021</text><text x="307" y="250" text-anchor="middle">2022</text><text x="410" y="250" text-anchor="middle">2023</text><text x="513" y="250" text-anchor="middle">2024</text><text x="616" y="250" text-anchor="middle">2025</text><text x="718" y="250" text-anchor="middle">2026</text></g>
+          <rect x="234" y="20" width="129" height="210" fill="#f2f5f4"></rect>
+          <text x="298" y="40" text-anchor="middle" font-family="Archivo" font-size="11" fill="#3a423e">No records</text>
+          <polyline points="45,230 140,187 234,151" fill="none" stroke="#1f4fcf" stroke-width="3"></polyline>
+          <polyline points="234,151 363,108" fill="none" stroke="#1f4fcf" stroke-width="2" stroke-dasharray="6 5"></polyline>
+          <polyline points="363,108 432,93 517,87" fill="none" stroke="#1f4fcf" stroke-width="3"></polyline>
+          <polyline points="517,87 560,116 628,64" fill="none" stroke="#ec3013" stroke-width="3"></polyline>
+          <polyline points="628,64 740,34" fill="none" stroke="#1f4fcf" stroke-width="3"></polyline>
+          <g fill="#ffffff" stroke="#1f4fcf" stroke-width="2.5"><rect x="41" y="226" width="8" height="8"></rect><rect x="136" y="183" width="8" height="8"></rect><rect x="230" y="147" width="8" height="8"></rect><rect x="359" y="104" width="8" height="8"></rect><rect x="428" y="89" width="8" height="8"></rect><rect x="624" y="60" width="8" height="8"></rect><rect x="736" y="30" width="8" height="8"></rect></g>
+          <rect x="513" y="83" width="8" height="8" fill="#ec3013"></rect><rect x="555" y="111" width="10" height="10" fill="#ec3013"></rect>
+          <line x1="560" y1="122" x2="560" y2="168" stroke="#ae1800" stroke-width="1.5"></line>
+          <rect x="470" y="168" width="196" height="40" fill="#fff2ef" stroke="#ec3013" stroke-width="1.5"></rect>
+          <text x="480" y="185" font-family="Archivo" font-size="12" font-weight="800" fill="#7c1405">! Jun 2024: 48,900 km</text>
+          <text x="480" y="200" font-family="Archivo" font-size="11" fill="#4d170e">12,500 km lower than Jan 2024</text>
+        </svg>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:#3a423e"><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border:2.5px solid #1f4fcf"></span>Verified reading</span><span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;background:#ec3013"></span>Inconsistent reading</span><span style="display:flex;align-items:center;gap:6px"><span style="width:18px;border-top:2px dashed #1f4fcf"></span>No readings in period</span></div>
+      <div style="border-top:2px solid #14201c66;padding-top:18px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline"><h3 style="font-weight:800;font-size:22px">Ownership</h3><span style="font-size:13px;color:#4a5550">Owners are never named. <span style="text-decoration:underline">Why?</span></span></div>
+        <div style="display:flex;height:40px;border:2px solid #14201c;font-size:12px;font-weight:600">
+          <div style="flex:21;background:#cdeedb;display:flex;align-items:center;padding:0 8px;border-right:2px solid #14201c;overflow:hidden;white-space:nowrap">Owner 1</div>
+          <div style="flex:39;background:#dbe5ff;display:flex;align-items:center;padding:0 8px;border-right:2px solid #14201c;overflow:hidden;white-space:nowrap">Owner 2 · company</div>
+          <div style="flex:2;background:#14201c;border-right:2px solid #14201c"></div>
+          <div style="flex:26;background:#cdeedb;display:flex;align-items:center;padding:0 8px;overflow:hidden;white-space:nowrap">Owner 3 · current</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));font-size:13px">
+          <div style="padding:8px 12px 8px 0"><p style="font-weight:800">Owner 1 · private</p><p style="color:#3a423e">Jun 2019 – Mar 2021 · 1 y 9 m</p></div>
+          <div style="padding:8px 12px 8px 0"><p style="font-weight:800">Owner 2 · company fleet</p><p style="color:#3a423e">Mar 2021 – Jun 2024 · 3 y 3 m</p></div>
+          <div style="padding:8px 12px 8px 0"><p style="font-weight:800">Dealer stock</p><p style="color:#3a423e">Jun – Aug 2024 · Prime Motors</p></div>
+          <div style="padding:8px 12px 8px 0"><p style="font-weight:800">Owner 3 · private</p><p style="color:#3a423e">Aug 2024 – now · 2 y 2 m</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- B9 COMPARE -->
+  <section data-screen-label="B9 Compare" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B9</span><h2 style="font-weight:800;font-size:22px">Vehicle comparison</h2></div>
+    <div style="border:2px solid #14201c;background:#ffffff;padding:28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><h3 style="font-weight:800;font-size:26px">Compare 3 cars</h3><span style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:34px;height:20px;background:#1f4fcf;position:relative;display:inline-block"><span style="position:absolute;right:3px;top:3px;width:14px;height:14px;background:#ffffff"></span></span>Highlight differences</span></div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;min-width:760px;table-layout:fixed">
+          <thead><tr>
+            <th style="width:22%;text-align:left;padding:10px 10px 10px 0;border-bottom:2px solid #14201c;vertical-align:bottom;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550"></th>
+            <th style="text-align:left;padding:10px;border-bottom:2px solid #14201c;vertical-align:top"><span style="font-weight:800;letter-spacing:0.06em;border:2px solid #14201c;padding:0 6px;font-size:12px">KDA 482Q</span><p style="font-weight:800;font-size:16px;margin-top:6px">2019 Toyota RAV4 Hybrid</p><p style="font-size:12px;color:#4a5550;font-weight:400">Full report ✓</p></th>
+            <th style="text-align:left;padding:10px;border-bottom:2px solid #14201c;vertical-align:top"><span style="font-weight:800;letter-spacing:0.06em;border:2px solid #14201c;padding:0 6px;font-size:12px">KCX 120T</span><p style="font-weight:800;font-size:16px;margin-top:6px">2018 Honda CR-V 1.5T</p><p style="font-size:12px;color:#4a5550;font-weight:400">Full report ✓</p></th>
+            <th style="text-align:left;padding:10px;border-bottom:2px solid #14201c;vertical-align:top"><span style="font-weight:800;letter-spacing:0.06em;border:2px solid #14201c;padding:0 6px;font-size:12px">KDB 077A</span><p style="font-weight:800;font-size:16px;margin-top:6px">2019 Mazda CX-5 2.0</p><p style="font-size:12px;color:#173da3;font-weight:600;text-decoration:underline">Unlock full report</p></th>
+          </tr></thead>
+          <tbody>
+            <tr><td colspan="4" style="padding:12px 0 6px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;font-weight:800;border-bottom:1px solid #14201c33">Findings</td></tr>
+            <tr style="background:#fff8f6"><td style="padding:10px 10px 10px 0;border-bottom:1px solid #14201c33;font-weight:600">Act on this</td><td style="padding:10px;border-bottom:1px solid #14201c33;color:#ae1800;font-weight:800">! 1 · mileage</td><td style="padding:10px;border-bottom:1px solid #14201c33">None recorded</td><td style="padding:10px;border-bottom:1px solid #14201c33">None recorded</td></tr>
+            <tr style="background:#fff8f6"><td style="padding:10px 10px 10px 0;border-bottom:1px solid #14201c33;font-weight:600">Accidents</td><td style="padding:10px;border-bottom:1px solid #14201c33">1 · moderate, repaired</td><td style="padding:10px;border-bottom:1px solid #14201c33">None recorded</td><td style="padding:10px;border-bottom:1px solid #14201c33">2 · minor</td></tr>
+            <tr><td style="padding:10px 10px 10px 0;border-bottom:1px solid #14201c33;font-weight:600">Latest inspection</td><td style="padding:10px;border-bottom:1px solid #14201c33;color:#0f6639;font-weight:600">✓ Pass · Mar 2026</td><td style="padding:10px;border-bottom:1px solid #14201c33;color:#0f6639;font-weight:600">✓ Pass · Jan 2026</td><td style="padding:10px;border-bottom:1px solid #14201c33;color:#0f6639;font-weight:600">✓ Pass · Apr 2026</td></tr>
+            <tr><td colspan="4" style="padding:12px 0 6px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#4a5550;font-weight:800;border-bottom:1px solid #14201c33">Usage</td></tr>
+            <tr style="background:#fff8f6"><td style="padding:10px 10px 10px 0;border-bottom:1px solid #14201c33;font-weight:600">Mileage</td><td style="padding:10px;border-bottom:1px solid #14201c33">84,210 km</td><td style="padding:10px;border-bottom:1px solid #14201c33;font-weight:800">112,600 km</td><td style="padding:10px;border-bottom:1px solid #14201c33">61,900 km</td></tr>
+            <tr><td style="padding:10px 10px 10px 0;border-bottom:1px solid #14201c33;font-weight:600">Owners</td><td style="padding:10px;border-bottom:1px solid #14201c33">3</td><td style="padding:10px;border-bottom:1px solid #14201c33">2</td><td style="padding:10px;border-bottom:1px solid #14201c33">2</td></tr>
+            <tr><td style="padding:10px 10px 10px 0;border-bottom:1px solid #14201c33;font-weight:600">Service regularity</td><td style="padding:10px;border-bottom:1px solid #14201c33">1 gap (14 mo)</td><td style="padding:10px;border-bottom:1px solid #14201c33">No gaps</td><td style="padding:10px;border-bottom:1px solid #14201c33">No gaps</td></tr>
+            <tr><td style="padding:10px 10px 10px 0;border-bottom:1px solid #14201c33;font-weight:600">Coverage</td><td style="padding:10px;border-bottom:1px solid #14201c33">Medium · 7 sources</td><td style="padding:10px;border-bottom:1px solid #14201c33">High · 9 sources</td><td style="padding:10px;border-bottom:1px solid #14201c33">Low · 2 sources</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:#4a5550">Shaded rows differ meaningfully. Low coverage means fewer records, not fewer problems.</p>
+    </div>
+  </section>
+
+  <!-- B10 ACCOUNT -->
+  <section data-screen-label="B10 Account" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B10</span><h2 style="font-weight:800;font-size:22px">Account and saved vehicles</h2></div>
+    <div style="border:2px solid #14201c;background:#ffffff;display:flex;flex-wrap:wrap;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+      <aside style="flex:1 1 200px;max-width:240px;background:#f8faf9;border-right:2px solid #14201c66;padding:24px 0;display:flex;flex-direction:column;font-size:14px">
+        <p style="padding:0 20px 14px;font-weight:800;border-bottom:2px solid #14201c66">David O.</p>
+        <span style="padding:11px 20px;font-weight:800;background:#eef3ff;border-left:4px solid #1f4fcf">Saved vehicles</span>
+        <span style="padding:11px 20px">Purchased reports</span><span style="padding:11px 20px">Alerts</span><span style="padding:11px 20px">My disputes</span><span style="padding:11px 20px">Privacy &amp; data</span><span style="padding:11px 20px">Billing</span>
+      </aside>
+      <div style="flex:999 1 520px;padding:28px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><h3 style="font-weight:800;font-size:26px">Saved vehicles</h3><span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:14px;padding:9px 14px;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Compare selected (2)</span></div>
+        <div style="display:flex;flex-direction:column;border-top:2px solid #14201c66">
+          <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:12px;padding:14px 0;border-bottom:1px solid #14201c33;align-items:center"><span style="width:18px;height:18px;background:#1f4fcf;color:#ffffff;font-size:12px;display:flex;align-items:center;justify-content:center">✓</span><div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-weight:800;letter-spacing:0.06em;border:2px solid #14201c;padding:0 6px;font-size:12px">KDA 482Q</span><p style="font-weight:800">2019 Toyota RAV4 Hybrid</p><span style="background:#1f4fcf;color:#ffffff;font-size:11px;font-weight:800;padding:2px 7px">1 new record</span></div><p style="font-size:13px;color:#3a423e">Alerts on until 11 Nov 2026 · Report updated 10 Oct</p></div><span style="font-size:13px;color:#173da3;text-decoration:underline">Open report</span></div>
+          <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:12px;padding:14px 0;border-bottom:1px solid #14201c33;align-items:center"><span style="width:18px;height:18px;background:#1f4fcf;color:#ffffff;font-size:12px;display:flex;align-items:center;justify-content:center">✓</span><div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-weight:800;letter-spacing:0.06em;border:2px solid #14201c;padding:0 6px;font-size:12px">KCX 120T</span><p style="font-weight:800">2018 Honda CR-V 1.5T</p></div><p style="font-size:13px;color:#3a423e">Alerts on until 2 Nov 2026 · No changes</p></div><span style="font-size:13px;color:#173da3;text-decoration:underline">Open report</span></div>
+          <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:12px;padding:14px 0;border-bottom:1px solid #14201c33;align-items:center"><span style="width:18px;height:18px;border:2px solid #14201c66"></span><div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-weight:800;letter-spacing:0.06em;border:2px solid #14201c;padding:0 6px;font-size:12px">KDB 077A</span><p style="font-weight:800">2019 Mazda CX-5 2.0</p><span style="border:1px solid #56605b;color:#3a423e;font-size:11px;padding:1px 7px">Overview only</span></div><p style="font-size:13px;color:#3a423e">Saved 4 Oct 2026</p></div><span style="font-size:13px;color:#173da3;text-decoration:underline">Unlock</span></div>
+        </div>
+        <div style="background:#f2f5f4;padding:16px;display:flex;flex-direction:column;gap:10px;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+          <p style="font-weight:800">Alert me when</p>
+          <div style="display:flex;gap:10px 24px;flex-wrap:wrap;font-size:14px"><span>☑ A new record is added</span><span>☑ A new finding appears</span><span>☐ An inspection is due</span><span>☑ A dispute is resolved</span></div>
+          <p style="font-size:13px;color:#3a423e">By email · <span style="text-decoration:underline">Add SMS</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- B11 MOBILE -->
+  <section data-screen-label="B11 Mobile" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B11</span><h2 style="font-weight:800;font-size:22px">Mobile · at the viewing</h2><span style="font-size:13px;color:#4a5550">360 × 740</span></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap">
+      <div style="width:360px;height:740px;border:2px solid #14201c;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;flex:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:2px solid #14201c66"><div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;background:#1f9d5c;display:block;box-shadow:4px 4px 0 #1f4fcf"></span><span style="font-weight:800;margin-left:4px">SAZO</span></div><span style="font-size:22px;line-height:1">≡</span></div>
+        <div style="padding:28px 16px;display:flex;flex-direction:column;gap:16px;flex:1">
+          <h1 style="font-weight:800;font-size:34px;line-height:1.04;letter-spacing:-0.02em">Know the car before you buy it.</h1>
+          <div style="display:flex;border:2px solid #14201c"><span style="background:#1f4fcf;color:#ffffff;font-size:11px;font-weight:800;display:flex;align-items:center;padding:0 8px">SZ</span><span style="flex:1;padding:12px;font-weight:800;font-size:22px;letter-spacing:0.08em">KDA 482Q</span></div>
+          <span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:16px;padding:0 16px;min-height:52px;display:flex;align-items:center;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Check this car →</span>
+          <span style="border:1px solid #14201c66;font-weight:800;font-size:15px;padding:0 16px;min-height:48px;display:flex;align-items:center;gap:8px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">▣ Scan the plate with camera</span>
+          <p style="font-size:13px;color:#4a5550">Free overview. No account needed.</p>
+        </div>
+      </div>
+      <div style="width:360px;height:740px;border:2px solid #14201c;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;flex:none">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:2px solid #14201c66"><span style="font-size:18px">←</span><span style="font-weight:800;letter-spacing:0.08em;border:2px solid #14201c;padding:0 6px;font-size:13px">KDA 482Q</span><span style="font-weight:600;font-size:14px">RAV4 2019</span></div>
+        <div style="display:flex;gap:0;border-bottom:2px solid #14201c66;font-size:13px;overflow:hidden;white-space:nowrap">
+          <span style="padding:12px 14px;font-weight:800;border-bottom:3px solid #1f4fcf">Summary</span><span style="padding:12px 14px">Accidents 1</span><span style="padding:12px 14px">Repairs 14</span><span style="padding:12px 14px">Mileage</span>
+        </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="display:flex;gap:2px"><span style="width:16px;height:8px;background:#1f9d5c"></span><span style="width:16px;height:8px;background:#1f9d5c"></span><span style="width:16px;height:8px;background:#d3d9d6"></span></span>Coverage: Medium · 7 sources</div>
+          <div style="border:2px solid #ec3013;background:#fff2ef;padding:12px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#7c1405;font-weight:800">! Act on this</p><p style="font-weight:800;color:#4d170e">Mileage went down between two records</p><p style="font-size:13px;color:#4d170e">61,400 km (Jan 2024) → 48,900 km (Jun 2024).</p></div>
+          <div style="background:#fff4e0;border:1px solid #e09a1a;padding:12px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#6e4200;font-weight:800">Worth checking · 3</p><p style="font-size:13px;color:#4a2c00">Repaired rear accident 2022 · 2 advisories · 14-month gap</p></div>
+          <div style="background:#e9f7ef;border:1px solid #1f9d5c;padding:12px;box-shadow:0 1px 2px rgba(20,32,28,0.06), 0 6px 16px rgba(20,32,28,0.08)"><p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#0c4b2b;font-weight:800">Consistent · 2</p></div>
+          <div style="border-top:2px solid #14201c66;padding-top:10px;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800;font-size:14px">Ask the seller</p><p style="font-size:13px">☐ Service invoices from 2024 showing km</p><p style="font-size:13px">☐ Photos or invoice of 2022 rear repair</p><p style="font-size:13px">☐ Where was it serviced Apr 2021 – Jul 2022?</p></div>
+        </div>
+        <div style="border-top:2px solid #14201c;padding:10px 16px;display:flex;gap:10px"><span style="border:1px solid #14201c66;font-weight:800;font-size:14px;min-height:48px;display:flex;align-items:center;padding:0 14px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Share</span><span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:14px;min-height:48px;display:flex;align-items:center;padding:0 14px;flex:1;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Download PDF</span></div>
+      </div>
+      <div style="width:360px;height:740px;border:2px solid #14201c;background:#ffffff;display:flex;flex-direction:column;overflow:hidden;flex:none">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:2px solid #14201c66"><span style="font-size:18px">←</span><span style="font-weight:800;letter-spacing:0.08em;border:2px solid #14201c;padding:0 6px;font-size:13px">KCX 120T</span><span style="font-weight:600;font-size:14px">Overview</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px;flex:1">
+          <p style="font-weight:800;font-size:22px;line-height:1.1">2018 Honda CR-V 1.5T</p>
+          <p style="font-size:13px;color:#3a423e">White · Petrol · Automatic</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;border-top:2px solid #14201c66;border-left:1px solid #14201c33">
+            <div style="padding:10px;border-right:1px solid #14201c33;border-bottom:1px solid #14201c33"><p style="font-size:11px;color:#4a5550;text-transform:uppercase;letter-spacing:0.06em">Mileage</p><p style="font-weight:800">112,600 km</p></div>
+            <div style="padding:10px;border-right:1px solid #14201c33;border-bottom:1px solid #14201c33"><p style="font-size:11px;color:#4a5550;text-transform:uppercase;letter-spacing:0.06em">Owners</p><p style="font-weight:800">2</p></div>
+          </div>
+          <div style="padding:14px;background:#f2f5f4;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Findings are in the full report</p><p style="font-size:13px;color:#3a423e">9 service records · 0 accident records · 3 inspections</p></div>
+        </div>
+        <div style="border-top:2px solid #14201c;padding:10px 16px;display:flex;flex-direction:column;gap:6px;background:#ffffff">
+          <span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:15px;min-height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)"><span>See all 12 records</span><span>KSh 1,200</span></span>
+          <p style="font-size:11px;color:#4a5550">Sticky unlock bar · card or mobile money</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- B12 STATES -->
+  <section data-screen-label="B12 States" style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="background:#1f4fcf;color:#ffffff;font-size:12px;font-weight:800;padding:3px 9px;box-shadow:3px 3px 0 #1f9d5c">B12</span><h2 style="font-weight:800;font-size:22px">Loading, empty, unavailable, error and dispute states</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px">
+      <div style="border:2px solid #14201c;background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5550;font-weight:600">Loading</p>
+        <div style="height:14px;width:40%;background:#e7ebe9"></div><div style="height:28px;width:85%;background:#e7ebe9"></div><div style="height:64px;background:#f2f5f4;border:1px solid #e7ebe9"></div><div style="height:64px;background:#f2f5f4;border:1px solid #e7ebe9"></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:4px;background:#e7ebe9"><div style="height:4px;width:57%;background:#1f4fcf"></div></div><p style="font-size:13px" aria-live="polite">Checking 4 of 7 sources…</p></div>
+      </div>
+      <div style="border:2px solid #14201c;background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5550;font-weight:600">Empty · no records</p>
+        <p style="font-weight:800;font-size:19px;line-height:1.2">We don’t have records for KDF 9031 yet.</p>
+        <p style="font-size:14px;color:#3a423e">This doesn’t mean anything is wrong — the car may not have visited a SAZO partner. You haven’t been charged.</p>
+        <span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:14px;padding:10px 14px;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Notify me when records appear</span>
+        <p style="font-size:13px"><span style="color:#173da3;text-decoration:underline">Check the plate</span> · <span style="color:#173da3;text-decoration:underline">Search by VIN</span></p>
+      </div>
+      <div style="border:2px solid #14201c;background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5550;font-weight:600">Unavailable section</p>
+        <div style="border:1px dashed #56605b;background:#f2f5f4;padding:16px;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800">Outstanding finance</p><p style="font-size:14px;color:#3a423e">Finance checks aren’t available in this region yet. Ask the seller for a loan clearance letter.</p><p style="font-size:13px;color:#173da3;text-decoration:underline">Tell me when this is available</p></div>
+        <p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#4a5550;font-weight:600;margin-top:4px">System error</p>
+        <div style="border:2px solid #ae1800;padding:14px;display:flex;flex-direction:column;gap:6px"><p style="font-weight:800;color:#7c1405">Something went wrong on our side.</p><p style="font-size:14px">You haven’t been charged. Reference: SZ-7F3A21</p><span style="border:1px solid #14201c66;font-weight:800;font-size:13px;padding:7px 12px;align-self:flex-start;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Try again</span></div>
+      </div>
+      <div style="border:2px solid #14201c;background:#14201c80;padding:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 18px 44px rgba(20,32,28,0.16)">
+        <div style="background:#ffffff;padding:20px;display:flex;flex-direction:column;gap:12px;width:100%;box-shadow:0 12px 32px #14201c40;position:relative;transition:transform 160ms ease, box-shadow 160ms ease" style-hover="transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,32,28,0.08), 0 14px 32px rgba(20,32,28,0.16);z-index:1">
+          <p style="font-weight:800;font-size:19px">Report a problem with this record</p>
+          <p style="font-size:13px;color:#3a423e">Accident repair · 22 Jul 2022 · Mwangi Auto Works</p>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:14px"><span>◉ The details are wrong</span><span>○ This isn’t my car</span><span>○ It happened, but was resolved</span><span>○ Personal information is visible</span></div>
+          <div style="border:1px solid #14201c66;background:#f2f5f4;min-height:60px;padding:8px;font-size:13px;color:#4a5550">Tell us what’s wrong…</div>
+          <span style="border:1px dashed #14201c66;padding:8px;font-size:13px">+ Add evidence (invoice, photo, document)</span>
+          <div style="display:flex;gap:10px;justify-content:flex-end"><span style="border:1px solid #14201c66;font-weight:800;font-size:14px;padding:9px 14px;border-radius:4px;background:#ffffff;box-shadow:0 1px 2px rgba(20,32,28,0.10)">Cancel</span><span style="background:#1f4fcf;color:#ffffff;font-weight:800;font-size:14px;padding:9px 14px;border-radius:4px;box-shadow:0 1px 2px rgba(15,33,79,0.30), 0 4px 12px rgba(31,79,207,0.28)">Send for review</span></div>
+          <p style="font-size:12px;color:#4a5550">The record stays visible, marked “Under review”, until we decide. Usually within 10 working days.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showAnnotations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { notes: this.props.showAnnotations ?? true };
+  }
+}
+</script>
+</body>
+</html>
