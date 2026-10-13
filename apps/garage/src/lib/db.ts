@@ -24,6 +24,12 @@ export interface LocalDraft {
   submitKey?: string;
   lastSyncError?: string;
   step: number;
+  /** The last mileage SAZO had when the car was chosen (for the check as you type). */
+  lastMileage?: { km: number; on: string };
+  /** The mechanic confirmed a reading lower than the last one is correct. */
+  mileageConfirmed?: boolean;
+  /** The customer was told the work goes on the car's SAZO record. */
+  customerTold?: boolean;
 }
 
 export interface LocalPhoto {

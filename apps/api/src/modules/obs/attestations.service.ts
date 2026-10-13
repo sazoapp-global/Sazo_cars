@@ -62,6 +62,19 @@ export class AttestationsService {
     return this.info('r.id', requestId);
   }
 
+  /** How a set of confirmation requests were answered (for a garage's own numbers). */
+  async answerCounts(requestIds: string[]): Promise<{ confirmed: number; disputed: number; waiting: number }> {
+    if (!requestIds.length) return { confirmed: 0, disputed: 0, waiting: 0 };
+    const { rows } = await this.pool.query<{ confirmed: string; disputed: string; waiting: string }>(
+      `SELECT count(*) FILTER (WHERE a.response = 'confirmed') AS confirmed,
+              count(*) FILTER (WHERE a.response = 'disputed') AS disputed,
+              count(*) FILTER (WHERE a.response IS NULL AND r.expires_at > now()) AS waiting
+         FROM obs.attestation_requests r LEFT JOIN obs.attestations a ON a.request_id = r.id
+        WHERE r.id = ANY($1::uuid[])`, [requestIds]);
+    const r = rows[0]!;
+    return { confirmed: Number(r.confirmed), disputed: Number(r.disputed), waiting: Number(r.waiting) };
+  }
+
   /** Record the answer once; Trust recomputes the vehicle (and the garage's reputation) on attestation.received. */
   async answer(token: string, response: 'confirmed' | 'disputed', comment?: string): Promise<AttestationRequestInfo> {
     const req = await this.byToken(token);

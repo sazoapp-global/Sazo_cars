@@ -243,6 +243,14 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     expect(list.body.items[1].jobId).toBe(jobId);
   });
 
+  it('the summary counts this garage\'s jobs and how customers answered', async () => {
+    const r = await http.get('/v1/garage/summary').set(asGarage(managerToken)).expect(200);
+    expect(r.body).toMatchObject({ thisMonth: 2, lastMonth: 0, drafts: 0, checking: 0, notAccepted: 0 });
+    expect(r.body.customers.confirmed).toBe(1);
+    expect(r.body.customers.asked).toBeGreaterThanOrEqual(1);
+    await http.get('/v1/garage/summary').set({ Authorization: asGarage(managerToken).Authorization }).expect(400);
+  });
+
   it('Security S1: a garage cannot send records to its own source directly (only the app builds them)', async () => {
     const code = `GAR-${garageId.replace(/-/g, '').slice(0, 10).toUpperCase()}`;
     const res = await http.post('/v1/ingest/submissions').set(bearer(managerToken)).set('Idempotency-Key', randomUUID()).set('X-Source-Code', code)

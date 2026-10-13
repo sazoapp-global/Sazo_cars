@@ -27,8 +27,8 @@ test.beforeAll(async ({ request }) => {
 
 test('inspect a car and send the checklist', async ({ page }) => {
   await signInInApp(page, `0${MANAGER.slice(4)}`);
-  await expect(page.getByText('SAZO Inspect')).toBeVisible();
-  await expect(page.getByText('Bugolobi Inspection')).toBeVisible();
+  await expect(page.getByRole('banner').getByText('SAZO Inspect')).toBeVisible();
+  await expect(page.getByRole('banner').getByText('Bugolobi Inspection')).toBeVisible();
   await a11y(page);
 
   await page.getByRole('button', { name: 'New inspection' }).click();

@@ -90,6 +90,22 @@ export class GarageRepository {
     await this.pool.query('UPDATE garage.job_customers SET attestation_request_id = $2 WHERE job_id = $1', [jobId, requestId]);
   }
 
+  /** Counts for the workspace's numbers strip, and the customer-confirmation requests of sent jobs. */
+  async summary(organisationId: string): Promise<{ thisMonth: number; lastMonth: number; drafts: number; checking: number; notAccepted: number; requestIds: string[] }> {
+    const { rows } = await this.pool.query<{ this_month: string; last_month: string; drafts: string; checking: string; not_accepted: string; request_ids: string[] | null }>(
+      `SELECT count(*) FILTER (WHERE j.status <> 'draft' AND j.submitted_at >= date_trunc('month', now())) AS this_month,
+              count(*) FILTER (WHERE j.status <> 'draft' AND j.submitted_at >= date_trunc('month', now()) - interval '1 month'
+                                 AND j.submitted_at < date_trunc('month', now())) AS last_month,
+              count(*) FILTER (WHERE j.status = 'draft') AS drafts,
+              count(*) FILTER (WHERE j.status = 'submitted') AS checking,
+              count(*) FILTER (WHERE j.status = 'rejected') AS not_accepted,
+              array_agg(c.attestation_request_id) FILTER (WHERE c.attestation_request_id IS NOT NULL) AS request_ids
+         FROM garage.jobs j LEFT JOIN garage.job_customers c ON c.job_id = j.id
+        WHERE j.organisation_id = $1`, [organisationId]);
+    const r = rows[0]!;
+    return { thisMonth: Number(r.this_month), lastMonth: Number(r.last_month), drafts: Number(r.drafts), checking: Number(r.checking), notAccepted: Number(r.not_accepted), requestIds: r.request_ids ?? [] };
+  }
+
   async jobByAttestationRequest(requestId: string): Promise<JobRow | undefined> {
     const { rows } = await this.pool.query<JobRow>(
       `SELECT ${COLS} FROM garage.jobs j JOIN garage.job_customers c ON c.job_id = j.id WHERE c.attestation_request_id = $1`, [requestId]);

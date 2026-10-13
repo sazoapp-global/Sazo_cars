@@ -29,9 +29,19 @@ const toE164 = (input: string) => {
   return /^\+[1-9]\d{7,14}$/.test(e) ? e : undefined;
 };
 const kmOf = (m?: JobForm['mileage']) => (m ? (m.unit === 'mi' ? Math.round(m.value * 1.609344) : m.value) : undefined);
+/** The reading typed is lower than the last one SAZO has for this car (checked as you type, D-059). */
+const mileageBelowLast = (d: LocalDraft) => { const km = kmOf(d.form.mileage); return km !== undefined && !!d.lastMileage && km < d.lastMileage.km; };
+
+/** Says plainly who will see a field. */
+function Seen({ by }: { by: 'buyers' | 'private' }) {
+  return by === 'buyers'
+    ? <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-soft px-2 py-0.5 align-middle text-[11px] font-semibold text-primary-container"><Icon name="visibility" size={12} />Shown to buyers</span>
+    : <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-na-fill px-2 py-0.5 align-middle text-[11px] font-semibold text-na-text"><Icon name="lock" size={12} />Private</span>;
+}
 
 export function JobWizard({ jobId, garage, me }: { jobId: string; garage: Garage; me: Me }) {
   const [d, setD] = useState<LocalDraft | null | undefined>();
+  const [savedAt, setSavedAt] = useState<Date>();
   const online = useOnline();
   const syncTimer = useRef<number>(undefined);
 
@@ -42,7 +52,7 @@ export function JobWizard({ jobId, garage, me }: { jobId: string; garage: Garage
     setD((prev) => {
       if (!prev) return prev;
       const next = { ...fn(prev), dirty: true };
-      void saveDraft(next);
+      void saveDraft(next).then(() => setSavedAt(new Date()));
       window.clearTimeout(syncTimer.current);
       if (next.plateEntered.length >= 2 && next.workTypes.length) syncTimer.current = window.setTimeout(() => void syncDraft(jobId), 1500);
       return next;
@@ -59,7 +69,7 @@ export function JobWizard({ jobId, garage, me }: { jobId: string; garage: Garage
   const canNext = [
     !!d.plateEntered && (!d.newToSazo || !!d.photos.plate),
     d.workTypes.length > 0,
-    !!d.form.mileage && !!d.photos.odometer,
+    !!d.form.mileage && !!d.photos.odometer && (!mileageBelowLast(d) || !!d.mileageConfirmed),
     true, true, true,
   ][step];
   const next = () => goStep(step === 2 && !details ? 4 : step + 1);
@@ -67,9 +77,36 @@ export function JobWizard({ jobId, garage, me }: { jobId: string; garage: Garage
 
   return (
     <div className="flex min-h-[calc(100dvh-64px)] flex-col">
-      <div className="px-4 pt-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-label">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
-        <div className="mt-2 flex gap-1" aria-hidden>{STEPS.map((s, i) => <span key={s} className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-primary-container' : 'bg-soft-3'}`} />)}</div>
+      <div className="space-y-3 border-b border-line bg-white px-4 pb-3 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-label">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
+          <p className={`flex items-center gap-1 text-xs font-semibold ${d.lastSyncError ? 'text-warn-text' : 'text-ok-text'}`} aria-live="polite">
+            <Icon name={d.lastSyncError ? 'cloud_upload' : 'check'} size={14} />
+            {d.lastSyncError ? 'Saved on this phone' : savedAt ? `Saved ${savedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : 'Saved'}
+          </p>
+        </div>
+        <ol className="flex gap-1" aria-label="Steps">
+          {STEPS.map((s, i) => {
+            const skipped = i === 3 && !details;
+            const done = i < step && !skipped;
+            return (
+              <li key={s} className="min-w-0 flex-1">
+                <button type="button" disabled={i >= step || skipped} onClick={() => goStep(i)} aria-current={i === step ? 'step' : undefined}
+                  className={`block w-full text-left disabled:cursor-default ${skipped ? 'opacity-40' : ''}`} aria-label={`${s}${done ? ', finished — tap to change' : ''}`}>
+                  <span className={`block h-1.5 rounded-full ${i <= step && !skipped ? 'bg-primary-container' : 'bg-soft-3'}`} />
+                  <span className={`mt-1 hidden truncate text-[11px] font-semibold sm:block ${i === step ? 'text-primary-container' : 'text-label'}`}>{s}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        {step > 0 && d.plateEntered && (
+          <div className="flex items-center gap-2 rounded-lg bg-soft px-3 py-2">
+            <PlateText value={d.plateEntered} />
+            <span className="min-w-0 flex-1 truncate text-sm">{d.vehicleLabel ?? (d.newToSazo ? 'New to SAZO' : 'Matched when sent')}</span>
+            <button type="button" className="link shrink-0 text-sm" onClick={() => goStep(0)}>Change</button>
+          </div>
+        )}
       </div>
       <div className="flex-1 space-y-5 p-4">
         {step === 0 && <CarStep d={d} garage={garage} online={online} update={update} />}
@@ -114,7 +151,7 @@ function CarStep({ d, garage, online, update }: StepProps & { garage: Garage; on
     } finally { setBusy(false); }
   }
   const choose = (c: Candidate) => update((x) => ({ ...x, plateEntered: plate.trim().toUpperCase(), vehicleRef: c.vehicleRef, newToSazo: false,
-    vehicleLabel: [c.year, c.make, c.model].filter(Boolean).join(' ') || 'Vehicle' }));
+    vehicleLabel: [c.year, c.make, c.model].filter(Boolean).join(' ') || 'Vehicle', lastMileage: c.lastMileage, mileageConfirmed: false }));
 
   return (
     <>
@@ -179,7 +216,7 @@ function WorkStep({ d, update, setForm }: FormProps) {
   return (
     <>
       <h1 className="font-display text-2xl font-bold">What work was done?</h1>
-      <p className="-mt-3 text-muted">Pick all that apply.</p>
+      <p className="-mt-3 text-muted">Pick all that apply. <Seen by="buyers" /></p>
       <div className="grid grid-cols-2 gap-2">
         {WORK_TYPES.map((w) => (
           <button key={w} type="button" className="tile" aria-pressed={d.workTypes.includes(w)} onClick={() => toggle(w)}>
@@ -188,11 +225,11 @@ function WorkStep({ d, update, setForm }: FormProps) {
         ))}
       </div>
       <div>
-        <label htmlFor="job-description" className="label">Describe the job (optional)</label>
+        <label htmlFor="job-description" className="label">Describe the job (optional)<Seen by="private" /></label>
         <textarea id="job-description" rows={3} maxLength={1000} className="field !min-h-24 py-3"
           placeholder="e.g. Full service: engine oil and filter, air filter, front brake pads. Checked suspension."
           value={d.form.description ?? ''} onChange={(e) => setForm((x) => ({ ...x, description: e.target.value || undefined }))} />
-        <p className="mt-1 text-xs text-muted">For your garage's records. Not shown to buyers.</p>
+        <p className="mt-1 text-xs text-muted">For your garage's records only.</p>
       </div>
     </>
   );
@@ -200,6 +237,7 @@ function WorkStep({ d, update, setForm }: FormProps) {
 
 function MileageStep({ d, setForm, update }: FormProps) {
   const m = d.form.mileage;
+  const low = mileageBelowLast(d);
   const [text, setText] = useState(m ? m.value.toLocaleString('en-UG') : '');
   const unit = m?.unit ?? 'km';
   const setValue = (raw: string) => {
@@ -214,9 +252,10 @@ function MileageStep({ d, setForm, update }: FormProps) {
     <>
       <h1 className="font-display text-2xl font-bold">Mileage on the dashboard</h1>
       <div>
-        <label htmlFor="km" className="label">Odometer reading<span className="text-bad-text"> *</span></label>
+        <label htmlFor="km" className="label">Odometer reading<span className="text-bad-text"> *</span><Seen by="buyers" /></label>
         <div className="flex gap-2">
-          <input id="km" className="field !text-2xl font-bold tabular-nums" inputMode="numeric" autoComplete="off" value={text} onChange={(e) => setValue(e.target.value)} />
+          <input id="km" className={`field !text-2xl font-bold tabular-nums ${low ? '!border-2 !border-bad-text' : ''}`} inputMode="numeric" autoComplete="off" value={text}
+            aria-invalid={low} aria-describedby={low ? 'km-low' : undefined} onChange={(e) => setValue(e.target.value)} />
           <div className="flex shrink-0 overflow-hidden rounded-lg border border-line" role="group" aria-label="Unit">
             {(['km', 'mi'] as const).map((u) => (
               <button key={u} type="button" aria-pressed={unit === u} className={`min-w-14 px-3 font-bold ${unit === u ? 'bg-primary-container text-white' : 'bg-white'}`}
@@ -225,6 +264,16 @@ function MileageStep({ d, setForm, update }: FormProps) {
           </div>
         </div>
         <p className="mt-1 text-sm text-muted">{unit === 'mi' ? 'Miles are converted to km for the record.' : 'Type the number exactly as shown.'}</p>
+        {low && d.lastMileage && (
+          <div id="km-low" role="alert" className="mt-2 rounded-lg border border-bad-line bg-bad-fill p-3 text-sm">
+            <p className="font-semibold text-bad-text">Lower than the last reading SAZO has: {formatKm(d.lastMileage.km)} on {formatDate(d.lastMileage.on)}. Did you miss a digit?</p>
+            <label className="mt-2 flex items-start gap-3">
+              <input type="checkbox" className="mt-0.5 h-6 w-6 shrink-0 accent-[#0033aa]" checked={!!d.mileageConfirmed} onChange={(e) => update((x) => ({ ...x, mileageConfirmed: e.target.checked }))} />
+              <span>The reading is correct (for example, the dashboard was replaced). I’ll explain before sending.</span>
+            </label>
+          </div>
+        )}
+        {!low && d.lastMileage && <p className="mt-1 text-sm text-muted">Last reading on SAZO: {formatKm(d.lastMileage.km)} on {formatDate(d.lastMileage.on)}.</p>}
       </div>
       <PhotoButton jobId={d.jobId} kind="odometer_photo" photoId={d.photos.odometer} label="Odometer photo" required hint="Fit the whole dashboard reading in the photo."
         onChange={(id) => update((x) => ({ ...x, photos: { ...x.photos, odometer: id } }))} />
@@ -254,6 +303,7 @@ function DetailsStep({ d, setForm, update }: FormProps) {
   return (
     <>
       <h1 className="font-display text-2xl font-bold">About the work</h1>
+      <p className="-mt-3 text-sm text-muted">These details go on the car’s history. <Seen by="buyers" /></p>
       {w.includes('service') && (
         <section className="card space-y-3 p-4" aria-label="Service">
           <Pills label="What was done in the service?" options={SERVICE_ITEMS} selected={f.service?.items ?? []}
@@ -324,6 +374,7 @@ function CustomerStep({ d, setForm, update }: FormProps) {
     <>
       <h1 className="font-display text-2xl font-bold">Customer and cost</h1>
       <section className="card space-y-3 p-4" aria-label="Customer">
+        <p className="text-sm text-muted">Customer details are never shown to buyers. <Seen by="private" /></p>
         <div><label htmlFor="cname" className="label">Customer name</label>
           <input id="cname" className="field" autoComplete="off" value={c?.name ?? ''} onChange={(e) => setCustomer({ name: e.target.value || undefined })} /></div>
         <div><label htmlFor="cphone" className="label">Customer phone</label>
@@ -339,14 +390,14 @@ function CustomerStep({ d, setForm, update }: FormProps) {
         )}
       </section>
       <section className="card space-y-3 p-4" aria-label="Cost">
-        <div><label htmlFor="amount" className="label">Total charged</label>
+        <div><label htmlFor="amount" className="label">Total charged<Seen by="private" /></label>
           <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-semibold text-label">UGX</span>
             <input id="amount" className="field !pl-14 font-semibold tabular-nums" inputMode="numeric" value={amountText} onChange={(e) => {
               const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
               setAmountText(digits ? Number(digits).toLocaleString('en-UG') : '');
               setForm((x) => { const { cost: old, ...rest } = x; return digits ? { ...rest, cost: { ...(old ?? {}), total: { amount: Number(digits), currency: 'UGX' } } } : rest; });
             }} /></div>
-          <p className="mt-1 text-sm text-muted">Never shown to buyers.</p></div>
+          <p className="mt-1 text-sm text-muted">Kept private by SAZO — never shown to buyers.</p></div>
         {d.form.cost && (
           <>
             <Pills label="Paid by" options={[['cash', 'Cash'], ['mtn_momo', 'MTN MoMo'], ['airtel_money', 'Airtel Money'], ['bank', 'Bank'], ['other', 'Other']] as const}
@@ -454,10 +505,14 @@ function ReviewStep({ d, garage, me, online, update, goStep }: StepProps & { gar
         </div>
       ))}
 
+      <label className="flex items-start gap-3 rounded-lg border-2 border-ink bg-white p-3">
+        <input type="checkbox" className="mt-0.5 h-6 w-6 shrink-0 accent-[#0033aa]" checked={!!d.customerTold} onChange={(e) => update((x) => ({ ...x, customerTold: e.target.checked }))} />
+        <span className="text-sm">The customer knows this work will be added to the car’s history on SAZO. Their name and phone number are never shown to buyers.</span>
+      </label>
       {error && <p role="alert" className="font-semibold text-bad-text">{error}</p>}
       <div className="bottom-bar -mx-4 flex gap-2">
         <button type="button" className="btn btn-ghost" onClick={() => goStep(4)}><Icon name="arrow_back" />Back</button>
-        <button type="button" className="btn btn-focal flex-1" disabled={busy || missing.length > 0 || !online || warnings.some((w) => w.blocking) || warnings.some((w) => !explain[w.code]?.trim() || explain[w.code]!.trim().length < 3)}
+        <button type="button" className="btn btn-focal flex-1" disabled={busy || missing.length > 0 || !online || !d.customerTold || warnings.some((w) => w.blocking) || warnings.some((w) => !explain[w.code]?.trim() || explain[w.code]!.trim().length < 3)}
           onClick={() => void submit()}>
           <Icon name="cloud_upload" />{busy ? 'Sending…' : online ? 'Send to SAZO' : 'Send when online'}
         </button>

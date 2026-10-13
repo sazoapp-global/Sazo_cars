@@ -54,7 +54,7 @@ test('no sign-up in the app: unknown numbers are told to ask their manager; an a
 
 test('record a service with an odometer photo and send it', async ({ page }) => {
   await signInInApp(page, MANAGER_LOCAL);
-  await expect(page.getByText('Kansanga Motors')).toBeVisible();
+  await expect(page.getByRole('banner').getByText('Kansanga Motors')).toBeVisible();
   const a11y = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(a11y.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
 
@@ -71,7 +71,12 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await shot(page, '2-work');
   await page.getByRole('button', { name: 'Next' }).click();
 
+  // A missed digit is caught as you type: lower than the last reading SAZO has, so Next waits.
+  await page.getByLabel('Odometer reading').fill('10500');
+  await expect(page.getByRole('alert')).toContainText('Lower than the last reading SAZO has');
+  await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
   await page.getByLabel('Odometer reading').fill('110500');
+  await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByLabel('Odometer reading')).toHaveValue('110,500');
   await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: PNG });
   await expect(page.getByAltText(/Odometer photo/)).toBeVisible();
@@ -91,13 +96,13 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await expect(page.getByText('Peter Okello · will get an SMS')).toBeVisible();
   await expect(page.getByText('Full service. Front brake pads worn, advised the customer.')).toBeVisible();
   await shot(page, '5-review');
+  await page.getByLabel(/customer knows this work/).check();
   await page.getByRole('button', { name: 'Send to SAZO' }).click();
   await expect(page.getByRole('heading', { name: 'Added to the car’s history' })).toBeVisible();
   await expect(page.getByText('The customer will get an SMS')).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();
 
   const job = page.getByRole('button', { name: /UBJ 214K/ }).first();
-  await expect(job).toContainText('In vehicle history');
   await expect(job).toContainText('Waiting for customer');
   await expect(job).toContainText('by Manager Sarah');
   await shot(page, '6-home');
@@ -108,7 +113,7 @@ test('no signal halfway through a job: everything is kept and syncs when the sig
   await expect(page.getByRole('button', { name: 'New job' })).toBeVisible();
 
   await context.setOffline(true);
-  await expect(page.getByText('No signal — saving on phone')).toBeVisible();
+  await expect(page.getByText('You’re offline')).toBeVisible();
   await page.getByRole('button', { name: 'New job' }).click();
   await page.getByLabel('Number plate').fill('UBR 404N');
   await page.getByRole('button', { name: 'Find' }).click();

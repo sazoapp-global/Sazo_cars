@@ -6,6 +6,11 @@ import { go, useOnline, useRoute } from './lib/route';
 import { syncAll } from './lib/sync';
 import type { Me } from './lib/types';
 import { Home } from './screens/home';
+import { Records } from './screens/records';
+import { Alerts } from './screens/alerts';
+import { More } from './screens/more';
+import { Shell } from './components/shell';
+import { useJobs } from './lib/use-jobs';
 import { InspectionHome } from './screens/inspection-home';
 import { InspectionWizard } from './screens/inspection-wizard';
 import { ServerInspectionView } from './screens/server-inspection';
@@ -58,31 +63,44 @@ export function App() {
   if (session.me.needsDetails?.length && online) return <FinishDetails onDone={() => void load()} onSignOut={leave} />;
 
   const garage = session.garages.find((g) => g.id === garageId);
-  return (
-    <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-surface">
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-primary px-4 py-3 text-white">
-        <button type="button" onClick={() => go({ name: 'home' })} className="min-w-0 text-left">
-          <span className="block font-display text-lg font-extrabold leading-tight">{garage && isInspector(garage) ? 'SAZO Inspect' : 'SAZO Garage'}</span>
-          {garage && <span className="block truncate text-sm text-white/80">{garage.name}</span>}
-        </button>
-        <span role="status" aria-live="polite" className={`chip !border-0 ${online ? 'bg-white/15 text-white' : 'bg-warn-fill text-warn-text'}`}>
-          <Icon name={online ? 'cloud_done' : 'wifi_off'} size={14} />{online ? 'Online' : 'No signal — saving on phone'}
-        </span>
-      </header>
-      <UpdateBanner />
-      <main className="flex-1">
-        {!garage ? (
+  if (!garage) {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-surface">
+        <header className="sticky top-0 z-10 border-b-4 border-lime bg-primary px-4 py-3 text-white">
+          <span className="block font-display text-lg font-extrabold leading-tight">SAZO Garage</span>
+        </header>
+        <UpdateBanner />
+        <main className="flex-1">
           <GaragePicker session={session} onPick={async (id) => { await kv.set('garageId', id); setGarageId(id); }} onSignOut={leave} />
-        ) : route.name === 'job' ? <JobWizard key={route.jobId} jobId={route.jobId} garage={garage} me={session.me} />
-          : route.name === 'server-job' ? <ServerJobView jobId={route.jobId} garage={garage} />
-          : route.name === 'inspection' ? <InspectionWizard key={route.id} id={route.id} workplace={garage} me={session.me} />
-          : route.name === 'server-inspection' ? <ServerInspectionView id={route.id} workplace={garage} />
-          : route.name === 'staff' ? <Staff garage={garage} />
-          : route.name === 'concerns' ? <Concerns workplace={garage} />
-          : isInspector(garage) ? <InspectionHome workplace={garage} me={session.me} onSignOut={leave} />
-          : <Home garage={garage} me={session.me} onSignOut={leave} />}
-      </main>
-    </div>
+        </main>
+      </div>
+    );
+  }
+  return <Workspace garage={garage} me={session.me} route={route} online={online} onSignOut={leave}
+    onSwitch={session.garages.length > 1 ? async () => { await kv.set('garageId', ''); setGarageId(undefined); go({ name: 'home' }, true); } : undefined} />;
+}
+
+function Workspace({ garage, me, route, online, onSignOut, onSwitch }: { garage: Garage; me: Me; route: ReturnType<typeof useRoute>; online: boolean; onSignOut: () => void; onSwitch?: () => void }) {
+  const jobs = useJobs(garage);
+  const { refresh } = jobs;
+  // Coming back to a list (e.g. after sending a job): fetch the latest.
+  useEffect(() => { if (route.name === 'home' || route.name === 'records' || route.name === 'alerts') void refresh(); }, [route.name, refresh]);
+  const narrow = (node: React.ReactNode) => <div className="mx-auto w-full max-w-xl">{node}</div>;
+  return (
+    <Shell garage={garage} me={me} route={route} online={online} unsent={jobs.unsent} records={jobs.jobs ? jobs.jobs.length + jobs.drafts.length : undefined} needsAction={jobs.needsAction} onSignOut={onSignOut}>
+      <UpdateBanner />
+      {route.name === 'job' ? narrow(<JobWizard key={route.jobId} jobId={route.jobId} garage={garage} me={me} />)
+        : route.name === 'server-job' ? narrow(<ServerJobView jobId={route.jobId} garage={garage} />)
+        : route.name === 'inspection' ? narrow(<InspectionWizard key={route.id} id={route.id} workplace={garage} me={me} />)
+        : route.name === 'server-inspection' ? narrow(<ServerInspectionView id={route.id} workplace={garage} />)
+        : route.name === 'staff' ? narrow(<Staff garage={garage} />)
+        : route.name === 'concerns' ? narrow(<Concerns workplace={garage} />)
+        : route.name === 'more' ? narrow(<More garage={garage} me={me} onSignOut={onSignOut} onSwitch={onSwitch} />)
+        : isInspector(garage) ? narrow(<InspectionHome workplace={garage} me={me} onSignOut={onSignOut} />)
+        : route.name === 'records' ? <Records garage={garage} jobs={jobs} />
+        : route.name === 'alerts' ? <Alerts jobs={jobs} />
+        : <Home garage={garage} me={me} jobs={jobs} />}
+    </Shell>
   );
 }
 

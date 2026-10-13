@@ -58,6 +58,12 @@ export class GarageController {
     return this.garage.lookup(plate).catch(garageProblem);
   }
 
+  /** GET /v1/garage/summary — the numbers on the workspace home (this garage only). */
+  @Get('summary')
+  async summary(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined) {
+    return this.garage.summary(await this.org(actor, orgId, 'garage.job.create'));
+  }
+
   /** GET /v1/garage/jobs?status= */
   @Get('jobs')
   async list(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Query('status') status?: string, @Query('limit') limit?: string) {

@@ -1,7 +1,8 @@
-// Tiny hash router: #/ · #/job/<id> · #/jobs/<id> (submitted, read-only) · #/inspection/<id> · #/inspections/<id> · #/staff. The phone's back button works.
+// Tiny hash router: #/ · #/records · #/alerts · #/more · #/job/<id> · #/jobs/<id> (submitted, read-only) · #/inspection/<id> · #/inspections/<id> · #/staff.
+// The phone's back button works.
 import { useEffect, useState } from 'react';
 
-export type Route = { name: 'home' } | { name: 'job'; jobId: string } | { name: 'server-job'; jobId: string } | { name: 'staff' }
+export type Route = { name: 'home' } | { name: 'records' } | { name: 'alerts' } | { name: 'more' } | { name: 'job'; jobId: string } | { name: 'server-job'; jobId: string } | { name: 'staff' }
   | { name: 'inspection'; id: string } | { name: 'server-inspection'; id: string } | { name: 'concerns' };
 
 function parse(hash: string): Route {
@@ -9,6 +10,9 @@ function parse(hash: string): Route {
   if (a === 'job' && b) return { name: 'job', jobId: b };
   if (a === 'jobs' && b) return { name: 'server-job', jobId: b };
   if (a === 'staff') return { name: 'staff' };
+  if (a === 'records') return { name: 'records' };
+  if (a === 'alerts') return { name: 'alerts' };
+  if (a === 'more') return { name: 'more' };
   if (a === 'concerns') return { name: 'concerns' };
   if (a === 'inspection' && b) return { name: 'inspection', id: b };
   if (a === 'inspections' && b) return { name: 'server-inspection', id: b };
@@ -16,8 +20,9 @@ function parse(hash: string): Route {
 }
 
 export function go(route: Route, replace = false): void {
-  const hash = route.name === 'job' ? `#/job/${route.jobId}` : route.name === 'server-job' ? `#/jobs/${route.jobId}` : route.name === 'staff' ? '#/staff' : route.name === 'concerns' ? '#/concerns'
-    : route.name === 'inspection' ? `#/inspection/${route.id}` : route.name === 'server-inspection' ? `#/inspections/${route.id}` : '#/';
+  const hash = route.name === 'job' ? `#/job/${route.jobId}` : route.name === 'server-job' ? `#/jobs/${route.jobId}`
+    : route.name === 'inspection' ? `#/inspection/${route.id}` : route.name === 'server-inspection' ? `#/inspections/${route.id}`
+    : route.name === 'home' ? '#/' : `#/${route.name}`;
   if (replace) location.replace(hash);
   else location.hash = hash;
 }

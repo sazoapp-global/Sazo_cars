@@ -19,6 +19,7 @@ const DEFAULT_NAMES = [
   'photo_camera', 'picture_as_pdf', 'pin_drop', 'play_arrow', 'policy', 'psychology', 'savings', 'security', 'shield', 'smart_display',
   'storefront', 'support_agent', 'tire_repair', 'translate', 'trending_down', 'trending_up', 'verified_user', 'visibility', 'visibility_off',
   'oil_barrel', 'photo_library', 'workspace_premium', 'dark_mode', 'light_mode', 'menu', 'inventory_2', 'analytics',
+  'group', 'edit', 'payments',
 ];
 // Usage: node build-icons.mjs [output.ts] [name,name,...]  (defaults: the web app's icon set)
 const [, , outArg, namesArg] = process.argv;

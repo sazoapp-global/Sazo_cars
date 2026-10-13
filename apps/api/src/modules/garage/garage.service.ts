@@ -154,6 +154,12 @@ export class GarageService {
     return this.repo.list(organisationId, status, limit);
   }
 
+  /** The garage's numbers: jobs sent this month and last, drafts, and how customers answered. */
+  async summary(organisationId: string) {
+    const { requestIds, ...counts } = await this.repo.summary(organisationId);
+    return { ...counts, customers: { asked: requestIds.length, ...(await this.attestations.answerCounts(requestIds)) } };
+  }
+
   /** The API view of a job: vehicle by public reference, the entering staff member's name, customer masked. */
   async view(j: JobRow) {
     const [names, vehicle, customer, ownerConfirmation] = await Promise.all([
