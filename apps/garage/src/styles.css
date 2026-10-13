@@ -12,6 +12,7 @@
   --color-muted: #444653;
   --color-label: #52627d;
   --color-surface: #f9f9ff;
+  --color-card: #ffffff;
   --color-soft: #f0f3ff;
   --color-soft-2: #e7eeff;
   --color-soft-3: #dee8ff;
@@ -47,7 +48,7 @@
 @layer components {
   /* Identifiers: VIN, plate, chassis, engine no., job card no. — tabular figures so 0/O and 1/I can't be confused. */
   .sazo-id { font-feature-settings: 'tnum', 'cv05'; text-transform: uppercase; letter-spacing: 0.06em; }
-  .card { background: #fff; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: 0 1px 3px rgba(11, 19, 43, 0.04), 0 1px 2px -1px rgba(11, 19, 43, 0.04); }
+  .card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: 0 1px 3px rgba(11, 19, 43, 0.04), 0 1px 2px -1px rgba(11, 19, 43, 0.04); }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 20px; border-radius: 10px; font-weight: 700; font-size: 16px; }
   .btn:disabled { opacity: 0.55; cursor: not-allowed; }
   .btn-primary { background: var(--color-primary-container); color: #fff; }
@@ -55,8 +56,8 @@
   .btn-focal { background: var(--color-lime); color: var(--color-ink); }
   .btn-focal:hover:not(:disabled) { background: var(--color-lime-hover); }
   .btn-ghost { background: transparent; color: var(--color-ink); border: 1px solid var(--color-line); }
-  .btn-ghost:hover:not(:disabled) { background: #f1f5f9; color: var(--color-primary-container); }
-  .field { width: 100%; min-height: 52px; padding: 0 14px; background: #fff; border: 1px solid var(--color-line); border-radius: 8px; font-size: 16px; }
+  .btn-ghost:hover:not(:disabled) { background: var(--color-soft); color: var(--color-primary-container); }
+  .field { width: 100%; min-height: 52px; padding: 0 14px; background: var(--color-card); color: var(--color-on-surface); border: 1px solid var(--color-line); border-radius: 8px; font-size: 16px; }
   .field:focus { outline: none; border-color: var(--color-primary-container); box-shadow: 0 0 0 3px rgba(0, 51, 170, 0.15); }
   .label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--color-on-surface); }
   .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; padding: 3px 10px; border: 1px solid; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
@@ -68,9 +69,9 @@
 
 @layer components {
   /* Big pick-don't-type tiles for gloved/greasy hands at the bay. */
-  .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 84px; padding: 12px; border: 2px solid var(--color-line); border-radius: 12px; background: #fff; text-align: left; font-weight: 700; }
+  .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 84px; padding: 12px; border: 2px solid var(--color-line); border-radius: 12px; background: var(--color-card); text-align: left; font-weight: 700; }
   .tile[aria-pressed='true'] { border-color: var(--color-primary-container); background: var(--color-soft); color: var(--color-primary); }
-  .pill { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 2px solid var(--color-line); border-radius: 9999px; background: #fff; font-weight: 600; }
+  .pill { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 2px solid var(--color-line); border-radius: 9999px; background: var(--color-card); font-weight: 600; }
   .pill[aria-pressed='true'] { border-color: var(--color-primary-container); background: var(--color-primary-container); color: #fff; }
-  .bottom-bar { position: sticky; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, 0.96); border-top: 1px solid var(--color-line); }
+  .bottom-bar { position: sticky; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--color-card) 96%, transparent); border-top: 1px solid var(--color-line); }
 }

@@ -1,0 +1,56 @@
+/* Dark mode (D-112: light / dark / same as the device). The page sets <html data-theme="dark">; these rules
+   swap the colour tokens and fix the few places that use a fixed colour. Kept the same in apps/garage. */
+/* Screens only: printed reports and PDFs always use the light colours. */
+@media screen {
+  [data-theme='dark'] {
+    color-scheme: dark;
+    --color-primary: #a9c1ff;
+    --color-primary-container: #8aa8ff;
+    --color-primary-hover: #3d68ec;
+    --color-ink: #e8edf7;
+    --color-on-surface: #dbe3f0;
+    --color-muted: #aab4c6;
+    --color-label: #9aa8c2;
+    --color-surface: #0a1020;
+    --color-card: #111a2e;
+    --color-soft: #152039;
+    --color-soft-2: #1a2747;
+    --color-soft-3: #23325c;
+    --color-line: #26334f;
+    --color-line-strong: #384868;
+    --color-ok-text: #6ee7b7;
+    --color-ok-fill: #0e2b23;
+    --color-ok-line: #1f5c48;
+    --color-warn-text: #fbbf24;
+    --color-warn-fill: #2b2210;
+    --color-warn-line: #5c4715;
+    --color-bad-text: #fca5a5;
+    --color-bad-fill: #351616;
+    --color-bad-line: #6b2626;
+    --color-na-text: #cbd5e1;
+    --color-na-fill: #1a2335;
+    --color-na-line: #3a4760;
+  }
+  [data-theme='light'] { color-scheme: light; }
+
+  /* Surfaces that are white in light mode become the card colour. */
+  [data-theme='dark'] .bg-white { background-color: var(--color-card); }
+  [data-theme='dark'] [class*='focus:!bg-card']:focus, [data-theme='dark'] [class*='focus:bg-card']:focus,
+  [data-theme='dark'] [class*='focus-within:bg-card']:focus-within { background-color: var(--color-card) !important; }
+  [data-theme='dark'] .bg-white\/90 { background-color: rgb(17 26 46 / 0.9); }
+  [data-theme='dark'] .bg-white\/70, [data-theme='dark'] .bg-white\/60 { background-color: rgb(17 26 46 / 0.7); }
+  /* Brand blocks keep their navy; buttons keep a solid blue with white text. */
+  [data-theme='dark'] .bg-primary { background-color: #0c2160; }
+  [data-theme='dark'] .bg-primary-container, [data-theme='dark'] .btn-primary, [data-theme='dark'] .avatar { background-color: #2a4fc4; color: #fff; }
+  [data-theme='dark'] .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-hover); }
+  [data-theme='dark'] .bg-lime\/40 { background-color: rgb(191 241 0 / 0.16); }
+  [data-theme='dark'] .bg-ink { background-color: #03060d; }
+  [data-theme='dark'] .border-lime { border-color: #bff100; }
+  /* Lime stays lime, with dark text on it. */
+  [data-theme='dark'] .bg-lime, [data-theme='dark'] .bg-lime *, [data-theme='dark'] .btn-focal, [data-theme='dark'] .btn-focal * { color: #0b132b; }
+  [data-theme='dark'] .btn-ghost:hover:not(:disabled) { background: var(--color-soft); }
+  [data-theme='dark'] .chip-class { color: var(--color-primary); }
+  [data-theme='dark'] .skeleton { background: linear-gradient(90deg, #172036 25%, #1d2842 50%, #172036 75%); background-size: 200% 100%; }
+  [data-theme='dark'] img { filter: brightness(0.92); }
+  [data-theme='dark'] ::placeholder { color: #7d89a3; }
+}

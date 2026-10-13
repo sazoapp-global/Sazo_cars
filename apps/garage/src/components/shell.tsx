@@ -3,6 +3,7 @@
 import { isInspector, type Garage, type Me } from '../lib/types';
 import { go, type Route } from '../lib/route';
 import { Icon, type IconName } from './icon';
+import { ThemePicker } from './theme-picker';
 
 interface Item { route: Route['name']; label: string; icon: IconName; count?: number; badge?: number }
 
@@ -56,6 +57,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
           <p role="status" aria-live="polite" className={`mb-3 flex items-center gap-1.5 font-semibold ${online ? 'text-white/85' : 'text-lime'}`}>
             <Icon name={online ? 'cloud_done' : 'wifi_off'} size={16} />{online ? 'Online' : 'No signal — saving here'}
           </p>
+          <div className="mb-4"><ThemePicker onNavy /></div>
           <p className="font-semibold">{me.displayName}</p>
           <p className="text-white/75">{ROLE[garage.role] ?? 'Staff'}</p>
           <button type="button" onClick={onSignOut} className="mt-3 inline-flex items-center gap-1.5 text-white/85 underline-offset-2 hover:underline"><Icon name="logout" size={16} />Sign out</button>

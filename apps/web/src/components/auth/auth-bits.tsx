@@ -24,7 +24,7 @@ export function GoogleButton({ next, label }: { next: string; label: string }) {
 /** Ugandan mobile number with the design's flag and +256 prefix. Accepts 0772…, 772… or +256…. */
 export function PhoneInput({ id, defaultValue, describedBy }: { id: string; defaultValue?: string; describedBy?: string }) {
   return (
-    <div className="flex overflow-hidden rounded-lg border border-line bg-soft focus-within:border-primary-container focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(0,51,170,0.15)]">
+    <div className="flex overflow-hidden rounded-lg border border-line bg-soft focus-within:border-primary-container focus-within:bg-card focus-within:shadow-[0_0_0_3px_rgba(0,51,170,0.15)]">
       <span className="flex items-center gap-2 border-r border-line px-3 text-sm font-bold text-ink" aria-hidden><span className="text-lg leading-none">🇺🇬</span>+256</span>
       <input id={id} name="phone" type="tel" inputMode="tel" autoComplete="tel-national" required defaultValue={defaultValue} placeholder="772 123 456"
         className="min-h-12 w-full bg-transparent px-3 text-[16px] outline-none" aria-describedby={describedBy} />

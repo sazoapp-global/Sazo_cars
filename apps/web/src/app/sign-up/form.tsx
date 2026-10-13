@@ -32,7 +32,7 @@ function EmailForm({ next, login, mode, setMode }: FormProps) {
       <PersonFields values={state.values} errors={e} idPrefix="em-" />
       <div>
         <div className="mb-1.5 flex items-baseline justify-between"><label htmlFor="su-email" className="label !mb-0">Email</label><ModeSwitch mode={mode} onChange={setMode} /></div>
-        <input id="su-email" name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} className="field !bg-soft focus:!bg-white" aria-invalid={!!e.email} />
+        <input id="su-email" name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} className="field !bg-soft focus:!bg-card" aria-invalid={!!e.email} />
         {e.email && <p className="mt-1 text-sm font-semibold text-bad-text">{e.email}</p>}
       </div>
       <PasswordField id="su-password" name="password" label="Password" autoComplete="new-password" minLength={8} error={e.password} describedBy="pw-help" />
@@ -69,7 +69,7 @@ function PhoneForm({ next, login, mode, setMode }: FormProps) {
           <div>
             <label htmlFor="su-code" className="label">6-digit code</label>
             <input id="su-code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required autoFocus
-              className="field !bg-soft text-center !text-2xl tracking-[0.5em] tabular-nums focus:!bg-white" />
+              className="field !bg-soft text-center !text-2xl tracking-[0.5em] tabular-nums focus:!bg-card" />
           </div>
           <Alert text={state.error} />
           <button type="submit" name="intent" value="verify" className="btn btn-focal w-full !text-base shadow-sm" disabled={pending}>{pending ? 'Creating account…' : <>Create Free Account<Icon name="arrow_forward" /></>}</button>

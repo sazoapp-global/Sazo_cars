@@ -106,6 +106,21 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await expect(job).toContainText('Waiting for customer');
   await expect(job).toContainText('by Manager Sarah');
   await shot(page, '6-home');
+
+  // Dark mode from the More tab, kept on this phone (D-112).
+  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('button', { name: 'Dark' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await shot(page, '8-dark-more');
+  await page.getByRole('button', { name: 'Home' }).click();
+  await shot(page, '9-dark-home');
+  await page.getByRole('button', { name: 'More' }).click();
+  const dark = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(dark.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+  await page.getByRole('button', { name: 'Light' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
 test('no signal halfway through a job: everything is kept and syncs when the signal returns', async ({ page, context }) => {

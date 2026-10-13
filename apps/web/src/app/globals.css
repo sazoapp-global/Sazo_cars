@@ -12,6 +12,7 @@
   --color-muted: #444653;
   --color-label: #52627d;
   --color-surface: #f9f9ff;
+  --color-card: #ffffff;
   --color-soft: #f0f3ff;
   --color-soft-2: #e7eeff;
   --color-soft-3: #dee8ff;
@@ -47,7 +48,7 @@
 @layer components {
   /* Identifiers: VIN, plate, chassis, engine no., job card no. — tabular figures so 0/O and 1/I can't be confused. */
   .sazo-id { font-feature-settings: 'tnum', 'cv05'; text-transform: uppercase; letter-spacing: 0.06em; }
-  .card { background: #fff; border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: 0 1px 3px rgba(11, 19, 43, 0.04), 0 1px 2px -1px rgba(11, 19, 43, 0.04); }
+  .card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-card); box-shadow: 0 1px 3px rgba(11, 19, 43, 0.04), 0 1px 2px -1px rgba(11, 19, 43, 0.04); }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 8px; font-weight: 700; font-size: 15px; }
   .btn:disabled { opacity: 0.55; cursor: not-allowed; }
   .btn-primary { background: var(--color-primary-container); color: #fff; }
@@ -55,8 +56,8 @@
   .btn-focal { background: var(--color-lime); color: var(--color-ink); }
   .btn-focal:hover:not(:disabled) { background: var(--color-lime-hover); }
   .btn-ghost { background: transparent; color: var(--color-ink); border: 1px solid var(--color-line); }
-  .btn-ghost:hover:not(:disabled) { background: #f1f5f9; color: var(--color-primary-container); }
-  .field { width: 100%; min-height: 48px; padding: 0 14px; background: #fff; border: 1px solid var(--color-line); border-radius: 8px; font-size: 16px; }
+  .btn-ghost:hover:not(:disabled) { background: var(--color-soft); color: var(--color-primary-container); }
+  .field { width: 100%; min-height: 48px; padding: 0 14px; background: var(--color-card); color: var(--color-on-surface); border: 1px solid var(--color-line); border-radius: 8px; font-size: 16px; }
   .field:focus { outline: none; border-color: var(--color-primary-container); box-shadow: 0 0 0 3px rgba(0, 51, 170, 0.15); }
   .label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--color-on-surface); }
   .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; padding: 3px 10px; border: 1px solid; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
@@ -68,7 +69,7 @@
   /* Two-way choice ("Email" | "Phone code"). */
   .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; background: var(--color-soft); border-radius: 10px; }
   .segmented > button { min-height: 40px; border-radius: 7px; font-weight: 600; font-size: 14px; color: var(--color-muted); }
-  .segmented > button[aria-selected='true'] { background: #fff; color: var(--color-primary-container); box-shadow: 0 1px 3px rgba(11, 19, 43, 0.12); }
+  .segmented > button[aria-selected='true'] { background: var(--color-card); color: var(--color-primary-container); box-shadow: 0 1px 3px rgba(11, 19, 43, 0.12); }
   .divider { display: flex; align-items: center; gap: 12px; color: var(--color-label); font-size: 13px; }
   .divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid var(--color-line); }
   .skeleton { background: linear-gradient(90deg, #eef2f7 25%, #f6f8fb 50%, #eef2f7 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 8px; }

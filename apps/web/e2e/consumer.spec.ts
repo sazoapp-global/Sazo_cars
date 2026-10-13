@@ -89,3 +89,18 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('link', { name: 'Log in', exact: true })).toBeVisible();
 });
+
+test('dark mode: switch from the header, kept after a reload, and readable (D-112)', async ({ page }) => {
+  await page.goto('/');
+  const html = page.locator('html');
+  await page.getByRole('button', { name: 'Switch to dark mode' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await noSeriousA11yIssues(page);
+  await page.goto('/v/' + (await (await page.request.get('http://localhost:3100/v1/vehicles/search?q=UBJ214K')).json()).matches[0].vehicleRef);
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await noSeriousA11yIssues(page);
+  await page.getByRole('button', { name: 'Switch to light mode' }).click();
+  await expect(html).toHaveAttribute('data-theme', 'light');
+});

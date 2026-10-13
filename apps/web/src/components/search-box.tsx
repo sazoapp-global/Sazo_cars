@@ -14,7 +14,7 @@ export function SearchBox({ defaultValue, autoFocus = false, label = 'Number pla
           <span className="sazo-id pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 rounded-md bg-primary-container px-2 py-1.5 text-xs font-extrabold text-white" aria-hidden>UG</span>
           <input id="q" name="q" required minLength={4} maxLength={32} defaultValue={defaultValue} autoFocus={autoFocus}
             autoCapitalize="characters" autoComplete="off" spellCheck={false} placeholder="Enter registration number or VIN"
-            className="field sazo-id !border-transparent !bg-soft !pl-14 !text-[16px] font-semibold placeholder:font-normal placeholder:normal-case placeholder:tracking-normal focus:!border-primary-container focus:!bg-white" />
+            className="field sazo-id !border-transparent !bg-soft !pl-14 !text-[16px] font-semibold placeholder:font-normal placeholder:normal-case placeholder:tracking-normal focus:!border-primary-container focus:!bg-card" />
         </div>
         <button type="submit" className="btn btn-focal whitespace-nowrap shadow-sm sm:w-auto">
           <Icon name="search" /> Check This Car

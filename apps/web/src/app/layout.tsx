@@ -3,8 +3,12 @@ import '@fontsource/plus-jakarta-sans/600.css';
 import '@fontsource/plus-jakarta-sans/700.css';
 import '@fontsource/plus-jakarta-sans/800.css';
 import './globals.css';
+import './theme-dark.css';
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { ThemeToggle } from '@/components/theme/theme-toggle';
+import { THEME_COOKIE, THEME_SCRIPT, parseTheme } from '@/lib/theme';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
@@ -24,11 +28,13 @@ async function currentUser(): Promise<Me | undefined> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const me = await currentUser();
+  const [me, theme] = await Promise.all([currentUser(), cookies().then((c) => parseTheme(c.get(THEME_COOKIE)?.value))]);
   return (
-    <html lang="en-UG">
+    // An explicit choice is drawn by the server; "same as device" is settled by THEME_SCRIPT before paint.
+    <html lang="en-UG" {...(theme !== 'system' ? { 'data-theme': theme } : {})} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} /></head>
       <body className="flex min-h-screen flex-col">
-        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
         <div role="note" className="bg-ink px-4 py-2 text-center text-xs text-white/90">
           <Icon name="science" size={14} className="mr-1 inline align-[-2px]" />
           SAZO is in testing. The vehicles and records shown are simulated and do not describe real cars.
@@ -46,6 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <Icon name="bookmark" size={20} className="sm:hidden" /><span className="sr-only sm:not-sr-only">Saved</span>
               </Link>
             )}
+            <ThemeToggle />
             {me ? (
               <Link href="/account" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm font-semibold hover:bg-soft sm:pr-3" aria-label={`Settings — ${me.displayName}`}>
                 <span className="avatar" aria-hidden>{me.initials}</span><span className="hidden max-w-[10rem] truncate sm:inline">{me.displayName}</span>

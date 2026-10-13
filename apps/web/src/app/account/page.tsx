@@ -2,6 +2,7 @@ import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
+import { ThemeChoice } from '@/components/theme/theme-choice';
 import { api, isSignedIn } from '@/lib/api';
 import { deviceName, localPhone } from '@/lib/phone';
 import type { Me } from '@/lib/types';
@@ -161,6 +162,11 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
           <p id="newpw-help" className="text-sm text-muted">At least {profile.strongPasswordRequired ? 12 : 8} characters{profile.strongPasswordRequired ? ' — your role can change car histories, so it needs a longer password' : ''}.</p>
           <button className="btn btn-ghost">{profile.hasPassword ? 'Change password' : 'Set password'}</button>
         </form>
+      </section>
+
+      <section className="card space-y-3 p-5" aria-labelledby="appearance">
+        <h2 id="appearance" className="font-display text-lg font-semibold">Appearance</h2>
+        <ThemeChoice />
       </section>
 
       <section className="card p-5" aria-labelledby="texts">

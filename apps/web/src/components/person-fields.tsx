@@ -19,18 +19,18 @@ export function PersonFields({ values = {}, errors = {}, lockIdentity = false, i
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor={id('surname')} className="label">Surname</label>
-          <input id={id('surname')} name="surname" autoComplete="family-name" required maxLength={60} defaultValue={values.surname} className="field !bg-soft focus:!bg-white" {...described('surname')} />
+          <input id={id('surname')} name="surname" autoComplete="family-name" required maxLength={60} defaultValue={values.surname} className="field !bg-soft focus:!bg-card" {...described('surname')} />
           {err('surname')}
         </div>
         <div>
           <label htmlFor={id('firstName')} className="label">First name</label>
-          <input id={id('firstName')} name="firstName" autoComplete="given-name" required maxLength={60} defaultValue={values.firstName} className="field !bg-soft focus:!bg-white" {...described('firstName')} />
+          <input id={id('firstName')} name="firstName" autoComplete="given-name" required maxLength={60} defaultValue={values.firstName} className="field !bg-soft focus:!bg-card" {...described('firstName')} />
           {err('firstName')}
         </div>
       </div>
       <div>
         <label htmlFor={id('middleName')} className="label">Middle name <span className="font-normal text-muted">(optional)</span></label>
-        <input id={id('middleName')} name="middleName" autoComplete="additional-name" maxLength={60} defaultValue={values.middleName} className="field !bg-soft focus:!bg-white" {...described('middleName')} />
+        <input id={id('middleName')} name="middleName" autoComplete="additional-name" maxLength={60} defaultValue={values.middleName} className="field !bg-soft focus:!bg-card" {...described('middleName')} />
         {err('middleName')}
       </div>
       {lockIdentity ? null : (
@@ -48,7 +48,7 @@ export function PersonFields({ values = {}, errors = {}, lockIdentity = false, i
           </fieldset>
           <div>
             <label htmlFor={id('dateOfBirth')} className="label">Date of birth</label>
-            <input id={id('dateOfBirth')} name="dateOfBirth" type="date" required max={latestDob()} min="1900-01-01" defaultValue={values.dateOfBirth} className="field !bg-soft focus:!bg-white" {...described('dateOfBirth')} />
+            <input id={id('dateOfBirth')} name="dateOfBirth" type="date" required max={latestDob()} min="1900-01-01" defaultValue={values.dateOfBirth} className="field !bg-soft focus:!bg-card" {...described('dateOfBirth')} />
             {err('dateOfBirth')}
           </div>
         </div>

@@ -30,7 +30,7 @@ function PasswordForm({ next, signUp, mode, setMode }: FormProps) {
       <input type="hidden" name="next" value={next} />
       <div>
         <div className="mb-1.5 flex items-baseline justify-between"><label htmlFor="email" className="label !mb-0">Email</label><ModeSwitch mode={mode} onChange={setMode} /></div>
-        <input id="email" name="email" type="email" autoComplete="username" required defaultValue={state.email} className="field !bg-soft focus:!bg-white" />
+        <input id="email" name="email" type="email" autoComplete="username" required defaultValue={state.email} className="field !bg-soft focus:!bg-card" />
       </div>
       <PasswordField id="password" name="password" label="Password" autoComplete="current-password" />
       <div className="flex items-center justify-between gap-3"><RememberDevice id="remember-email" /><Link href="/forgot-password" className="text-sm font-semibold text-primary-container hover:underline">Forgot password?</Link></div>
@@ -62,7 +62,7 @@ function PhoneForm({ next, signUp, mode, setMode }: FormProps) {
           <div>
             <label htmlFor="code" className="label">6-digit code</label>
             <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required autoFocus
-              className="field !bg-soft text-center !text-2xl tracking-[0.5em] tabular-nums focus:!bg-white" />
+              className="field !bg-soft text-center !text-2xl tracking-[0.5em] tabular-nums focus:!bg-card" />
           </div>
           <Alert text={state.error} />
           <button type="submit" name="intent" value="verify" className="btn btn-focal w-full !text-base shadow-sm" disabled={pending}>{pending ? 'Checking…' : <>Log in to SAZO<Icon name="arrow_forward" /></>}</button>

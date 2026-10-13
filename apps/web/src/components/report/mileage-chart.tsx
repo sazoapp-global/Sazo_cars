@@ -27,27 +27,27 @@ export function MileageChart({ readings }: { readings: Reading[] }) {
       </defs>
       {ticks.map((t) => (
         <g key={t}>
-          <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="#e2e8f0" strokeDasharray="4 4" />
-          <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" fontSize="13" fill="#64748b">{short(t)}</text>
+          <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} stroke="var(--color-line)" strokeDasharray="4 4" />
+          <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" fontSize="13" fill="var(--color-label)">{short(t)}</text>
         </g>
       ))}
       <path d={area} fill="url(#km-fill)" />
-      <path d={line} fill="none" stroke="#0033aa" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={line} fill="none" stroke="var(--color-primary-container)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
       {readings.map((r, i) => {
         const [cx, cy] = pts[i]!;
         const drop = i > 0 && r.km < readings[i - 1]!.km;
         const last = i === readings.length - 1;
         return (
           <g key={`${r.at}-${i}`}>
-            <circle cx={cx} cy={cy} r={last ? 7 : 5} fill={drop ? '#dc2626' : last ? '#bff100' : '#fff'} stroke={drop ? '#dc2626' : '#0033aa'} strokeWidth="3" />
+            <circle cx={cx} cy={cy} r={last ? 7 : 5} fill={drop ? '#dc2626' : last ? '#bff100' : 'var(--color-card)'} stroke={drop ? '#dc2626' : 'var(--color-primary-container)'} strokeWidth="3" />
             {(i === 0 || last || readings.length <= 6) && (
-              <text x={cx} y={cy - 12} textAnchor={i === 0 ? 'start' : last ? 'end' : 'middle'} fontSize="13" fontWeight="700" fill="#0b132b">{short(r.km)} km</text>
+              <text x={cx} y={cy - 12} textAnchor={i === 0 ? 'start' : last ? 'end' : 'middle'} fontSize="13" fontWeight="700" fill="var(--color-ink)">{short(r.km)} km</text>
             )}
           </g>
         );
       })}
       {[readings[0]!, readings.at(-1)!].map((r, i) => (
-        <text key={i} x={x(r.at)} y={H - 12} textAnchor={i ? 'end' : 'start'} fontSize="13" fontWeight="600" fill="#475569">{formatDate(r.at, 'month')}</text>
+        <text key={i} x={x(r.at)} y={H - 12} textAnchor={i ? 'end' : 'start'} fontSize="13" fontWeight="600" fill="var(--color-muted)">{formatDate(r.at, 'month')}</text>
       ))}
     </svg>
   );
