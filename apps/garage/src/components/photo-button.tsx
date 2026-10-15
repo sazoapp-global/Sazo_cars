@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import { getPhoto, savePhoto, type LocalPhoto } from '../lib/db';
-import { sha256, shrink } from '../lib/photos';
+import { quickCheck, sha256, shrink } from '../lib/photos';
 import { uuidv7 } from '../lib/uuid';
 import { Icon } from './icon';
 
@@ -19,6 +19,7 @@ export function PhotoButton({ jobId, kind, photoId, label, hint, required, onCha
   const inputId = useId();
   const [url, setUrl] = useState<string>();
   const [error, setError] = useState<string>();
+  const [warning, setWarning] = useState<string>();
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -32,10 +33,12 @@ export function PhotoButton({ jobId, kind, photoId, label, hint, required, onCha
 
   async function take(file: File | undefined) {
     if (!file) return;
-    setBusy(true); setError(undefined);
+    setBusy(true); setError(undefined); setWarning(undefined);
     try {
       const blob = await shrink(file);
       if (!ACCEPTED.includes(blob.type)) throw new Error('unsupported');
+      const problem = await quickCheck(blob);
+      if (problem) setWarning(`This photo looks ${problem === 'too_dark' ? 'too dark' : 'too small'} to read. Please retake it. If you keep it, a SAZO reviewer will check it and the record counts for less until then.`);
       const id = uuidv7();
       await savePhoto({ id, jobId, kind, blob, mime: blob.type, size: blob.size, sha256: await sha256(blob), capturedAt: new Date().toISOString() });
       onChange(id);
@@ -56,9 +59,10 @@ export function PhotoButton({ jobId, kind, photoId, label, hint, required, onCha
           <Icon name="add_a_photo" />{busy ? 'Saving photo…' : url ? 'Retake' : 'Take photo'}
         </label>
         <input id={inputId} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { void take(e.target.files?.[0]); e.target.value = ''; }} />
-        {url && <button type="button" aria-label={`Remove ${label} photo`} className="btn btn-ghost !px-3" onClick={() => onChange(undefined)}><Icon name="delete" /></button>}
+        {url && <button type="button" aria-label={`Remove ${label} photo`} className="btn btn-ghost !px-3" onClick={() => { setWarning(undefined); onChange(undefined); }}><Icon name="delete" /></button>}
       </div>
       {error && <p role="alert" className="mt-1 text-sm font-semibold text-bad-text">{error}</p>}
+      {warning && url && <p role="alert" className="mt-1 flex items-start gap-1 text-sm font-semibold text-warn-text"><Icon name="warning" size={16} className="mt-0.5 shrink-0" />{warning}</p>}
     </div>
   );
 }

@@ -186,7 +186,9 @@ export class ObservationsService implements OnModuleInit {
               COALESCE(array_agg(f.kind) FILTER (WHERE f.kind IS NOT NULL), '{}') AS "evidenceKinds"
          FROM obs.observations o
          LEFT JOIN obs.observation_evidence oe ON oe.observation_id = o.id
+         -- X-01: a photo waiting for a reviewer, or rejected, doesn't count as evidence for the record.
          LEFT JOIN obs.evidence_files f ON f.id = oe.evidence_file_id
+              AND EXISTS (SELECT 1 FROM obs.evidence_status st WHERE st.evidence_file_id = f.id AND st.status IN ('ok','cleared'))
         WHERE o.vehicle_id = ANY($1)
         GROUP BY o.id
         ORDER BY o.event_time NULLS LAST, o.recorded_at`,

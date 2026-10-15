@@ -11,6 +11,8 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { testPhoto } from './test-photos.js';
+import sharp from 'sharp';
 import { signInWithCode } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
@@ -44,7 +46,7 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
   const signIn = (phone: string, displayName?: string) => signInWithCode(app, http, phone, displayName);
 
   async function upload(token: string, kind: string, content: string): Promise<string> {
-    const bytes = Buffer.from(content);
+    const bytes = await testPhoto(content);
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     const slot = await http.post('/v1/evidence/uploads').set(bearer(token))
       .send({ kind, mimeType: 'image/jpeg', sizeBytes: bytes.length, sha256 }).expect(201);
@@ -305,5 +307,50 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     await inbound(INBOUND_KEY, { from: CUSTOMER2, text: 'stop', id: 'AT-3' }).expect(200);
     expect(sms(CUSTOMER2)).toContain('will not text you about garage visits');
     expect(await app.get(PartiesService).visitTextsAllowed(CUSTOMER2)).toBe(false);
+  });
+
+  it('X-01: photos are checked — unreadable, dark, re-used or near-copied photos wait for a reviewer and do not count until cleared', async () => {
+    async function send(bytes: Buffer, kind = 'odometer_photo', capturedAt?: string) {
+      const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const slot = await http.post('/v1/evidence/uploads').set(bearer(mechanicToken))
+        .send({ kind, mimeType: 'image/jpeg', sizeBytes: bytes.length, sha256, ...(capturedAt ? { capturedAt } : {}) }).expect(201);
+      await http.put(new URL(slot.body.uploadUrl).pathname).set(bearer(mechanicToken)).set('Content-Type', 'image/jpeg').send(bytes).expect(204);
+      return (await http.post(`/v1/evidence/${slot.body.evidenceId}/complete`).set(bearer(mechanicToken)).expect(200)).body;
+    }
+    const good = await testPhoto('x01 fresh odometer');
+    const ok = await send(good, 'odometer_photo', new Date().toISOString());
+    expect(ok.checks).toEqual({ status: 'ok', problems: [] });
+
+    const reasons = (b: { checks: { problems: { reason: string }[] } }) => b.checks.problems.map((p) => p.reason);
+    expect(reasons(await send(Buffer.from('not a photo at all')))).toEqual(['not_a_readable_image']);
+    expect(reasons(await send(await testPhoto('x01 dark', { brightness: 10 })))).toEqual(['too_dark']);
+    expect(reasons(await send(await testPhoto('x01 tiny', { width: 200, height: 150 })))).toEqual(['too_small']);
+    expect(reasons(await send(await testPhoto('x01 old'), 'odometer_photo', new Date(Date.now() - 5 * 86_400_000).toISOString()))).toEqual(['taken_long_before_upload']);
+    // The same photo again (exact copy), and the same picture re-saved at another quality (near copy).
+    const again = await send(good);
+    expect(again.checks.status).toBe('needs_checking');
+    expect(again.checks.problems[0]).toMatchObject({ reason: 'same_photo_used_before', message: 'This exact photo was already sent to SAZO before' });
+    const resaved = await sharp(good).jpeg({ quality: 60 }).toBuffer();
+    expect(reasons(await send(resaved))).toEqual(['near_copy_of_earlier_photo']);
+
+    // A job sent with the re-used photo: accepted, but the garage is told, and a reviewer sees it.
+    const id = randomUUID();
+    await http.put(`/v1/garage/jobs/${id}`).set(asGarage(mechanicToken)).send({ plateEntered: 'UBQ 101A', vehicleRef, workTypes: ['service'],
+      clientCreatedAt: new Date().toISOString(), form: { mileage: { value: 92000, unit: 'km', odometerPhotoId: again.evidenceId }, service: { items: ['engine_oil'] } } }).expect(200);
+    await http.post(`/v1/garage/jobs/${id}/submit`).set(asGarage(mechanicToken)).set('Idempotency-Key', randomUUID()).send({}).expect(202);
+    const job = await http.get(`/v1/garage/jobs/${id}`).set(asGarage(managerToken)).expect(200);
+    expect(job.body.photosNeedChecking).toEqual([{ evidenceId: again.evidenceId, path: 'form.mileage.odometerPhotoId', problems: ['This exact photo was already sent to SAZO before'] }]);
+
+    const ledger = async () => (await http.get(`/v1/vehicles/${vehicleRef}/evidence`).set(bearer(adminToken)).expect(200)).body.items
+      .find((i: { type: string; attributes: { km?: number } }) => i.type === 'odometer_reading' && i.attributes.km === 92000);
+    const before = await ledger();
+
+    await http.get('/v1/admin/photos/needs-checking').set(bearer(mechanicToken)).expect(403);
+    const queue = await http.get('/v1/admin/photos/needs-checking').set(bearer(adminToken)).expect(200);
+    expect(queue.body.items.map((i: { evidenceId: string }) => i.evidenceId)).toContain(again.evidenceId);
+    await http.post(`/v1/admin/photos/${again.evidenceId}/review`).set(bearer(adminToken)).send({ decision: 'clear', reason: 'Same dashboard, re-sent by mistake' }).expect(204);
+    expect((await http.get(`/v1/garage/jobs/${id}`).set(asGarage(managerToken)).expect(200)).body.photosNeedChecking).toEqual([]);
+    // Cleared, the photo counts again: the reading's confidence goes up.
+    expect((await ledger()).confidence).toBeGreaterThan(before.confidence);
   });
 });

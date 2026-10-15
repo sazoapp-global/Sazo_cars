@@ -56,6 +56,8 @@ export class TrustService implements OnModuleInit {
     };
     this.bus.subscribe('observation.recorded', onChange);
     this.bus.subscribe('observation.related', onChange);
+    // X-01: a reviewer cleared or rejected a photo — the records it backs are re-weighed.
+    this.bus.subscribe('evidence.reviewed', onChange);
     this.bus.subscribe('attestation.received', async (e) => {
       await this.recompute(String(e.payload.vehicleId), 'attestation');
     });

@@ -1,7 +1,7 @@
 // A car dealer registers, is approved, lists a known car and a car new to SAZO, changes a price, sends a
 // buyer a report link, records a sale (price kept private) and adds a salesperson.
 import { expect, test } from '@playwright/test';
-import { a11y, createAdmin, shot, signIn } from './helpers';
+import { a11y, createAdmin, shot, signIn, testPhoto } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const OWNER = `+2567090${stamp}`;
@@ -44,7 +44,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Number plate').fill('uba 905t');
   await dealer.getByLabel('Asking price (UGX) *').fill('25,500,000');
   await dealer.getByLabel('Mileage now (km)').fill('150000');
-  await dealer.getByLabel(/Odometer photo/).setInputFiles({ name: 'odo.jpg', mimeType: 'image/jpeg', buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 9, 9, 9]) });
+  await dealer.getByLabel(/Odometer photo/).setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: testPhoto('dealer odometer') });
   await dealer.getByRole('button', { name: 'Add to stock' }).click();
   await expect(dealer.getByRole('status')).toContainText('Added to your stock');
   const car = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });

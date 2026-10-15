@@ -934,6 +934,35 @@ paths:
       responses:
         '200': { description: Everything SAZO holds about the person }
 
+  /admin/photos/needs-checking:
+    get:
+      tags: [Admin]
+      operationId: adminListPhotosNeedingChecks
+      summary: Photos the automatic checks flagged, oldest first (conflict.review) — X-01
+      responses:
+        '200': { description: '{ items: [EvidenceFile & { vehicleIds }] }' }
+
+  /admin/photos/{evidenceId}/review:
+    post:
+      tags: [Admin]
+      operationId: adminReviewPhoto
+      summary: Clear a flagged photo (it counts as evidence again) or reject it; the cars it backs are re-weighed
+      parameters:
+        - { name: evidenceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason]
+              properties:
+                decision: { type: string, enum: [clear, reject] }
+                reason: { type: string, minLength: 3, maxLength: 1000 }
+      responses:
+        '204': { description: Recorded }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /admin/ownership-claims:
     get:
       tags: [Admin]
@@ -2426,6 +2455,15 @@ components:
         submittedAt: { type: [string, 'null'], format: date-time }
         submissionId: { type: [string, 'null'], format: uuid }
         ownerConfirmation: { type: string, enum: [confirmed, disputed, pending, not_requested] }
+        photosNeedChecking:
+          description: X-01 — photos in this job the checks flagged and no reviewer has cleared yet.
+          type: array
+          items:
+            type: object
+            properties:
+              evidenceId: { type: string, format: uuid }
+              path: { type: string }
+              problems: { type: array, items: { type: string } }
         rejectionReason: { type: [string, 'null'] }
         version: { type: integer }
     CheckWarning:
@@ -2465,6 +2503,24 @@ components:
         sizeBytes: { type: integer }
         capturedAt: { type: string, format: date-time }
         uploadedAt: { type: string, format: date-time }
+        checks: { $ref: '#/components/schemas/PhotoChecks' }
+    PhotoChecks:
+      description: |
+        X-01. What SAZO's photo checks found: readable, big and bright enough, taken recently, not a photo
+        sent before (exactly or a near copy). Never a reason to refuse the upload — a flagged photo waits for a
+        reviewer and does not count as evidence for its record until cleared.
+      type: object
+      required: [status, problems]
+      properties:
+        status: { type: string, enum: [ok, needs_checking, cleared, rejected] }
+        problems:
+          type: array
+          items:
+            type: object
+            properties:
+              check: { type: string, enum: [duplicate, quality, capture_time, content] }
+              reason: { type: string, enum: [same_photo_used_before, near_copy_of_earlier_photo, not_a_readable_image, too_small, too_dark, taken_long_before_upload, time_in_future] }
+              message: { type: string }
     OcrExtraction:
       type: object
       required: [extractionId, evidenceId, proposedFields]

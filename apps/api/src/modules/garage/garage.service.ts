@@ -162,12 +162,19 @@ export class GarageService {
 
   /** The API view of a job: vehicle by public reference, the entering staff member's name, customer masked. */
   async view(j: JobRow) {
-    const [names, vehicle, customer, ownerConfirmation] = await Promise.all([
+    const refs = evidenceRefs(j.form);
+    const [names, vehicle, customer, ownerConfirmation, checks] = await Promise.all([
       this.iam.displayNames([j.createdBy]),
       j.vehicleId ? this.registry.getVehicle(j.vehicleId) : undefined,
       j.partyId ? this.parties.reveal(j.partyId) : undefined,
       this.ownerConfirmation(j),
+      this.evidence.checks(refs.map((r) => r.id)),
     ]);
+    // X-01: photos in this job that the checks flagged and no reviewer has cleared yet.
+    const photosNeedChecking = refs.flatMap((r) => {
+      const c = checks.get(r.id);
+      return c?.status === 'needs_checking' ? [{ evidenceId: r.id, path: r.path, problems: c.problems.map((p) => p.message) }] : [];
+    });
     return {
       jobId: j.id,
       publicRef: j.publicRef,
@@ -184,6 +191,7 @@ export class GarageService {
       submittedAt: j.submittedAt,
       submissionId: j.submissionId,
       ownerConfirmation,
+      photosNeedChecking,
       acknowledgedWarnings: j.acknowledgedWarnings,
       rejectionReason: j.rejectionReason,
       version: j.version,

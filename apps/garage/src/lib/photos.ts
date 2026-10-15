@@ -21,3 +21,24 @@ export async function sha256(blob: Blob): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+/**
+ * X-01, the phone's own check: is the picture big and bright enough to read? It runs at once, offline,
+ * so the mechanic can retake while the car is still in the bay. SAZO's server checks again on upload.
+ * Same limits as the server (apps/api photo-checks.ts).
+ */
+export async function quickCheck(blob: Blob): Promise<'too_dark' | 'too_small' | undefined> {
+  try {
+    const bitmap = await createImageBitmap(blob);
+    if (Math.min(bitmap.width, bitmap.height) < 320) return 'too_small';
+    const canvas = new OffscreenCanvas(32, 32);
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(bitmap, 0, 0, 32, 32);
+    const px = ctx.getImageData(0, 0, 32, 32).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += 0.299 * px[i]! + 0.587 * px[i + 1]! + 0.114 * px[i + 2]!;
+    return sum / (px.length / 4) < 28 ? 'too_dark' : undefined;
+  } catch {
+    return undefined; // can't tell on this phone — the server will check
+  }
+}

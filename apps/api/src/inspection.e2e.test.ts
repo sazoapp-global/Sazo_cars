@@ -11,6 +11,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { testPhoto } from './test-photos.js';
 import { signInWithCode } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
@@ -39,7 +40,7 @@ describe.skipIf(!base)('inspector workspace (e2e)', () => {
   const signIn = (phone: string, displayName?: string) => signInWithCode(app, http, phone, displayName);
 
   async function upload(token: string, kind: string, content: string): Promise<string> {
-    const bytes = Buffer.from(content);
+    const bytes = await testPhoto(content);
     const slot = await http.post('/v1/evidence/uploads').set(bearer(token))
       .send({ kind, mimeType: 'image/jpeg', sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }).expect(201);
     await http.put(new URL(slot.body.uploadUrl).pathname).set(bearer(token)).set('Content-Type', 'image/jpeg').send(bytes).expect(204);
@@ -143,7 +144,7 @@ describe.skipIf(!base)('inspector workspace (e2e)', () => {
     const file = await http.get(`/v1/evidence/${rows[0].report_evidence_id}/content`).set(bearer(adminToken)).expect(200);
     const report = JSON.parse(file.text);
     expect(report).toMatchObject({ organisation: 'KVI Bugolobi', inspector: 'Denis (Inspector)', plate: 'UBR 202B', vehicleRef, repaintedPanels: ['Bonnet'] });
-    expect(report.photos.map((p: { sha256: string }) => p.sha256)).toContain(createHash('sha256').update('front of car').digest('hex'));
+    expect(report.photos.map((p: { sha256: string }) => p.sha256)).toContain(createHash('sha256').update(await testPhoto('front of car')).digest('hex'));
   });
 
   it('buyers see the inspection: structural damage, the repaint note, and the latest inspection card', async () => {
@@ -169,7 +170,8 @@ describe.skipIf(!base)('inspector workspace (e2e)', () => {
     expect(photos).toEqual([expect.objectContaining({ takenBy: 'KVI Bugolobi' }), expect.objectContaining({ takenBy: 'KVI Bugolobi' })]);
     const img = await http.get(`/v1/vehicles/${vehicleRef}/photos/${photos[0].photoId}`).set(bearer(buyer)).expect(200);
     expect(img.headers['x-content-type-options']).toBe('nosniff');
-    expect(['front of car', 'back of car']).toContain(img.body.toString());
+    const shown = createHash('sha256').update(img.body).digest('hex');
+    expect([await testPhoto('front of car'), await testPhoto('back of car')].map((b) => createHash('sha256').update(b).digest('hex'))).toContain(shown);
     await http.get(`/v1/vehicles/${vehicleRef}/photos`).expect(401);
     const { rows: [odo] } = await db.query(`SELECT form->'mileage'->>'odometerPhotoId' AS id FROM inspection.inspections WHERE vehicle_id IS NOT NULL LIMIT 1`);
     await http.get(`/v1/vehicles/${vehicleRef}/photos/${odo.id}`).set(bearer(buyer)).expect(404);

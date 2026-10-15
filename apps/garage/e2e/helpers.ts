@@ -1,7 +1,9 @@
 // Shared by the garage app browser tests: log in through the API or the app, answering a second step
 // (managers, D-105) from the codes the API prints in its log.
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import zlib from 'node:zlib';
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { API_LOG, API_PORT } from '../playwright.config';
 
@@ -59,4 +61,30 @@ export async function signInInApp(page: Page, localPhone: string) {
     await page.getByRole('button', { name: 'Confirm' }).click();
   }
   await expect(home).toBeVisible();
+}
+
+/**
+ * A real, distinct PNG photo for upload tests (X-01: SAZO checks photos are readable, big and bright
+ * enough, and not copies). Each seed draws its own pattern, so no two count as the same picture.
+ */
+export function testPhoto(seed: string, width = 480, height = 360): Buffer {
+  const h = createHash('sha512').update(seed).digest();
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    raw[y * (width * 3 + 1)] = 0;
+    for (let x = 0; x < width; x++) {
+      const v = 40 + (h[(Math.floor((y * 8) / height) * 8 + Math.floor((x * 8) / width)) % 64]! % 200);
+      const o = y * (width * 3 + 1) + 1 + x * 3;
+      raw[o] = v; raw[o + 1] = v; raw[o + 2] = Math.max(0, v - 20);
+    }
+  }
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(zlib.crc32(td));
+    return Buffer.concat([len, td, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }

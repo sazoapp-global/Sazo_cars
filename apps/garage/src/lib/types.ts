@@ -31,6 +31,8 @@ export interface ServerJob {
   clientCreatedAt: string;
   submittedAt: string | null;
   ownerConfirmation: 'confirmed' | 'disputed' | 'pending' | 'not_requested';
+  /** X-01: photos SAZO's checks flagged that no reviewer has cleared yet. */
+  photosNeedChecking?: { evidenceId: string; path: string; problems: string[] }[];
   acknowledgedWarnings: { code: string; explanation: string }[];
   rejectionReason: string | null;
   version: number;

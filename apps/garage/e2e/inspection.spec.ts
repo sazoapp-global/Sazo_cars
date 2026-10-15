@@ -2,12 +2,11 @@
 // paint thickness), condition, photos, result — then a finding that differs from the records is explained and sent.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { API, apiSignIn, createAdmin, signInInApp } from './helpers';
+import { API, apiSignIn, createAdmin, signInInApp, testPhoto } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567030${stamp}`;
 const MANAGER = `+2567040${stamp}`;
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8DwnwEJMDEgARQGAG2jA/2T4ZbXAAAAAElFTkSuQmCC', 'base64');
 const shot = async (page: Page, name: string) => { if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name}.png`, fullPage: true }); };
 const a11y = async (page: Page) => {
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
@@ -39,7 +38,7 @@ test('inspect a car and send the checklist', async ({ page }) => {
   await page.getByRole('button', { name: 'Next' }).click();
 
   await page.getByLabel('Odometer reading').fill('300000');
-  await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: PNG });
+  await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: testPhoto('inspection.spec.ts odo.png 1') });
   await expect(page.getByAltText(/Odometer photo/)).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();
 
@@ -66,9 +65,9 @@ test('inspect a car and send the checklist', async ({ page }) => {
   await page.getByRole('button', { name: 'Next' }).click();
 
   const files = page.locator('input[type=file]');
-  await files.nth(0).setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: PNG });
+  await files.nth(0).setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: testPhoto('inspection.spec.ts front.png 2') });
   await expect(page.getByAltText(/Front of the car/)).toBeVisible();
-  await files.nth(1).setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: PNG });
+  await files.nth(1).setInputFiles({ name: 'back.png', mimeType: 'image/png', buffer: testPhoto('inspection.spec.ts back.png 3') });
   await expect(page.getByAltText(/Back of the car/)).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();
 
@@ -101,7 +100,7 @@ test('report a problem with a car (O-002) and follow what SAZO decides', async (
   await page.getByLabel('Number plate *').fill('UBG 909K');
   await page.getByLabel(/Chassis or VIN looks tampered with/).check();
   await page.getByLabel('What did you see? *').fill('Chassis stamp ground off and re-punched; letters uneven');
-  await page.locator('input[type=file]').first().setInputFiles({ name: 'chassis.png', mimeType: 'image/png', buffer: PNG });
+  await page.locator('input[type=file]').first().setInputFiles({ name: 'chassis.png', mimeType: 'image/png', buffer: testPhoto('inspection.spec.ts chassis.png 4') });
   await expect(page.getByAltText(/Photo \(optional\)/)).toBeVisible();
   await a11y(page);
   await shot(page, 'c1-report');

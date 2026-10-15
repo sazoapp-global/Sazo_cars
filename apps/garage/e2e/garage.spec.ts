@@ -2,14 +2,13 @@
 // signal halfway through the next job and watch it sync when the signal comes back.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { API, apiSignIn, createAdmin, signInInApp } from './helpers';
+import { API, apiSignIn, createAdmin, signInInApp, testPhoto } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567010${stamp}`;
 const MANAGER = `+2567020${stamp}`;
 const MANAGER_LOCAL = `0${MANAGER.slice(4)}`; // how a mechanic types it: 0702…
-// A tiny real PNG — the app shrinks and re-encodes it like a camera photo.
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8DwnwEJMDEgARQGAG2jA/2T4ZbXAAAAAElFTkSuQmCC', 'base64');
+// Photos are real, distinct PNGs (testPhoto) so they pass SAZO's photo checks (X-01); the app re-encodes them like a camera photo.
 
 /** Set SHOTS=<folder> to save screenshots of each step (design review). */
 const shot = async (page: Page, name: string) => { if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name}.png`, fullPage: true }); };
@@ -78,7 +77,7 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await page.getByLabel('Odometer reading').fill('110500');
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByLabel('Odometer reading')).toHaveValue('110,500');
-  await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: PNG });
+  await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: testPhoto('garage.spec.ts odo.png 1') });
   await expect(page.getByAltText(/Odometer photo/)).toBeVisible();
   await shot(page, '3-mileage');
   await page.getByRole('button', { name: 'Next' }).click();
@@ -137,7 +136,7 @@ test('no signal halfway through a job: everything is kept and syncs when the sig
   await page.getByRole('button', { name: 'Electrical work' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByLabel('Odometer reading').fill('64200');
-  await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: PNG });
+  await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: testPhoto('garage.spec.ts odo.png 2') });
   await expect(page.getByAltText(/Odometer photo/)).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();
 

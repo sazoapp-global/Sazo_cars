@@ -28,6 +28,7 @@ export async function addStock(form: FormData) {
   if (km !== undefined && !hasPhoto) back(org, { error: 'Add a photo of the odometer with the mileage.' });
   if (hasPhoto && !['image/jpeg', 'image/png', 'image/webp'].includes((photo as File).type)) back(org, { error: 'The odometer photo must be a JPEG, PNG or WebP image.' });
   let odometerPhotoId: string | undefined;
+  let problem: string | undefined;
   if (km !== undefined) {
     try {
       const f = photo as File;
@@ -35,11 +36,14 @@ export async function addStock(form: FormData) {
       const slot = await api<{ evidenceId: string }>('/evidence/uploads', { method: 'POST', auth: true, body: {
         kind: 'odometer_photo', mimeType: f.type, sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } });
       await api(`/evidence/uploads/${slot.evidenceId}/content`, { method: 'PUT', auth: true, raw: { bytes, contentType: f.type } });
-      await api(`/evidence/${slot.evidenceId}/complete`, { method: 'POST', auth: true });
+      const done = await api<{ checks?: { status: string; problems: { message: string }[] } }>(`/evidence/${slot.evidenceId}/complete`, { method: 'POST', auth: true });
+      // X-01: the dealer is at the screen, so a photo that fails SAZO's checks is sent back for another one at once.
+      if (done.checks?.status === 'needs_checking') problem = done.checks.problems[0]?.message ?? 'This photo could not be checked';
       odometerPhotoId = slot.evidenceId;
     } catch {
       back(org, { error: 'The odometer photo could not be sent. Please try again.' });
     }
+    if (problem) back(org, { error: `${problem}. Please take a clear, new photo of the odometer.` });
   }
   const find = async (q: string) => (await api<SearchResult>(`/vehicles/search?q=${encodeURIComponent(q)}`)).matches;
   let body: Record<string, unknown>;

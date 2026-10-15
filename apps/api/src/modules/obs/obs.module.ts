@@ -6,9 +6,10 @@ import { EvidenceService } from './evidence.service.js';
 import { LocalObjectStore, OBJECT_STORE } from './evidence-store.js';
 import { ObservationsService } from './observations.service.js';
 import { PartiesService } from './parties.service.js';
+import { PhotoReviewController } from './photo-review.controller.js';
 
 @Module({
-  controllers: [EvidenceController],
+  controllers: [EvidenceController, PhotoReviewController],
   providers: [
     ObservationsService,
     EvidenceService,

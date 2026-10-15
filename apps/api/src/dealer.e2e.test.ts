@@ -11,6 +11,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { testPhoto } from './test-photos.js';
 import { signInWithCode } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
@@ -39,7 +40,7 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
   const signIn = (phone: string, displayName?: string) => signInWithCode(app, http, phone, displayName);
 
   async function upload(token: string, kind: string, content: string): Promise<string> {
-    const bytes = Buffer.from(content);
+    const bytes = await testPhoto(content);
     const slot = await http.post('/v1/evidence/uploads').set(bearer(token))
       .send({ kind, mimeType: 'image/jpeg', sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }).expect(201);
     await http.put(new URL(slot.body.uploadUrl).pathname).set(bearer(token)).set('Content-Type', 'image/jpeg').send(bytes).expect(204);

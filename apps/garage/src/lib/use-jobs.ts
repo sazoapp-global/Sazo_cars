@@ -34,6 +34,7 @@ function alertsFrom(drafts: LocalDraft[], jobs: ServerJob[]): Alert[] {
   for (const d of drafts) if (d.lastSyncError) out.push({ id: `sync-${d.jobId}`, tone: 'warn', kind: 'Not sent', text: `${plate(d.plateEntered)} — ${d.lastSyncError}`, action: { label: 'Open', jobId: d.jobId, local: true } });
   for (const j of jobs) {
     if (j.ownerConfirmation === 'disputed') out.push({ id: `disp-${j.jobId}`, tone: 'bad', kind: 'Customer disputed', text: `The customer says the visit for ${plate(j.plateEntered)} (${j.publicRef}) is not right. SAZO may contact you — check your job card.`, action: { label: 'See the job', jobId: j.jobId } });
+    if (j.photosNeedChecking?.length) out.push({ id: `photo-${j.jobId}`, tone: 'warn', kind: 'Photo needs checking', text: `${plate(j.plateEntered)} (${j.publicRef}): ${j.photosNeedChecking[0]!.problems[0] ?? 'a photo could not be checked'}. A SAZO reviewer will look at it; until then this record counts for less.`, action: { label: 'See the job', jobId: j.jobId } });
     if (j.status === 'rejected') out.push({ id: `rej-${j.jobId}`, tone: 'bad', kind: 'Not accepted', text: `${plate(j.plateEntered)} (${j.publicRef}): ${j.rejectionReason ?? 'SAZO could not accept this job.'}`, action: { label: 'See the job', jobId: j.jobId } });
   }
   for (const j of jobs) if (j.status === 'submitted') out.push({ id: `chk-${j.jobId}`, tone: 'info', kind: 'Being checked', text: `SAZO is matching ${plate(j.plateEntered)} to the right car.`, action: { label: 'See the job', jobId: j.jobId } });

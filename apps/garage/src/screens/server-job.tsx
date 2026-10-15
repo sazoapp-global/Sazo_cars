@@ -30,6 +30,13 @@ export function ServerJobView({ jobId, garage }: { jobId: string; garage: Garage
       <div className="flex items-center justify-between gap-2"><PlateText value={job.plateEntered} /><span className="sazo-id text-sm text-label">{job.publicRef}</span></div>
       <div className="flex flex-wrap gap-2"><Chip s={JOB_STATUS[job.status]!} />{job.status !== 'draft' && <Chip s={OWNER[job.ownerConfirmation]!} />}</div>
       {job.status === 'draft' && <p className="text-sm text-muted">This draft was started on another phone. Finish it there.</p>}
+      {!!job.photosNeedChecking?.length && (
+        <div role="status" className="rounded-lg border border-warn-line bg-warn-fill p-3 text-sm text-warn-text">
+          <p className="font-bold">A photo needs checking</p>
+          <ul className="mt-1 list-disc pl-5">{job.photosNeedChecking.flatMap((p) => p.problems).map((m, i) => <li key={i}>{m}</li>)}</ul>
+          <p className="mt-1">A SAZO reviewer will look at it. Until then this record counts for less on the car's report.</p>
+        </div>
+      )}
       {job.rejectionReason && <p className="rounded-lg border border-bad-line bg-bad-fill p-3 text-bad-text">{job.rejectionReason}</p>}
       <dl className="card divide-y divide-line">
         {[
