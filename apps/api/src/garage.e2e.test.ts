@@ -16,6 +16,7 @@ import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
 import { ConsoleSmsSender } from './modules/notify/index.js';
+import { PartiesService } from './modules/obs/index.js';
 
 const base = process.env.TEST_DATABASE_URL;
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -34,6 +35,7 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
   let mechanicToken: string;
   let garageId: string;
   const CUSTOMER = '+256772555123';
+  const INBOUND_KEY = 'test-inbound-key-0123456789abcdef';
 
   const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
   const asGarage = (t: string) => ({ ...bearer(t), 'X-Organisation-Id': garageId });
@@ -58,7 +60,7 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     execFileSync('node', [path.join(repoRoot, 'db/migrate.mjs')], { env: { ...process.env, DATABASE_URL: url.toString() }, stdio: 'pipe' });
     db = new pg.Client({ connectionString: url.toString() });
     await db.connect();
-    app = await createApp(loadConfig({ ...process.env, NODE_ENV: 'test', DATABASE_URL: url.toString(), EVIDENCE_DIR: evidenceDir }));
+    app = await createApp(loadConfig({ ...process.env, NODE_ENV: 'test', DATABASE_URL: url.toString(), EVIDENCE_DIR: evidenceDir, SMS_INBOUND_KEY: INBOUND_KEY }));
     await app.init();
     http = request(app.getHttpServer());
     const adminId = await app.get(IamService).ensureUser('+256700000997', 'Test Admin', 'sazo_admin');
@@ -268,5 +270,40 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     expect(JSON.stringify(job.body)).not.toContain('Peter');
     expect(job.body.form.customer).toEqual({ phoneMasked: '+256 77• ••• 123', smsConsent: false });
   });
-});
 
+  it('C-02: the customer can answer by replying 1 or 2 to the SMS, and STOP turns the texts off', async () => {
+    const CUSTOMER2 = '+256772555777';
+    const id = randomUUID();
+    const photo = await upload(mechanicToken, 'odometer_photo', 'odometer 91000');
+    await http.put(`/v1/garage/jobs/${id}`).set(asGarage(mechanicToken)).send({ plateEntered: 'UBQ 101A', vehicleRef, workTypes: ['service'],
+      clientCreatedAt: new Date().toISOString(), form: { mileage: { value: 91000, unit: 'km', odometerPhotoId: photo }, service: { items: ['engine_oil'] }, customer: { phone: CUSTOMER2, smsConsent: true } } }).expect(200);
+    await http.post(`/v1/garage/jobs/${id}/submit`).set(asGarage(mechanicToken)).set('Idempotency-Key', randomUUID()).send({}).expect(202);
+    expect(sms(CUSTOMER2)).toContain('Reply 1 for yes, 2 for no');
+
+    const inbound = (key: string, form: Record<string, string>) => http.post('/v1/webhooks/sms/inbound').query({ key }).type('form').send(form);
+    // Without the secret key the endpoint doesn't exist.
+    await http.post('/v1/webhooks/sms/inbound').type('form').send({ from: CUSTOMER2, text: '1' }).expect(404);
+    await inbound('wrong-key-wrong-key-wrong-key', { from: CUSTOMER2, text: '1' }).expect(404);
+
+    await inbound(INBOUND_KEY, { from: CUSTOMER2, text: 'what is this?', id: 'AT-0' }).expect(200);
+    expect(sms(CUSTOMER2)).toContain('Reply 1 if the garage visit was your car');
+
+    await inbound(INBOUND_KEY, { from: CUSTOMER2.slice(1), text: ' 1 ', id: 'AT-1' }).expect(200);
+    expect(sms(CUSTOMER2)).toMatch(/^Thank you\. SAZO noted that the \d{4}-\d{2}-\d{2} visit to Ntinda Auto Clinic was your car \(UBQ 101A\)\.$/);
+    expect((await http.get(`/v1/garage/jobs/${id}`).set(asGarage(managerToken)).expect(200)).body.ownerConfirmation).toBe('confirmed');
+    const answers = await db.query(`SELECT channel, response FROM obs.attestations ORDER BY responded_at DESC LIMIT 1`);
+    expect(answers.rows[0]).toEqual({ channel: 'sms_reply', response: 'confirmed' });
+
+    // The provider resending the same message changes nothing; a second answer finds nothing waiting.
+    await inbound(INBOUND_KEY, { from: CUSTOMER2, text: '1', id: 'AT-1' }).expect(200);
+    expect((await db.query(`SELECT count(*)::int AS n FROM notify.inbound_replies WHERE provider_message_id = 'AT-1'`)).rows[0].n).toBe(1);
+    await inbound(INBOUND_KEY, { from: CUSTOMER2, text: '2', id: 'AT-2' }).expect(200);
+    expect(sms(CUSTOMER2)).toContain('no garage visit waiting');
+    const stored = await db.query(`SELECT body, from_phone_hash FROM notify.inbound_replies WHERE provider_message_id = 'AT-2'`);
+    expect(stored.rows[0].from_phone_hash.toString('latin1')).not.toContain('772555777');
+
+    await inbound(INBOUND_KEY, { from: CUSTOMER2, text: 'stop', id: 'AT-3' }).expect(200);
+    expect(sms(CUSTOMER2)).toContain('will not text you about garage visits');
+    expect(await app.get(PartiesService).visitTextsAllowed(CUSTOMER2)).toBe(false);
+  });
+});

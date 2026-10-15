@@ -1398,19 +1398,34 @@ paths:
     post:
       tags: [Attestation]
       operationId: smsInboundWebhook
-      summary: SMS provider callback for owner replies ("1" confirm / "2" dispute)
-      description: Verified by provider signature/shared secret. Phone numbers are hashed on receipt; raw numbers are not stored here.
-      security: [{ providerSignature: [] }]
+      summary: SMS provider callback for owner replies ("1" confirm / "2" dispute, "STOP" opts out)
+      description: |
+        C-02. Africa's Talking does not sign callbacks, so the registered address carries a long secret
+        (`?key=`, the `SMS_INBOUND_KEY` setting). Without it — or while two-way SMS is off — the answer is 404.
+        A bare 1 or 2 answers the one garage visit waiting for that phone; with several waiting, the sender is
+        asked to use the links. Every message gets a short SMS back. Phone numbers are kept only as a keyed hash.
+        Resent messages (same provider `id`) are acted on once.
+      security: []
+      parameters:
+        - name: key
+          in: query
+          required: true
+          schema: { type: string, minLength: 24 }
       requestBody:
         required: true
         content:
           application/x-www-form-urlencoded:
             schema:
               type: object
+              required: [from, text]
+              properties:
+                from: { type: string, description: 'Sender in E.164, e.g. +256772555777' }
+                text: { type: string, maxLength: 1000 }
+                id: { type: string, description: Provider message id (used to ignore resends) }
               additionalProperties: true
       responses:
         '200': { description: Acknowledged }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /webhooks/sms/delivery:
     post:

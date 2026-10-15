@@ -75,9 +75,30 @@ export class AttestationsService {
     return { confirmed: Number(r.confirmed), disputed: Number(r.disputed), waiting: Number(r.waiting) };
   }
 
-  /** Record the answer once; Trust recomputes the vehicle (and the garage's reputation) on attestation.received. */
+  /**
+   * Questions still waiting for an answer from this phone (C-02, reply by SMS), newest first.
+   * A person can appear as several parties (one per business that typed the number), so match on the phone hash.
+   */
+  async openForPhone(phoneHash: Buffer): Promise<AttestationRequestInfo[]> {
+    const { rows } = await this.pool.query<{ id: string }>(
+      `SELECT r.id FROM obs.attestation_requests r JOIN pii.parties p ON p.id = r.party_id
+        WHERE p.phone_hash = $1 AND p.erased_at IS NULL AND r.expires_at > now()
+          AND NOT EXISTS (SELECT 1 FROM obs.attestations a WHERE a.request_id = r.id)
+        ORDER BY r.requested_at DESC`, [phoneHash]);
+    return (await Promise.all(rows.map((r) => this.byId(r.id)))).filter((r): r is AttestationRequestInfo => !!r);
+  }
+
+  /** Record the answer from the SMS link once; Trust recomputes the vehicle (and the garage's reputation) on attestation.received. */
   async answer(token: string, response: 'confirmed' | 'disputed', comment?: string): Promise<AttestationRequestInfo> {
-    const req = await this.byToken(token);
+    return this.record(await this.byToken(token), response, 'sms_link', comment);
+  }
+
+  /** Record an answer sent as an SMS reply ("1" or "2") to a known request (C-02). */
+  async answerByReply(requestId: string, response: 'confirmed' | 'disputed'): Promise<AttestationRequestInfo> {
+    return this.record(await this.byId(requestId), response, 'sms_reply');
+  }
+
+  private async record(req: AttestationRequestInfo | undefined, response: 'confirmed' | 'disputed', channel: 'sms_link' | 'sms_reply', comment?: string): Promise<AttestationRequestInfo> {
     if (!req) throw new AttestationError('not_found', 'This link is not valid');
     if (req.answer) throw new AttestationError('already_answered', 'You have already answered');
     if (new Date(req.expiresAt).getTime() < Date.now()) throw new AttestationError('expired', 'This link has expired');
@@ -85,11 +106,11 @@ export class AttestationsService {
       const { rows } = await tx.query<{ vehicle_id: string; source_id: string }>('SELECT vehicle_id, source_id FROM obs.vehicle_events WHERE id = $1', [req.eventId]);
       await tx.query(
         `INSERT INTO obs.attestations (request_id, target_event_id, attester_kind, attester_party_id, channel, response, comment)
-         VALUES ($1,$2,'customer',$3,'sms_link',$4,$5)`,
-        [req.requestId, req.eventId, req.partyId, response, comment ?? null]);
+         VALUES ($1,$2,'customer',$3,$4,$5,$6)`,
+        [req.requestId, req.eventId, req.partyId, channel, response, comment ?? null]);
       await emit('obs', { type: 'attestation.received', aggregateId: rows[0]!.vehicle_id, payload: { vehicleId: rows[0]!.vehicle_id, sourceId: rows[0]!.source_id, response } });
     }).catch((err: { code?: string }) => {
-      // Two taps at once: the unique index lets only one answer in.
+      // Two taps (or a tap and a reply) at once: the unique index lets only one answer in.
       if (err.code === '23505') throw new AttestationError('already_answered', 'You have already answered');
       throw err;
     });

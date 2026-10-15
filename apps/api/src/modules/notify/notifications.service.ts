@@ -24,7 +24,17 @@ const TEMPLATES: Record<string, { version: number; body: string }> = {
   staff_added: { version: 1, body: '{organisation} added you to their team on SAZO. Sign in with this phone number to start recording jobs.' },
   // D-058: what was recorded, and a link to confirm or dispute. No costs, no other personal data.
   attestation: { version: 1, body: '{garage} recorded {work} on {plate} at {km} km on {date}. Was this your car? Confirm or dispute: {link}' },
+  // C-02: the same question when two-way SMS is on — the customer can simply reply 1 or 2.
+  attestation_reply: { version: 1, body: '{garage} recorded {work} on {plate} at {km} km on {date}. Was this your car? Reply 1 for yes, 2 for no. Or open: {link}' },
+  reply_thanks_yes: { version: 1, body: 'Thank you. SAZO noted that the {date} visit to {garage} was your car ({plate}).' },
+  reply_thanks_no: { version: 1, body: 'Thank you. SAZO noted that the {date} visit to {garage} was NOT your car ({plate}). SAZO will look into it.' },
+  reply_several: { version: 1, body: 'You have {count} garage visits waiting for an answer. Please answer each one with the link in its message.' },
+  reply_none: { version: 1, body: 'SAZO has no garage visit waiting for an answer from this number.' },
+  reply_help: { version: 1, body: 'Reply 1 if the garage visit was your car, or 2 if it was not. Reply STOP to get no more of these messages.' },
+  reply_stopped: { version: 1, body: 'SAZO will not text you about garage visits any more. You can turn this back on in your SAZO account settings.' },
 };
+
+export type SmsTemplate = keyof typeof TEMPLATES;
 
 /** Email templates (en-UG). Links are single-use credentials: never logged. */
 const EMAILS: Record<string, { version: number; subject: string; body: string }> = {
@@ -55,7 +65,7 @@ export class NotificationsService {
   }
 
   /** Send a templated SMS to a phone number. The number is used for delivery only and never stored. */
-  async sendSmsToPhone(phoneE164: string, template: keyof typeof TEMPLATES, params: Record<string, string | number>,
+  async sendSmsToPhone(phoneE164: string, template: SmsTemplate, params: Record<string, string | number>,
     purpose: 'otp' | 'attestation' | 'account' | 'reminder', toUserId?: string | null,
     extra: { toPartyId?: string; relatedType?: string; relatedId?: string } = {}): Promise<boolean> {
     const t = TEMPLATES[template]!;
@@ -74,6 +84,25 @@ export class NotificationsService {
       [rows[0]!.id, result.ok ? 'sent' : 'failed', result.provider, result.providerMessageId ?? null, result.error ?? null],
     );
     return result.ok;
+  }
+
+  /**
+   * Log an SMS someone sent to SAZO (C-02). Only a keyed hash of the number is kept. Returns undefined when the
+   * provider already delivered this message (providers retry), so a reply is acted on once.
+   */
+  async recordInbound(fromE164: string, body: string, providerMessageId?: string): Promise<string | undefined> {
+    if (providerMessageId) {
+      const seen = await this.pool.query('SELECT 1 FROM notify.inbound_replies WHERE provider_message_id = $1', [providerMessageId]);
+      if (seen.rowCount) return undefined;
+    }
+    const { rows } = await this.pool.query<{ id: string }>(
+      `INSERT INTO notify.inbound_replies (channel, from_phone_hash, body, provider_message_id) VALUES ('sms', $1, $2, $3) RETURNING id`,
+      [this.phoneHash(fromE164), body.slice(0, 500), providerMessageId ?? null]);
+    return rows[0]!.id;
+  }
+
+  async markInboundProcessed(id: string): Promise<void> {
+    await this.pool.query('UPDATE notify.inbound_replies SET processed_at = now() WHERE id = $1', [id]);
   }
 
   /** Send a templated email. The address is used for delivery only; the log keeps an HMAC of it. */

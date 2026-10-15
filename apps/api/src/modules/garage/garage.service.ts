@@ -356,11 +356,53 @@ export class GarageService {
     const org = await this.iam.organisation(j.organisationId);
     const m = j.form.mileage!;
     const km = m.unit === 'mi' ? Math.round(m.value * 1.609344) : m.value;
-    const sent = await this.notify.sendSmsToPhone(person.phone, 'attestation', {
+    const sent = await this.notify.sendSmsToPhone(person.phone, this.cfg.SMS_INBOUND_KEY ? 'attestation_reply' : 'attestation', {
       garage: org?.tradingName ?? org?.legalName ?? 'A garage', work: workPhrase(j.workTypes), plate: j.plateEntered.toUpperCase(),
       km: km.toLocaleString('en-UG'), date: j.clientCreatedAt.slice(0, 10), link: `${this.cfg.PUBLIC_WEB_URL}/a/${req.token}`,
     }, 'attestation', null, { toPartyId: j.partyId, relatedType: 'attestation_request', relatedId: req.requestId });
     if (!sent) this.log.warn(`owner confirmation SMS for job ${j.publicRef} was not sent`);
+  }
+
+  // ------------------------------------------------------------------ answers sent as SMS replies (C-02)
+
+  /**
+   * Someone replied to SAZO's number. "1"/"YES" confirms and "2"/"NO" disputes the one visit waiting for this phone;
+   * "STOP" turns off visit texts. With several visits waiting, a bare 1 or 2 could hit the wrong one, so the
+   * person is asked to use the links instead. Every reply gets a short answer back so nobody is left guessing.
+   */
+  async handleSmsReply(fromE164: string, text: string, providerMessageId?: string): Promise<void> {
+    const inboundId = await this.notify.recordInbound(fromE164, text, providerMessageId);
+    if (!inboundId) return; // the provider resent a message already handled
+    const word = text.trim().toUpperCase().replace(/[^A-Z0-9 ]/g, '').split(/\s+/)[0] ?? '';
+    const send = (t: Parameters<NotificationsService['sendSmsToPhone']>[1], params: Record<string, string | number> = {}) =>
+      this.notify.sendSmsToPhone(fromE164, t, params, 'attestation');
+    try {
+      if (['STOP', 'STOPALL', 'UNSUBSCRIBE'].includes(word)) {
+        await this.parties.setVisitTexts(fromE164, false);
+        await send('reply_stopped');
+        return;
+      }
+      const response = ['1', 'YES', 'Y', 'YEE', 'NDIYO'].includes(word) ? 'confirmed' as const
+        : ['2', 'NO', 'N', 'NEDDA', 'HAPANA'].includes(word) ? 'disputed' as const : undefined;
+      if (!response) return void (await send('reply_help'));
+      const open = await this.attestations.openForPhone(this.parties.phoneHash(fromE164));
+      if (open.length === 0) return void (await send('reply_none'));
+      if (open.length > 1) return void (await send('reply_several', { count: open.length }));
+      const req = open[0]!;
+      try {
+        await this.attestations.answerByReply(req.requestId, response);
+      } catch (err) {
+        if ((err as { code?: string }).code === 'already_answered') return void (await send('reply_none'));
+        throw err;
+      }
+      const j = await this.repo.jobByAttestationRequest(req.requestId);
+      const org = j && (await this.iam.organisation(j.organisationId));
+      await send(response === 'confirmed' ? 'reply_thanks_yes' : 'reply_thanks_no', {
+        date: j?.clientCreatedAt.slice(0, 10) ?? '', garage: org?.tradingName ?? org?.legalName ?? 'the garage', plate: j?.plateEntered.toUpperCase() ?? '',
+      });
+    } finally {
+      await this.notify.markInboundProcessed(inboundId);
+    }
   }
 
   // ------------------------------------------------------------------ owner confirmation page

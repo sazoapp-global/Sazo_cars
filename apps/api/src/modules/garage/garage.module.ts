@@ -9,10 +9,11 @@ import { AttestController } from './attest.controller.js';
 import { GarageController } from './garage.controller.js';
 import { GarageRepository } from './garage.repository.js';
 import { GarageService } from './garage.service.js';
+import { SmsWebhookController } from './sms-webhook.controller.js';
 
 @Module({
   imports: [IamModule, NotifyModule, VehicleModule, ObservationsModule, IngestModule, TrustModule],
-  controllers: [GarageController, AttestController],
+  controllers: [GarageController, AttestController, SmsWebhookController],
   providers: [GarageRepository, GarageService],
   exports: [GarageService],
 })

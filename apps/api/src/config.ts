@@ -23,6 +23,11 @@ const Env = z.object({
   AT_SENDER_ID: z.string().optional(),
   AT_SANDBOX: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   /**
+   * Two-way SMS (C-02): customers answer garage-visit texts by replying 1 or 2. Off until set. The provider's
+   * inbound-SMS callback must be registered as <PUBLIC_API_URL>/v1/webhooks/sms/inbound?key=<this value>.
+   */
+  SMS_INBOUND_KEY: z.string().min(24).optional(),
+  /**
    * Keys for names and phone numbers in the personal-data store (DM-15) — see platform/keyring.ts.
    * env: PII_KEYS="1:<base64>,2:<base64>" (or PII_ENCRYPTION_KEY as version 1). kms: PII_KMS_DATA_KEYS, decrypted by AWS KMS at start-up.
    */
