@@ -15,6 +15,19 @@ test('people who are not SAZO staff cannot open the console', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'SAZO staff only' })).toBeVisible();
 });
 
+test("only an administrator downloads a person's data as a JSON file", async ({ page }) => {
+  await signIn(page, ADMIN);
+  await page.getByRole('link', { name: "People's data" }).click();
+  await expect(page.getByRole('heading', { name: "People's data" })).toBeVisible();
+  await a11y(page);
+  await page.getByLabel('Their mobile number').fill('0700 000 000');
+  await page.getByRole('button', { name: 'Download JSON file' }).click();
+  await expect(page.getByRole('alert')).toContainText('No SAZO account uses this number.');
+  await page.getByLabel('Their mobile number').fill(`0${ADMIN.slice(4)}`);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download JSON file' }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^sazo-person-data-\d{4}-\d{4}-\d{2}-\d{2}\.json$/);
+});
+
 test('approve a garage that registered', async ({ page, request }) => {
   // A garage manager registers through the API (their sign-up screen comes later).
   const phone = `+2567050${stamp}`;

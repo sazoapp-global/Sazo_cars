@@ -37,12 +37,23 @@ export class AccountService {
   }
 
   /** Everything SAZO holds that is about this person, in one file. */
-  async export(actor: Actor) {
+  /** Everything SAZO holds about the signed-in person (shown to them as a page they can save as PDF). */
+  export(actor: Actor) {
+    return this.exportFor(actor.userId, actor, 'account.export');
+  }
+
+  /** The same, as a JSON file for a SAZO administrator (for example a formal data request). Audited. */
+  async exportByAdmin(admin: Actor, phone: string) {
+    const userId = await this.iam.userIdByPhone(phone);
+    return userId ? this.exportFor(userId, admin, 'account.export_by_admin') : undefined;
+  }
+
+  private async exportFor(userId: string, actor: Actor, action: string) {
     const [profile, saved, shares, cars, contributions, prefs, devices] = await Promise.all([
-      this.iam.profile(actor.userId), this.buyer.saved(actor.userId), this.buyer.myShares(actor.userId), this.ownership.myCars(actor.userId),
-      this.community.contributions(actor.userId), this.preferences(actor.userId), this.iam.devices(actor.userId, actor.sessionId),
+      this.iam.profile(userId), this.buyer.saved(userId), this.buyer.myShares(userId), this.ownership.myCars(userId),
+      this.community.contributions(userId), this.preferences(userId), this.iam.devices(userId, userId === actor.userId ? actor.sessionId : ''),
     ]);
-    await this.iam.audit({ actor, action: 'account.export', targetType: 'user', targetId: actor.userId });
+    await this.iam.audit({ actor, action, targetType: 'user', targetId: userId });
     return {
       exportedAt: new Date().toISOString(),
       about: 'Your data held by SAZO. Records about cars (services, inspections, registrations) belong to each car\'s history and are not included.',

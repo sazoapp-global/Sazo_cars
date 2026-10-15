@@ -149,6 +149,12 @@ export class IamService {
   }
 
   // ---------- account settings
+  /** The account using this phone number, if any (deleted accounts excluded). */
+  async userIdByPhone(phone: string): Promise<string | undefined> {
+    const u = await this.repo.userByPhone(phone);
+    return u && u.status !== 'deleted' ? u.id : undefined;
+  }
+
   async devices(userId: string, currentSessionId: string) {
     return (await this.repo.sessions(userId)).map((s) => ({
       sessionId: s.id, device: s.userAgent, signedInAt: s.createdAt.toISOString(), lastUsedAt: s.lastUsedAt.toISOString(), current: s.id === currentSessionId,

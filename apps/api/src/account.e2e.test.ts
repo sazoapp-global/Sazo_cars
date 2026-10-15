@@ -127,6 +127,17 @@ describe.skipIf(!base)('account settings (e2e)', () => {
       preferences: { visitConfirmationTexts: false }, savedCars: [{ vehicleRef: ref }] });
     expect(data.sharedReports).toHaveLength(1);
     expect(data.devices.some((d: { current: boolean }) => d.current)).toBe(true);
+
+    // The same data as a JSON file is for SAZO administrators only, and every download is audited.
+    await http.get('/v1/admin/users/export').query({ phone: NEW }).set(bearer(token)).expect(403);
+    await http.get('/v1/admin/users/export').query({ phone: '0772' }).set(bearer(adminToken)).expect(400);
+    await http.get('/v1/admin/users/export').query({ phone: '+256772899999' }).set(bearer(adminToken)).expect(404);
+    const byAdmin = (await http.get('/v1/admin/users/export').query({ phone: NEW }).set(bearer(adminToken)).expect(200)).body;
+    expect(byAdmin).toMatchObject({ profile: { displayName: 'Namukasa G. Sarah', phone: NEW }, savedCars: [{ vehicleRef: ref }] });
+    expect(byAdmin.devices.every((d: { current: boolean }) => !d.current)).toBe(true);
+    const { rows: [logged] } = await db.query(`SELECT target_id FROM iam.audit_entries WHERE action = 'account.export_by_admin' ORDER BY at DESC LIMIT 1`);
+    expect(logged.target_id).toBe(userId);
+
     const r = await http.post('/v1/me/sessions/sign-out-others').set(bearer(token)).expect(201);
     expect(r.body.signedOut).toBeGreaterThan(0);
     expect((await http.get('/v1/me/sessions').set(bearer(token)).expect(200)).body.items).toHaveLength(1);
