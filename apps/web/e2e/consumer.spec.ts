@@ -54,7 +54,7 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
   const panel = page.getByRole('main');
   await panel.getByLabel('Surname').fill('Buyer');
-  await panel.getByLabel('First name').fill('Test');
+  await panel.getByLabel('Given name').fill('Test');
   await panel.getByLabel('Male', { exact: true }).check();
   await panel.getByLabel('Date of birth').fill('1988-08-08');
   await panel.getByLabel('Mobile number').fill(phone);
@@ -66,7 +66,7 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   // Back on the car, now with details.
   await expect(page.getByRole('heading', { name: 'Vehicle Health' })).toBeVisible();
   await expect(page.getByText('Estimated price range')).toBeVisible();
-  await expect(page.getByText(/UGX \d+(\.\d)?M – UGX/)).toBeVisible();
+  await expect(page.getByText(/UGX \d+(\.\d)?M to UGX/)).toBeVisible();
   // The latest inspection (P-004) in plain words.
   const inspection = page.getByRole('region', { name: 'Latest inspection' });
   await expect(inspection).toContainText('Passed');

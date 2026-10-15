@@ -24,6 +24,11 @@ export class DealerRepository {
     return (await this.pool.query<StockRow>(`SELECT ${COLS} FROM dealer.stock_items WHERE organisation_id = $1 AND vehicle_id = $2 AND status = 'in_stock'`, [organisationId, vehicleId])).rows[0];
   }
 
+  /** Every car in stock at any dealer, newest first (the website filters to approved dealers). */
+  async inStockEverywhere(limit: number): Promise<StockRow[]> {
+    return (await this.pool.query<StockRow>(`SELECT ${COLS} FROM dealer.stock_items WHERE status = 'in_stock' ORDER BY listed_at DESC LIMIT $1`, [limit])).rows;
+  }
+
   async list(organisationId: string, status: StockStatus | undefined): Promise<StockRow[]> {
     return (await this.pool.query<StockRow>(
       `SELECT ${COLS} FROM dealer.stock_items WHERE organisation_id = $1 AND ($2::text IS NULL OR status = $2)

@@ -46,7 +46,7 @@ export class Keyring {
 
   decrypt(blob: Buffer, version: number): string {
     const key = this.keys.get(version);
-    if (!key) throw new Error(`PII key version ${version} is not loaded — add it back to the configuration`);
+    if (!key) throw new Error(`PII key version ${version} is not loaded. Add it back to the configuration`);
     const d = createDecipheriv('aes-256-gcm', key, blob.subarray(0, 12));
     d.setAuthTag(blob.subarray(12, 28));
     return Buffer.concat([d.update(blob.subarray(28)), d.final()]).toString('utf8');

@@ -9,7 +9,7 @@ export function AnswerForm({ token }: { token: string }) {
   if (state.done) {
     return (
       <div role="status" className={`mt-6 rounded-lg border p-4 ${state.done === 'confirmed' ? 'border-ok-line bg-ok-fill text-ok-text' : 'border-warn-line bg-warn-fill text-warn-text'}`}>
-        <p className="font-semibold">{state.done === 'confirmed' ? 'Thank you — you confirmed this visit.' : 'Thank you — we have noted that you dispute this record.'}</p>
+        <p className="font-semibold">{state.done === 'confirmed' ? 'Thank you. You confirmed this visit.' : 'Thank you. We have noted that you dispute this record.'}</p>
         <p className="mt-1 text-sm text-on-surface">{state.done === 'confirmed' ? 'Your answer makes this car’s history more reliable.' : 'SAZO will treat this record with caution. You don’t need to do anything else.'}</p>
       </div>
     );

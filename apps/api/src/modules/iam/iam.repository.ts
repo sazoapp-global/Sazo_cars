@@ -240,9 +240,11 @@ export class IamRepository {
     return rows[0]!.id;
   }
 
-  async sessionByRefresh(hash: string): Promise<{ id: string; userId: string; revoked: boolean; expired: boolean } | undefined> {
+  async sessionByRefresh(hash: string): Promise<{ id: string; userId: string; revoked: boolean; expired: boolean; idleSeconds: number } | undefined> {
     const { rows } = await this.pool.query(
-      `SELECT id, user_id AS "userId", revoked_at IS NOT NULL AS revoked, expires_at <= now() AS expired FROM iam.sessions WHERE refresh_hash = $1`, [hash]);
+      `SELECT id, user_id AS "userId", revoked_at IS NOT NULL AS revoked, expires_at <= now() AS expired,
+              EXTRACT(EPOCH FROM (now() - COALESCE(rotated_at, created_at)))::float AS "idleSeconds"
+         FROM iam.sessions WHERE refresh_hash = $1`, [hash]);
     return rows[0];
   }
 

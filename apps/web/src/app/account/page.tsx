@@ -90,23 +90,23 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div><label htmlFor="surname" className="label">Surname</label>
               <input id="surname" name="surname" required maxLength={60} defaultValue={profile.surname ?? ''} className="field" autoComplete="family-name" /></div>
-            <div><label htmlFor="firstName" className="label">First name</label>
+            <div><label htmlFor="firstName" className="label">Given name</label>
               <input id="firstName" name="firstName" required maxLength={60} defaultValue={profile.firstName ?? ''} className="field" autoComplete="given-name" /></div>
             <div><label htmlFor="middleName" className="label">Middle name</label>
               <input id="middleName" name="middleName" maxLength={60} defaultValue={profile.middleName ?? ''} className="field" autoComplete="additional-name" /></div>
           </div>
           <button className="btn btn-ghost">Save names</button>
         </form>
-        <p className="text-sm text-muted">Shown as “{profile.displayName}”. Garages you work with see your name; on reviews only your first name is shown.</p>
+        <p className="text-sm text-muted">Shown as “{profile.displayName}”. Garages you work with see your name; on reviews only your given name is shown.</p>
         <dl className="grid gap-3 border-t border-line pt-3 sm:grid-cols-2">
-          <div><dt className="label">Gender</dt><dd>{profile.gender === 'male' ? 'Male' : profile.gender === 'female' ? 'Female' : '—'}</dd></div>
-          <div><dt className="label">Date of birth</dt><dd className="tabular-nums">{profile.dateOfBirth ? formatDate(profile.dateOfBirth) : '—'}</dd></div>
+          <div><dt className="label">Gender</dt><dd>{profile.gender === 'male' ? 'Male' : profile.gender === 'female' ? 'Female' : 'Not given'}</dd></div>
+          <div><dt className="label">Date of birth</dt><dd className="tabular-nums">{profile.dateOfBirth ? formatDate(profile.dateOfBirth) : 'Not given'}</dd></div>
         </dl>
         <p className="text-sm text-muted">Gender and date of birth identify you, so only SAZO staff can change them. Contact SAZO if they are wrong.</p>
 
         <div className="border-t border-line pt-3">
           <p id="phone-heading" className="label">Phone number</p>
-          <p className="font-semibold tabular-nums">{profile.phone ? localPhone(profile.phone) : '—'}</p>
+          <p className="font-semibold tabular-nums">{profile.phone ? localPhone(profile.phone) : 'Not given'}</p>
           {newPhone ? (
             <form action={confirmPhone} className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
               <input type="hidden" name="phone" value={newPhone} />
@@ -159,7 +159,7 @@ export default async function Account({ searchParams }: { searchParams: SP }) {
             <div><label htmlFor="confirmPassword" className="label">New password again</label>
               <input id="confirmPassword" name="confirmPassword" type="password" required autoComplete="new-password" className="field" /></div>
           </div>
-          <p id="newpw-help" className="text-sm text-muted">At least {profile.strongPasswordRequired ? 12 : 8} characters{profile.strongPasswordRequired ? ' — your role can change car histories, so it needs a longer password' : ''}.</p>
+          <p id="newpw-help" className="text-sm text-muted">At least {profile.strongPasswordRequired ? 12 : 8} characters{profile.strongPasswordRequired ? '. Your role can change car histories, so it needs a longer password' : ''}.</p>
           <button className="btn btn-ghost">{profile.hasPassword ? 'Change password' : 'Set password'}</button>
         </form>
       </section>

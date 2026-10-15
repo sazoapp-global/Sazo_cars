@@ -1,6 +1,5 @@
-// "Download my data", readable: everything SAZO holds about the signed-in person — including the businesses
-// they belong to — as a page they can read, print or save as PDF. The JSON file (machine-readable copy,
-// DPPA 2019) is still offered from here.
+// "Download my data", readable: everything SAZO holds about the signed-in person, including the businesses
+// they belong to, as a page they can read or save as a PDF file (the only download offered).
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -64,14 +63,13 @@ export default async function YourData() {
         <p className="mt-1 text-muted">Prepared {formatDate(d.exportedAt)}. Records about cars (services, inspections, registrations) belong to each car&apos;s history and are not included.</p>
       </div>
       <div className="flex flex-wrap gap-2 print:hidden">
-        <PrintButton />
-        <a href="/account/export" className="btn btn-ghost" download><Icon name="receipt_long" />Download as a JSON file</a>
+        <PrintButton primary />
       </div>
 
       <Section id="you" title="Your details">
         <Rows rows={[
-          ['Name', p.displayName ?? '—'],
-          ['Phone', p.phone ? localPhone(p.phone) : '—'],
+          ['Name', p.displayName ?? 'Not given'],
+          ['Phone', p.phone ? localPhone(p.phone) : 'Not given'],
           ...(p.email ? [['Email', p.email] as [string, ReactNode]] : []),
           ['Texts asking you to confirm garage visits', d.preferences.visitConfirmationTexts ? 'On' : 'Off'],
         ]} />
@@ -86,11 +84,11 @@ export default async function YourData() {
                 ['Type', TYPE[b.type] ?? b.type],
                 ['Registered name', b.legalName],
                 ...(b.tradingName ? [['Trading name', b.tradingName] as [string, ReactNode]] : []),
-                ['Registration number', b.registrationNumber ?? '—'],
-                ['District', b.district ?? '—'],
+                ['Registration number', b.registrationNumber ?? 'Not recorded'],
+                ['District', b.district ?? 'Not recorded'],
                 ['Status', STATUS[b.status] ?? b.status],
                 ['Your role', ROLE[b.yourRole] ?? b.yourRole],
-                ['Registered on SAZO', b.registeredAt ? formatDate(b.registeredAt) : '—'],
+                ['Registered on SAZO', b.registeredAt ? formatDate(b.registeredAt) : 'Not recorded'],
                 ['Documents sent', String(b.documentsSent)],
               ]} />
             </div>

@@ -143,7 +143,7 @@ function CarStep({ i, update, workplace, online }: StepProps & { workplace: Gara
       </div>
       {result === 'offline' && (
         <div className="rounded-lg border border-warn-line bg-warn-fill p-3 text-sm text-warn-text">
-          <p className="font-semibold">No signal — carry on.</p>
+          <p className="font-semibold">No signal. Carry on.</p>
           <p className="text-on-surface">SAZO will match the plate to the car when you send the inspection. Read the chassis number in the next steps.</p>
         </div>
       )}
@@ -174,7 +174,7 @@ function CarStep({ i, update, workplace, online }: StepProps & { workplace: Gara
         </div>
       )}
       {!result && i.plateEntered && <p className="text-sm text-muted">Chosen: <PlateText value={i.plateEntered} /> {i.vehicleLabel ?? (i.newToSazo ? '(new to SAZO)' : '(will be matched when sent)')}</p>}
-      {!online && !result && <p className="text-sm text-muted">No signal: type the plate and tap Find — you can carry on without the lookup.</p>}
+      {!online && !result && <p className="text-sm text-muted">No signal: type the plate and tap Find. You can carry on without the lookup.</p>}
     </>
   );
 }
@@ -246,7 +246,7 @@ function PaintStep({ i, setForm }: StepProps) {
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Paint thickness</h1>
-      <p className="-mt-3 text-muted">Use the paint gauge on each steel panel, in microns. Factory paint is usually 80–180. Skip panels you could not measure.</p>
+      <p className="-mt-3 text-muted">Use the paint gauge on each steel panel, in microns. Factory paint is usually 80 to 180. Skip panels you could not measure.</p>
       <div className="card divide-y divide-line">
         {PANELS.map((p) => {
           const v = valueOf(p);
@@ -255,7 +255,7 @@ function PaintStep({ i, setForm }: StepProps) {
             <div key={p} className="flex items-center justify-between gap-3 p-3">
               <label htmlFor={`paint-${p}`} className="min-w-0">
                 <span className="font-semibold">{PANEL_LABELS[p]}</span>
-                {isThick && <span className="block text-sm font-semibold text-warn-text">Thick — likely repainted</span>}
+                {isThick && <span className="block text-sm font-semibold text-warn-text">Thick, likely repainted</span>}
               </label>
               <div className="flex items-center gap-1">
                 <input id={`paint-${p}`} className={`field !w-24 text-right font-bold tabular-nums ${isThick ? '!border-warn-line' : ''}`} inputMode="numeric" autoComplete="off"
@@ -336,7 +336,7 @@ function PhotosStep({ i, update }: StepProps) {
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Photos of the car</h1>
-      <p className="-mt-3 text-muted">Buyers never see these photos — SAZO keeps them as proof of what you saw.</p>
+      <p className="-mt-3 text-muted">Buyers never see these photos. SAZO keeps them as proof of what you saw.</p>
       {CAR_PHOTO_SLOTS.map(([slot, label, required]) => (
         <PhotoButton key={slot} jobId={i.id} kind="vehicle_photo" photoId={i.photos[slot]} label={label} required={required}
           onChange={(p) => update((x) => ({ ...x, photos: { ...x.photos, [slot]: p } }))} />
@@ -368,7 +368,7 @@ function ResultStep({ i, update, setForm, workplace, me, online, goStep }: StepP
       await forgetInspection(i.id);
       setDone(res);
     } catch (err) {
-      if (err instanceof OfflineError) setError('No signal. The inspection is saved on this phone — send it when you have signal.');
+      if (err instanceof OfflineError) setError('No signal. The inspection is saved on this phone. Send it when you have signal.');
       else if (err instanceof ApiError && (err.code === 'warnings_need_acknowledgement' || err.code === 'blocked')) {
         setWarnings(err.errors as InspectionWarning[]);
         setError(err.code === 'blocked' ? 'This inspection cannot be sent as it is.' : 'What you found differs from SAZO’s records. Check, then explain to continue.');
@@ -382,7 +382,7 @@ function ResultStep({ i, update, setForm, workplace, me, online, goStep }: StepP
     return (
       <div className="space-y-4 text-center">
         <Icon name="check_circle" size={56} className="mx-auto text-ok-text" />
-        <h1 className="font-display text-2xl font-bold">{done.status === 'accepted' ? 'Added to the car’s history' : done.status === 'submitted' ? 'Sent — SAZO is checking which car it is' : 'Not accepted'}</h1>
+        <h1 className="font-display text-2xl font-bold">{done.status === 'accepted' ? 'Added to the car’s history' : done.status === 'submitted' ? 'Sent. SAZO is checking which car it is' : 'Not accepted'}</h1>
         {done.rejectionReason && <p className="text-bad-text">{done.rejectionReason}</p>}
         <p className="text-muted">SAZO keeps a signed copy of your checklist and photos.</p>
         <button type="button" className="btn btn-primary w-full" onClick={() => go({ name: 'home' })}>Done</button>
@@ -402,9 +402,9 @@ function ResultStep({ i, update, setForm, workplace, me, online, goStep }: StepP
 
       <div className="card divide-y divide-line">
         <Row label="Car" onEdit={() => goStep(0)}><PlateText value={i.plateEntered} /> <span className="text-sm">{i.vehicleLabel ?? (i.newToSazo ? 'New to SAZO' : 'Matched when sent')}</span></Row>
-        <Row label="Mileage" onEdit={() => goStep(1)}>{f.mileage ? `${f.mileage.value.toLocaleString('en-UG')} ${f.mileage.unit}` : '—'}{i.photos.odometer ? ' · with photo' : ''}</Row>
+        <Row label="Mileage" onEdit={() => goStep(1)}>{f.mileage ? `${f.mileage.value.toLocaleString('en-UG')} ${f.mileage.unit}` : 'Not recorded'}{i.photos.odometer ? ' · with photo' : ''}</Row>
         <Row label="Paint" onEdit={() => goStep(3)}>{f.paint?.readings.length ? `${f.paint.readings.length} panels measured${thick ? ` · ${thick} thick` : ''}` : 'Not measured'}</Row>
-        <Row label="Condition" onEdit={() => goStep(4)}>{f.structure ? (f.structure.damageFound ? 'Structural damage found' : 'No structural damage') : '—'}{f.defects?.length ? ` · ${f.defects.length} defects` : ''}</Row>
+        <Row label="Condition" onEdit={() => goStep(4)}>{f.structure ? (f.structure.damageFound ? 'Structural damage found' : 'No structural damage') : 'Not recorded'}{f.defects?.length ? ` · ${f.defects.length} defects` : ''}</Row>
         <Row label="Photos" onEdit={() => goStep(5)}>{CAR_PHOTO_SLOTS.filter(([s]) => i.photos[s]).length} of the car</Row>
         <Row label="Inspector">{me.displayName}</Row>
       </div>

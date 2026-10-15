@@ -21,12 +21,12 @@ test('manage my account and delete it', async ({ page }) => {
 
   // Names are tidied and shown surname first, with the middle initial; the circle shows "AR" (D-103).
   await page.getByLabel('Surname').fill('AKELLO');
-  await page.getByLabel('First name').fill('ruth');
+  await page.getByLabel('Given name').fill('ruth');
   await page.getByLabel('Middle name').fill('nambi');
   await page.getByRole('button', { name: 'Save names' }).click();
   await expect(page.getByRole('status')).toContainText('Names saved');
   await expect(page.getByRole('heading', { name: 'Akello N. Ruth' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Settings — Akello N. Ruth' })).toContainText('AR');
+  await expect(page.getByRole('link', { name: 'Settings for Akello N. Ruth' })).toContainText('AR');
 
   // Add an email (confirmed by link) and a password: 100%, and she can log in with them.
   const email = `ruth${stamp}@example.com`;
@@ -63,9 +63,13 @@ test('manage my account and delete it', async ({ page }) => {
   await a11y(page);
   await shot(page, 'account');
 
-  const file = await page.request.get('/account/export');
-  expect(file.headers()['content-disposition']).toMatch(/attachment; filename="sazo-my-data-/);
-  expect(await file.json()).toMatchObject({ profile: { displayName: 'Akello N. Ruth', phone: NEW_PHONE }, preferences: { visitConfirmationTexts: false } });
+  // Your data held by SAZO: a page to read or save as PDF; there is no JSON download any more.
+  await page.goto('/account/data');
+  await expect(page.getByRole('heading', { name: 'Your data held by SAZO' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
+  await expect(page.getByText(/JSON/)).toHaveCount(0);
+  expect((await page.request.get('/account/export')).status()).toBe(404);
+  await page.goto('/account');
 
   await page.getByText('Delete my account').first().click();
   await page.getByLabel('Type DELETE to confirm').fill('delete');
@@ -86,7 +90,7 @@ test('create an account with email and password, then log in with it (D-100)', a
   const panel = page.getByRole('main');
   await panel.getByRole('button', { name: 'Use email instead' }).click();
   await panel.getByLabel('Surname').fill('anguzu');
-  await panel.getByLabel('First name').fill('MIKE');
+  await panel.getByLabel('Given name').fill('MIKE');
   await panel.getByLabel('Middle name').fill('james');
   await panel.getByLabel('Male', { exact: true }).check();
   // Under 18: refused with a clear reason.
@@ -103,7 +107,7 @@ test('create an account with email and password, then log in with it (D-100)', a
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByRole('heading', { name: 'Welcome to SAZO, Mike' })).toBeVisible();
   await a11y(page);
-  await expect(page.getByRole('link', { name: 'Settings — Anguzu J. Mike' })).toContainText('AM');
+  await expect(page.getByRole('link', { name: 'Settings for Anguzu J. Mike' })).toContainText('AM');
   await shot(page, 'signed-up');
 
   await page.goto('/account');

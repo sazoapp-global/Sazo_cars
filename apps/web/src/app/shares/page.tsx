@@ -20,7 +20,7 @@ export default async function Shares({ searchParams }: { searchParams: Promise<{
       {token && /^[A-Za-z0-9_-]{22,64}$/.test(token) && (
         <section className="card p-5" aria-labelledby="ready">
           <h1 id="ready" className="font-display text-2xl font-bold">Your link is ready</h1>
-          <p className="mt-1 text-muted">Anyone with this link can see this report for 30 days, without signing in. It is a copy frozen today — new records won&apos;t change it. Owners&apos; names and garage costs are never included.</p>
+          <p className="mt-1 text-muted">Anyone with this link can see this report for 30 days, without signing in. It is a copy frozen today. New records won&apos;t change it. Owners&apos; names and garage costs are never included.</p>
           <p className="sazo-id mt-3 break-all rounded-lg bg-soft p-3 text-sm normal-case tracking-normal">{`${origin}/shared/${token}`}</p>
           <div className="mt-3"><ShareButtons url={`${origin}/shared/${token}`} title="SAZO vehicle report" /></div>
           <p className="mt-3 text-sm text-muted">To save a PDF, open the link and choose <strong>Save as PDF</strong>.</p>

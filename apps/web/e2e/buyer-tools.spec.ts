@@ -25,8 +25,28 @@ test('save, compare, share and stop sharing', async ({ page, browser }) => {
   await a11y(page);
   await shot(page, 'compare');
 
+  // The compare pop-up opens from a report's Compare button: add a car by plate, or browse cars for sale.
   await page.goto('/check?q=UBJ214K');
-  await page.getByRole('button', { name: 'Share or save as PDF' }).click();
+  await page.getByRole('link', { name: 'Compare', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Compare cars' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('listitem').filter({ hasText: '2016 Toyota Harrier' })).toBeVisible();
+  const plate = dialog.getByLabel('Number plate, VIN or chassis number');
+  await plate.fill('UBZ 000Z');
+  await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('SAZO has no records for UBZ 000Z');
+  await plate.fill('UBC718P');
+  await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(dialog.getByRole('listitem').filter({ hasText: '2015 Toyota RAV4' })).toBeVisible();
+  await dialog.getByRole('tab', { name: /Cars for sale/ }).click();
+  await expect(dialog.getByRole('tabpanel')).toBeVisible();
+  await a11y(page);
+  await shot(page, 'compare-popup');
+  await dialog.getByRole('button', { name: 'Compare 2 cars' }).click();
+  await expect(page.getByRole('row', { name: /Mileage.*differs/ })).toBeVisible();
+
+  await page.goto('/check?q=UBJ214K');
+  await page.getByRole('button', { name: 'Share this report' }).click();
   await expect(page.getByRole('heading', { name: 'Your link is ready' })).toBeVisible();
   const url = (await page.locator('p.sazo-id').first().textContent())!.trim();
 

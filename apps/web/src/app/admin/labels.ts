@@ -18,7 +18,7 @@ export function recordLine(type: string, a: Record<string, unknown>): string {
   const parts = Object.entries(a)
     .filter(([k, v]) => v !== null && v !== undefined && !/Id$/.test(k))
     .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${Array.isArray(v) ? v.join(', ') : typeof v === 'object' ? Object.values(v as object).join(' ') : String(v)}`);
-  return parts.join(' · ') || '—';
+  return parts.join(' · ') || 'None';
 }
 export const recordLabel = (t: string) => RECORD_LABELS[t] ?? t;
 export const day = (iso: string | null, p = 'day') => formatDate(iso, p);

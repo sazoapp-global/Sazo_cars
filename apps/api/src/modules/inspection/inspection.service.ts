@@ -141,7 +141,7 @@ export class InspectionService {
     for (const ref of refs) {
       const f = files.get(ref.id);
       if (!f || !f.uploadedBy || !(await this.iam.isActiveMember(f.uploadedBy, r.organisationId))) {
-        errors.push({ path: ref.path, code: 'evidence_not_found', message: 'Photo not found — upload it again' });
+        errors.push({ path: ref.path, code: 'evidence_not_found', message: 'Photo not found. Upload it again' });
       } else if (ref.kind && f.kind !== ref.kind) {
         errors.push({ path: ref.path, code: 'evidence_wrong_kind', message: `This should be a ${ref.kind.replace(/_/g, ' ')}` });
       }
@@ -211,7 +211,7 @@ export class InspectionService {
       candidate = found.candidates[0];
       vehicleId = (await this.registry.idForRef(candidate!.vehicleRef)) ?? null;
     } else if (found.outcome === 'not_found' && !r.form.identity?.chassisSeen) {
-      throw new InspectionError('chassis_required', 'This car is new to SAZO — enter the chassis number you see and photograph it', [{ path: 'form.identity.chassisSeen', code: 'required', message: 'chassis number' }]);
+      throw new InspectionError('chassis_required', 'This car is new to SAZO. Enter the chassis number you see and photograph it', [{ path: 'form.identity.chassisSeen', code: 'required', message: 'chassis number' }]);
     }
     const warnings = await this.checks(r, vehicleId, candidate, r.vehicleId ? 1 : found.candidates.length);
     const blocking = warnings.filter((w) => w.blocking);

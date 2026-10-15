@@ -38,7 +38,7 @@ export async function setPassword(form: FormData) {
 /** Step 1: send a code to the NEW number. */
 export async function sendPhoneCode(form: FormData) {
   const phone = toE164(text(form, 'phone'));
-  if (!phone) back({ error: 'Check the new number — e.g. 0772 123 456.' });
+  if (!phone) back({ error: 'Check the new number, for example 0772 123 456.' });
   try { await api('/me/phone/code', { method: 'POST', auth: true, body: { phone } }); } catch (err) { back({ error: why(err, 'Could not send a code.') }); }
   back({ newPhone: phone! });
 }

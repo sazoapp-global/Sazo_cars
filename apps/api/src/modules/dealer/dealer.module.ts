@@ -7,10 +7,11 @@ import { VehicleModule } from '../vehicle/index.js';
 import { DealerController } from './dealer.controller.js';
 import { DealerRepository } from './dealer.repository.js';
 import { DealerService } from './dealer.service.js';
+import { ForSaleController } from './for-sale.controller.js';
 
 @Module({
   imports: [IamModule, VehicleModule, IngestModule, ReportModule, ObservationsModule],
-  controllers: [DealerController],
+  controllers: [DealerController, ForSaleController],
   providers: [DealerRepository, DealerService],
 })
 export class DealerModule {}

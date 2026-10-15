@@ -67,7 +67,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       ]}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{name} — cars for sale</h1>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{name}: cars for sale</h1>
           <p className="mt-1 max-w-2xl text-muted">Each car you list, its asking price and its sale become part of its SAZO history. Send buyers a report link so they can check the car themselves.</p>
         </div>
       </div>
@@ -79,7 +79,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           <Icon name="report" size={22} className="shrink-0 text-bad-text" />
           <div className="min-w-0 flex-1">
             <p className="font-bold text-bad-text">{flagged.length} {flagged.length === 1 ? 'car in stock has' : 'cars in stock have'} a serious finding in {flagged.length === 1 ? 'its' : 'their'} records</p>
-            <p className="text-sm text-on-surface">{flagged.map((c) => c.vehicle?.currentPlate ?? (c.vehicle ? vehicleName(c.vehicle) : 'A car')).join(', ')} — check before you sell. Buyers see the same findings.</p>
+            <p className="text-sm text-on-surface">{flagged.map((c) => c.vehicle?.currentPlate ?? (c.vehicle ? vehicleName(c.vehicle) : 'A car')).join(', ')}. Check before you sell. Buyers see the same findings.</p>
           </div>
           <Link href={href({ show: undefined, findings: '1' })} className="link text-sm text-bad-text">Show them</Link>
         </div>
@@ -89,7 +89,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
         { label: 'In stock', value: String(inStock.length) },
         { label: 'Sold this month', value: String(soldThisMonth), sub: `${soldList.length} sold in total` },
         { label: 'Cars to check', value: String(flagged.length), sub: 'Serious finding in the records', tone: flagged.length ? 'bad' : undefined },
-        { label: 'Average days in stock', value: avgDays === undefined ? '—' : String(avgDays), sub: 'Cars for sale now' },
+        { label: 'Average days in stock', value: avgDays === undefined ? 'None' : String(avgDays), sub: 'Cars for sale now' },
       ]} />
 
       <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={(inStock.length === 0 && show === 'in_stock') || !!sp.error}>
@@ -165,7 +165,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                     <p className="text-sm text-muted md:text-right"><span className="md:hidden">In stock for </span><span className="font-semibold tabular-nums text-ink">{days(c.listedAt)}</span><span className="md:hidden"> days</span></p>
                   </div>
                   {c.notes && <p className="mt-2 text-sm text-muted">Note: {c.notes}</p>}
-                  {c.status === 'sold' && <p className="mt-2 text-sm text-muted">The sale price is kept private — buyers never see it.</p>}
+                  {c.status === 'sold' && <p className="mt-2 text-sm text-muted">The sale price is kept private. Buyers never see it.</p>}
                   {c.status === 'in_stock' && c.vehicleRef && (
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                       <form action={shareReport} className="col-span-2"><input type="hidden" name="ref" value={c.vehicleRef} />
@@ -183,7 +183,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                         <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Mark as sold</summary>
                         <form action={markSold} className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
                           <input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} />
-                          <div><label htmlFor={`s-${c.stockId}`} className="label">Sold for (UGX) — private</label>
+                          <div><label htmlFor={`s-${c.stockId}`} className="label">Sold for (UGX), private</label>
                             <input id={`s-${c.stockId}`} name="price" required inputMode="numeric" className="field tabular-nums" /></div>
                           <div><label htmlFor={`d-${c.stockId}`} className="label">Date</label>
                             <input id={`d-${c.stockId}`} name="soldOn" type="date" max={today} defaultValue={today} className="field" /></div>

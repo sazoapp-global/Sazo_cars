@@ -16,6 +16,8 @@ const Env = z.object({
   HMAC_SECRET: z.string().min(32).default(DEV_SECRET),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  /** Log people out after this many hours without using their account (on the website and in the apps). */
+  SESSION_IDLE_HOURS: z.coerce.number().positive().default(4),
   /** 'console' keeps SMS in a local inbox (development/tests); 'africastalking' sends real SMS. */
   SMS_PROVIDER: z.enum(['console', 'africastalking']).default('console'),
   AT_USERNAME: z.string().optional(),

@@ -58,5 +58,5 @@ export async function answerVisit(form: FormData) {
   } catch (err) {
     go(`/my-cars/${ref}`, { error: err instanceof ApiError && err.detail ? err.detail : 'Could not save your answer. Please try again.' });
   }
-  go(`/my-cars/${ref}`, { done: response === 'confirmed' ? 'Thank you — visit confirmed.' : 'Thank you — SAZO will mark this visit as disputed by the owner.' });
+  go(`/my-cars/${ref}`, { done: response === 'confirmed' ? 'Thank you. Visit confirmed.' : 'Thank you. SAZO will mark this visit as disputed by the owner.' });
 }

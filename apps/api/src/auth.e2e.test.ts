@@ -117,6 +117,22 @@ describe.skipIf(!base)('sign-in and access control (e2e)', () => {
     await http.get('/v1/me').set(bearer(r1.body.accessToken)).expect(401);
   });
 
+  it('a session unused for 4 hours is logged out; one used within 4 hours carries on', async () => {
+    const t = await signIn('+256772100090', 'Idle I.');
+    const c = new pg.Client({ connectionString: url.toString() });
+    await c.connect();
+    const age = (h: number) => c.query(`UPDATE iam.sessions SET created_at = now() - make_interval(mins => $1), rotated_at = NULL
+      WHERE user_id = (SELECT id FROM iam.users WHERE phone_e164 = '+256772100090')`, [h]);
+    await age(210);
+    const fresh = await http.post('/v1/auth/refresh').send({ refreshToken: t.refreshToken }).expect(200);
+    await c.query(`UPDATE iam.sessions SET rotated_at = now() - interval '4 hours 20 minutes' WHERE user_id = (SELECT id FROM iam.users WHERE phone_e164 = '+256772100090')`);
+    const idle = await http.post('/v1/auth/refresh').send({ refreshToken: fresh.body.refreshToken }).expect(401);
+    expect(idle.body).toMatchObject({ code: 'session_idle', detail: 'You were logged out after 4 hours without activity. Log in again.' });
+    const { rows } = await c.query(`SELECT revoked_reason FROM iam.sessions WHERE user_id = (SELECT id FROM iam.users WHERE phone_e164 = '+256772100090')`);
+    expect(rows[0].revoked_reason).toBe('idle');
+    await c.end();
+  });
+
   it('sign-out ends the session', async () => {
     const t = await signIn('+256772100003', 'Grace A.');
     await http.post('/v1/auth/sign-out').set(bearer(t.accessToken)).expect(204);

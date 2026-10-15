@@ -29,6 +29,7 @@ async function raw(path: string, init: RequestInit): Promise<Response> {
 async function store(t: Tokens): Promise<void> {
   access = t.accessToken;
   await kv.set('refreshToken', t.refreshToken);
+  await kv.del('signedOutIdle');
 }
 
 /** Swap the refresh token for new tokens. Only one refresh runs at a time. */
@@ -40,6 +41,9 @@ export function refresh(): Promise<boolean> {
       const res = await raw('/auth/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: token }) });
       if (res.status === 409) { await new Promise((r) => setTimeout(r, 600)); return !!access; } // another tab refreshed
       if (!res.ok) {
+        // Logged out after 4 hours without activity: the log-in screen says why. Drafts stay on the phone.
+        const code = ((await res.json().catch(() => ({}))) as { code?: string }).code;
+        if (code === 'session_idle') await kv.set('signedOutIdle', true);
         await kv.del('refreshToken');
         access = undefined;
         listeners.forEach((l) => l(false));

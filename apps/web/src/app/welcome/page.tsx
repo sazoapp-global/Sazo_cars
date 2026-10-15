@@ -80,7 +80,7 @@ export default async function Welcome() {
             <section aria-labelledby="why" className="rounded-[14px] bg-primary p-5 text-white">
               <h2 id="why" className="font-display font-bold">How SAZO helps</h2>
               <ul className="mt-3 space-y-3 text-sm">
-                <li className="flex gap-2"><Icon name="verified_user" size={20} className="shrink-0 text-lime" /><span><strong>Records, not opinions.</strong> Official, garage and inspection records — each one labelled with where it came from.</span></li>
+                <li className="flex gap-2"><Icon name="verified_user" size={20} className="shrink-0 text-lime" /><span><strong>Records, not opinions.</strong> Official, garage and inspection records, each one labelled with where it came from.</span></li>
                 <li className="flex gap-2"><Icon name="translate" size={20} className="shrink-0 text-lime" /><span><strong>Plain language.</strong> Seven questions every buyer asks, answered in everyday words.</span></li>
                 <li className="flex gap-2"><Icon name="lock" size={20} className="shrink-0 text-lime" /><span><strong>Private.</strong> Owner names are never shown; loans and police records as status only.</span></li>
               </ul>

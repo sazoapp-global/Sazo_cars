@@ -28,7 +28,7 @@ const READY: { icon: IconName; title: string; tag: string; text: string; can: st
   },
   {
     icon: 'handyman', title: 'Garages & service centres', tag: 'Every job becomes part of the car’s record', type: 'garage', where: 'SAZO Garage app on your mechanics’ phones', popular: true,
-    text: 'Record jobs from the bay in a minute — even without signal. Customers confirm by SMS.',
+    text: 'Record jobs from the bay in a minute, even without signal. Customers confirm by SMS.',
     can: ['See the last mileage and engine number SAZO has', 'Record services, repairs and parts with photos', 'Customers confirm each visit by SMS', 'Add your mechanics from the Staff screen'],
   },
   {
@@ -54,7 +54,7 @@ const BENEFITS: { icon: IconName; title: string; tag: string; items: string[] }[
 const STEPS = [
   'Register your business here (about 5 minutes).',
   'Send your trading licence or registration certificate, and a photo of your premises.',
-  'SAZO checks your details — we may call or visit. You get an SMS with the decision.',
+  'SAZO checks your details. We may call or visit. You get an SMS with the decision.',
   'Once approved, you and your staff log in: dealers on this website, garages and inspectors in the phone app.',
 ];
 
@@ -80,7 +80,7 @@ export default async function Business() {
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-ink md:text-5xl">
               Turn your work on cars into <span className="relative whitespace-nowrap text-primary-container">business value<span aria-hidden className="absolute inset-x-0 -bottom-1 h-2 rounded-full bg-lime" /></span>.
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-muted">Garages, dealers and inspectors add what they do to each car’s record. Buyers see it, trust it — and choose businesses they can check. Free while SAZO is in testing.</p>
+            <p className="mt-5 max-w-xl text-lg text-muted">Garages, dealers and inspectors add what they do to each car’s record. Buyers see it, trust it and choose businesses they can check. Free while SAZO is in testing.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/business/register" className="btn btn-focal">Register your business<Icon name="arrow_forward" size={18} /></Link>
               <a href="#how" className="btn btn-ghost bg-white">How it works</a>
@@ -92,7 +92,7 @@ export default async function Business() {
                 ))}
               </dl>
             )}
-            {figures.length > 0 && <p className="mt-2 text-xs text-muted">Live counts. SAZO is in testing — these include simulated records.</p>}
+            {figures.length > 0 && <p className="mt-2 text-xs text-muted">Live counts. SAZO is in testing. These include simulated records.</p>}
           </div>
           <div className="relative mx-auto w-full max-w-xl">
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-xl">

@@ -31,7 +31,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
 
   await dealer.goto(businessUrl);
   await dealer.getByRole('link', { name: 'Open your stock' }).click();
-  await expect(dealer.getByRole('heading', { name: `${NAME} — cars for sale` })).toBeVisible();
+  await expect(dealer.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
   await a11y(dealer);
 
   // A known car, by plate.

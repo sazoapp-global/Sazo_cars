@@ -26,7 +26,7 @@ export function FinishDetails({ onDone, onSignOut }: { onDone: () => void; onSig
         <h1 className="font-display text-xl font-bold">Finish your details</h1>
         <p className="text-sm text-muted">SAZO now asks everyone for their full name, gender and date of birth. You only do this once.</p>
         <div><label htmlFor="fd-surname" className="label">Surname</label><input id="fd-surname" className="field" autoComplete="family-name" value={v.surname} onChange={set('surname')} /></div>
-        <div><label htmlFor="fd-first" className="label">First name</label><input id="fd-first" className="field" autoComplete="given-name" value={v.firstName} onChange={set('firstName')} /></div>
+        <div><label htmlFor="fd-first" className="label">Given name</label><input id="fd-first" className="field" autoComplete="given-name" value={v.firstName} onChange={set('firstName')} /></div>
         <div><label htmlFor="fd-middle" className="label">Middle name (optional)</label><input id="fd-middle" className="field" autoComplete="additional-name" value={v.middleName} onChange={set('middleName')} /></div>
         <fieldset><legend className="label">Gender</legend>
           <div className="flex gap-2">{[['female', 'Female'], ['male', 'Male']].map(([val, l]) => (

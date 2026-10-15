@@ -250,7 +250,7 @@ export class GarageService {
     for (const r of refs) {
       const f = files.get(r.id);
       if (!f || !f.uploadedBy || !(await this.iam.isActiveMember(f.uploadedBy, j.organisationId))) {
-        errors.push({ path: r.path, code: 'evidence_not_found', message: 'Photo not found — upload it again' });
+        errors.push({ path: r.path, code: 'evidence_not_found', message: 'Photo not found. Upload it again' });
       } else if (r.kind && f.kind !== r.kind) {
         errors.push({ path: r.path, code: 'evidence_wrong_kind', message: `This should be a ${r.kind.replace(/_/g, ' ')}` });
       }
@@ -292,7 +292,7 @@ export class GarageService {
       if (found.outcome === 'found') vehicleId = (await this.registry.idForRef(found.candidates[0]!.vehicleRef)) ?? null;
       if (found.outcome === 'not_found') {
         const kinds = new Set((await this.evidence.view(j.form.evidenceIds ?? [])).map((f) => f.kind));
-        if (!kinds.has('plate_photo')) throw new GarageError('plate_photo_required', 'This car is new to SAZO — take a photo of its number plate', [{ path: 'form.evidenceIds', code: 'evidence_required', message: 'plate photo' }]);
+        if (!kinds.has('plate_photo')) throw new GarageError('plate_photo_required', 'This car is new to SAZO. Take a photo of its number plate', [{ path: 'form.evidenceIds', code: 'evidence_required', message: 'plate photo' }]);
       }
     }
 

@@ -151,10 +151,10 @@ export function legalStatus(r: FullReport, x: ReportExtras) {
   const finance = f.get('finance_status');
   const impound = f.get('impound_status');
   return {
-    police: stolen === 'open' ? st('bad', 'Reported stolen — open report') : stolen === 'recovered' ? st('warn', 'Recovered after a theft report') : impound === 'impounded' ? st('bad', 'Impounded') : st('ok', 'No open police report on record'),
+    police: stolen === 'open' ? st('bad', 'Reported stolen, report still open') : stolen === 'recovered' ? st('warn', 'Recovered after a theft report') : impound === 'impounded' ? st('bad', 'Impounded') : st('ok', 'No open police report on record'),
     loan: finance === 'active' ? st('bad', 'A loan on this car is recorded') : finance === 'cleared' ? st('ok', 'A recorded loan was paid off') : st('ok', 'No loan on record'),
     customs: counted(x.ledger).some((l) => l.type === 'customs_cleared') ? st('ok', 'Customs clearance recorded') : counted(x.ledger).some((l) => l.type === 'import_recorded') ? st('na', 'Import recorded; no clearance record yet') : st('na', 'No customs record yet'),
   };
 }
 
-export const kmText = (km: number | null | undefined) => (km === null || km === undefined ? '—' : formatKm(km));
+export const kmText = (km: number | null | undefined) => (km === null || km === undefined ? 'Not recorded' : formatKm(km));

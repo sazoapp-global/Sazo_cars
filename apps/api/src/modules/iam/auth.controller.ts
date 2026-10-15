@@ -14,7 +14,7 @@ const DeviceToken = z.string().min(20).max(100).optional();
 const STATUS: Record<string, number> = {
   rate_limited: 429, signup_details_required: 400, refresh_in_progress: 409, no_account: 404, account_exists: 409, email_in_use: 409,
   account_locked: 423, weak_password: 422, invalid_link: 410, too_young: 422, google_disabled: 503, google_failed: 502, wrong_password: 403,
-  details_locked: 409, invalid_code: 401, invalid_credentials: 401, invalid_token: 401, account_suspended: 403, phone_in_use: 409, same_phone: 400,
+  details_locked: 409, invalid_code: 401, invalid_credentials: 401, invalid_token: 401, session_idle: 401, account_suspended: 403, phone_in_use: 409, same_phone: 400,
 };
 const TITLES: Record<number, string> = { 400: 'Invalid request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not found', 409: 'Conflict', 410: 'Gone',
   422: 'Unprocessable', 423: 'Locked', 429: 'Too many requests', 502: 'Bad gateway', 503: 'Unavailable' };

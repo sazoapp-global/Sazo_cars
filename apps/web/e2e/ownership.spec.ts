@@ -43,7 +43,7 @@ test('phone match, garage visits, and a logbook claim a reviewer rejects', async
   const before = await answerable.count();
   expect(before).toBeGreaterThan(0);
   await answerable.first().click();
-  await expect(owner.getByRole('status')).toContainText('visit confirmed');
+  await expect(owner.getByRole('status')).toContainText('Visit confirmed');
   await expect(owner.getByText('You confirmed this visit')).toBeVisible();
   await expect(answerable).toHaveCount(before - 1);
 

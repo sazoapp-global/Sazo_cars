@@ -50,7 +50,7 @@ describe('passwords (D-105)', () => {
     expect(passwordProblems('river-stone-7', { sensitive: false })).toEqual([]);
     expect(passwordProblems('short', { sensitive: false })).toContain('Use at least 8 characters');
     expect(passwordProblems('river-stone', { sensitive: true })).toContain('Use at least 12 characters');
-    expect(passwordProblems('password123', { sensitive: false })).toContain('This password is too common — choose another');
+    expect(passwordProblems('password123', { sensitive: false })).toContain('This password is too common. Choose another');
     expect(passwordProblems('mike.anguzu99', { sensitive: false, email: 'mike.anguzu@example.com' })).toHaveLength(1);
   });
 });

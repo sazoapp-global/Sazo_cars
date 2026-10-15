@@ -48,7 +48,7 @@ export class ConcernService {
     }
     const files = await this.evidence.view(r.evidenceIds);
     if (files.length !== r.evidenceIds.length || !(await Promise.all(files.map((f) => f.uploadedBy ? this.iam.isActiveMember(f.uploadedBy, organisationId) : false))).every(Boolean)) {
-      throw new ConcernError('evidence_invalid', 'A photo was not found — upload it again');
+      throw new ConcernError('evidence_invalid', 'A photo was not found. Upload it again');
     }
     // Count and insert as one step, one business at a time, so many reports sent at once cannot beat the limit (S4).
     const client = await this.pool.connect();

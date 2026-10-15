@@ -21,7 +21,12 @@ export async function proxy(request: NextRequest) {
     if (res && res.status === 401) {
       request.cookies.delete('sazo_at');
       request.cookies.delete('sazo_rt');
-      const out = NextResponse.next({ request: { headers: request.headers } });
+      // Logged out after 4 hours without activity: say so on the log-in page, then come back here.
+      const idle = ((await res.json().catch(() => ({}))) as { code?: string }).code === 'session_idle';
+      const page = request.method === 'GET' && (request.headers.get('accept') ?? '').includes('text/html');
+      const out = idle && page && !request.nextUrl.pathname.startsWith('/sign-in')
+        ? NextResponse.redirect(new URL(`/sign-in?done=idle&next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`, request.url))
+        : NextResponse.next({ request: { headers: request.headers } });
       out.cookies.delete('sazo_at');
       out.cookies.delete('sazo_rt');
       return out;

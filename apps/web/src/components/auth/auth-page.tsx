@@ -39,7 +39,7 @@ export async function AuthPage({ children, notice }: { children: React.ReactNode
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-lime"><Icon name="verified" size={14} className="text-ink" /></span>Car checks for Uganda
           </span>
           <h2 className="mt-5 font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-ink md:text-5xl">Know every car before you commit.</h2>
-          <p className="mt-4 max-w-xl text-lg text-muted">Registration, import, garage, inspection, police and loan records about a car — brought together and explained in plain language.</p>
+          <p className="mt-4 max-w-xl text-lg text-muted">Registration, import, garage, inspection, police and loan records about a car, brought together and explained in plain language.</p>
 
           <div className="card mt-8 p-4">
             <div className="relative aspect-[16/8] overflow-hidden rounded-xl bg-soft">

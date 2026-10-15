@@ -42,7 +42,7 @@ export async function signIn(page: Page, phone: string, opts: { name?: string; n
     const panel = page.getByRole('main'); // phone code is the default
     const p = personFor(opts.name);
     await panel.getByLabel('Surname').fill(p.surname);
-    await panel.getByLabel('First name').fill(p.firstName);
+    await panel.getByLabel('Given name').fill(p.firstName);
     await panel.getByLabel('Female').check();
     await panel.getByLabel('Date of birth').fill('1990-03-15');
     await panel.getByLabel('Mobile number').fill(`0${phone.slice(4)}`);

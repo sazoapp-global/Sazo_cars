@@ -42,7 +42,7 @@ export function ServerJobView({ jobId, garage }: { jobId: string; garage: Garage
         {[
           ['Work', works(job.workTypes)],
           ...(job.form.description ? [['Description', job.form.description]] : []),
-          ['Mileage', km !== undefined ? formatKm(km) : '—'],
+          ['Mileage', km !== undefined ? formatKm(km) : 'Not recorded'],
           ['Date', when(job.clientCreatedAt)],
           ['Recorded by', job.createdBy.displayName],
           ['Customer', job.form.customer?.name ? `${job.form.customer.name}${job.form.customer.phoneMasked ? ` · ${job.form.customer.phoneMasked}` : ''}` : 'Not given'],
@@ -51,7 +51,7 @@ export function ServerJobView({ jobId, garage }: { jobId: string; garage: Garage
           <div key={k} className="flex justify-between gap-3 p-3"><dt className="text-muted">{k}</dt><dd className="whitespace-pre-line text-right font-semibold">{v}</dd></div>
         ))}
       </dl>
-      <p className="text-xs text-muted">Records are never edited after sending. To correct one, tell SAZO — a correction is added next to it.</p>
+      <p className="text-xs text-muted">Records are never edited after sending. To correct one, tell SAZO. A correction is added next to it.</p>
     </div>
   );
 }

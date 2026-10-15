@@ -32,7 +32,7 @@ export default async function Check({ searchParams }: { searchParams: Promise<{ 
       {r.outcome === 'not_found' && (
         <section className="mt-6" aria-labelledby="nf">
           <h1 id="nf" className="font-display text-2xl font-bold">We couldn&apos;t find this vehicle</h1>
-          <p className="mt-1 text-muted">No records for <span className="sazo-id font-semibold">{r.normalizedQuery}</span> yet. That doesn&apos;t mean anything is wrong — SAZO doesn&apos;t have every car.</p>
+          <p className="mt-1 text-muted">No records for <span className="sazo-id font-semibold">{r.normalizedQuery}</span> yet. That doesn&apos;t mean anything is wrong. SAZO doesn&apos;t have every car.</p>
           {r.suggestion && (
             <div className="card mt-4 p-4">
               <p className="font-semibold">Did you mean <Link className="link sazo-id" href={`/check?q=${encodeURIComponent(r.suggestion.query)}`}>{r.suggestion.query}</Link>?</p>

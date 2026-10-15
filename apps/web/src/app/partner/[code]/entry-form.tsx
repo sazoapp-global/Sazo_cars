@@ -6,7 +6,7 @@ import { submitRecord, type EntryState } from '../actions';
 
 const STATUS: Record<string, { text: string; cls: string }> = {
   accepted: { text: 'Received and added to the vehicle', cls: 'border-ok-line bg-ok-fill text-ok-text' },
-  needs_review: { text: 'Received — SAZO will check which vehicle it belongs to', cls: 'border-warn-line bg-warn-fill text-warn-text' },
+  needs_review: { text: 'Received. SAZO will check which vehicle it belongs to', cls: 'border-warn-line bg-warn-fill text-warn-text' },
   rejected: { text: 'Not accepted', cls: 'border-bad-line bg-bad-fill text-bad-text' },
 };
 
@@ -60,7 +60,7 @@ export function EntryForm({ source, domain, types, fields, idempotencyKey }: {
               <label htmlFor={f.path} className="label">{f.label}{f.required ? ' *' : ''}</label>
               {f.kind === 'choice' || f.kind === 'boolean' ? (
                 <select id={f.path} name={f.path} defaultValue={v[f.path] ?? ''} className="field" required={f.required}>
-                  <option value="">—</option>
+                  <option value="">Choose</option>
                   {(f.kind === 'boolean' ? ['yes', 'no'] : f.options ?? []).map((o) => <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>)}
                 </select>
               ) : (

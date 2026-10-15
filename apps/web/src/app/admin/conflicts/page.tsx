@@ -38,7 +38,7 @@ export default async function Conflicts({ searchParams }: { searchParams: SP }) 
                 <tr key={c.conflictId}>
                   <td className="p-3"><span className="sazo-id font-semibold">{c.vehicleRef}</span>{c.relatedVehicleRefs.length > 0 && <span className="block text-xs text-muted">also {c.relatedVehicleRefs.join(', ')}</span>}</td>
                   <td className="p-3">{TOPIC[c.topic] ?? c.topic}</td>
-                  <td className="p-3">{c.openedByCheck ? CHECK[c.openedByCheck] ?? c.openedByCheck : '—'}</td>
+                  <td className="p-3">{c.openedByCheck ? CHECK[c.openedByCheck] ?? c.openedByCheck : 'Not recorded'}</td>
                   <td className="p-3">{CONFLICT_STATUS[c.status] ?? c.status}</td>
                   <td className="p-3 whitespace-nowrap">{day(c.openedAt)}</td>
                   <td className="p-3"><Link className="link" href={`/admin/conflicts/${c.conflictId}`}>Review</Link></td>

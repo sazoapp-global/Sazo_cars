@@ -68,7 +68,7 @@ export class BuyerController {
   async snapshot(@CurrentActor() actor: Actor, @Param('ref') ref: string, @Body() body: unknown) {
     if (!REF.safeParse(ref).success) throw notFound('vehicle_not_found', 'No such vehicle');
     const b = z.object({ createShareLink: z.boolean().default(true), expiresInDays: z.number().int().min(1).max(90).default(SHARE_DAYS_DEFAULT) }).safeParse(body ?? {});
-    if (!b.success) throw badRequest('invalid_request', 'expiresInDays must be 1–90');
+    if (!b.success) throw badRequest('invalid_request', 'expiresInDays must be 1 to 90');
     const s = await this.buyer.snapshot(actor.userId, ref, { share: b.data.createShareLink, expiresInDays: b.data.expiresInDays }).catch(problem);
     return { snapshotRef: s.snapshotRef, vehicleRef: s.vehicleRef, createdAt: s.createdAt, shareToken: s.token ?? null, expiresAt: s.expiresAt };
   }

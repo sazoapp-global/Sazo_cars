@@ -57,7 +57,7 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
               <li key={i.id}>
                 <button type="button" onClick={() => go({ name: 'inspection', id: i.id })} className="card flex w-full items-center justify-between gap-3 p-4 text-left">
                   <div className="min-w-0">
-                    {i.plateEntered ? <PlateText value={i.plateEntered} /> : <span className="font-semibold">New inspection — car not chosen yet</span>}
+                    {i.plateEntered ? <PlateText value={i.plateEntered} /> : <span className="font-semibold">New inspection, car not chosen yet</span>}
                     <p className="mt-1 truncate text-sm text-muted">{i.vehicleLabel ?? (i.newToSazo ? 'New to SAZO' : '')}</p>
                     <p className={`mt-1 flex items-center gap-1 text-xs font-semibold ${i.lastSyncError ? 'text-bad-text' : i.dirty ? 'text-warn-text' : 'text-ok-text'}`}>
                       <Icon name={i.lastSyncError ? 'report' : i.dirty ? 'cloud_upload' : 'cloud_done'} size={14} />

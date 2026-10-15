@@ -38,18 +38,18 @@ export function ServerInspectionView({ id, workplace }: { id: string; workplace:
         {[
           ['Date', when(i.clientCreatedAt)],
           ['Inspector', i.createdBy.displayName],
-          ['Mileage', km !== undefined ? formatKm(km) : '—'],
-          ['Structure', f.structure ? (f.structure.damageFound ? `Damage: ${f.structure.areas.map((a) => STRUCTURE_LABELS[a as StructureArea]).join(', ')}` : 'No damage found') : '—'],
+          ['Mileage', km !== undefined ? formatKm(km) : 'Not recorded'],
+          ['Structure', f.structure ? (f.structure.damageFound ? `Damage: ${f.structure.areas.map((a) => STRUCTURE_LABELS[a as StructureArea]).join(', ')}` : 'No damage found') : 'Not recorded'],
           ['Paint', f.paint?.readings.length ? (thick.length ? `Thick on ${thick.map((r) => PANEL_LABELS[r.panel as Panel]).join(', ')}` : `${f.paint.readings.length} panels, all normal`) : 'Not measured'],
-          ['Tyres', f.tyres ? `${f.tyres.minTreadPercent}% tread left (worst tyre)` : '—'],
-          ['Battery', f.battery ? (f.battery.ok ? 'OK' : 'Needs attention') : '—'],
+          ['Tyres', f.tyres ? `${f.tyres.minTreadPercent}% tread left (worst tyre)` : 'Not recorded'],
+          ['Battery', f.battery ? (f.battery.ok ? 'OK' : 'Needs attention') : 'Not recorded'],
           ['Defects', f.defects?.length ? f.defects.map((d) => `${d.item}${d.severity === 'major' ? ' (major)' : ''}`).join(' · ') : 'None noted'],
           ...(i.acknowledgedWarnings.length ? [['Explained', i.acknowledgedWarnings.map((w) => w.explanation).join(' · ')]] : []),
         ].map(([k, v]) => (
           <div key={k} className="flex justify-between gap-3 p-3"><dt className="text-muted">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>
         ))}
       </dl>
-      <p className="text-xs text-muted">Inspections are never edited after sending. To correct one, tell SAZO — a correction is added next to it.</p>
+      <p className="text-xs text-muted">Inspections are never edited after sending. To correct one, tell SAZO. A correction is added next to it.</p>
     </div>
   );
 }

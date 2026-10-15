@@ -35,7 +35,7 @@ export default async function Sources({ searchParams }: { searchParams: SP }) {
                     <select id={`st-${s.id}`} name="status" defaultValue={s.status} className="field">{Object.entries(STATUS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
                   <div><label htmlFor={`sup-${s.id}`} className="label">Replaced by</label>
                     <select id={`sup-${s.id}`} name="supersededBySourceId" defaultValue={s.supersededBySourceId ?? ''} className="field">
-                      <option value="">—</option>{data.filter((x) => x.id !== s.id && !x.isSimulated).map((x) => <option key={x.id} value={x.id}>{x.code}</option>)}
+                      <option value="">Choose</option>{data.filter((x) => x.id !== s.id && !x.isSimulated).map((x) => <option key={x.id} value={x.id}>{x.code}</option>)}
                     </select></div>
                   <div><label htmlFor={`why-${s.id}`} className="label">Reason</label><input id={`why-${s.id}`} name="reason" required minLength={3} className="field" /></div>
                   <button className="btn btn-primary">Save</button>

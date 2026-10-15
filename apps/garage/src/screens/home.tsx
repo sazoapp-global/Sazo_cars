@@ -56,10 +56,10 @@ function Numbers({ jobs }: { jobs: JobsState }) {
   const diff = s ? s.thisMonth - s.lastMonth : 0;
   const answered = s ? s.customers.confirmed + s.customers.disputed : 0;
   const cells: { label: string; value: string; sub: string; tone?: 'ok' | 'bad' }[] = [
-    { label: 'Jobs sent this month', value: s ? String(s.thisMonth) : '—', sub: !s ? '' : diff === 0 ? 'Same as last month' : `${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)} vs last month`, tone: diff > 0 ? 'ok' : undefined },
-    { label: 'Customers confirmed', value: s ? (answered ? `${Math.round((s.customers.confirmed / answered) * 100)}%` : '—') : '—', sub: !s ? '' : s.customers.asked ? `${s.customers.waiting} waiting for an answer` : 'No customer SMS sent yet' },
+    { label: 'Jobs sent this month', value: s ? String(s.thisMonth) : '...', sub: !s ? '' : diff === 0 ? 'Same as last month' : `${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)} vs last month`, tone: diff > 0 ? 'ok' : undefined },
+    { label: 'Customers confirmed', value: s ? (answered ? `${Math.round((s.customers.confirmed / answered) * 100)}%` : 'None yet') : '...', sub: !s ? '' : s.customers.asked ? `${s.customers.waiting} waiting for an answer` : 'No customer SMS sent yet' },
     { label: 'Drafts', value: String(jobs.drafts.length + (jobs.jobs ?? []).filter((j) => j.status === 'draft' && !jobs.drafts.some((d) => d.jobId === j.jobId)).length), sub: jobs.unsent ? `${jobs.unsent} not sent to SAZO yet` : 'All saved to SAZO' },
-    { label: 'Customer disputes', value: s ? String(s.customers.disputed) : '—', sub: s ? `${s.notAccepted} not accepted by SAZO` : '', tone: s && s.customers.disputed ? 'bad' : undefined },
+    { label: 'Customer disputes', value: s ? String(s.customers.disputed) : '...', sub: s ? `${s.notAccepted} not accepted by SAZO` : '', tone: s && s.customers.disputed ? 'bad' : undefined },
   ];
   return (
     <dl className="grid grid-cols-2 border-y-2 border-t-ink border-b-line-strong bg-white md:grid-cols-4">
@@ -100,7 +100,7 @@ export function JobList({ drafts, jobs, limit }: { drafts: LocalDraft[]; jobs: S
               <tr key={r.id} className="cursor-pointer hover:bg-soft/60" onClick={r.open}>
                 <th scope="row" className="whitespace-nowrap px-4 py-3"><button type="button" onClick={(e) => { e.stopPropagation(); r.open(); }} className="text-left">{r.plate ? <PlateText value={r.plate} /> : <span className="font-semibold">New job</span>}{r.ref && <span className="sazo-id mt-0.5 block text-[11px] font-normal text-label">{r.ref}</span>}</button></th>
                 <td className="max-w-56 truncate px-3 py-3">{r.work}</td>
-                <td className="px-3 py-3 text-right tabular-nums">{r.km !== undefined ? r.km.toLocaleString('en-UG') : '—'}</td>
+                <td className="px-3 py-3 text-right tabular-nums">{r.km !== undefined ? r.km.toLocaleString('en-UG') : 'Not recorded'}</td>
                 <td className="px-3 py-3">{r.by ?? 'You'}</td>
                 <td className="whitespace-nowrap px-3 py-3 text-muted">{when(r.date)}</td>
                 <td className="px-4 py-3"><Chip s={r.status} /></td>
@@ -113,7 +113,7 @@ export function JobList({ drafts, jobs, limit }: { drafts: LocalDraft[]; jobs: S
         {rows.map((r) => (
           <li key={r.id}>
             <button type="button" onClick={r.open} className="card w-full p-4 text-left">
-              <div className="flex items-center justify-between gap-2">{r.plate ? <PlateText value={r.plate} /> : <span className="font-semibold">New job — car not chosen yet</span>}<Chip s={r.status} /></div>
+              <div className="flex items-center justify-between gap-2">{r.plate ? <PlateText value={r.plate} /> : <span className="font-semibold">New job, car not chosen yet</span>}<Chip s={r.status} /></div>
               <p className="mt-1.5 text-sm">{r.work}{r.km !== undefined ? ` · ${formatKm(r.km)}` : ''}</p>
               <p className="mt-0.5 text-xs text-muted">{when(r.date)}{r.by ? ` · by ${r.by}` : ''}{r.ref ? ` · ${r.ref}` : ''}</p>
               {r.sync && <p className={`mt-1 flex items-center gap-1 text-xs font-semibold ${r.synced ? 'text-ok-text' : 'text-warn-text'}`}><Icon name={r.synced ? 'cloud_done' : 'cloud_upload'} size={14} />{r.sync}</p>}

@@ -84,7 +84,7 @@ export function passwordProblems(password: string, opts: { sensitive: boolean; e
   if (password.length < min) out.push(`Use at least ${min} characters`);
   if (password.length > 128) out.push('Use at most 128 characters');
   const lower = password.toLowerCase();
-  if (COMMON.has(lower) || /^(.)\1+$/.test(password)) out.push('This password is too common — choose another');
+  if (COMMON.has(lower) || /^(.)\1+$/.test(password)) out.push('This password is too common. Choose another');
   const local = opts.email?.split('@')[0]?.toLowerCase();
   if (local && local.length >= 4 && lower.includes(local)) out.push("Don't use your email address in your password");
   if ((opts.names ?? []).some((n) => n.length >= 4 && lower === n.toLowerCase())) out.push("Don't use your name as your password");

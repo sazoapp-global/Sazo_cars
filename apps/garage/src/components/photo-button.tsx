@@ -52,7 +52,7 @@ export function PhotoButton({ jobId, kind, photoId, label, hint, required, onCha
       <p className="label">{label}{required && <span className="text-bad-text"> *</span>}</p>
       {hint && <p className="-mt-1 mb-2 text-sm text-muted">{hint}</p>}
       <div className="flex items-center gap-3">
-        {url ? <img src={url} alt={`${label} — photo taken`} className="h-20 w-20 rounded-lg border border-line object-cover" /> : (
+        {url ? <img src={url} alt={`${label}, photo taken`} className="h-20 w-20 rounded-lg border border-line object-cover" /> : (
           <span className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-line-strong text-label"><Icon name="add_a_photo" size={28} /></span>
         )}
         <label htmlFor={inputId} className={`btn ${url ? 'btn-ghost' : 'btn-primary'} flex-1 cursor-pointer`}>

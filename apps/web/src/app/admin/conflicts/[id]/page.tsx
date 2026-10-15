@@ -71,9 +71,9 @@ export default async function ConflictPage({ params, searchParams }: { params: P
                 <legend className="px-1 text-sm font-semibold">Optional: mark which record is wrong (it stays, but stops counting)</legend>
                 <div className="grid gap-2 md:grid-cols-3">
                   <div><label htmlFor="relationTo" className="label">Wrong record</label>
-                    <select id="relationTo" name="relationTo" className="field" defaultValue=""><option value="">—</option>{c.observations.map((o) => <option key={o.id} value={o.id}>{o.sourceCode} · {recordLabel(o.type)} · {day(o.eventTime)}</option>)}</select></div>
+                    <select id="relationTo" name="relationTo" className="field" defaultValue=""><option value="">Choose</option>{c.observations.map((o) => <option key={o.id} value={o.id}>{o.sourceCode} · {recordLabel(o.type)} · {day(o.eventTime)}</option>)}</select></div>
                   <div><label htmlFor="relationFrom" className="label">Is corrected by</label>
-                    <select id="relationFrom" name="relationFrom" className="field" defaultValue=""><option value="">—</option>{c.observations.map((o) => <option key={o.id} value={o.id}>{o.sourceCode} · {recordLabel(o.type)} · {day(o.eventTime)}</option>)}</select></div>
+                    <select id="relationFrom" name="relationFrom" className="field" defaultValue=""><option value="">Choose</option>{c.observations.map((o) => <option key={o.id} value={o.id}>{o.sourceCode} · {recordLabel(o.type)} · {day(o.eventTime)}</option>)}</select></div>
                   <div><label htmlFor="relationKind" className="label">Because it is</label>
                     <select id="relationKind" name="relationKind" className="field" defaultValue="corrects"><option value="corrects">a mistake</option><option value="duplicates">a duplicate</option></select></div>
                 </div>
@@ -115,7 +115,7 @@ export default async function ConflictPage({ params, searchParams }: { params: P
         <ol className="mt-3 space-y-2 text-sm">
           {c.activity.slice().reverse().map((a, i) => (
             <li key={i} className="flex gap-3"><span className="w-28 shrink-0 text-muted">{day(a.at)}</span>
-              <span><strong className="capitalize">{a.kind.replace('_', ' ')}</strong>{typeof a.details.comment === 'string' ? ` — ${a.details.comment}` : typeof a.details.reasoning === 'string' ? ` — ${a.details.reasoning}` : ''}</span></li>
+              <span><strong className="capitalize">{a.kind.replace('_', ' ')}</strong>{typeof a.details.comment === 'string' ? `: ${a.details.comment}` : typeof a.details.reasoning === 'string' ? `: ${a.details.reasoning}` : ''}</span></li>
           ))}
         </ol>
       </section>

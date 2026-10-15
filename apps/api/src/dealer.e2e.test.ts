@@ -122,6 +122,16 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     expect(res.body.vehicle).toMatchObject({ status: 'provisional' });
   });
 
+  it('buyers see cars in stock at approved dealers to pick for comparing, with nothing confidential', async () => {
+    await http.get('/v1/cars-for-sale').expect(401);
+    const buyer = await signIn('+256772500051', 'Another buyer');
+    const items = (await http.get('/v1/cars-for-sale').set(bearer(buyer)).expect(200)).body.items;
+    const known = items.find((i: { vehicleRef: string }) => i.vehicleRef === knownRef);
+    expect(known).toMatchObject({ askingPriceUgx: 36_000_000, listedMileageKm: 131000, vehicle: { make: 'Toyota' } });
+    expect(known.dealerName).toBeTruthy();
+    expect(Object.keys(known).sort()).toEqual(['askingPriceUgx', 'dealerName', 'listedAt', 'listedMileageKm', 'vehicle', 'vehicleRef']);
+  });
+
   it('a sale is recorded but its price stays confidential; buyer links work like any share link', async () => {
     const sold = await http.post(`/v1/dealer/stock/${stockId}/sold`).set(asStaff()).send({ salePriceUgx: 35_000_000 }).expect(200);
     expect(sold.body).toMatchObject({ status: 'sold', salePriceUgx: 35_000_000 });

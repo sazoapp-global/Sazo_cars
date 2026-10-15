@@ -23,7 +23,7 @@ export function PersonFields({ values = {}, errors = {}, lockIdentity = false, i
           {err('surname')}
         </div>
         <div>
-          <label htmlFor={id('firstName')} className="label">First name</label>
+          <label htmlFor={id('firstName')} className="label">Given name</label>
           <input id={id('firstName')} name="firstName" autoComplete="given-name" required maxLength={60} defaultValue={values.firstName} className="field !bg-soft focus:!bg-card" {...described('firstName')} />
           {err('firstName')}
         </div>
@@ -54,7 +54,7 @@ export function PersonFields({ values = {}, errors = {}, lockIdentity = false, i
         </div>
       )}
       {lockIdentity ? null : (
-        <p className="text-sm text-muted">You must be 18 or older. SAZO uses your gender and date of birth to identify you — for example if a record you add is ever questioned — and keeps your date of birth encrypted.</p>
+        <p className="text-sm text-muted">You must be 18 or older. SAZO uses your gender and date of birth to identify you (for example if a record you add is ever questioned) and keeps your date of birth encrypted.</p>
       )}
     </div>
   );

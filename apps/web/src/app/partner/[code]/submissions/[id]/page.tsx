@@ -24,8 +24,8 @@ export default async function SubmissionPage({ params }: { params: Promise<{ cod
           <tbody className="divide-y divide-line">
             {s.items.map((i) => (
               <tr key={i.sequence}><td className="p-3 tabular-nums">{i.sequence}</td><td className="p-3 font-semibold">{LABEL[i.status] ?? i.status}</td>
-                <td className="p-3">{i.vehicleRef ? <Link className="link sazo-id" href={`/v/${i.vehicleRef}`}>{i.vehicleRef}</Link> : '—'}</td>
-                <td className="p-3">{i.errors.map((e) => e.message).join('; ') || '—'}</td></tr>
+                <td className="p-3">{i.vehicleRef ? <Link className="link sazo-id" href={`/v/${i.vehicleRef}`}>{i.vehicleRef}</Link> : 'Not recorded'}</td>
+                <td className="p-3">{i.errors.map((e) => e.message).join('; ') || 'Not recorded'}</td></tr>
             ))}
           </tbody>
         </table>

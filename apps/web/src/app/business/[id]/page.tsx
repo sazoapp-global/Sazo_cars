@@ -75,7 +75,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
           <Link href={`/dealer/${org.id}`} className="btn btn-primary mt-3"><Icon name="directions_car" />Open your stock</Link>
         </section>
       )}
-      {org.status === 'approved' && !WORKSHOP.includes(org.type) && org.type !== 'dealer' && <p className="text-muted">Approved. Your workspace is coming soon — we&apos;ll send an SMS when it&apos;s ready.</p>}
+      {org.status === 'approved' && !WORKSHOP.includes(org.type) && org.type !== 'dealer' && <p className="text-muted">Approved. Your workspace is coming soon. We&apos;ll send an SMS when it&apos;s ready.</p>}
       {(org.status === 'rejected' || org.status === 'suspended') && <p className="text-muted">Contact SAZO support if you think this is a mistake.</p>}
       <Link href="/account" className="link inline-block">Back to your account</Link>
     </div>

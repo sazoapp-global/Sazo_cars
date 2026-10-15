@@ -9,14 +9,31 @@ import { vehicleName } from '@/components/vehicle-card';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import { QUESTION_ICONS } from '@/lib/questions';
 import type { CarPhoto } from '@/lib/report-data';
-import type { Comparison, FullReport, ModelCommunity, SavedCheck } from '@/lib/types';
+import type { Comparison, FullReport, ModelCommunity, SavedCheck, Summary } from '@/lib/types';
+import type { PickedCar } from './actions';
+import { CompareDialog, type ForSaleCar } from './compare-dialog';
 
 export const metadata: Metadata = { title: 'Compare cars', robots: { index: false } };
 
 const PLATFORM: Record<string, string> = { tiktok: 'TikTok', youtube: 'YouTube', instagram: 'Instagram' };
 const qs = (refs: string[]) => refs.map((r) => `r=${r}`).join('&');
 
-export default async function Compare({ searchParams }: { searchParams: Promise<{ r?: string | string[] }> }) {
+/** The pop-up's starting point: the cars already chosen, and what dealers have for sale. */
+async function dialogData(refs: string[]) {
+  const [initial, sale] = await Promise.all([
+    Promise.all(refs.map(async (r): Promise<PickedCar | undefined> => {
+      const s = await api<Summary>(`/vehicles/${r}/summary`).catch(() => undefined);
+      return s ? { ref: r, name: vehicleName(s.vehicle), ...(s.vehicle.currentPlate ? { plate: s.vehicle.currentPlate } : {}) } : undefined;
+    })),
+    api<{ items: { vehicleRef: string; vehicle: Summary['vehicle'] | null; askingPriceUgx: number; listedMileageKm: number | null; dealerName: string }[] }>('/cars-for-sale', { auth: true })
+      .then((x) => x.items).catch(() => []),
+  ]);
+  const forSale: ForSaleCar[] = sale.map((c) => ({ vehicleRef: c.vehicleRef, name: c.vehicle ? vehicleName(c.vehicle) : 'Vehicle', ...(c.vehicle?.currentPlate ? { plate: c.vehicle.currentPlate } : {}),
+    askingPriceUgx: c.askingPriceUgx, listedMileageKm: c.listedMileageKm, dealerName: c.dealerName }));
+  return { initial: initial.filter((x): x is PickedCar => !!x), forSale };
+}
+
+export default async function Compare({ searchParams }: { searchParams: Promise<{ r?: string | string[]; add?: string }> }) {
   const sp = await searchParams;
   const refs = [...new Set([sp.r ?? []].flat())].slice(0, 3);
   if (!(await isSignedIn())) redirect(`/sign-in?next=${encodeURIComponent(`/compare?${qs(refs)}`)}`);
@@ -24,7 +41,17 @@ export default async function Compare({ searchParams }: { searchParams: Promise<
     ? (await api<{ items: SavedCheck[] }>('/me/saved-checks', { auth: true }).catch(() => ({ items: [] as SavedCheck[] }))).items.filter((s) => !refs.includes(s.vehicleRef))
     : [];
 
-  if (refs.length < 2) return <Pick refs={refs} saved={saved} />;
+  // Fewer than two cars, or "add a car": the compare pop-up opens straight away.
+  if (refs.length < 2) {
+    const d = await dialogData(refs);
+    return (
+      <>
+        <Intro />
+        <CompareDialog initial={d.initial} forSale={d.forSale} closeHref={refs[0] ? `/v/${refs[0]}` : '/'} />
+      </>
+    );
+  }
+  const addDialog = sp.add === '1' && refs.length < 3 ? await dialogData(refs) : undefined;
 
   let c: Comparison;
   try {
@@ -42,6 +69,7 @@ export default async function Compare({ searchParams }: { searchParams: Promise<
 
   return (
     <>
+      {addDialog && <CompareDialog initial={addDialog.initial} forSale={addDialog.forSale} closeHref={`/compare?${qs(refs)}`} />}
       <section className="border-b border-line bg-gradient-to-b from-soft to-surface">
         <div className="mx-auto max-w-[1280px] px-4 py-8 md:px-8 md:py-10 lg:px-12">
           <span className="chip border-transparent bg-lime text-ink">Side by side</span>
@@ -149,13 +177,13 @@ function Row({ label, sub, children }: { label: string; sub: string; children: R
 
 function Cell({ v, q }: { v: FullReport; q: string }) {
   const a = v.questions.find((x) => x.question === q);
-  if (!a) return <td className="p-4 align-top text-muted">—</td>;
+  if (!a) return <td className="p-4 align-top text-muted">Not recorded</td>;
   const km = v.facts.find((f) => f.key === 'current_mileage_km');
   return (
     <td className="p-4 align-top">
       <StatusChip status={a.status} label={statusLabel(q, a.status)} />
       {q === 'mileage' && km && <p className="mt-2 font-display text-lg font-extrabold">{factValue(km.key, km.value)}</p>}
-      {q === 'valuation' && v.valuation.range && <p className="mt-2 font-display text-lg font-extrabold">{formatUgx(v.valuation.range.lowUgx)} – {formatUgx(v.valuation.range.highUgx)}</p>}
+      {q === 'valuation' && v.valuation.range && <p className="mt-2 font-display text-lg font-extrabold">{formatUgx(v.valuation.range.lowUgx)} to {formatUgx(v.valuation.range.highUgx)}</p>}
       <p className="mt-1">{headline(a.headlineKey, a.params)}</p>
     </td>
   );
@@ -178,10 +206,10 @@ function CarCard({ v, photo, remove }: { v: FullReport; photo?: CarPhoto; remove
         <h2 className="font-display text-lg font-bold">{vehicleName(v.vehicle)}</h2>
         <div className="mt-3 rounded-lg bg-soft p-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-label">Estimated price</p>
-          <p className="font-display text-xl font-extrabold text-primary-container">{v.valuation.range ? `${formatUgx(v.valuation.range.lowUgx)} – ${formatUgx(v.valuation.range.highUgx)}` : 'Not enough data'}</p>
+          <p className="font-display text-xl font-extrabold text-primary-container">{v.valuation.range ? `${formatUgx(v.valuation.range.lowUgx)} to ${formatUgx(v.valuation.range.highUgx)}` : 'Not enough data'}</p>
         </div>
         <div className="mt-3 flex items-center gap-3">
-          <span className={`grid size-12 shrink-0 place-items-center rounded-full border-4 font-display font-extrabold ${score === null ? 'border-na-line text-na-text' : score >= 80 ? 'border-lime text-ink' : score >= 50 ? 'border-warn-line text-warn-text' : 'border-bad-line text-bad-text'}`}>{score ?? '—'}</span>
+          <span className={`grid size-12 shrink-0 place-items-center rounded-full border-4 font-display font-extrabold ${score === null ? 'border-na-line text-na-text' : score >= 80 ? 'border-lime text-ink' : score >= 50 ? 'border-warn-line text-warn-text' : 'border-bad-line text-bad-text'}`}>{score ?? 'N/A'}</span>
           <p className="text-sm"><span className="font-semibold">Vehicle Health</span><span className="block text-muted">Record Confidence: {CONFIDENCE_LABELS[v.recordConfidence.level]}</span></p>
         </div>
         <div className="mt-auto flex items-center gap-2 pt-4">
@@ -212,7 +240,7 @@ function AddSlot({ refs, saved }: { refs: string[]; saved: SavedCheck[] }) {
           </ul>
         </>
       ) : <p className="text-center text-sm text-muted">Check a car and tap <strong>Save this car</strong>, then add it here.</p>}
-      <Link href="/#check" className="link mt-4 self-center text-sm">Check another car</Link>
+      <Link href={`/compare?${qs(refs)}&add=1`} className="btn btn-primary mt-4 self-center"><Icon name="add" />Add by plate or from cars for sale</Link>
     </div>
   );
 }
@@ -225,7 +253,7 @@ function CommunityCard({ m }: { m: ModelCommunity }) {
         {m.averageRating !== null && <span className="chip border-transparent bg-lime text-ink"><Icon name="star" size={14} />{m.averageRating} / 5</span>}
       </div>
       <p className="text-sm text-muted">{m.reviewCount} {m.reviewCount === 1 ? 'review' : 'reviews'}</p>
-      {m.reviews[0] && <blockquote className="mt-3 border-l-2 border-soft-3 pl-3 text-sm">“{m.reviews[0].body.length > 220 ? `${m.reviews[0].body.slice(0, 220)}…` : m.reviews[0].body}”<footer className="mt-1 text-xs text-muted">— {m.reviews[0].author}{m.reviews[0].verifiedOwner ? ', verified owner' : ''}</footer></blockquote>}
+      {m.reviews[0] && <blockquote className="mt-3 border-l-2 border-soft-3 pl-3 text-sm">“{m.reviews[0].body.length > 220 ? `${m.reviews[0].body.slice(0, 220)}…` : m.reviews[0].body}”<footer className="mt-1 text-xs text-muted">{m.reviews[0].author}{m.reviews[0].verifiedOwner ? ', verified owner' : ''}</footer></blockquote>}
       {m.creatorLinks.length > 0 && (
         <ul className="mt-4 space-y-2">
           {m.creatorLinks.slice(0, 3).map((l) => (
@@ -243,20 +271,12 @@ function CommunityCard({ m }: { m: ModelCommunity }) {
   );
 }
 
-function Pick({ refs, saved }: { refs: string[]; saved: SavedCheck[] }) {
+function Intro() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 md:px-8">
       <span className="chip border-transparent bg-lime text-ink">Side by side</span>
       <h1 className="mt-3 font-display text-3xl font-extrabold text-primary-container">Compare cars</h1>
-      <p className="mt-1 text-muted">Pick {refs.length ? 'one or two more cars' : '2 or 3 cars'} from your saved cars.</p>
-      <form action="/compare" method="get" className="mt-5 space-y-2">
-        {refs.map((r) => <input key={r} type="hidden" name="r" value={r} />)}
-        {saved.length === 0 ? <p className="card p-4">Save another car first — open its report and tap <strong>Save this car</strong>.</p> : saved.map((s) => (
-          <label key={s.vehicleRef} className="card flex items-center gap-3 p-3"><input type="checkbox" name="r" value={s.vehicleRef} className="h-6 w-6 accent-[#0033aa]" />
-            <span className="font-semibold">{vehicleName(s.summary.vehicle)}</span>{s.summary.vehicle.currentPlate && <Plate value={s.summary.vehicle.currentPlate} size="sm" />}</label>
-        ))}
-        {saved.length > 0 && <button className="btn btn-primary">Compare</button>}
-      </form>
+      <p className="mt-1 text-muted">The same seven questions for two or three cars, side by side.</p>
     </div>
   );
 }

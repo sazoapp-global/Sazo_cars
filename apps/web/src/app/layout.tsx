@@ -17,7 +17,7 @@ import { MainNav } from '@/components/main-nav';
 import { MobileNav } from '@/components/mobile-nav';
 
 export const metadata: Metadata = {
-  title: { default: 'SAZO — Check a car before you buy', template: '%s · SAZO' },
+  title: { default: 'SAZO: check a car before you buy', template: '%s · SAZO' },
   description: 'Look up a vehicle by number plate or VIN and see what its records show: identity, servicing, accidents, mileage, finance and price.',
 };
 export const viewport: Viewport = { themeColor: '#002177', width: 'device-width', initialScale: 1 };
@@ -54,7 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
             <ThemeToggle />
             {me ? (
-              <Link href="/account" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm font-semibold hover:bg-soft sm:pr-3" aria-label={`Settings — ${me.displayName}`}>
+              <Link href="/account" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm font-semibold hover:bg-soft sm:pr-3" aria-label={`Settings for ${me.displayName}`}>
                 <span className="avatar" aria-hidden>{me.initials}</span><span className="hidden max-w-[10rem] truncate sm:inline">{me.displayName}</span>
               </Link>
             ) : (

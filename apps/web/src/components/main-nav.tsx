@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 export const NAV_LINKS = [
   { href: '/', label: 'Check a Car', match: (p: string) => p === '/' || p.startsWith('/check') || p.startsWith('/v/') },
   { href: '/compare', label: 'Compare Cars', match: (p: string) => p.startsWith('/compare') },
-  { href: '/#how', label: 'How It Works', match: () => false },
   { href: '/business', label: 'For Businesses', match: (p: string) => p.startsWith('/business') },
 ];
 

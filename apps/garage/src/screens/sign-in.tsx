@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { kv } from '../lib/db';
 import { ApiError, OfflineError, passwordLogin, requestCode, secondStep, verifyCode, type SecondStep } from '../lib/api';
 
 function toE164(input: string): string | undefined {
@@ -25,6 +26,8 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [idle, setIdle] = useState(false);
+  useEffect(() => { void kv.get<boolean>('signedOutIdle').then((v) => setIdle(!!v)); }, []);
 
   async function run(fn: () => Promise<void>) {
     setBusy(true); setError(undefined);
@@ -68,6 +71,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
       <p className="mt-1 text-muted">Record jobs for your customers&apos; cars. Works without signal.</p>
       <form className="card mt-6 space-y-4 p-5" onSubmit={submit} noValidate>
         <h1 className="font-display text-xl font-bold">{step === 'second' ? 'Confirm it’s you' : 'Log in'}</h1>
+        {idle && step === 'start' && <p role="alert" className="rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">You were logged out after 4 hours without activity. Your jobs are still on this phone; log in again to carry on.</p>}
         {step !== 'second' && (
           <div role="tablist" aria-label="How to log in" className="grid grid-cols-2 gap-1 rounded-lg bg-soft p-1">
             {(['phone', 'email'] as const).map((m) => (

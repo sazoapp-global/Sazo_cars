@@ -12,10 +12,10 @@ export default async function AdminHome() {
     adminFetch<{ items: unknown[] }>('/admin/ownership-claims'),
     adminFetch<{ items: unknown[] }>('/admin/moderation?status=open'),
   ]);
-  const count = (x: { items: unknown[] } | 'forbidden') => (x === 'forbidden' ? '—' : String(x.items.length));
+  const count = (x: { items: unknown[] } | 'forbidden') => (x === 'forbidden' ? 'No access' : String(x.items.length));
   const cards = [
     { href: '/admin/organisations', n: count(orgs), label: 'businesses waiting for approval', hint: 'Garages cannot record history until approved (D-055).' },
-    { href: '/admin/conflicts', n: count(conflicts), label: 'open conflicts', hint: 'Records that disagree — resolve with written reasoning.' },
+    { href: '/admin/conflicts', n: count(conflicts), label: 'open conflicts', hint: 'Records that disagree. Resolve them with written reasoning.' },
     { href: '/admin/matches', n: count(matches), label: 'records waiting for a vehicle match', hint: 'SAZO could not tell which car a record belongs to.' },
     { href: '/admin/concerns', n: count(concerns), label: 'reported problems to check', hint: 'Signs of fraud reported by garages and inspectors (O-002).' },
     { href: '/admin/moderation', n: count(moderation), label: 'reviews and videos to check', hint: 'Nothing people post appears until it is checked (P-008).' },

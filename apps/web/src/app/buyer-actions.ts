@@ -45,7 +45,7 @@ export async function addCar(_prev: AddCarState, form: FormData): Promise<AddCar
   } catch (err) {
     if (err instanceof ApiError && err.code === 'vehicle_exists') redirect(`/v/${err.detail?.split(',')[0]}`);
     if (err instanceof ApiError && err.status === 429) return { error: 'You have added several cars today. Try again tomorrow.' };
-    if (err instanceof ApiError && err.status === 400) return { error: 'Check the details — a VIN has 17 characters.' };
+    if (err instanceof ApiError && err.status === 400) return { error: 'Check the details. A VIN has 17 characters.' };
     return { error: 'Something went wrong. Please try again.' };
   }
   if (!vehicleRef) return { error: 'SAZO needs to check this car before it appears. We will show it once it is matched.' };

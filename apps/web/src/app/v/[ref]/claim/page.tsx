@@ -27,7 +27,7 @@ export default async function Claim({ params, searchParams }: { params: Promise<
           <div>
             <label htmlFor="logbook" className="label">Photo of the logbook page with the owner&apos;s name and the number plate</label>
             <input id="logbook" name="logbook" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" required className="field" />
-            <p className="mt-1 text-sm text-muted">Take it in good light so the writing is readable. Only SAZO staff see it — never buyers.</p>
+            <p className="mt-1 text-sm text-muted">Take it in good light so the writing is readable. Only SAZO staff see it, never buyers.</p>
           </div>
           <button className="btn btn-primary w-full sm:w-auto"><Icon name="upload_file" />Send to SAZO</button>
         </form>

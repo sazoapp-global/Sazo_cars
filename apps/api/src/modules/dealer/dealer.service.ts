@@ -144,6 +144,30 @@ export class DealerService {
   }
 
   /** What the dealer sees for one car: its listing, its sale (theirs), and today's answers about the car. */
+  /**
+   * Cars for sale (compare picker): what an approved dealer has in stock, with asking price and listed
+   * mileage. Never the sale price, notes or who listed it.
+   */
+  async forSale(limit = 60) {
+    const rows = await this.repo.inStockEverywhere(limit * 2);
+    const orgs = new Map<string, { name: string; approved: boolean }>();
+    for (const id of new Set(rows.map((r) => r.organisationId))) {
+      const o = await this.iam.organisation(id);
+      orgs.set(id, { name: o?.tradingName ?? o?.legalName ?? '', approved: o?.status === 'approved' });
+    }
+    const out = [];
+    for (const r of rows) {
+      if (!orgs.get(r.organisationId)?.approved) continue;
+      const v = await this.registry.getVehicle(r.vehicleId);
+      if (!v) continue;
+      const summary = await this.reports.publicSummary(v.publicRef).catch(() => undefined);
+      out.push({ vehicleRef: v.publicRef, vehicle: summary?.vehicle ?? null, askingPriceUgx: r.askingPriceUgx, listedMileageKm: r.listedMileageKm,
+        dealerName: orgs.get(r.organisationId)!.name, listedAt: new Date(r.listedAt).toISOString() });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
   async view(r: StockRow) {
     const v = await this.registry.getVehicle(r.vehicleId);
     const summary = v ? await this.reports.publicSummary(v.publicRef).catch(() => undefined) : undefined;

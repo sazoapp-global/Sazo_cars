@@ -17,7 +17,7 @@ export function Staff({ garage }: { garage: Garage }) {
 
   const load = useCallback(async () => {
     try { setStaff(await request<StaffMember[]>('/garage/staff', { org: garage.id })); } catch (err) {
-      if (err instanceof OfflineError) setMsg({ ok: false, text: 'No signal — the staff list needs the internet.' }); else throw err;
+      if (err instanceof OfflineError) setMsg({ ok: false, text: 'No signal. The staff list needs the internet.' }); else throw err;
     }
   }, [garage.id]);
   useEffect(() => { void load(); }, [load]);

@@ -19,7 +19,8 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const next = safeNext(sp.next);
   if (await isSignedIn()) redirect(next);
-  const notice = (sp.done && DONE[sp.done] && <p role="status" className="mt-5 rounded-lg border border-ok-line bg-ok-fill p-3 text-sm font-semibold text-ok-text">{DONE[sp.done]}</p>)
+  const notice = (sp.done === 'idle' && <p role="alert" className="mt-5 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">You were logged out after 4 hours without activity. Log in again to carry on.</p>)
+    || (sp.done && DONE[sp.done] && <p role="status" className="mt-5 rounded-lg border border-ok-line bg-ok-fill p-3 text-sm font-semibold text-ok-text">{DONE[sp.done]}</p>)
     || (sp.google && GOOGLE[sp.google] && <p role="alert" className="mt-5 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">{GOOGLE[sp.google]}</p>) || null;
   return (
     <AuthPage notice={notice}>

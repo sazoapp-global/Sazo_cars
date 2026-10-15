@@ -43,7 +43,7 @@ test('no sign-up in the app: unknown numbers are told to ask their manager; an a
   await signInInApp(page, `0${MECHANIC.slice(4)}`);
   await expect(page.getByRole('heading', { name: 'Finish your details' })).toBeVisible();
   await page.getByLabel('Surname').fill('Kato');
-  await page.getByLabel('First name').fill('musa');
+  await page.getByLabel('Given name').fill('musa');
   await page.getByLabel('Male', { exact: true }).check();
   await page.getByLabel('Date of birth').fill('1995-07-07');
   await page.getByRole('button', { name: 'Save and continue' }).click();
@@ -131,7 +131,7 @@ test('no signal halfway through a job: everything is kept and syncs when the sig
   await page.getByRole('button', { name: 'New job' }).click();
   await page.getByLabel('Number plate').fill('UBR 404N');
   await page.getByRole('button', { name: 'Find' }).click();
-  await expect(page.getByText('No signal — carry on.')).toBeVisible();
+  await expect(page.getByText('No signal. Carry on.')).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Electrical work' }).click();
   await page.getByRole('button', { name: 'Next' }).click();

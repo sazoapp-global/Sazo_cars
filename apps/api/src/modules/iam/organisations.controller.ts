@@ -39,7 +39,7 @@ export class OrganisationsController {
   @HttpCode(200)
   async documents(@CurrentActor() actor: Actor, @Param('id') id: string, @Body() body: unknown) {
     const b = z.object({ evidenceIds: z.array(z.string().uuid()).min(1).max(10) }).safeParse(body);
-    if (!b.success) throw badRequest('invalid_request', 'evidenceIds: 1–10 uploaded files');
+    if (!b.success) throw badRequest('invalid_request', 'evidenceIds: 1 to 10 uploaded files');
     const isManager = actor.memberships.some((m) => m.organisationId === id && m.status === 'active' && m.role === 'org_manager');
     if (!isManager) throw notFound('organisation_not_found', 'No such organisation');
     if (!(await this.iam.addVerificationDocuments(actor, id, b.data.evidenceIds))) {

@@ -243,8 +243,8 @@ function IdentityTable({ rows }: { rows: IdentityRow[] }) {
         <li key={row.label} className="p-3">
           <div className="flex items-center justify-between gap-2"><span className="font-semibold">{row.label}</span><span className={`chip ${TONE[MATCH[row.result].tone]}`}>{MATCH[row.result].text}</span></div>
           <dl className="mt-1 grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-label">Official record</dt><dd className="text-muted">{row.record ?? '—'}</dd></div>
-            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-label">Latest record</dt><dd className="font-semibold">{row.latest ?? '—'}</dd></div>
+            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-label">Official record</dt><dd className="text-muted">{row.record ?? 'Not recorded'}</dd></div>
+            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-label">Latest record</dt><dd className="font-semibold">{row.latest ?? 'Not recorded'}</dd></div>
           </dl>
         </li>
       ))}
@@ -259,8 +259,8 @@ function IdentityTable({ rows }: { rows: IdentityRow[] }) {
           {rows.map((row) => (
             <tr key={row.label}>
               <th scope="row" className="px-4 py-3 font-semibold">{row.label}</th>
-              <td className="px-4 py-3 text-muted">{row.record ?? '—'}</td>
-              <td className="px-4 py-3 font-semibold">{row.latest ?? '—'}</td>
+              <td className="px-4 py-3 text-muted">{row.record ?? 'Not recorded'}</td>
+              <td className="px-4 py-3 font-semibold">{row.latest ?? 'Not recorded'}</td>
               <td className="px-4 py-3"><span className={`chip ${TONE[MATCH[row.result].tone]}`}>{MATCH[row.result].text}</span></td>
             </tr>
           ))}
@@ -276,9 +276,9 @@ function IdentityTips() {
     <Tip title="Check it on the car yourself" icon="pin_drop">
       <p>Before you pay, match these on the car with the logbook and this report:</p>
       <ul className="space-y-2">
-        <li className="flex gap-2"><Icon name="check" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span><strong>Chassis number</strong> — stamped on the body; ask the seller to show you where.</span></li>
-        <li className="flex gap-2"><Icon name="check" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span><strong>Engine number</strong> — on the engine block.</span></li>
-        <li className="flex gap-2"><Icon name="check" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span><strong>Number plates</strong> — front and back should match the logbook.</span></li>
+        <li className="flex gap-2"><Icon name="check" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span><strong>Chassis number:</strong> stamped on the body; ask the seller to show you where.</span></li>
+        <li className="flex gap-2"><Icon name="check" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span><strong>Engine number:</strong> on the engine block.</span></li>
+        <li className="flex gap-2"><Icon name="check" size={18} className="mt-0.5 shrink-0 text-primary-container" /><span><strong>Number plates:</strong> front and back should match the logbook.</span></li>
       </ul>
     </Tip>
   );
@@ -395,7 +395,7 @@ function InspectionPanel({ x }: { x: LatestInspection }) {
             ))}</ul>
           )}</dd></div>
       </dl>
-      <p className="mt-2 text-xs text-muted">An inspection shows the car on that day. Things can change — check it again before you pay.</p>
+      <p className="mt-2 text-xs text-muted">An inspection shows the car on that day. Things can change. Check it again before you pay.</p>
     </section>
   );
 }
@@ -430,7 +430,7 @@ function MileageSection({ q, r, x, full }: { q: QuestionView; r: FullReport; x: 
           </div>
           <div className="mt-4"><MileageChart readings={readings} /></div>
         </div>
-      ) : <Empty>Fewer than two dated mileage readings — not enough to draw a history.</Empty>)}
+      ) : <Empty>Fewer than two dated mileage readings, not enough to draw a history.</Empty>)}
     </Section>
   );
 }
@@ -488,7 +488,7 @@ function LegalSection({ q, r, x }: { q: QuestionView; r: FullReport; x: ReportEx
           </div>
         ))}
       </div>
-      <p className="mt-3 text-xs text-muted">SAZO shows only whether a record exists — never the details. Ask the seller for proof a loan is paid off, and check with the police if a report is open.</p>
+      <p className="mt-3 text-xs text-muted">SAZO shows only whether a record exists, never the details. Ask the seller for proof a loan is paid off, and check with the police if a report is open.</p>
     </Section>
   );
 }
@@ -508,8 +508,8 @@ function ValuationSection({ q, r }: { q: QuestionView; r: FullReport }) {
       {range ? (
         <div className="rounded-xl border border-line p-5">
           <Eyebrow>Estimated price range</Eyebrow>
-          <p className="font-display text-3xl font-extrabold text-primary-container md:text-4xl">{formatUgx(range.lowUgx)} – {formatUgx(range.highUgx)}</p>
-          <p className="mt-1 text-sm text-muted">From {range.comparables} similar cars in SAZO’s price records. This is an estimate — the car’s condition and documents change the price.</p>
+          <p className="font-display text-3xl font-extrabold text-primary-container md:text-4xl">{formatUgx(range.lowUgx)} to {formatUgx(range.highUgx)}</p>
+          <p className="mt-1 text-sm text-muted">From {range.comparables} similar cars in SAZO’s price records. This is an estimate. The car’s condition and documents change the price.</p>
           <dl className="mt-4 divide-y divide-line text-sm">
             <div className="flex justify-between py-2"><dt>Lower end</dt><dd className="font-semibold">{formatUgx(range.lowUgx)}</dd></div>
             <div className="flex justify-between rounded-lg bg-lime/40 px-2 py-2 font-bold"><dt>Typical</dt><dd>{formatUgx(range.midUgx)}</dd></div>

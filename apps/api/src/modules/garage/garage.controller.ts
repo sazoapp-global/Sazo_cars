@@ -54,7 +54,7 @@ export class GarageController {
   @Get('vehicles/lookup')
   async lookup(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Query('plate') plate?: string) {
     await this.org(actor, orgId, 'garage.job.create');
-    if (!plate || plate.trim().length < 4 || plate.length > 12) throw badRequest('invalid_query', 'plate must be 4–12 characters');
+    if (!plate || plate.trim().length < 4 || plate.length > 12) throw badRequest('invalid_query', 'plate must be 4 to 12 characters');
     return this.garage.lookup(plate).catch(garageProblem);
   }
 

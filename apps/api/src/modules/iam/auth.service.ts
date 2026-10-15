@@ -23,7 +23,8 @@ export class AuthError extends Error {
   constructor(
     readonly code: 'rate_limited' | 'invalid_code' | 'signup_details_required' | 'invalid_token' | 'account_suspended' | 'refresh_in_progress'
       | 'phone_in_use' | 'same_phone' | 'no_account' | 'account_exists' | 'invalid_credentials' | 'account_locked' | 'weak_password'
-      | 'email_in_use' | 'invalid_link' | 'too_young' | 'google_disabled' | 'google_failed' | 'wrong_password' | 'details_locked',
+      | 'email_in_use' | 'invalid_link' | 'too_young' | 'google_disabled' | 'google_failed' | 'wrong_password' | 'details_locked'
+      | 'session_idle',
     message: string,
     readonly details: unknown[] = [],
   ) {
@@ -86,8 +87,8 @@ export class AuthService {
    */
   async requestOtp(phone: string, intent: 'login' | 'signup' = 'login'): Promise<void> {
     const user = await this.repo.userByPhone(phone);
-    if (intent === 'login' && (!user || user.status === 'deleted')) throw new AuthError('no_account', 'No SAZO account uses this number — create one');
-    if (intent === 'signup' && user) throw new AuthError('account_exists', 'This number already has a SAZO account — log in instead');
+    if (intent === 'login' && (!user || user.status === 'deleted')) throw new AuthError('no_account', 'No SAZO account uses this number. Create one');
+    if (intent === 'signup' && user) throw new AuthError('account_exists', 'This number already has a SAZO account. Log in instead');
     if ((await this.repo.recentOtpCount(phone, 60)) >= OTP_MAX_PER_HOUR) throw new AuthError('rate_limited', 'Too many codes requested; try again later');
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
     await this.repo.createOtp(phone, this.codeHmac(phone, code), OTP_TTL_MINUTES);
@@ -114,11 +115,11 @@ export class AuthService {
       throw new AuthError('invalid_code', 'Code is wrong or expired');
     }
     // The code is proven correct, so asking for the details leaks nothing; keep the code usable for the retry.
-    if (!existing && !signup) throw new AuthError('signup_details_required', 'No account uses this number yet — fill in your details to create one');
+    if (!existing && !signup) throw new AuthError('signup_details_required', 'No account uses this number yet. Fill in your details to create one');
     await this.repo.otpAttempt(challenge.id, true);
     if (existing) return this.completeLogin(existing, 'phone_code', idHash, ctx, false);
     const id = await this.createAccount(signup!, { phone });
-    if (!id) throw new AuthError('account_exists', 'This number already has a SAZO account — log in instead');
+    if (!id) throw new AuthError('account_exists', 'This number already has a SAZO account. Log in instead');
     return this.completeLogin((await this.repo.userById(id))!, 'phone_code', idHash, ctx, true);
   }
 
@@ -152,9 +153,9 @@ export class AuthService {
   async signupWithEmail(d: PersonDetails, email: string, password: string, ctx: LoginContext = {}): Promise<LoginResult> {
     const problems = passwordProblems(password, { sensitive: false, email, names: [d.surname, d.firstName] });
     if (problems.length) throw new AuthError('weak_password', problems[0]!, problems);
-    if (await this.repo.userByEmail(email)) throw new AuthError('account_exists', 'This email already has a SAZO account — log in instead');
+    if (await this.repo.userByEmail(email)) throw new AuthError('account_exists', 'This email already has a SAZO account. Log in instead');
     const id = await this.createAccount(d, { email, password });
-    if (!id) throw new AuthError('account_exists', 'This email already has a SAZO account — log in instead');
+    if (!id) throw new AuthError('account_exists', 'This email already has a SAZO account. Log in instead');
     await this.sendVerifyLink(id, email, personDisplayName(d));
     return this.completeLogin((await this.repo.userById(id))!, 'password', this.identifierHash('email', email), ctx, true);
   }
@@ -165,7 +166,7 @@ export class AuthService {
     if (!user) {
       await burnPasswordTime(password);
       await this.repo.recordLoginAttempt({ userId: null, identifierHash: idHash, method: 'password', success: false, failureReason: 'no_account', ip: ctx.ip, userAgent: ctx.userAgent });
-      throw new AuthError('no_account', 'No SAZO account uses this email — create one');
+      throw new AuthError('no_account', 'No SAZO account uses this email. Create one');
     }
     const sensitive = await this.isSensitive(user.id);
     if ((await this.repo.recentFailures(user.id, LOCK_MINUTES)) >= LOCK_AFTER[sensitive ? 'sensitive' : 'normal']) {
@@ -176,7 +177,7 @@ export class AuthService {
     const ok = stored ? await verifyPassword(password, stored.hash) : (await burnPasswordTime(password), false);
     if (!ok) {
       await this.repo.recordLoginAttempt({ userId: user.id, identifierHash: idHash, method: 'password', success: false, failureReason: stored ? 'wrong_password' : 'no_password', ip: ctx.ip, userAgent: ctx.userAgent });
-      throw new AuthError('invalid_credentials', stored ? 'Wrong email or password' : 'This account has no password yet — log in with your phone code or Google, then set one in Settings');
+      throw new AuthError('invalid_credentials', stored ? 'Wrong email or password' : 'This account has no password yet. Log in with your phone code or Google, then set one in Settings');
     }
     return this.completeLogin(user, 'password', idHash, ctx, false);
   }
@@ -222,7 +223,7 @@ export class AuthService {
   /** Finish a log-in with the second-step code; optionally remember this device (no second step here for 90 days). */
   async completeSecondStep(challengeId: string, code: string, rememberDevice: boolean, ctx: LoginContext = {}): Promise<LoginResult> {
     const c = await this.repo.secondStep(challengeId);
-    if (!c || c.attempts >= OTP_MAX_ATTEMPTS) throw new AuthError('invalid_code', 'Code is wrong or expired — log in again');
+    if (!c || c.attempts >= OTP_MAX_ATTEMPTS) throw new AuthError('invalid_code', 'Code is wrong or expired. Log in again');
     const user = await this.repo.userById(c.userId);
     const a = Buffer.from(c.codeHmac, 'hex');
     const b = Buffer.from(this.secondStepHmac(c.userId, code), 'hex');
@@ -266,7 +267,7 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<void> {
     const t = await this.repo.useEmailToken(sha256(token), 'verify_email');
-    if (!t) throw new AuthError('invalid_link', 'This link has expired or was already used — ask for a new one');
+    if (!t) throw new AuthError('invalid_link', 'This link has expired or was already used. Ask for a new one');
     if (!(await this.repo.markEmailVerified(t.userId, t.email))) {
       // A change of email: the new address becomes the account's email now that it is confirmed.
       if (!(await this.repo.setEmail(t.userId, t.email, true))) throw new AuthError('email_in_use', 'Another SAZO account uses that email');
@@ -287,11 +288,11 @@ export class AuthService {
   /** A new password from the emailed link: confirms the email, signs out every device, forgets remembered devices. */
   async resetPassword(token: string, password: string): Promise<void> {
     const peek = await this.repo.peekEmailToken(sha256(token), 'reset_password');
-    if (!peek) throw new AuthError('invalid_link', 'This link has expired or was already used — ask for a new one');
+    if (!peek) throw new AuthError('invalid_link', 'This link has expired or was already used. Ask for a new one');
     const user = (await this.repo.userById(peek.userId))!;
     await this.checkPassword(user, password); // a refused password doesn't use up the link
     const t = await this.repo.useEmailToken(sha256(token), 'reset_password');
-    if (!t) throw new AuthError('invalid_link', 'This link has expired or was already used — ask for a new one');
+    if (!t) throw new AuthError('invalid_link', 'This link has expired or was already used. Ask for a new one');
     await this.savePassword(user, password);
     await this.repo.markEmailVerified(user.id, t.email);
     await this.repo.revokeAllSessions(user.id, 'password_reset');
@@ -333,7 +334,7 @@ export class AuthService {
       g = await this.google.finish(code, redirectUri, codeVerifier, nonce);
     } catch (err) {
       this.log.warn(`Google sign-in failed: ${(err as Error).message}`);
-      throw new AuthError('google_failed', 'Google sign-in did not work — try again');
+      throw new AuthError('google_failed', 'Google sign-in did not work. Try again');
     }
     const idHash = this.identifierHash('email', g.email ?? `google:${g.subject}`);
     const linked = await this.repo.userByGoogle(g.subject);
@@ -357,13 +358,13 @@ export class AuthService {
     try {
       g = (await jwtVerify(signupToken, this.signupKey(), { audience: 'sazo-google-signup', algorithms: ['HS256'] })).payload.g as GoogleProfile;
     } catch {
-      throw new AuthError('invalid_link', 'This Google sign-up took too long — start again');
+      throw new AuthError('invalid_link', 'This Google sign-up took too long. Start again');
     }
     const existing = await this.repo.userByGoogle(g.subject);
     if (existing) return this.completeLogin((await this.repo.userById(existing))!, 'google', this.identifierHash('email', g.email ?? g.subject), ctx, false);
     const email = g.email && g.emailVerified && !(await this.repo.userByEmail(g.email)) ? g.email : undefined;
     const id = await this.createAccount(d, { google: g, ...(email ? { email, emailVerified: true } : {}) });
-    if (!id) throw new AuthError('account_exists', 'An account already uses this email — log in instead');
+    if (!id) throw new AuthError('account_exists', 'An account already uses this email. Log in instead');
     return this.completeLogin((await this.repo.userById(id))!, 'google', this.identifierHash('email', g.email ?? g.subject), ctx, true);
   }
 
@@ -375,7 +376,7 @@ export class AuthService {
     this.dobOk(d.dateOfBirth);
     if (user.gender && user.dobCiphertext) {
       const same = user.gender === d.gender && this.keyring.decrypt(user.dobCiphertext, user.dobKeyVersion!) === d.dateOfBirth;
-      if (!same) throw new AuthError('details_locked', 'Gender and date of birth can only be changed by SAZO staff — contact SAZO');
+      if (!same) throw new AuthError('details_locked', 'Gender and date of birth can only be changed by SAZO staff. Contact SAZO');
     }
     await this.repo.setIdentityOnce(userId, d.gender, this.keyring.encrypt(d.dateOfBirth), this.keyring.current);
     await this.setNames(userId, d);
@@ -456,6 +457,12 @@ export class AuthService {
       throw new AuthError('invalid_token', 'Sign in again');
     }
     if (s.revoked || s.expired) throw new AuthError('invalid_token', 'Sign in again');
+    // Signed out after SESSION_IDLE_HOURS without using the account. The clock is the last refresh: an
+    // active person refreshes at least once per access-token lifetime, so allow one lifetime on top.
+    if (s.idleSeconds > this.cfg.SESSION_IDLE_HOURS * 3600 + this.cfg.ACCESS_TOKEN_TTL_SECONDS) {
+      await this.repo.revokeSession(s.id, 'idle');
+      throw new AuthError('session_idle', `You were logged out after ${this.cfg.SESSION_IDLE_HOURS} hours without activity. Log in again.`);
+    }
     const next = randomBytes(32).toString('base64url');
     if (!(await this.repo.rotateSession(s.id, hash, sha256(next)))) throw new AuthError('refresh_in_progress', 'Already refreshed; use the newest token');
     return { accessToken: await this.sign(s.userId, s.id), refreshToken: next, expiresIn: this.cfg.ACCESS_TOKEN_TTL_SECONDS };

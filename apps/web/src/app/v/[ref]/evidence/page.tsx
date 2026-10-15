@@ -15,10 +15,10 @@ const CLASSES: { id: string; label: string }[] = [
   { id: 'inspection', label: 'Inspection' }, { id: 'dealer', label: 'Dealer' }, { id: 'owner_provided', label: 'Owner-provided' },
 ];
 const EXCLUDED: Record<string, string> = {
-  corrected: 'Replaced by a correction — kept for the record, not counted',
-  retracted: 'Withdrawn by its source — kept for the record, not counted',
-  duplicate: 'Duplicate of another record — not counted twice',
-  retired_simulated_source: 'From a test data source that has been replaced — not counted',
+  corrected: 'Replaced by a correction. Kept for the record, not counted',
+  retracted: 'Withdrawn by its source. Kept for the record, not counted',
+  duplicate: 'Duplicate of another record, not counted twice',
+  retired_simulated_source: 'From a test data source that has been replaced, not counted',
 };
 
 /** Attribute values in plain words; internal ids are never shown. */

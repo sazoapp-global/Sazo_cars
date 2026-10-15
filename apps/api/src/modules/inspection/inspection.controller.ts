@@ -47,7 +47,7 @@ export class InspectionController {
   @Get('vehicles/lookup')
   async lookup(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Query('plate') plate?: string) {
     await this.org(actor, orgId, 'inspection.create');
-    if (!plate || plate.trim().length < 4 || plate.length > 12) throw badRequest('invalid_query', 'plate must be 4–12 characters');
+    if (!plate || plate.trim().length < 4 || plate.length > 12) throw badRequest('invalid_query', 'plate must be 4 to 12 characters');
     return this.inspections.lookup(plate).catch((err: { code?: string; message?: string }) => {
       if (err.code === 'invalid_plate') throw badRequest('invalid_plate', err.message ?? 'Not a number plate');
       throw err;

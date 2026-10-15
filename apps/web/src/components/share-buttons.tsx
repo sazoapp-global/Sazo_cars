@@ -17,6 +17,7 @@ export function ShareButtons({ url, title }: { url: string; title: string }) {
   );
 }
 
-export function PrintButton() {
-  return <button type="button" className="btn btn-ghost print:hidden" onClick={() => window.print()}><Icon name="description" />Save as PDF</button>;
+/** Opens the print window, where "Save as PDF" downloads the report as a PDF file. */
+export function PrintButton({ primary = false }: { primary?: boolean }) {
+  return <button type="button" className={`btn ${primary ? 'btn-primary' : 'btn-ghost'} print:hidden`} onClick={() => window.print()}><Icon name="download" />Save as PDF</button>;
 }

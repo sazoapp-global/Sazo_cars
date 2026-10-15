@@ -17,7 +17,7 @@ export default async function Matches({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Vehicle matches</h1>
-      <p className="mb-4 text-muted">A record arrived and SAZO could not be sure which car it belongs to — for example a new chassis number with a plate that is on a car entered by its owner. Pick the car, make a new one, or reject the record.</p>
+      <p className="mb-4 text-muted">A record arrived and SAZO could not be sure which car it belongs to, for example a new chassis number with a plate that is on a car entered by its owner. Pick the car, make a new one, or reject the record.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="deciding vehicle matches" /> : data.items.length === 0 ? <p className="text-muted">Nothing waiting.</p> : (
         <ul className="space-y-4">
@@ -42,7 +42,7 @@ export default async function Matches({ searchParams }: { searchParams: SP }) {
                       </label>
                     );
                   })}
-                  <label className="mt-2 flex items-center gap-2 rounded-lg border border-line p-3"><input type="radio" name="choice" value="created_new" className="h-5 w-5" />A different car — create a new vehicle</label>
+                  <label className="mt-2 flex items-center gap-2 rounded-lg border border-line p-3"><input type="radio" name="choice" value="created_new" className="h-5 w-5" />A different car: create a new vehicle</label>
                   <label className="mt-2 flex items-center gap-2 rounded-lg border border-line p-3"><input type="radio" name="choice" value="rejected" className="h-5 w-5" />Reject this record</label>
                 </fieldset>
                 <div><label htmlFor={`reason-${d.decisionId}`} className="label">Reason</label>

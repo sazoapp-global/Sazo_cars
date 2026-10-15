@@ -93,7 +93,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
         <section className="mx-auto max-w-[1280px] px-4 py-16 md:px-8 lg:px-12" aria-labelledby="preview">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-container">A quick preview</p>
           <h2 id="preview" className="mt-2 font-display text-3xl font-extrabold leading-tight text-primary md:text-4xl">Less guesswork.<br />More confidence.</h2>
-          <p className="mt-2 text-muted">This is a real check from SAZO’s test records — the same summary anyone sees without an account.</p>
+          <p className="mt-2 text-muted">This is a real check from SAZO’s test records: the same summary anyone sees without an account.</p>
           <div className="card mt-8 grid overflow-hidden lg:grid-cols-[1.4fr_1fr]">
             <div className="p-5 md:p-7">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -128,7 +128,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-label">Typical market price</p>
                 <p className="mt-1 font-display text-lg font-bold text-primary">See the estimated price range</p>
-                <p className="text-sm text-muted">From comparable sales of similar cars in Uganda, adjusted for this car’s history. Free — just log in.</p>
+                <p className="text-sm text-muted">From comparable sales of similar cars in Uganda, adjusted for this car’s history. Free. Just log in.</p>
                 <Link href={`/sign-in?next=/v/${preview.vehicle.vehicleRef}`} className="link mt-2 inline-block text-sm">Log in to see the price</Link>
               </div>
             </div>
@@ -144,7 +144,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-container">Your car, explained</p>
               <h2 id="questions" className="mt-2 font-display text-3xl font-extrabold leading-tight text-primary md:text-4xl">What can I find out<br />about a car?</h2>
             </div>
-            <p className="max-w-sm text-muted">SAZO brings together what is available and explains it in seven questions — including when we simply don’t know yet.</p>
+            <p className="max-w-sm text-muted">SAZO brings together what is available and explains it in seven questions, including when we simply don’t know yet.</p>
           </div>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {QUESTION_ORDER.map((q, i) => (
@@ -165,10 +165,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
         <h2 id="how-h" className="mt-2 font-display text-3xl font-extrabold text-primary md:text-4xl">Checking a car is easy</h2>
         <ol className="mt-10 grid gap-4 text-left sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ['Enter the number', 'Type the registration or VIN from the car. If the plate is on more than one car, we show them all — and warn you.'],
+            ['Enter the number', 'Type the registration or VIN from the car. If the plate is on more than one car, we show them all and warn you.'],
             ['See what we found', 'We bring the available records into one clear view, with how sure each answer is.'],
             ['Read the important bits', 'History, mileage and key details are easy to understand. Log in for the evidence behind each answer.'],
-            ['Decide for yourself', 'See the car, check its papers and get it inspected — with better questions to ask.'],
+            ['Decide for yourself', 'See the car, check its papers and get it inspected, with better questions to ask.'],
           ].map(([t, d], i) => (
             <li key={t} className="card relative p-5">
               <span className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold ${i === 0 ? 'bg-lime text-ink' : 'bg-soft text-primary-container'}`}>{i + 1}</span>

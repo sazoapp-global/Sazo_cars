@@ -55,7 +55,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
         </nav>
         <div className="border-t border-white/15 px-5 py-4 text-sm">
           <p role="status" aria-live="polite" className={`mb-3 flex items-center gap-1.5 font-semibold ${online ? 'text-white/85' : 'text-lime'}`}>
-            <Icon name={online ? 'cloud_done' : 'wifi_off'} size={16} />{online ? 'Online' : 'No signal — saving here'}
+            <Icon name={online ? 'cloud_done' : 'wifi_off'} size={16} />{online ? 'Online' : 'No signal, saving here'}
           </p>
           <div className="mb-4"><ThemePicker onNavy /></div>
           <p className="font-semibold">{me.displayName}</p>
@@ -78,7 +78,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
         {!online && (
           <div className="bg-ink px-4 py-2.5 text-sm text-white">
             <p className="font-bold">You’re offline</p>
-            <p className="text-white/85">{unsent ? `${unsent} ${unsent === 1 ? 'job is' : 'jobs are'} saved on this phone. They’ll upload automatically when there’s signal.` : 'Keep working — everything is saved on this phone and uploads when there’s signal.'}</p>
+            <p className="text-white/85">{unsent ? `${unsent} ${unsent === 1 ? 'job is' : 'jobs are'} saved on this phone. They’ll upload automatically when there’s signal.` : 'Keep working. Everything is saved on this phone and uploads when there’s signal.'}</p>
           </div>
         )}
         <main className={`flex-1 ${inWizard ? '' : 'pb-24 lg:pb-0'}`}>{children}</main>

@@ -16,7 +16,7 @@ export default async function Concerns({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Reported problems</h1>
-      <p className="mb-4 text-muted">Garages and inspectors report signs of fraud. While a serious report waits, buyers see only &ldquo;a business has raised a concern; SAZO is checking&rdquo;. Uphold only what you could confirm — buyers then see it. The reporting business is never named to buyers.</p>
+      <p className="mb-4 text-muted">Garages and inspectors report signs of fraud. While a serious report waits, buyers see only &ldquo;a business has raised a concern; SAZO is checking&rdquo;. Uphold only what you could confirm. Buyers then see it. The reporting business is never named to buyers.</p>
       <Notice done={sp.done} error={sp.error} />
       <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
         {STATUSES.map(([s, label]) => (

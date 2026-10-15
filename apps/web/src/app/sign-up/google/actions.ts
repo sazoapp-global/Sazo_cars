@@ -21,7 +21,7 @@ export async function finishGoogleSignUp(_prev: GoogleSignUpState, form: FormDat
   } catch (err) {
     if (err instanceof ApiError && err.code === 'invalid_request') return { values: details, error: 'Check the highlighted fields.', errors: fieldErrors(err.errors) };
     if (err instanceof ApiError && err.code === 'invalid_link') redirect('/sign-up?google=expired');
-    if (err instanceof ApiError && err.code === 'account_exists') return { values: details, error: err.detail ?? 'You already have an account — log in instead.' };
+    if (err instanceof ApiError && err.code === 'account_exists') return { values: details, error: err.detail ?? 'You already have an account. Log in instead.' };
     return { values: details, error: 'Something went wrong. Please try again.' };
   }
   redirect(to);

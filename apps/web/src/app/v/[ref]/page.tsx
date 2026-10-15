@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { QUESTION_ICONS } from '@/lib/questions';
 import type { CarPhoto } from '@/lib/report-data';
 import type { LedgerItem, MyCar, Summary, TimelineItem } from '@/lib/types';
+import { PrintButton } from '@/components/share-buttons';
 import { saveCar, shareReport, unsaveCar } from '../../buyer-actions';
 import { claimCar } from '../../my-cars/actions';
 import { loadVehicle } from './load';
@@ -45,8 +46,7 @@ export default async function VehiclePage({ params, searchParams }: Props) {
       <form action={saved ? unsaveCar : saveCar}><input type="hidden" name="ref" value={ref} />
         <button className="btn btn-ghost" aria-pressed={saved}><Icon name={saved ? 'bookmark_added' : 'bookmark'} />{saved ? 'Saved' : 'Save this car'}</button></form>
       <Link href={`/compare?r=${ref}`} className="btn btn-ghost"><Icon name="compare_arrows" />Compare</Link>
-      <form action={shareReport}><input type="hidden" name="ref" value={ref} />
-        <button className="btn btn-primary"><Icon name="share" />Share or save as PDF</button></form>
+      <PrintButton primary />
       {mine ? (
         <Link href={mine.status === 'verified' ? `/my-cars/${ref}` : '/my-cars'} className="btn btn-ghost"><Icon name="key" />{mine.status === 'verified' ? 'Your car' : 'Logbook being checked'}</Link>
       ) : (

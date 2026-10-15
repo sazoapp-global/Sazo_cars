@@ -81,7 +81,6 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await expect(biz).toContainText('Manager');
   await expect(biz).toContainText('Kampala');
   await expect(later.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
-  await expect(later.getByRole('link', { name: 'Download as a JSON file' })).toHaveAttribute('href', '/account/export');
   await a11y(later);
   await shot(later, 'my-data');
 });

@@ -22,7 +22,7 @@ export class ReportsController {
   @Get('search')
   async search(@Query() query: Record<string, unknown>) {
     const parsed = SearchQuery.safeParse(query);
-    if (!parsed.success) throw badRequest('invalid_query', 'q must be 4–32 characters (a VIN, chassis number or plate)');
+    if (!parsed.success) throw badRequest('invalid_query', 'q must be 4 to 32 characters (a VIN, chassis number or plate)');
     const result = await this.registry.search(parsed.data.q);
     const [matches, suggestionMatch] = await Promise.all([
       this.reports.enrichCards(result.matches),

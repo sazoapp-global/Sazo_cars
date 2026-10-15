@@ -71,7 +71,7 @@ const HEADLINES: Record<string, Text> = {
     const names = checked.map((c) => (c === 'police' ? 'police' : c === 'insurer' ? 'insurer' : c)).join(' and ');
     return `No accident or damage records found${names ? ` in the ${names} records we have` : ''}.`;
   },
-  'damage.attention.non_structural': 'There is an accident record — reported as minor, but worth a closer look.',
+  'damage.attention.non_structural': 'There is an accident record, reported as minor but worth a closer look.',
   'damage.serious.structural': 'Records show structural damage.',
   'damage.serious.flood': 'Records show flood damage.',
   'damage.serious.total_loss': (p) => (p.rebuilt ? 'An insurer declared it a total loss; it was later rebuilt.' : 'An insurer declared it a total loss.'),
@@ -80,7 +80,7 @@ const HEADLINES: Record<string, Text> = {
   // Mileage
   'mileage.verified.consistent': (p) => `${plural(p.readings, 'reading rises', 'readings rise')} steadily over time.`,
   'mileage.serious.decrease': (p) => `A reading of ${formatKm(p.laterKm)} came after an earlier reading of ${formatKm(p.earlierKm)}. The odometer may have been wound back.`,
-  'mileage.attention.implausible_rate': (p) => `About ${formatKm(p.kmPerYear)} a year — more than is usual for this kind of use.`,
+  'mileage.attention.implausible_rate': (p) => `About ${formatKm(p.kmPerYear)} a year, more than is usual for this kind of use.`,
   'mileage.attention.odometer_replaced': (p) => `The odometer was replaced${p.replacedOn ? ` on ${formatDate(String(p.replacedOn))}` : ''}${p.estimatedTotalKm ? `; total distance is estimated at ${formatKm(p.estimatedTotalKm)}` : ''}.`,
   'mileage.attention.single_reading': 'Only one mileage reading is recorded, so we cannot check it against others.',
   'mileage.attention.short_history': 'Mileage readings cover only a short period.',
@@ -105,23 +105,23 @@ const HEADLINES: Record<string, Text> = {
   'legal_financial.not_available.no_coverage': "We don't have finance or police records that cover this car yet.",
   // Price
   'valuation.verified.comparables': (p) => `Estimate based on ${plural(p.comparables, 'comparable sale', 'comparable sales')} in the last 12 months.`,
-  'valuation.attention.few_comparables': (p) => `Rough estimate — only ${plural(p.comparables, 'comparable sale', 'comparable sales')} found.`,
+  'valuation.attention.few_comparables': (p) => `Rough estimate: only ${plural(p.comparables, 'comparable sale', 'comparable sales')} found.`,
   'valuation.attention.rebuilt_adjusted': 'Rebuilt cars usually sell below the range for similar cars.',
   'valuation.not_available.too_few_comparables': 'Not enough comparable sales to estimate a price yet.',
   // Notes and conflicts
   'identity.note.engine_replaced': (p) => `Engine replaced${p.on ? ` on ${formatDate(String(p.on))}` : ''} (recorded).`,
   'identity.note.full_repaint': (p) => `Fully repainted${p.from && p.to ? ` from ${p.from} to ${p.to}` : ''}.`,
-  'damage.note.repainted_panels': (p) => `At an inspection${p.on ? ` on ${formatDate(String(p.on))}` : ''}, the paint on ${plural(p.panels, 'panel was', 'panels were')} thicker than factory paint — a sign of repainting, often after body repairs.`,
+  'damage.note.repainted_panels': (p) => `At an inspection${p.on ? ` on ${formatDate(String(p.on))}` : ''}, the paint on ${plural(p.panels, 'panel was', 'panels were')} thicker than factory paint, a sign of repainting, often after body repairs.`,
   'legal.note.previous_loan_cleared': 'A previous loan on this car was recorded as paid off.',
   'legal.note.past_stolen_recovered': 'It was once reported stolen and later recovered.',
-  'conflict.mileage.open': 'Mileage records disagree — under review.',
-  'conflict.identity.open': 'Identity records disagree — under review.',
-  'conflict.damage.open': 'Damage records disagree — under review.',
-  'conflict.ownership.open': 'Ownership records disagree — under review.',
-  'conflict.finance.open': 'Finance records disagree — under review.',
-  'conflict.spec.open': 'Specification records disagree — under review.',
-  'conflict.care.open': 'Service records are disputed — under review.',
-  'conflict.legal.open': 'Legal records disagree — under review.',
+  'conflict.mileage.open': 'Mileage records disagree and are under review.',
+  'conflict.identity.open': 'Identity records disagree and are under review.',
+  'conflict.damage.open': 'Damage records disagree and are under review.',
+  'conflict.ownership.open': 'Ownership records disagree and are under review.',
+  'conflict.finance.open': 'Finance records disagree and are under review.',
+  'conflict.spec.open': 'Specification records disagree and are under review.',
+  'conflict.care.open': 'Service records are disputed and under review.',
+  'conflict.legal.open': 'Legal records disagree and are under review.',
 };
 
 export const HEALTH_FACTORS: Record<string, string> = {
@@ -183,7 +183,7 @@ const VALUE_WORDS: Record<string, string> = {
 
 /** A fact value for display: units, dates, plain words. */
 export function factValue(key: string, value: unknown): string {
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return 'Not recorded';
   if (key === 'current_mileage_km') return formatKm(value);
   if (key === 'first_registration_date') return formatDate(String(value));
   if (key === 'owner_count') return plural(value, 'owner', 'owners');
@@ -201,7 +201,7 @@ export function headline(key: string, params?: Params): string {
 
 /** Figure-free wording for the public summary (P-002: one status and one line, no figures or details). */
 const SUMMARY_LINES: Record<string, string> = {
-  'damage.note.repainted_panels': 'An inspection found paint thicker than factory paint — a sign of repainting.',
+  'damage.note.repainted_panels': 'An inspection found paint thicker than factory paint , a sign of repainting.',
   'identity.attention.colour_mismatch': 'The colour seen at inspection differs from the registered colour.',
   'care.verified.regular_services': 'Regular services are recorded.',
   'care.attention.service_gap': 'No recent service is recorded.',

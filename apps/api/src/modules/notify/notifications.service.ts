@@ -11,7 +11,7 @@ import { SMS_SENDER, type SmsSender } from './sms.js';
 /** SMS templates (en-UG). Short, plain, and never containing personal data beyond what's needed. */
 const TEMPLATES: Record<string, { version: number; body: string }> = {
   otp: { version: 1, body: 'Your SAZO code is {code}. It expires in 10 minutes. Never share it with anyone.' },
-  second_step: { version: 1, body: 'Your SAZO sign-in code is {code}. It expires in 10 minutes. Never share it — SAZO will never ask you for it.' },
+  second_step: { version: 1, body: 'Your SAZO sign-in code is {code}. It expires in 10 minutes. Never share it. SAZO will never ask you for it.' },
   org_approved: { version: 1, body: '{organisation} is approved on SAZO. You can now record jobs in the SAZO Garage app.' },
   org_info_requested: { version: 1, body: 'SAZO needs more information about {organisation}: {reason}. Reply on the SAZO website.' },
   org_rejected: { version: 1, body: 'SAZO could not approve {organisation} at this time. Contact SAZO support for details.' },
@@ -41,9 +41,9 @@ const EMAILS: Record<string, { version: number; subject: string; body: string }>
   verify_email: { version: 1, subject: 'Confirm your email for SAZO',
     body: 'Hello {name},\n\nConfirm this email address for your SAZO account:\n{link}\n\nThe link works once and expires in 24 hours. If you did not ask for this, ignore this email.\n\nSAZO' },
   reset_password: { version: 1, subject: 'Reset your SAZO password',
-    body: 'Hello {name},\n\nSomeone (hopefully you) asked to reset the password for your SAZO account. Choose a new password here:\n{link}\n\nThe link works once and expires in 1 hour. If this was not you, ignore this email — your password has not changed.\n\nSAZO' },
+    body: 'Hello {name},\n\nSomeone (hopefully you) asked to reset the password for your SAZO account. Choose a new password here:\n{link}\n\nThe link works once and expires in 1 hour. If this was not you, ignore this email. Your password has not changed.\n\nSAZO' },
   second_step: { version: 1, subject: 'Your SAZO sign-in code',
-    body: 'Hello {name},\n\nYour SAZO sign-in code is {code}. It expires in 10 minutes. Never share it with anyone — SAZO will never ask you for it.\n\nIf you are not signing in, change your password at once.\n\nSAZO' },
+    body: 'Hello {name},\n\nYour SAZO sign-in code is {code}. It expires in 10 minutes. Never share it with anyone. SAZO will never ask you for it.\n\nIf you are not signing in, change your password at once.\n\nSAZO' },
   password_changed: { version: 1, subject: 'Your SAZO password was changed',
     body: 'Hello {name},\n\nThe password for your SAZO account was just changed. If this was not you, reset it at once from the sign-in page and contact SAZO.\n\nSAZO' },
 };

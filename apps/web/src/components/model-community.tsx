@@ -18,7 +18,7 @@ export async function ModelCommunity({ vehicleRef, modelId, done, error }: { veh
   return (
     <section id="community" className="card scroll-mt-4 p-4 md:p-5" aria-labelledby="community-h">
       <h2 id="community-h" className="font-display text-lg font-semibold">What owners say about the {c.model.label}</h2>
-      <p className="text-sm text-muted">Opinions about this model in general — not records about this car. Checked by SAZO before they appear.</p>
+      <p className="text-sm text-muted">Opinions about this model in general, not records about this car. Checked by SAZO before they appear.</p>
       {done && <p role="status" className="mt-2 rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{done}</p>}
       {error && <p role="alert" className="mt-2 rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{error}</p>}
       {c.averageRating !== null && <p className="mt-2 flex items-center gap-2 font-semibold"><Stars n={Math.round(c.averageRating)} />{c.averageRating} from {c.reviewCount} reviews</p>}
@@ -48,7 +48,7 @@ export async function ModelCommunity({ vehicleRef, modelId, done, error }: { veh
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         {c.myReviewStatus ? (
-          <p className="rounded-lg bg-soft p-3 text-sm">{c.myReviewStatus === 'pending' ? 'Your review is waiting for SAZO to check it.' : 'Thank you — your review is published.'}</p>
+          <p className="rounded-lg bg-soft p-3 text-sm">{c.myReviewStatus === 'pending' ? 'Your review is waiting for SAZO to check it.' : 'Thank you. Your review is published.'}</p>
         ) : (
           <form action={postReview} className="space-y-2 rounded-lg bg-soft p-3">
             <input type="hidden" name="ref" value={vehicleRef} /><input type="hidden" name="modelId" value={c.model.modelId} />

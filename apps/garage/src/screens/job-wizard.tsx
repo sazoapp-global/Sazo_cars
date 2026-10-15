@@ -92,7 +92,7 @@ export function JobWizard({ jobId, garage, me }: { jobId: string; garage: Garage
             return (
               <li key={s} className="min-w-0 flex-1">
                 <button type="button" disabled={i >= step || skipped} onClick={() => goStep(i)} aria-current={i === step ? 'step' : undefined}
-                  className={`block w-full text-left disabled:cursor-default ${skipped ? 'opacity-40' : ''}`} aria-label={`${s}${done ? ', finished — tap to change' : ''}`}>
+                  className={`block w-full text-left disabled:cursor-default ${skipped ? 'opacity-40' : ''}`} aria-label={`${s}${done ? ', finished, tap to change' : ''}`}>
                   <span className={`block h-1.5 rounded-full ${i <= step && !skipped ? 'bg-primary-container' : 'bg-soft-3'}`} />
                   <span className={`mt-1 hidden truncate text-[11px] font-semibold sm:block ${i === step ? 'text-primary-container' : 'text-label'}`}>{s}</span>
                 </button>
@@ -168,7 +168,7 @@ function CarStep({ d, garage, online, update }: StepProps & { garage: Garage; on
 
       {result === 'offline' && (
         <div className="rounded-lg border border-warn-line bg-warn-fill p-3 text-sm text-warn-text">
-          <p className="font-semibold">No signal — carry on.</p>
+          <p className="font-semibold">No signal. Carry on.</p>
           <p className="text-on-surface">SAZO will match the plate to the car when you send the job. Check the plate carefully.</p>
         </div>
       )}
@@ -206,7 +206,7 @@ function CarStep({ d, garage, online, update }: StepProps & { garage: Garage; on
       {!result && d.plateEntered && (
         <p className="text-sm text-muted">Chosen: <PlateText value={d.plateEntered} /> {d.vehicleLabel ?? (d.newToSazo ? '(new to SAZO)' : '(will be matched when sent)')}</p>
       )}
-      {!online && !result && <p className="text-sm text-muted">No signal: type the plate and tap Find — you can carry on without the lookup.</p>}
+      {!online && !result && <p className="text-sm text-muted">No signal: type the plate and tap Find. You can carry on without the lookup.</p>}
     </>
   );
 }
@@ -380,8 +380,8 @@ function CustomerStep({ d, setForm, update }: FormProps) {
         <div><label htmlFor="cphone" className="label">Customer phone</label>
           <input id="cphone" className="field" type="tel" inputMode="tel" autoComplete="off" placeholder="0772 123 456" value={phoneText} aria-invalid={!phoneValid}
             onChange={(e) => { setPhoneText(e.target.value); setCustomer({ phone: toE164(e.target.value) }); }} />
-          {!phoneValid && <p role="alert" className="mt-1 text-sm font-semibold text-bad-text">Check the number — e.g. 0772 123 456.</p>}
-          <p className="mt-1 text-sm text-muted">Optional. With a number, the customer can confirm the visit by SMS — that makes your record count for more.</p></div>
+          {!phoneValid && <p role="alert" className="mt-1 text-sm font-semibold text-bad-text">Check the number, for example 0772 123 456.</p>}
+          <p className="mt-1 text-sm text-muted">Optional. With a number, the customer can confirm the visit by SMS, which makes your record count for more.</p></div>
         {c?.phone && (
           <label className="flex items-start gap-3">
             <input type="checkbox" className="mt-1 h-6 w-6 shrink-0 accent-[#0033aa]" checked={!!c.smsConsent} onChange={(e) => setCustomer({ smsConsent: e.target.checked })} />
@@ -397,7 +397,7 @@ function CustomerStep({ d, setForm, update }: FormProps) {
               setAmountText(digits ? Number(digits).toLocaleString('en-UG') : '');
               setForm((x) => { const { cost: old, ...rest } = x; return digits ? { ...rest, cost: { ...(old ?? {}), total: { amount: Number(digits), currency: 'UGX' } } } : rest; });
             }} /></div>
-          <p className="mt-1 text-sm text-muted">Kept private by SAZO — never shown to buyers.</p></div>
+          <p className="mt-1 text-sm text-muted">Kept private by SAZO and never shown to buyers.</p></div>
         {d.form.cost && (
           <>
             <Pills label="Paid by" options={[['cash', 'Cash'], ['mtn_momo', 'MTN MoMo'], ['airtel_money', 'Airtel Money'], ['bank', 'Bank'], ['other', 'Other']] as const}
@@ -414,7 +414,7 @@ function CustomerStep({ d, setForm, update }: FormProps) {
 const WARNING_TEXT: Record<string, (p: Record<string, unknown>) => string> = {
   'garage.check.mileage_lower_than_last': (p) => `The reading (${formatKm(p.enteredKm)}) is lower than the last one SAZO has: ${formatKm(p.lastKm)} on ${formatDate(String(p.lastOn))}. Check the dashboard, or explain (e.g. the instrument cluster was replaced).`,
   'garage.check.plate_on_several_vehicles': () => 'This plate is on more than one car in SAZO. Check the chassis number on the car.',
-  'garage.check.implausible_mileage_rate': (p) => `That is about ${formatKm(p.kmPerYear)} a year — more than usual. Check the reading.`,
+  'garage.check.implausible_mileage_rate': (p) => `That is about ${formatKm(p.kmPerYear)} a year, more than usual. Check the reading.`,
   'garage.check.old_engine_differs_from_record': (p) => `The old engine number you entered (${String(p.entered)}) is different from the record (${String(p.expected)}).`,
   'garage.check.date_in_future': () => "The job's date is in the future. Check the phone's date and time.",
 };
@@ -450,7 +450,7 @@ function ReviewStep({ d, garage, me, online, update, goStep }: StepProps & { gar
       await forgetJob(d.jobId);
       setDone(res);
     } catch (err) {
-      if (err instanceof OfflineError) setError('No signal. The job is saved on this phone — send it when you have signal.');
+      if (err instanceof OfflineError) setError('No signal. The job is saved on this phone. Send it when you have signal.');
       else if (err instanceof ApiError && (err.code === 'warnings_need_acknowledgement' || err.code === 'blocked')) {
         setWarnings(err.errors as CheckWarning[]);
         setError(err.code === 'blocked' ? 'This job cannot be sent as it is.' : 'Please check these, then explain to continue.');
@@ -464,7 +464,7 @@ function ReviewStep({ d, garage, me, online, update, goStep }: StepProps & { gar
     return (
       <div className="space-y-4 text-center">
         <Icon name="check_circle" size={56} className="mx-auto text-ok-text" />
-        <h1 className="font-display text-2xl font-bold">{done.jobStatus === 'accepted' ? 'Added to the car’s history' : done.jobStatus === 'submitted' ? 'Sent — SAZO is checking which car it is' : 'Not accepted'}</h1>
+        <h1 className="font-display text-2xl font-bold">{done.jobStatus === 'accepted' ? 'Added to the car’s history' : done.jobStatus === 'submitted' ? 'Sent. SAZO is checking which car it is' : 'Not accepted'}</h1>
         {done.rejectionReason && <p className="text-bad-text">{done.rejectionReason}</p>}
         <p className="text-muted">{done.ownerConfirmation === 'pending' ? 'The customer will get an SMS to confirm the visit.' : 'No SMS was sent to the customer.'}</p>
         <button type="button" className="btn btn-primary w-full" onClick={() => go({ name: 'home' })}>Done</button>
@@ -479,7 +479,7 @@ function ReviewStep({ d, garage, me, online, update, goStep }: StepProps & { gar
         <Row label="Car" onEdit={() => goStep(0)}><PlateText value={d.plateEntered} /> <span className="text-sm">{d.vehicleLabel ?? (d.newToSazo ? 'New to SAZO' : 'Matched when sent')}</span></Row>
         <Row label="Work" onEdit={() => goStep(1)}>{d.workTypes.map((w) => WORK_LABELS[w]).join(', ')}</Row>
         {d.form.description && <Row label="Description" onEdit={() => goStep(1)}><span className="whitespace-pre-line text-sm">{d.form.description}</span></Row>}
-        <Row label="Mileage" onEdit={() => goStep(2)}>{d.form.mileage ? `${d.form.mileage.value.toLocaleString('en-UG')} ${d.form.mileage.unit}${d.form.mileage.unit === 'mi' ? ` (${formatKm(kmOf(d.form.mileage))})` : ''}` : '—'}{d.photos.odometer ? ' · with photo' : ''}</Row>
+        <Row label="Mileage" onEdit={() => goStep(2)}>{d.form.mileage ? `${d.form.mileage.value.toLocaleString('en-UG')} ${d.form.mileage.unit}${d.form.mileage.unit === 'mi' ? ` (${formatKm(kmOf(d.form.mileage))})` : ''}` : 'Not recorded'}{d.photos.odometer ? ' · with photo' : ''}</Row>
         <Row label="Customer" onEdit={() => goStep(4)}>{d.form.customer?.name ?? 'Not given'}{willSms ? ' · will get an SMS' : ''}</Row>
         <Row label="Recorded by">{me.displayName}</Row>
       </div>
