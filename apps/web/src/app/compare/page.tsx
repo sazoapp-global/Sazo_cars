@@ -75,7 +75,7 @@ export default async function Compare({ searchParams }: { searchParams: Promise<
           <span className="chip border-transparent bg-lime text-ink">Side by side</span>
           <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-primary-container md:text-4xl">Compare cars</h1>
           <p className="mt-2 max-w-2xl text-muted">The same seven questions for each car, from their records. Rows where the cars differ are marked. Owner reviews are about the model in general and are kept separate.</p>
-          <div className={`mt-6 grid gap-4 ${c.vehicles.length + (refs.length < 3 ? 1 : 0) >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+          <div className={`mt-6 grid gap-4 sm:grid-cols-2 ${c.vehicles.length + (refs.length < 3 ? 1 : 0) >= 3 ? 'lg:grid-cols-3' : ''}`}>
             {c.vehicles.map((v, i) => <CarCard key={v.vehicle.vehicleRef} v={v} photo={photos[i]} remove={refs.length > 2 ? `/compare?${qs(refs.filter((r) => r !== v.vehicle.vehicleRef))}` : undefined} />)}
             {refs.length < 3 && <AddSlot refs={refs} saved={saved} />}
           </div>

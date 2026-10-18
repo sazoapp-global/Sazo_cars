@@ -90,8 +90,8 @@ export function JobList({ drafts, jobs, limit }: { drafts: LocalDraft[]; jobs: S
   ].slice(0, limit);
   return (
     <>
-      <div className="mt-3 hidden overflow-hidden rounded-[14px] border border-line bg-white shadow-sm md:block">
-        <table className="w-full text-left text-sm">
+      <div tabIndex={0} role="region" aria-label="Job records" className="mt-3 hidden overflow-x-auto rounded-[14px] border border-line bg-white shadow-sm focus-visible:outline-2 focus-visible:outline-primary-container md:block">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="bg-soft text-[11px] font-bold uppercase tracking-wider text-label">
             <tr><th scope="col" className="px-4 py-3">Plate</th><th scope="col" className="px-3 py-3">Work</th><th scope="col" className="px-3 py-3 text-right">km</th><th scope="col" className="px-3 py-3">By</th><th scope="col" className="px-3 py-3">Date</th><th scope="col" className="px-4 py-3">Status</th></tr>
           </thead>
