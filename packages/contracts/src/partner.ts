@@ -14,7 +14,7 @@ export const DOMAIN_RECORD_TYPES: Partial<Record<string, ObservationTypeCode[]>>
   auction: ['auction_sale', 'odometer_reading', 'spec_declared'],
   rental: ['rental_period', 'usage_declared', 'odometer_reading', 'service_performed', 'repair_performed'],
   manufacturer: ['spec_declared', 'identifier_assigned'],
-  dealer: ['listing_published', 'odometer_reading', 'service_performed', 'sale_recorded'],
+  dealer: ['listing_published', 'odometer_reading', 'service_performed', 'sale_recorded', 'spec_declared'],
   inspection: ['inspection_result', 'odometer_reading'],
 };
 

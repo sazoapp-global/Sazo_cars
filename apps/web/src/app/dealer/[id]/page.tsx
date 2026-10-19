@@ -5,16 +5,16 @@ import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { Plate } from '@/components/plate';
 import { statusIcon } from '@/components/status';
-import { vehicleName } from '@/components/vehicle-card';
 import { ApiError, api, isSignedIn } from '@/lib/api';
-import type { Me, MyOrganisation, StaffMember, StockItem } from '@/lib/types';
+import type { DealerSettings, Me, MyOrganisation, StaffMember, StockItem } from '@/lib/types';
 import { NumberStrip, WorkspaceFrame } from '@/components/workspace-frame';
 import { shareReport } from '../../buyer-actions';
-import { addStaff, addStock, changePrice, markSold, removeStock } from '../actions';
+import { addStaff, addStock, changePrice, markSold, removeStock, saveSettings } from '../actions';
+import { BondClock, FUELS, STAGES, StockAge, carName, stageLabel } from '../labels';
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
-type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string }>;
+type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string }>;
 
 export default async function DealerStock({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -35,22 +35,25 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   const show = sp.show === 'sold' ? 'sold' : 'in_stock';
   const onlyFindings = sp.findings === '1';
   const q = (sp.q ?? '').replace(/\s/g, '').toUpperCase();
-  const [inStock, soldList, staff, me] = await Promise.all([
+  const manager = org.role === 'org_manager';
+  const [inStock, soldList, staff, me, settings] = await Promise.all([
     api<{ items: StockItem[] }>('/dealer/stock?status=in_stock', as).then((r) => r.items),
     api<{ items: StockItem[] }>('/dealer/stock?status=sold', as).then((r) => r.items),
     org.role === 'org_manager' ? api<StaffMember[]>('/garage/staff', as).catch((err) => { if (err instanceof ApiError) return []; throw err; }) : Promise.resolve(undefined),
     api<Me>('/me', { auth: true }).catch(() => undefined),
+    api<DealerSettings>('/dealer/settings', as).catch(() => undefined),
   ]);
   const today = new Date().toISOString().slice(0, 10);
-  const days = (from: string) => Math.max(0, Math.floor((Date.now() - Date.parse(from)) / 86_400_000));
   const findings = (c: StockItem) => ({ serious: c.questions.filter((x) => x.status === 'serious').length, attention: c.questions.filter((x) => x.status === 'attention').length });
   const flagged = inStock.filter((c) => findings(c).serious > 0);
   const monthStart = today.slice(0, 7);
   const soldThisMonth = soldList.filter((c) => (c.soldAt ?? '').slice(0, 7) === monthStart).length;
-  const avgDays = inStock.length ? Math.round(inStock.reduce((n, c) => n + days(c.listedAt), 0) / inStock.length) : undefined;
+  const avgDays = inStock.length ? Math.round(inStock.reduce((n, c) => n + c.clocks.daysInStock, 0) / inStock.length) : undefined;
+  const ageing = inStock.filter((c) => c.clocks.stockAgeLevel > 0).length;
+  const bondUrgent = inStock.filter((c) => c.clocks.bond.level === 'soon' || c.clocks.bond.level === 'overdue');
   const base = show === 'sold' ? soldList : inStock;
   const items = base.filter((c) => (!onlyFindings || findings(c).serious + findings(c).attention > 0)
-    && (!q || (c.vehicle?.currentPlate ?? '').replace(/\s/g, '').toUpperCase().includes(q) || (c.vehicle ? vehicleName(c.vehicle) : '').replace(/\s/g, '').toUpperCase().includes(q)));
+    && (!q || (c.vehicle?.currentPlate ?? '').replace(/\s/g, '').toUpperCase().includes(q) || carName(c).replace(/\s/g, '').toUpperCase().includes(q)));
   const href = (o: Record<string, string | undefined>) => {
     const p = new URLSearchParams(Object.entries({ show: show === 'sold' ? 'sold' : undefined, findings: onlyFindings ? '1' : undefined, q: sp.q || undefined, ...o }).filter(([, v]) => v) as [string, string][]);
     return `/dealer/${id}${p.size ? `?${p}` : ''}`;
@@ -63,12 +66,13 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
         { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', count: inStock.length, active: show === 'in_stock' },
         { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell', count: soldList.length, active: show === 'sold' },
         ...(staff ? [{ href: `/dealer/${id}#staff-section`, label: 'Team', icon: 'group' as const, count: staff.length }] : []),
+        ...(manager ? [{ href: `/dealer/${id}#settings-section`, label: 'Settings', icon: 'edit' as const }] : []),
         { href: `/business/${id}`, label: 'Business details', icon: 'verified_user' as const },
       ]}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{name}: cars for sale</h1>
-          <p className="mt-1 max-w-2xl text-muted">Each car you list, its asking price and its sale become part of its SAZO history. Send buyers a report link so they can check the car themselves.</p>
+          <p className="mt-1 max-w-2xl text-muted">Add your cars, follow their import costs and bond deadlines, and send buyers a link with each car&apos;s SAZO history.</p>
         </div>
       </div>
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
@@ -79,9 +83,16 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           <Icon name="report" size={22} className="shrink-0 text-bad-text" />
           <div className="min-w-0 flex-1">
             <p className="font-bold text-bad-text">{flagged.length} {flagged.length === 1 ? 'car in stock has' : 'cars in stock have'} a serious finding in {flagged.length === 1 ? 'its' : 'their'} records</p>
-            <p className="text-sm text-on-surface">{flagged.map((c) => c.vehicle?.currentPlate ?? (c.vehicle ? vehicleName(c.vehicle) : 'A car')).join(', ')}. Check before you sell. Buyers see the same findings.</p>
+            <p className="text-sm text-on-surface">{flagged.map((c) => c.vehicle?.currentPlate ?? carName(c)).join(', ')}. Check before you sell. Buyers see the same findings.</p>
           </div>
           <Link href={href({ show: undefined, findings: '1' })} className="link text-sm text-bad-text">Show them</Link>
+        </div>
+      )}
+
+      {bondUrgent.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-[14px] border-2 border-warn-line bg-warn-fill p-4 shadow-sm">
+          <Icon name="inventory_2" size={22} className="shrink-0 text-warn-text" />
+          <p className="min-w-0 flex-1 font-bold text-warn-text">{bondUrgent.length} {bondUrgent.length === 1 ? 'car is' : 'cars are'} close to or past the bond deadline you entered: {bondUrgent.map(carName).join(', ')}</p>
         </div>
       )}
 
@@ -89,26 +100,42 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
         { label: 'In stock', value: String(inStock.length) },
         { label: 'Sold this month', value: String(soldThisMonth), sub: `${soldList.length} sold in total` },
         { label: 'Cars to check', value: String(flagged.length), sub: 'Serious finding in the records', tone: flagged.length ? 'bad' : undefined },
-        { label: 'Average days in stock', value: avgDays === undefined ? 'None' : String(avgDays), sub: 'Cars for sale now' },
+        { label: 'Average days in stock', value: avgDays === undefined ? 'None' : String(avgDays), sub: ageing ? `${ageing} past your alert levels` : 'Cars for sale now', tone: ageing ? 'bad' : undefined },
       ]} />
 
-      <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={(inStock.length === 0 && show === 'in_stock') || !!sp.error}>
+      <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={(inStock.length === 0 && show === 'in_stock') || sp.add === '1'}>
         <summary className="flex cursor-pointer list-none items-center gap-2 font-display text-lg font-bold text-primary-container"><Icon name="add" />Add a car</summary>
+        <p className="mt-1 text-sm text-muted">Start with the basics. You can add the chassis number, import costs and more photos later.</p>
         <form action={addStock} className="mt-3 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="org" value={id} />
+          <div className="sm:col-span-2"><label htmlFor="photos" className="label">Photos of the car</label>
+            <input id="photos" name="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+          <div><label htmlFor="make" className="label">Make</label><input id="make" name="make" className="field" placeholder="Toyota" autoComplete="off" /></div>
+          <div><label htmlFor="model" className="label">Model</label><input id="model" name="model" className="field" placeholder="Harrier" autoComplete="off" /></div>
+          <div><label htmlFor="modelYear" className="label">Year</label><input id="modelYear" name="modelYear" inputMode="numeric" maxLength={4} className="field tabular-nums" placeholder="2018" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label htmlFor="engineCc" className="label">Engine (cc)</label><input id="engineCc" name="engineCc" inputMode="numeric" className="field tabular-nums" placeholder="2000" /></div>
+            <div><label htmlFor="fuel" className="label">Fuel</label><select id="fuel" name="fuel" className="field" defaultValue=""><option value="">Choose</option>{FUELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+          </div>
+          <div><label htmlFor="price" className="label">Asking price (UGX) *</label><input id="price" name="price" required inputMode="numeric" className="field tabular-nums" placeholder="75,000,000" />
+            <p className="mt-1 text-xs text-muted"><Icon name="visibility" size={12} className="mr-1 inline align-[-1px]" />Shown to buyers once the car is linked to SAZO</p></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label htmlFor="stage" className="label">Where is it now?</label><select id="stage" name="stage" className="field" defaultValue="at_yard">{STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <div><label htmlFor="yard" className="label">Bond or yard</label><input id="yard" name="yard" className="field" placeholder="Kyambogo" /></div>
+          </div>
+          <div><label htmlFor="anchor" className="label">Chassis number or VIN</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" />
+            <p className="mt-1 text-sm text-muted">Add when you have it. Buyers see the SAZO history once it is added.</p></div>
           <div><label htmlFor="plate" className="label">Number plate</label><input id="plate" name="plate" className="field sazo-id" autoCapitalize="characters" autoComplete="off" placeholder="UBK 482M" /></div>
-          <div><label htmlFor="anchor" className="label">VIN or chassis number</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" />
-            <p className="mt-1 text-sm text-muted">Needed if SAZO doesn&apos;t know the car yet.</p></div>
-          <div><label htmlFor="price" className="label">Asking price (UGX) *</label><input id="price" name="price" required inputMode="numeric" className="field tabular-nums" placeholder="38,500,000" />
-            <p className="mt-1 text-xs text-muted"><Icon name="visibility" size={12} className="mr-1 inline align-[-1px]" />Shown to buyers as part of the car&apos;s history</p></div>
-          <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" />
-            <p className="mt-1 text-xs text-muted"><Icon name="visibility" size={12} className="mr-1 inline align-[-1px]" />Shown to buyers</p></div>
-          <div className="sm:col-span-2"><label htmlFor="odometer" className="label">Odometer photo (needed with a mileage)</label>
-            <input id="odometer" name="odometer" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+          <details className="sm:col-span-2"><summary className="cursor-pointer text-sm font-semibold text-primary">Add the mileage now (needs the chassis number and an odometer photo)</summary>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" /></div>
+              <div><label htmlFor="odometer" className="label">Odometer photo</label>
+                <input id="odometer" name="odometer" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+            </div>
+          </details>
           <div className="sm:col-span-2"><label htmlFor="notes" className="label">Notes for your team (not shown to buyers)</label><input id="notes" name="notes" maxLength={500} className="field" />
             <p className="mt-1 text-xs text-muted"><Icon name="lock" size={12} className="mr-1 inline align-[-1px]" />Private</p></div>
-          <div className="sm:col-span-2"><button className="btn btn-primary"><Icon name="add" />Add to stock</button>
-            <p className="mt-2 text-sm text-muted">The asking price and mileage are added to the car&apos;s history as a dealer listing. A car new to SAZO shows as &ldquo;not yet confirmed&rdquo; until an official record matches it.</p></div>
+          <div className="sm:col-span-2"><button className="btn btn-primary"><Icon name="add" />Add the car</button></div>
         </form>
       </details>
 
@@ -138,7 +165,8 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           <ul className="divide-y divide-line">
             {items.map((c) => {
               const v = c.vehicle;
-              const title = v ? vehicleName(v) : 'Vehicle';
+              const title = carName(c);
+              const carHref = `/dealer/${id}/car/${c.stockId}`;
               const f = findings(c);
               return (
                 <li key={c.stockId} className={`px-4 py-4 ${f.serious ? 'bg-bad-fill/30' : ''}`}>
@@ -146,12 +174,15 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         {v?.currentPlate && <Plate value={v.currentPlate} size="sm" />}
+                        {!c.linked && <span className="chip border-line-strong bg-white text-muted">Chassis number needed</span>}
                         {v?.status === 'provisional' && <span className="chip border-warn-line bg-warn-fill text-warn-text">Not yet confirmed</span>}
                       </div>
-                      <h2 className="mt-1 font-display text-base font-bold">{c.vehicleRef ? <Link href={`/v/${c.vehicleRef}`} className="hover:underline">{title}</Link> : title}</h2>
-                      <p className="text-xs text-muted">Listed {formatDate(c.listedAt)}{c.listedMileageKm !== null ? ` at ${formatKm(c.listedMileageKm)}` : ''}</p>
+                      <h2 className="mt-1 font-display text-base font-bold"><Link href={carHref} className="hover:underline">{title}</Link></h2>
+                      <p className="text-xs text-muted">{stageLabel(c.details.stage)}{c.details.yard ? `, ${c.details.yard}` : ''}. Listed {formatDate(c.listedAt)}{c.listedMileageKm !== null ? ` at ${formatKm(c.listedMileageKm)}` : ''}</p>
+                      {c.status === 'in_stock' && <div className="mt-1 flex flex-wrap gap-1"><StockAge c={c} /><BondClock c={c} /></div>}
                     </div>
                     <div>
+                      {!c.linked ? <p className="text-sm text-muted">Add the chassis number to see what SAZO records show.</p> : <>
                       <p className="text-sm font-semibold">{f.serious + f.attention === 0 ? <span className="text-ok-text">Nothing flagged</span> : <>
                         {f.serious > 0 && <span className="text-bad-text">{f.serious} serious</span>}{f.serious > 0 && f.attention > 0 && ' · '}{f.attention > 0 && <span className="text-warn-text">{f.attention} to check</span>}</>}</p>
                       <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="What the records show">
@@ -159,17 +190,21 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                           const st = statusIcon(x.status);
                           return <li key={x.question} className={`flex items-center gap-1 font-semibold ${st.cls}`}><Icon name={st.icon} size={14} />{QUESTION_TITLES[x.question]?.short}</li>;
                         })}
-                      </ul>
+                      </ul></>}
                     </div>
-                    <p className="font-display text-lg font-extrabold tabular-nums md:text-right">{c.status === 'sold' ? <>Sold {formatDate(c.soldAt)} · {formatUgx(c.salePriceUgx!)}</> : formatUgx(c.askingPriceUgx)}</p>
-                    <p className="text-sm text-muted md:text-right"><span className="md:hidden">In stock for </span><span className="font-semibold tabular-nums text-ink">{days(c.listedAt)}</span><span className="md:hidden"> days</span></p>
+                    <div className="md:text-right">
+                      <p className="font-display text-lg font-extrabold tabular-nums">{c.status === 'sold' ? <>Sold {formatDate(c.soldAt)}, {formatUgx(c.salePriceUgx!)}</> : formatUgx(c.askingPriceUgx)}</p>
+                      {c.costTotalUgx !== undefined && c.costTotalUgx > 0 && <p className="text-xs text-muted">Cost {formatUgx(c.costTotalUgx)}{c.marginUgx !== null && c.marginUgx !== undefined ? `, margin ${formatUgx(c.marginUgx)}` : ''}</p>}
+                    </div>
+                    <p className="hidden text-sm text-muted md:block md:text-right"><span className="font-semibold tabular-nums text-ink">{c.clocks.daysInStock}</span></p>
                   </div>
                   {c.notes && <p className="mt-2 text-sm text-muted">Note: {c.notes}</p>}
                   {c.status === 'sold' && <p className="mt-2 text-sm text-muted">The sale price is kept private. Buyers never see it.</p>}
-                  {c.status === 'in_stock' && c.vehicleRef && (
+                  {c.status === 'in_stock' && (
                     <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                      <form action={shareReport} className="col-span-2"><input type="hidden" name="ref" value={c.vehicleRef} />
-                        <button className="btn btn-primary w-full"><Icon name="share" />Link for a buyer</button></form>
+                      <Link href={carHref} className="btn btn-primary col-span-2"><Icon name="edit" />Open the car</Link>
+                      {c.vehicleRef && <form action={shareReport} className="col-span-2 sm:col-span-1"><input type="hidden" name="ref" value={c.vehicleRef} />
+                        <button className="btn btn-ghost w-full bg-white"><Icon name="share" />Report link for a buyer</button></form>}
                       <details className="open:col-span-2">
                         <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Change price</summary>
                         <form action={changePrice} className="mt-2 flex gap-2">
@@ -187,7 +222,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                             <input id={`s-${c.stockId}`} name="price" required inputMode="numeric" className="field tabular-nums" /></div>
                           <div><label htmlFor={`d-${c.stockId}`} className="label">Date</label>
                             <input id={`d-${c.stockId}`} name="soldOn" type="date" max={today} defaultValue={today} className="field" /></div>
-                          <button className="btn btn-primary self-end">Record sale</button>
+                          <button className="btn btn-primary self-end">Record the sale</button>
                         </form>
                       </details>
                       <form action={removeStock} className="col-span-2 sm:col-span-1"><input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} />
@@ -199,6 +234,21 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
             })}
           </ul>
         </div>
+      )}
+
+      {manager && settings && (
+        <section id="settings-section" className="scroll-mt-24 rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="settings">
+          <h2 id="settings" className="font-display text-lg font-bold">Settings</h2>
+          <form action={saveSettings} className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <input type="hidden" name="org" value={id} />
+            <div><label htmlFor="levels" className="label">Warn me when a car has been in stock for (days)</label>
+              <input id="levels" name="levels" defaultValue={settings.stockAgeAlertDays.join(', ')} className="field tabular-nums" />
+              <p className="mt-1 text-xs text-muted">Up to 5 numbers, for example 90, 180, 240. These are your own business levels, not customs rules.</p></div>
+            <div><label htmlFor="protection" className="label">A broker keeps a customer they bring for (days)</label>
+              <input id="protection" name="protection" inputMode="numeric" defaultValue={settings.leadProtectionDays} className="field tabular-nums" /></div>
+            <button className="btn btn-ghost">Save</button>
+          </form>
+        </section>
       )}
 
       {staff && (

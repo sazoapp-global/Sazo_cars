@@ -142,10 +142,27 @@ export interface LatestInspection {
   date: string; sourceLabel: string; passed: boolean; structuralFindings: boolean | null; tyresPercent: number | null; batteryOk: boolean | null;
   defects: { item: string; severity: 'minor' | 'major' }[]; panelsMeasured: number; repaintedPanels: string[]; photos: number;
 }
-export interface StockItem {
-  stockId: string; vehicleRef?: string; status: 'in_stock' | 'sold' | 'removed'; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null;
-  listedAt: string; soldAt: string | null; salePriceUgx: number | null; vehicle: VehicleCard | null; questions: QuestionView[]; recordConfidence: RecordConfidence | null;
+export type ImportStage = 'bought' | 'shipping' | 'at_port' | 'in_bond' | 'cleared' | 'at_yard';
+export interface StockDetails {
+  make: string | null; model: string | null; modelYear: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; colour: string | null;
+  yard: string | null; stage: ImportStage; receivedOn: string | null; bondArrivedOn: string | null; customsStatus: string | null; customsDeadline: string | null;
+  customsExtensionUntil: string | null; customsValueUgx?: number | null; tiktokUrl: string | null; openToBrokers: boolean;
+  commissionKind: 'fixed' | 'percent' | null; commissionFixedUgx: number | null; commissionPercent: number | null;
 }
+export interface StockItem {
+  stockId: string; vehicleRef?: string; linked: boolean; status: 'in_stock' | 'sold' | 'removed'; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null;
+  listedAt: string; soldAt: string | null; salePriceUgx: number | null; vehicle: VehicleCard | null; questions: QuestionView[]; recordConfidence: RecordConfidence | null;
+  details: StockDetails;
+  clocks: { daysInStock: number; stockAgeLevel: number; stockAgeAlertDays: number[];
+    bond: { applies: boolean; deadline: string | null; daysInBond: number | null; daysLeft: number | null; level: 'none' | 'ok' | 'soon' | 'overdue' } };
+  photos: { photoId: string; position: number }[];
+  costTotalUgx?: number; marginUgx?: number | null;
+}
+export interface CostEntry {
+  id: string; category: string; amount: number; currency: string; rateToUgx: number; amountUgx: number; note: string | null; shareRule: string | null;
+  reversesEntryId: string | null; reversedBy: string | null; createdAt: string;
+}
+export interface DealerSettings { stockAgeAlertDays: number[]; leadProtectionDays: number }
 export interface StaffMember { userId: string; displayName: string; role: string; status: string; joinedAt: string | null }
 export interface ConcernQueueItem {
   concernId: string; plate: string; vehicleRef?: string; category: import('@sazo/contracts').ConcernCategory; severity: 'serious' | 'attention'; description: string;
