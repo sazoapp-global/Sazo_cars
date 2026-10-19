@@ -209,8 +209,10 @@ export async function removeStock(form: FormData) {
 export async function saveSettings(form: FormData) {
   const { org } = ids(form);
   const levels = text(form, 'levels').split(/[^\d]+/).filter(Boolean).map(Number);
+  const wa = text(form, 'whatsapp') ? toE164(text(form, 'whatsapp')) : null;
+  if (text(form, 'whatsapp') && !wa) toList(org, { error: 'Enter the WhatsApp number like 0772 123 456.' });
   try {
-    await api('/dealer/settings', { method: 'PUT', ...asDealer(org), body: { stockAgeAlertDays: levels, leadProtectionDays: digits(text(form, 'protection')) } });
+    await api('/dealer/settings', { method: 'PUT', ...asDealer(org), body: { stockAgeAlertDays: levels, leadProtectionDays: digits(text(form, 'protection')), whatsappE164: wa } });
   } catch (err) { toList(org, { error: reason(err, 'Could not save the settings. Use up to 5 numbers of days.') }); }
   toList(org, { done: 'Settings saved.' });
 }
@@ -223,4 +225,65 @@ export async function addStaff(form: FormData) {
     await api('/garage/staff', { method: 'POST', ...asDealer(org), body: { phone, displayName: text(form, 'name'), role: text(form, 'role') === 'org_manager' ? 'org_manager' : 'org_staff' } });
   } catch (err) { toList(org, { error: reason(err, 'Could not add this person.') }); }
   toList(org, { done: `${text(form, 'name')} can now sign in with their phone and manage your stock.` });
+}
+
+// Selling (D-125 step 2) --------------------------------------------------------------------------------
+
+const CHANNELS = ['whatsapp', 'tiktok', 'facebook', 'instagram', 'other'];
+const SOURCES = ['whatsapp', 'tiktok', 'facebook', 'instagram', 'walk_in', 'phone_call', 'other'];
+const STAGES = ['enquiry', 'viewing', 'negotiation', 'deposit', 'handover', 'completed', 'lost'];
+const toLeads = (org: string, q: Record<string, string>): never => redirect(`/dealer/${org}/enquiries?${new URLSearchParams(q)}`);
+
+/** A link to share the car on WhatsApp, TikTok or Facebook. The full link is shown once on the car page. */
+export async function createLink(form: FormData) {
+  const { org, car } = ids(form);
+  const channel = CHANNELS.includes(text(form, 'channel')) ? text(form, 'channel') : 'whatsapp';
+  let token = '';
+  try {
+    token = (await api<{ token: string }>(`/dealer/stock/${car}/links`, { method: 'POST', ...asDealer(org), body: { channel, showDealerName: form.get('showDealerName') === 'on' } })).token;
+  } catch (err) { toCar(org, car, { error: reason(err, 'Could not make the link.'), at: 'share' }); }
+  toCar(org, car, { link: token, ch: channel, at: 'share' });
+}
+
+export async function revokeLink(form: FormData) {
+  const { org, car } = ids(form);
+  const link = text(form, 'link');
+  if (UUID.test(link)) await api(`/dealer/links/${link}`, { method: 'DELETE', ...asDealer(org) }).catch(() => undefined);
+  toCar(org, car, { done: 'That link no longer works.', at: 'share' });
+}
+
+/** An enquiry added by staff: a walk-in, a phone call or a WhatsApp message. */
+export async function addLead(form: FormData) {
+  const { org, car } = ids(form);
+  const phone = toE164(text(form, 'phone'));
+  if (text(form, 'name').length < 2 || !phone) toLeads(org, { error: 'Enter the customer’s name and phone number.', add: '1' });
+  const source = SOURCES.includes(text(form, 'source')) ? text(form, 'source') : 'other';
+  try {
+    await api('/dealer/leads', { method: 'POST', ...asDealer(org), body: { name: text(form, 'name'), phone, source, consent: form.get('consent') === 'on',
+      ...(car ? { stockId: car } : {}), ...(text(form, 'message') ? { message: text(form, 'message') } : {}) } });
+  } catch (err) { toLeads(org, { error: reason(err, 'Could not add the enquiry.'), add: '1' }); }
+  toLeads(org, { done: 'Enquiry added.' });
+}
+
+/** Move an enquiry to another stage. Completed records the sale, with its private price. */
+export async function moveLead(form: FormData) {
+  const { org } = ids(form);
+  const lead = text(form, 'lead');
+  const stage = text(form, 'stage');
+  if (!UUID.test(lead) || !STAGES.includes(stage)) toLeads(org, { error: 'Choose a stage.' });
+  const price = text(form, 'price') ? digits(text(form, 'price')) : undefined;
+  if (stage === 'completed' && !price) toLeads(org, { error: 'Enter the price the car sold for. Buyers never see it.', open: lead });
+  try {
+    await api(`/dealer/leads/${lead}`, { method: 'PATCH', ...asDealer(org), body: { stage, ...(price ? { salePriceUgx: price } : {}), ...(text(form, 'note') ? { note: text(form, 'note') } : {}) } });
+  } catch (err) { toLeads(org, { error: reason(err, 'Could not move the enquiry.'), open: lead }); }
+  toLeads(org, { done: stage === 'completed' ? 'Sale recorded. The car is marked as sold.' : 'Enquiry moved.' });
+}
+
+export async function noteLead(form: FormData) {
+  const { org } = ids(form);
+  const lead = text(form, 'lead');
+  if (!UUID.test(lead) || text(form, 'note').length < 2) toLeads(org, { error: 'Write a note first.' });
+  try { await api(`/dealer/leads/${lead}/notes`, { method: 'POST', ...asDealer(org), body: { note: text(form, 'note') } }); }
+  catch (err) { toLeads(org, { error: reason(err, 'Could not save the note.') }); }
+  toLeads(org, { done: 'Note saved.', open: lead });
 }

@@ -190,10 +190,10 @@ describe.skipIf(!base)('dealer cars, costs and clocks (e2e)', () => {
   });
 
   it('dealer settings: staff can read them, managers change them', async () => {
-    expect((await http.get('/v1/dealer/settings').set(as(staff)).expect(200)).body).toEqual({ stockAgeAlertDays: [90, 180, 240], leadProtectionDays: 30 });
+    expect((await http.get('/v1/dealer/settings').set(as(staff)).expect(200)).body).toEqual({ stockAgeAlertDays: [90, 180, 240], leadProtectionDays: 30, whatsappE164: null });
     await http.put('/v1/dealer/settings').set(as(staff)).send({ stockAgeAlertDays: [60], leadProtectionDays: 14 }).expect(403);
-    expect((await http.put('/v1/dealer/settings').set(as(manager)).send({ stockAgeAlertDays: [120, 60], leadProtectionDays: 14 }).expect(200)).body)
-      .toEqual({ stockAgeAlertDays: [60, 120], leadProtectionDays: 14 });
+    expect((await http.put('/v1/dealer/settings').set(as(manager)).send({ stockAgeAlertDays: [120, 60], leadProtectionDays: 14, whatsappE164: '+256772600001' }).expect(200)).body)
+      .toEqual({ stockAgeAlertDays: [60, 120], leadProtectionDays: 14, whatsappE164: '+256772600001' });
     const view = (await http.get(`/v1/dealer/stock/${carId}`).set(as(staff)).expect(200)).body;
     expect(view.clocks).toMatchObject({ stockAgeAlertDays: [60, 120], stockAgeLevel: 1 });
   });

@@ -79,7 +79,7 @@ export class PartiesService {
   }
 
   /** Record consent — unless the person has told SAZO not to text them (their choice wins over a garage's form). */
-  async recordConsent(partyId: string, purpose: 'attestation_sms' | 'service_reminders' | 'marketing', channel: string, sql: Sql = this.pool): Promise<void> {
+  async recordConsent(partyId: string, purpose: 'attestation_sms' | 'service_reminders' | 'marketing' | 'dealer_contact', channel: string, sql: Sql = this.pool): Promise<void> {
     await sql.query(
       `INSERT INTO pii.party_consents (party_id, purpose, channel)
        SELECT $1, $2, $3 WHERE NOT EXISTS (SELECT 1 FROM pii.party_consents WHERE party_id = $1 AND purpose = $2 AND revoked_at IS NULL)

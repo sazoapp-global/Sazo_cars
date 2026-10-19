@@ -64,6 +64,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}
       items={[
         { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', count: inStock.length, active: show === 'in_stock' },
+        { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
         { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell', count: soldList.length, active: show === 'sold' },
         ...(staff ? [{ href: `/dealer/${id}#staff-section`, label: 'Team', icon: 'group' as const, count: staff.length }] : []),
         ...(manager ? [{ href: `/dealer/${id}#settings-section`, label: 'Settings', icon: 'edit' as const }] : []),
@@ -246,6 +247,9 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
               <p className="mt-1 text-xs text-muted">Up to 5 numbers, for example 90, 180, 240. These are your own business levels, not customs rules.</p></div>
             <div><label htmlFor="protection" className="label">A broker keeps a customer they bring for (days)</label>
               <input id="protection" name="protection" inputMode="numeric" defaultValue={settings.leadProtectionDays} className="field tabular-nums" /></div>
+            <div className="sm:col-span-2"><label htmlFor="whatsapp" className="label">WhatsApp number for buyers</label>
+              <input id="whatsapp" name="whatsapp" type="tel" defaultValue={settings.whatsappE164 ?? ''} className="field" placeholder="0772 123 456" />
+              <p className="mt-1 text-xs text-muted">Shown as an &ldquo;Ask on WhatsApp&rdquo; button on the car pages you share.</p></div>
             <button className="btn btn-ghost">Save</button>
           </form>
         </section>

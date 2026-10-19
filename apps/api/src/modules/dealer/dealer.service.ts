@@ -311,7 +311,7 @@ export class DealerService {
 
   async saveSettings(actor: Actor, organisationId: string, s: DealerSettings): Promise<DealerSettings> {
     const before = await this.repo.settings(organisationId);
-    const clean = { stockAgeAlertDays: [...new Set(s.stockAgeAlertDays)].sort((a, b) => a - b), leadProtectionDays: s.leadProtectionDays };
+    const clean = { stockAgeAlertDays: [...new Set(s.stockAgeAlertDays)].sort((a, b) => a - b), leadProtectionDays: s.leadProtectionDays, whatsappE164: s.whatsappE164 ?? null };
     await this.repo.saveSettings(organisationId, clean, actor.userId);
     await this.iam.audit({ actor, organisationId, action: 'dealer.settings_changed', targetType: 'organisation', targetId: organisationId, details: { before, after: clean } });
     return clean;

@@ -102,6 +102,37 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await a11y(dealer);
   await shot(dealer, 'dealer-car');
 
+  // Share the car on WhatsApp; a buyer opens the page and asks about it.
+  const share = dealer.getByRole('region', { name: 'Share the car' });
+  await share.getByLabel('Where will you share it?').selectOption('whatsapp');
+  await share.getByRole('button', { name: 'Make a link' }).click();
+  await expect(dealer.getByText('Your WhatsApp link is ready')).toBeVisible();
+  const carLink = (await dealer.locator('#share p.sazo-id').textContent())!;
+  const visitor = await (await browser.newContext()).newPage();
+  await visitor.goto(carLink);
+  await expect(visitor.getByRole('heading', { name: '2018 Toyota Harrier' })).toBeVisible();
+  await expect(visitor.getByText(`For sale at ${NAME}`)).toBeVisible();
+  await expect(visitor.getByRole('img', { name: /photo 1 of 1/ })).toBeVisible();
+  await expect(visitor.getByRole('region', { name: 'What SAZO records show' })).toBeVisible();
+  await a11y(visitor);
+  await visitor.getByLabel('Your name').fill('Peter Okello');
+  await visitor.getByLabel('Phone number').fill('0701 234 567');
+  await visitor.getByLabel(/I agree that the seller may contact me/).check();
+  await visitor.getByRole('button', { name: 'Send' }).click();
+  await expect(visitor.getByRole('status')).toContainText(`${NAME} will contact you`);
+  await shot(visitor, 'car-page');
+
+  await dealer.goto(`${listUrl}/enquiries`);
+  const lead = dealer.getByRole('listitem').filter({ hasText: 'Peter Okello' });
+  await expect(lead).toContainText('2018 Toyota Harrier');
+  await expect(lead).toContainText('+256701234567');
+  await lead.getByLabel('Move to').selectOption('viewing');
+  await lead.getByRole('button', { name: 'Move' }).click();
+  await expect(dealer.getByRole('status')).toContainText('Enquiry moved');
+  await expect(dealer.getByRole('listitem').filter({ hasText: 'Peter Okello' })).toContainText('Viewing');
+  await a11y(dealer);
+  await shot(dealer, 'dealer-enquiries');
+
   await dealer.goto(listUrl);
   const car = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });
   await expect(car).toContainText('UGX 25.5M');

@@ -162,7 +162,7 @@ export interface CostEntry {
   id: string; category: string; amount: number; currency: string; rateToUgx: number; amountUgx: number; note: string | null; shareRule: string | null;
   reversesEntryId: string | null; reversedBy: string | null; createdAt: string;
 }
-export interface DealerSettings { stockAgeAlertDays: number[]; leadProtectionDays: number }
+export interface DealerSettings { stockAgeAlertDays: number[]; leadProtectionDays: number; whatsappE164: string | null }
 export interface StaffMember { userId: string; displayName: string; role: string; status: string; joinedAt: string | null }
 export interface ConcernQueueItem {
   concernId: string; plate: string; vehicleRef?: string; category: import('@sazo/contracts').ConcernCategory; severity: 'serious' | 'attention'; description: string;

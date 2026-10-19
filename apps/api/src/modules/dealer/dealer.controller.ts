@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import { canForOrg, CurrentActor, IamService, type Actor } from '../iam/index.js';
 import { COST_CATEGORIES, CUSTOMS_STATUSES, IMPORT_STAGES } from './dealer.repository.js';
+import { dealerOrg, type DealerPermission } from './dealer-access.js';
 import { DealerError, DealerService } from './dealer.service.js';
 
 const Uuid = z.string().uuid();
@@ -60,6 +61,7 @@ const Cost = z.object({
 const Settings = z.object({
   stockAgeAlertDays: z.array(z.number().int().min(1).max(3650)).min(1).max(5),
   leadProtectionDays: z.number().int().min(1).max(365),
+  whatsappE164: z.string().regex(/^\+[1-9]\d{7,14}$/).nullable().default(null),
 });
 
 const STATUS: Record<string, number> = {
@@ -87,16 +89,8 @@ function parse<T>(schema: z.ZodType<T>, body: unknown): T {
 export class DealerController {
   constructor(@Inject(DealerService) private readonly dealer: DealerService, @Inject(IamService) private readonly iam: IamService) {}
 
-  private async org(actor: Actor, orgId: string | undefined, permission: 'dealer.stock.manage' | 'dealer.costs.manage' = 'dealer.stock.manage'): Promise<string> {
-    if (!orgId || !Uuid.safeParse(orgId).success) throw badRequest('organisation_required', 'Send the X-Organisation-Id header');
-    const access = canForOrg(actor, orgId, permission);
-    if (!access.ok) {
-      if (access.code === 'organisation_not_approved') throw new Problem(403, 'organisation_not_approved', 'Forbidden', 'Your business has not been approved yet');
-      throw new Problem(403, 'forbidden', 'Forbidden', permission === 'dealer.costs.manage' ? 'Only a manager can see or change costs and settings' : 'You cannot do this for this organisation');
-    }
-    const type = access.membership?.organisationType ?? (await this.iam.organisation(orgId))?.type;
-    if (type !== 'dealer') throw new Problem(403, 'not_a_dealer', 'Forbidden', 'This organisation is not a dealer');
-    return orgId;
+  private org(actor: Actor, orgId: string | undefined, permission: DealerPermission = 'dealer.stock.manage'): Promise<string> {
+    return dealerOrg(this.iam, actor, orgId, permission);
   }
 
   private canManage(actor: Actor, orgId: string) {

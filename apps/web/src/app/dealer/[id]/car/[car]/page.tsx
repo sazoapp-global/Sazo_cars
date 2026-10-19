@@ -1,15 +1,17 @@
 import { QUESTION_TITLES, formatDate, formatKm, formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { Plate } from '@/components/plate';
 import { statusIcon } from '@/components/status';
+import { ShareButtons } from '@/components/share-buttons';
 import { WorkspaceFrame } from '@/components/workspace-frame';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { CostEntry, Me, MyOrganisation, StockItem } from '@/lib/types';
 import { shareReport } from '../../../../buyer-actions';
-import { addCost, addPhotos, changePrice, linkCar, removePhoto, removeStock, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
+import { addCost, addPhotos, changePrice, createLink, linkCar, removePhoto, removeStock, revokeLink, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
@@ -28,7 +30,10 @@ function Section({ id, title, icon, children, note }: { id: string; title: strin
   );
 }
 
-type SP = Promise<{ done?: string; error?: string }>;
+type SP = Promise<{ done?: string; error?: string; link?: string; ch?: string }>;
+interface CarLink { linkId: string; channel: string; showDealerName: boolean; createdAt: string }
+const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
+const channelLabel = (c: string) => CHANNELS.find(([k]) => k === c)?.[1] ?? c;
 
 export default async function DealerCar({ params, searchParams }: { params: Promise<{ id: string; car: string }>; searchParams: SP }) {
   const { id, car } = await params;
@@ -40,11 +45,14 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const manager = org.role === 'org_manager';
   const c = await api<StockItem>(`/dealer/stock/${car}`, as).catch((err) => { if (err instanceof ApiError && err.status === 404) notFound(); throw err; });
-  const [costs, me] = await Promise.all([
+  const [costs, me, links] = await Promise.all([
     manager ? api<{ totalUgx: number; entries: CostEntry[] }>(`/dealer/stock/${car}/costs`, as).catch(() => undefined) : Promise.resolve(undefined),
     api<Me>('/me', { auth: true }).catch(() => undefined),
+    c.linked && c.status === 'in_stock' ? api<{ items: CarLink[] }>(`/dealer/stock/${car}/links`, as).then((r) => r.items).catch(() => []) : Promise.resolve([] as CarLink[]),
   ]);
   const name = org.tradingName ?? org.legalName;
+  const h = await headers();
+  const newLink = sp.link && /^[A-Za-z0-9_-]{20,40}$/.test(sp.link) ? `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host')}/c/${sp.link}` : undefined;
   const title = carName(c);
   const d = c.details;
   const live = c.status === 'in_stock';
@@ -56,6 +64,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
       person={me ? { name: me.displayName, role: manager ? 'Manager' : 'Sales' } : undefined}
       items={[
         { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', active: true },
+        { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
         { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell' },
         { href: `/business/${id}`, label: 'Business details', icon: 'verified_user' as const },
       ]}>
@@ -94,6 +103,39 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           </details>
           <form action={removeStock}>{hidden}<button className="btn btn-ghost w-full bg-white"><Icon name="delete" />Remove</button></form>
         </div>
+      )}
+
+      {live && c.linked && (
+        <Section id="share" title="Share the car" icon="share" note="Make a link for WhatsApp, TikTok or Facebook. It opens a page with the photos, the price and what SAZO records show, and buyers can ask about the car there.">
+          {newLink && (
+            <div className="mb-4 rounded-lg border border-ok-line bg-ok-fill p-3" role="status">
+              <p className="font-semibold text-ok-text">Your {channelLabel(sp.ch ?? 'other')} link is ready</p>
+              <p className="sazo-id mt-2 break-all rounded bg-white p-2 text-sm normal-case tracking-normal">{newLink}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <a className="btn btn-primary" target="_blank" rel="noopener noreferrer" href={`https://wa.me/?text=${encodeURIComponent(`${title} for ${formatUgx(c.askingPriceUgx, false)}. See the photos and its SAZO history: ${newLink}`)}`}><Icon name="chat" />Send on WhatsApp</a>
+                <ShareButtons url={newLink} title={title} />
+              </div>
+              {sp.ch === 'tiktok' && <p className="mt-2 text-sm">Paste the link in your TikTok video description or your profile.</p>}
+            </div>
+          )}
+          <form action={createLink} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">{hidden}
+            <div><label htmlFor="channel" className="label">Where will you share it?</label>
+              <select id="channel" name="channel" className="field" defaultValue="whatsapp">{CHANNELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <button className="btn btn-primary"><Icon name="add_link" />Make a link</button>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="showDealerName" defaultChecked className="size-5" />Show {name} on the page</label>
+          </form>
+          {links.length > 0 && (
+            <ul className="mt-4 divide-y divide-line border-t border-line text-sm" aria-label="Links in use">
+              {links.map((l) => (
+                <li key={l.linkId} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span>{channelLabel(l.channel)} link, made {formatDate(l.createdAt)}{l.showDealerName ? '' : ', without your name'}</span>
+                  <form action={revokeLink}>{hidden}<input type="hidden" name="link" value={l.linkId} /><button className="link text-sm">Stop this link</button></form>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-sm"><Link href={`/dealer/${id}/enquiries`} className="link">See enquiries</Link></p>
+        </Section>
       )}
 
       {live && !c.linked && (

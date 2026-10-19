@@ -27,7 +27,7 @@ export interface CostRow {
   reversesEntryId: string | null; reversedBy: string | null; createdBy: string; createdAt: Date;
 }
 export interface PhotoRow { id: string; evidenceId: string; position: number; addedAt: Date }
-export interface DealerSettings { stockAgeAlertDays: number[]; leadProtectionDays: number }
+export interface DealerSettings { stockAgeAlertDays: number[]; leadProtectionDays: number; whatsappE164: string | null }
 
 const DATE = (c: string, as: string) => `to_char(${c}, 'YYYY-MM-DD') AS "${as}"`;
 const COLS = `id, organisation_id AS "organisationId", vehicle_id AS "vehicleId", status, asking_price_ugx::float8 AS "askingPriceUgx",
@@ -198,14 +198,15 @@ export class DealerRepository {
 
   async settings(organisationId: string): Promise<DealerSettings> {
     const r = (await this.pool.query<DealerSettings>(
-      `SELECT stock_age_alert_days AS "stockAgeAlertDays", lead_protection_days AS "leadProtectionDays" FROM dealer.settings WHERE organisation_id = $1`, [organisationId])).rows[0];
-    return r ?? { stockAgeAlertDays: [90, 180, 240], leadProtectionDays: 30 };
+      `SELECT stock_age_alert_days AS "stockAgeAlertDays", lead_protection_days AS "leadProtectionDays", whatsapp_e164 AS "whatsappE164"
+         FROM dealer.settings WHERE organisation_id = $1`, [organisationId])).rows[0];
+    return r ?? { stockAgeAlertDays: [90, 180, 240], leadProtectionDays: 30, whatsappE164: null };
   }
 
   async saveSettings(organisationId: string, s: DealerSettings, userId: string): Promise<void> {
     await this.pool.query(
-      `INSERT INTO dealer.settings (organisation_id, stock_age_alert_days, lead_protection_days, updated_by_user_id) VALUES ($1, $2, $3, $4)
-       ON CONFLICT (organisation_id) DO UPDATE SET stock_age_alert_days = $2, lead_protection_days = $3, updated_by_user_id = $4`,
-      [organisationId, s.stockAgeAlertDays, s.leadProtectionDays, userId]);
+      `INSERT INTO dealer.settings (organisation_id, stock_age_alert_days, lead_protection_days, whatsapp_e164, updated_by_user_id) VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (organisation_id) DO UPDATE SET stock_age_alert_days = $2, lead_protection_days = $3, whatsapp_e164 = $4, updated_by_user_id = $5`,
+      [organisationId, s.stockAgeAlertDays, s.leadProtectionDays, s.whatsappE164, userId]);
   }
 }

@@ -22,7 +22,7 @@ test("only an administrator downloads a person's data as a JSON file", async ({ 
   await a11y(page);
   await page.getByLabel('Their mobile number').fill('0700 000 000');
   await page.getByRole('button', { name: 'Download JSON file' }).click();
-  await expect(page.getByRole('alert')).toContainText('No SAZO account uses this number.');
+  await expect(page.getByRole('alert').filter({ hasText: 'No SAZO account uses this number.' })).toBeVisible();
   await page.getByLabel('Their mobile number').fill(`0${ADMIN.slice(4)}`);
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download JSON file' }).click()]);
   expect(download.suggestedFilename()).toMatch(/^sazo-person-data-\d{4}-\d{4}-\d{2}-\d{2}\.json$/);
