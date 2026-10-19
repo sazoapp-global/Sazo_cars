@@ -36,6 +36,8 @@ tags:
     description: Saved checks, frozen report snapshots, share links and PDFs.
   - name: Inspections
     description: Inspector and inspection-centre workspace (P-004) — checklist drafts from the phone app, sent through Ingestion (inspector_app).
+  - name: Brokers
+    description: Broker marketplace (D-121) - identity check, cars open to brokers, own links, customers and commission statement.
   - name: Dealer
     description: Dealer workspace (P-005) — cars for sale, prices, sales (confidential). Listings and sales go through Ingestion on the dealer's own source.
   - name: Concerns
@@ -611,7 +613,7 @@ paths:
     post:
       tags: [Dealer]
       operationId: addDealerStock
-      summary: List a car for sale — a known car by vehicleRef, or a new one by VIN / chassis number (+ plate)
+      summary: Add a car. With a vehicleRef, VIN or chassis number it joins the car's history at once; with only details (make, model) it waits for POST /dealer/stock/{stockId}/link
       parameters:
         - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -628,10 +630,12 @@ paths:
                 chassisNumber: { type: string }
                 askingPriceUgx: { type: integer, minimum: 1 }
                 mileageKm: { type: integer, minimum: 0 }
+                odometerPhotoId: { type: string, format: uuid }
                 notes: { type: string, maxLength: 500 }
+                details: { $ref: '#/components/schemas/StockDetails' }
       responses:
         '201': { description: StockItem }
-        '400': { description: identifiers_required }
+        '400': { description: identifiers_required / make_required / link_first }
         '409': { description: already_in_stock }
         '422': { description: vehicle_needs_review / listing_rejected }
 
@@ -648,7 +652,7 @@ paths:
     patch:
       tags: [Dealer]
       operationId: changeDealerPrice
-      summary: New asking price (recorded as a new listing in the car's history)
+      summary: New asking price (a new listing in the car's history once linked) and/or changed details (stage, clocks, broker switch; commission and customs value for managers)
       parameters:
         - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
         - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -656,9 +660,10 @@ paths:
         required: true
         content:
           application/json:
-            schema: { type: object, required: [askingPriceUgx], properties: { askingPriceUgx: { type: integer, minimum: 1 } } }
+            schema: { type: object, properties: { askingPriceUgx: { type: integer, minimum: 1 }, details: { $ref: '#/components/schemas/StockDetails' } } }
       responses:
         '200': { description: StockItem }
+        '400': { description: commission_incomplete }
         '409': { description: not_in_stock }
     delete:
       tags: [Dealer]
@@ -692,6 +697,392 @@ paths:
       responses:
         '200': { description: StockItem }
         '409': { description: not_in_stock }
+
+  /dealer/stock/{stockId}/link:
+    post:
+      tags: [Dealer]
+      operationId: linkDealerStock
+      summary: Add the chassis number (or VIN) of a car added without it; publishes the listing to the car's history
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: StockItem }
+        '409': { description: already_linked / already_in_stock }
+
+  /dealer/stock/{stockId}/costs:
+    get:
+      tags: [Dealer]
+      operationId: listDealerCosts
+      summary: The car's cost ledger and landed cost in UGX (managers, dealer.costs.manage)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ totalUgx, entries: [{ id, category, amount, currency, rateToUgx, amountUgx, note, shareRule, reversesEntryId, reversedBy, createdAt }] }' }
+        '403': { description: forbidden (not a manager) }
+    post:
+      tags: [Dealer]
+      operationId: addDealerCost
+      summary: One cost in its own currency with the rate used (append-only; frozen once sold)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, amount]
+              properties:
+                category: { type: string, enum: [purchase, freight_insurance, port_shipping, customs_taxes, clearing_agent, transport, inspection_repairs, registration_plates, other] }
+                amount: { type: number, exclusiveMinimum: 0 }
+                currency: { type: string, pattern: '^[A-Z]{3}$', default: UGX }
+                rateToUgx: { type: number, description: required unless currency is UGX }
+                note: { type: string, maxLength: 300 }
+                shareRule: { type: string, maxLength: 200 }
+      responses:
+        '201': { description: the cost entry }
+        '409': { description: costs_locked }
+
+  /dealer/stock/{stockId}/costs/{entryId}/reverse:
+    post:
+      tags: [Dealer]
+      operationId: reverseDealerCost
+      summary: Cancel a cost with a reason; both entries stay in the ledger
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: entryId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, minLength: 3 } } } } } }
+      responses:
+        '201': { description: the reversal entry }
+        '409': { description: already_reversed / costs_locked }
+
+  /dealer/stock/{stockId}/photos:
+    post:
+      tags: [Dealer]
+      operationId: addDealerPhoto
+      summary: Attach a vehicle photo uploaded by someone at this dealer (up to 12)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [evidenceId], properties: { evidenceId: { type: string, format: uuid } } } } } }
+      responses:
+        '201': { description: '{ photoId, position }' }
+        '422': { description: photo_not_allowed / too_many_photos }
+
+  /dealer/stock/{stockId}/photos/{photoId}:
+    get:
+      tags: [Dealer]
+      operationId: getDealerPhoto
+      summary: The image, for this dealer's staff (nosniff, sandboxed)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: photoId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: image bytes }
+    delete:
+      tags: [Dealer]
+      operationId: removeDealerPhoto
+      summary: Remove a photo from the car
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: photoId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removed }
+
+  /dealer/stock/{stockId}/links:
+    get:
+      tags: [Dealer]
+      operationId: listDealerLinks
+      summary: The dealer's own links for the car still working (tokens are never shown again)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ items: [{ linkId, channel, showDealerName, createdAt }] }' }
+    post:
+      tags: [Dealer]
+      operationId: createDealerLink
+      summary: A link to share on WhatsApp, TikTok, Facebook or Instagram; opens the public car page. The token is returned once.
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [channel], properties: { channel: { type: string, enum: [whatsapp, tiktok, facebook, instagram, other] }, showDealerName: { type: boolean, default: true } } } } } }
+      responses:
+        '201': { description: '{ linkId, channel, showDealerName, createdAt, token, path }' }
+        '409': { description: car_not_linked }
+        '429': { description: too_many (100 a day) }
+
+  /dealer/links/{linkId}:
+    delete:
+      tags: [Dealer]
+      operationId: revokeDealerLink
+      summary: Stop one of the dealer's own links
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: linkId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Stopped }
+
+  /dealer/settings:
+    get:
+      tags: [Dealer]
+      operationId: getDealerSettings
+      summary: Stock age alert levels, broker protection period and WhatsApp number
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ stockAgeAlertDays: integer[], leadProtectionDays, whatsappE164 }' }
+    put:
+      tags: [Dealer]
+      operationId: saveDealerSettings
+      summary: Change the settings (managers)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: the settings }
+
+  /dealer/leads:
+    get:
+      tags: [Dealer]
+      operationId: listDealerLeads
+      summary: Enquiries with the customer's name and phone (this dealer's staff only), and this month's enquiries and sales by source
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: stage, in: query, schema: { type: string, description: 'open, closed, or one stage' } }
+      responses:
+        '200': { description: '{ items: Lead[], thisMonthBySource: [{ source, enquiries, completed }] }' }
+    post:
+      tags: [Dealer]
+      operationId: addDealerLead
+      summary: An enquiry added by staff (walk-in, phone call, a WhatsApp message); credited to a broker who registered the customer within the protection period
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [name, phone, source, consent], properties: { stockId: { type: string, format: uuid }, name: { type: string }, phone: { type: string }, source: { type: string, enum: [whatsapp, tiktok, facebook, instagram, walk_in, phone_call, other] }, message: { type: string }, consent: { type: boolean } } } } } }
+      responses:
+        '201': { description: Lead }
+
+  /dealer/leads/{leadId}:
+    patch:
+      tags: [Dealer]
+      operationId: moveDealerLead
+      summary: Move an enquiry to another stage; completed needs the private selling price, records the sale and works out any broker commission
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: leadId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [stage], properties: { stage: { type: string, enum: [enquiry, viewing, negotiation, deposit, handover, completed, lost] }, salePriceUgx: { type: integer }, note: { type: string } } } } } }
+      responses:
+        '200': { description: Lead }
+        '400': { description: sale_price_required }
+        '409': { description: lead_closed / stage_conflict }
+        '410': { description: car_not_available }
+
+  /dealer/leads/{leadId}/notes:
+    post:
+      tags: [Dealer]
+      operationId: noteDealerLead
+      summary: Add a note to the enquiry's history
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: leadId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Saved }
+
+  /dealer/leads/{leadId}/events:
+    get:
+      tags: [Dealer]
+      operationId: listDealerLeadEvents
+      summary: What happened to the enquiry, in order (append-only)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: leadId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ items: [{ kind, fromStage, toStage, note, by, at }] }' }
+
+  /dealer/leads/{leadId}/decision:
+    post:
+      tags: [Dealer]
+      operationId: decideDealerLead
+      summary: Managers decide who brought a customer two people claimed (keep, earlier, split, dealer); the reason is kept and commissions follow
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: leadId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [outcome, reason], properties: { outcome: { type: string, enum: [keep, earlier, split, dealer] }, reason: { type: string }, splitPercent: { type: integer, minimum: 1, maximum: 99 } } } } } }
+      responses:
+        '200': { description: Lead }
+        '409': { description: no_decision_needed }
+
+  /dealer/commissions:
+    get:
+      tags: [Dealer]
+      operationId: listDealerCommissions
+      summary: Broker commission records for this dealer's sales (managers; records only)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ items: [{ commissionId, broker, status, kind, percent, salePriceUgx, sharePercent, amountUgx, paidReference, createdAt }] }' }
+
+  /dealer/commissions/{commissionId}/{action}:
+    post:
+      tags: [Dealer]
+      operationId: actOnDealerCommission
+      summary: approve (pending), paid (approved; note is the payment reference) or cancel (not paid; note is the reason)
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: commissionId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [approve, paid, cancel] } }
+      responses:
+        '200': { description: '{ commissionId, status, amountUgx, paidReference }' }
+        '409': { description: commission_state }
+
+  /cars/{token}:
+    get:
+      tags: [Dealer]
+      operationId: getPublicCar
+      summary: The public car page a shared link opens (no sign-in) - photos, the car, asking price, SAZO summary and seller; nothing private
+      security: []
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: '{ vehicleRef, vehicle, specs, askingPriceUgx, listedMileageKm, tiktokUrl, photos, questions, recordConfidence, seller: { kind, name, dealerName, whatsapp } }' }
+        '404': { description: link_not_found }
+        '410': { description: car_not_available }
+
+  /cars/{token}/photos/{photoId}:
+    get:
+      tags: [Dealer]
+      operationId: getPublicCarPhoto
+      summary: A photo on the public car page
+      security: []
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+        - { name: photoId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: image bytes }
+
+  /cars/{token}/enquiries:
+    post:
+      tags: [Dealer]
+      operationId: enquireAboutCar
+      summary: A customer leaves a name and number and agrees to be contacted (limits per link and per phone)
+      security: []
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [name, phone, consent], properties: { name: { type: string }, phone: { type: string }, consent: { type: boolean }, message: { type: string } } } } } }
+      responses:
+        '201': { description: '{ status: received | already_received }' }
+        '400': { description: consent_required }
+        '410': { description: car_not_available }
+        '429': { description: too_many }
+
+  /broker/application:
+    get:
+      tags: [Brokers]
+      operationId: getBrokerApplication
+      summary: The person's latest broker application and whether they are a broker
+      responses:
+        '200': { description: '{ isBroker, application: { status, decisionReason, createdAt, decidedAt } | null }' }
+    post:
+      tags: [Brokers]
+      operationId: applyAsBroker
+      summary: Apply with a National ID number and a photo of the ID (full profile needed; D-127)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [nin, idPhotoEvidenceId], properties: { nin: { type: string, pattern: '^C[MF][A-Z0-9]{12}$' }, idPhotoEvidenceId: { type: string, format: uuid } } } } } }
+      responses:
+        '201': { description: '{ status, createdAt }' }
+        '409': { description: profile_incomplete / already_applied / nin_in_use }
+        '422': { description: id_photo_invalid }
+
+  /broker/cars:
+    get:
+      tags: [Brokers]
+      operationId: listBrokerCars
+      summary: Cars approved dealers opened to brokers with commission terms (broker.access); never costs or customers
+      responses:
+        '200': { description: '{ items: [{ stockId, vehicleRef, vehicle, specs, askingPriceUgx, listedMileageKm, photos, commission, dealer, questions, recordConfidence, listedAt }] }' }
+
+  /broker/cars/{stockId}/photos/{photoId}:
+    get:
+      tags: [Brokers]
+      operationId: getBrokerCarPhoto
+      summary: A photo of a car open to brokers
+      parameters:
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: photoId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: image bytes }
+
+  /broker/cars/{stockId}/links:
+    post:
+      tags: [Brokers]
+      operationId: createBrokerLink
+      summary: The broker's own link; enquiries through it are registered to the broker for the dealer's protection period
+      parameters:
+        - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [channel], properties: { channel: { type: string, enum: [whatsapp, tiktok, facebook, instagram, other] } } } } } }
+      responses:
+        '201': { description: '{ linkId, channel, createdAt, token, path }' }
+        '404': { description: car_not_open }
+
+  /broker/links:
+    get:
+      tags: [Brokers]
+      operationId: listBrokerLinks
+      summary: The broker's links
+      responses:
+        '200': { description: '{ items: [{ linkId, channel, createdAt, stockId, live, car }] }' }
+
+  /broker/links/{linkId}:
+    delete:
+      tags: [Brokers]
+      operationId: revokeBrokerLink
+      summary: Stop one of the broker's own links
+      parameters:
+        - { name: linkId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Stopped }
+
+  /broker/enquiries:
+    get:
+      tags: [Brokers]
+      operationId: listBrokerEnquiries
+      summary: The broker's own customers (phone partly hidden), stage and protection
+      responses:
+        '200': { description: '{ items: [{ leadId, stage, createdAt, dealer, car, customer: { name, phone }, protectedUntil, waitingForDealerDecision, sharedWithAnotherBroker }] }' }
+
+  /broker/commissions:
+    get:
+      tags: [Brokers]
+      operationId: getBrokerStatement
+      summary: The broker's commission statement with totals (records only)
+      responses:
+        '200': { description: '{ items, totals: { waiting, approved, paid } }' }
+
+  /admin/brokers/applications:
+    get:
+      tags: [Admin]
+      operationId: listBrokerApplications
+      summary: Applications with the applicant's name, phone and ID number for checking (broker.approve)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [pending, approved, rejected], default: pending } }
+      responses:
+        '200': { description: '{ items: [{ applicationId, status, createdAt, idPhotoEvidenceId, nin, person: { name, phone, gender } }] }' }
+
+  /admin/brokers/applications/{applicationId}/decision:
+    post:
+      tags: [Admin]
+      operationId: decideBrokerApplication
+      summary: Approve (gives the broker role) or reject, with a reason the applicant sees
+      parameters:
+        - { name: applicationId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [decision, reason], properties: { decision: { type: string, enum: [approve, reject] }, reason: { type: string, minLength: 3 } } } } } }
+      responses:
+        '200': { description: '{ status, decisionReason }' }
+        '409': { description: already_decided }
 
   /concerns:
     post:
@@ -1293,7 +1684,7 @@ paths:
                 required: [evidenceId, uploadUrl, expiresAt]
                 properties:
                   evidenceId: { type: string, format: uuid }
-                  uploadUrl: { type: string, format: uri, description: PUT the file bytes here (raw body, the declared content type) }
+                  uploadUrl: { type: string, format: uri, description: 'PUT the file bytes here (raw body, the declared content type)' }
                   uploadMethod: { type: string, enum: [PUT] }
                   expiresAt: { type: string, format: date-time }
         '400': { $ref: '#/components/responses/BadRequest' }
@@ -1848,58 +2239,6 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  /admin/moderation:
-    get:
-      tags: [Admin]
-      operationId: adminListModeration
-      summary: Moderation queue (creator links, model reviews — P-008)
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: Cases
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [items]
-                properties:
-                  items: { type: array, items: { $ref: '#/components/schemas/ModerationCase' } }
-                  nextCursor: { type: [string, 'null'] }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
-  /admin/moderation/{caseId}/decision:
-    post:
-      tags: [Admin]
-      operationId: adminDecideModeration
-      summary: Approve or reject
-      parameters:
-        - name: caseId
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [decision]
-              properties:
-                decision: { type: string, enum: [approve, reject] }
-                reason: { type: string }
-      responses:
-        '200':
-          description: Decided
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ModerationCase' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
-  # ---------------------------------------------------------------- SYSTEM
   /health:
     get:
       tags: [System]
@@ -2027,6 +2366,30 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
 
   schemas:
+    StockDetails:
+      type: object
+      description: A dealer car's typed details, stage, clocks and broker terms (D-124 to D-129). commission and customsValueUgx are for managers.
+      properties:
+        make: { type: [string, 'null'] }
+        model: { type: [string, 'null'] }
+        modelYear: { type: [integer, 'null'] }
+        engineCc: { type: [integer, 'null'] }
+        fuel: { type: [string, 'null'], enum: [petrol, diesel, hybrid, electric, lpg, other, null] }
+        transmission: { type: [string, 'null'], enum: [manual, automatic, cvt, other, null] }
+        colour: { type: [string, 'null'] }
+        yard: { type: [string, 'null'] }
+        stage: { type: string, enum: [bought, shipping, at_port, in_bond, cleared, at_yard] }
+        receivedOn: { type: [string, 'null'], format: date }
+        bondArrivedOn: { type: [string, 'null'], format: date }
+        customsStatus: { type: [string, 'null'], enum: [not_entered, in_bond, assessed, duty_paid, released, null] }
+        customsDeadline: { type: [string, 'null'], format: date }
+        customsExtensionUntil: { type: [string, 'null'], format: date }
+        customsValueUgx: { type: [integer, 'null'] }
+        tiktokUrl: { type: [string, 'null'], format: uri }
+        openToBrokers: { type: boolean }
+        commissionKind: { type: [string, 'null'], enum: [fixed, percent, null] }
+        commissionFixedUgx: { type: [integer, 'null'] }
+        commissionPercent: { type: [number, 'null'], maximum: 20 }
     # ---------- primitives & enums
     VehicleRef:
       type: string

@@ -287,3 +287,33 @@ export async function noteLead(form: FormData) {
   catch (err) { toLeads(org, { error: reason(err, 'Could not save the note.') }); }
   toLeads(org, { done: 'Note saved.', open: lead });
 }
+
+// Brokers (D-128, D-129) ----------------------------------------------------------------------------------
+
+/** A manager decides who brought a customer two people claimed; the reason is kept. */
+export async function decideLead(form: FormData) {
+  const { org } = ids(form);
+  const lead = text(form, 'lead');
+  const outcome = ['keep', 'earlier', 'split', 'dealer'].includes(text(form, 'outcome')) ? text(form, 'outcome') : 'keep';
+  if (!UUID.test(lead)) toLeads(org, { error: 'No such enquiry.' });
+  if (text(form, 'reason').length < 3) toLeads(org, { error: 'Write the reason for the decision.', open: lead });
+  try {
+    await api(`/dealer/leads/${lead}/decision`, { method: 'POST', ...asDealer(org), body: { outcome, reason: text(form, 'reason'),
+      ...(outcome === 'split' ? { splitPercent: digits(text(form, 'split')) || 50 } : {}) } });
+  } catch (err) { toLeads(org, { error: reason(err, 'Could not save the decision.') }); }
+  toLeads(org, { done: 'Decision saved. Commission follows it.' });
+}
+
+/** Approve a commission, mark it paid (with the payment reference) or cancel it (with a reason). Records only. */
+export async function commissionAction(form: FormData) {
+  const { org } = ids(form);
+  const c = text(form, 'commission');
+  const action = ['approve', 'paid', 'cancel'].includes(text(form, 'action')) ? text(form, 'action') : '';
+  const go = (q: Record<string, string>): never => redirect(`/dealer/${org}/commissions?${new URLSearchParams(q)}`);
+  if (!UUID.test(c) || !action) go({ error: 'Choose what to do.' });
+  if (action === 'cancel' && text(form, 'note').length < 3) go({ error: 'Say why the commission is cancelled.' });
+  try {
+    await api(`/dealer/commissions/${c}/${action}`, { method: 'POST', ...asDealer(org), body: text(form, 'note') ? { note: text(form, 'note') } : {} });
+  } catch (err) { go({ error: reason(err, 'Could not update the commission.') }); }
+  go({ done: action === 'approve' ? 'Commission approved.' : action === 'paid' ? 'Marked as paid.' : 'Commission cancelled.' });
+}

@@ -99,3 +99,15 @@ export async function decideModeration(form: FormData) {
   } catch (err) { back('/admin/moderation', failure(err), false); }
   back('/admin/moderation', decision === 'approve' ? 'Published.' : 'Rejected.');
 }
+
+export async function decideBroker(form: FormData) {
+  const id = text(form, 'id');
+  const decision = text(form, 'decision') === 'approve' ? 'approve' : 'reject';
+  const reason = text(form, 'reason');
+  if (!/^[0-9a-f-]{36}$/i.test(id)) back('/admin/brokers', 'No such application.', false);
+  if (reason.length < 3) back('/admin/brokers', 'Write a reason (at least 3 characters).', false);
+  try {
+    await api(`/admin/brokers/applications/${id}/decision`, { method: 'POST', auth: true, body: { decision, reason } });
+  } catch (err) { back('/admin/brokers', failure(err), false); }
+  back('/admin/brokers', decision === 'approve' ? 'Approved. They can now use the broker marketplace.' : 'Rejected. They can see your reason.');
+}

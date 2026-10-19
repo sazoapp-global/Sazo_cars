@@ -7,7 +7,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import pg from 'pg';
 import { enforceLimit, LimitReached } from '../../platform/limits.js';
-import { withTx } from '../../platform/sql.js';
+import { withTx, type Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 import { IamService, type Actor } from '../iam/index.js';
 import { PartiesService } from '../obs/index.js';
@@ -16,7 +16,7 @@ import { DealerError, DealerService } from './dealer.service.js';
 import { OPEN_STAGES, SellingRepository, type LeadRow, type LeadSource, type LeadStage, type LinkChannel, type LinkRow } from './selling.repository.js';
 
 export type SellingErrorCode = 'link_not_found' | 'car_not_available' | 'car_not_linked' | 'lead_not_found' | 'stage_conflict' | 'sale_price_required'
-  | 'lead_closed' | 'consent_required' | 'too_many' | 'stock_not_found';
+  | 'lead_closed' | 'consent_required' | 'too_many' | 'stock_not_found' | 'no_decision_needed' | 'commission_not_found' | 'commission_state' | 'split_needs_two_brokers';
 export class SellingError extends Error {
   constructor(readonly code: SellingErrorCode, message: string) {
     super(message);
@@ -29,6 +29,13 @@ export const ENQUIRIES_PER_LINK_PER_DAY = 30;
 export const ENQUIRIES_PER_PHONE_PER_DAY = 3;
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest();
+const DAY_MS = 86_400_000;
+
+/** A commission's amount from the car's terms at the moment of the sale (D-129), and this broker's share of it. */
+export function commissionAmount(terms: { kind: 'fixed' | 'percent'; fixedUgx: number | null; percent: number | null }, salePriceUgx: number, sharePercent: number): number {
+  const full = terms.kind === 'fixed' ? terms.fixedUgx! : Math.round((salePriceUgx * terms.percent!) / 100);
+  return Math.round((full * sharePercent) / 100);
+}
 
 @Injectable()
 export class SellingService {
@@ -133,10 +140,30 @@ export class SellingService {
       const partyId = await this.parties.recordPerson({ name: e.name, phone: e.phone }, tx);
       await this.parties.recordConsent(partyId, 'dealer_contact', 'car_page', tx);
       const source: LeadSource = link.brokerUserId ? 'broker' : link.channel;
+      const credit = await this.credit(tx, link.organisationId, phoneHash, link.brokerUserId);
       await this.repo.insertLead(tx, { organisationId: link.organisationId, stockItemId: car.id, partyId, phoneHash, source, carLinkId: link.id,
-        brokerUserId: link.brokerUserId, consentToContact: true, message: e.message ?? null, createdBy: null });
+        consentToContact: true, message: e.message ?? null, createdBy: null, ...credit });
       return { status: 'received' as const };
     }).catch((err) => { if (err instanceof LimitReached) throw new SellingError('too_many', err.message); throw err; });
+  }
+
+  /**
+   * Who brought this customer (D-128). A customer a broker registered stays that broker's for the dealer's
+   * protection period: a later enquiry from the same phone through the dealer's own link or staff is credited
+   * to that broker. When a different broker (or a broker after the dealer already knew the customer) registers
+   * the same phone, the new enquiry is marked for the dealer to decide, with the earlier one shown.
+   */
+  private async credit(tx: Sql, organisationId: string, phoneHash: Buffer, broker: string | null) {
+    const earlier = await this.repo.earlierLeadFor(tx, organisationId, phoneHash);
+    const days = (await this.stock.settings(organisationId)).leadProtectionDays;
+    const protectedBroker = earlier?.brokerUserId && earlier.protectedUntil && new Date(earlier.protectedUntil) > new Date() ? earlier : undefined;
+    if (!broker) {
+      if (protectedBroker) return { brokerUserId: protectedBroker.brokerUserId, protectedUntil: protectedBroker.protectedUntil, earlierLeadId: protectedBroker.id, needsDecision: false };
+      return { brokerUserId: null, protectedUntil: null, earlierLeadId: null, needsDecision: false };
+    }
+    const until = new Date(Date.now() + days * DAY_MS);
+    if (!earlier || earlier.brokerUserId === broker) return { brokerUserId: broker, protectedUntil: earlier?.brokerUserId === broker ? earlier.protectedUntil : until, earlierLeadId: earlier?.id ?? null, needsDecision: false };
+    return { brokerUserId: broker, protectedUntil: until, earlierLeadId: earlier.id, needsDecision: true };
   }
 
   // Enquiries (dealer staff) ------------------------------------------------------------------------------
@@ -150,8 +177,9 @@ export class SellingService {
       if (existing) return existing;
       const partyId = await this.parties.recordPerson({ name: l.name, phone: l.phone }, tx);
       if (l.consent) await this.parties.recordConsent(partyId, 'dealer_contact', 'staff', tx);
+      const credit = await this.credit(tx, organisationId, phoneHash, null);
       return this.repo.insertLead(tx, { organisationId, stockItemId: l.stockId ?? null, partyId, phoneHash, source: l.source, carLinkId: null,
-        brokerUserId: null, consentToContact: l.consent, message: l.message ?? null, createdBy: actor.userId });
+        consentToContact: l.consent, message: l.message ?? null, createdBy: actor.userId, ...credit });
     });
   }
 
@@ -181,8 +209,85 @@ export class SellingService {
     await withTx(this.pool, async (tx) => {
       if (!(await this.repo.setStage(tx, id, l.stage, to, to === 'completed' ? o.salePriceUgx! : null))) throw new SellingError('stage_conflict', 'Someone else changed this enquiry. Reload and try again.');
       await this.repo.event(tx, { organisationId, leadId: id, kind: 'stage', fromStage: l.stage, toStage: to, note: o.note ?? null, actorUserId: actor.userId });
+      if (to === 'completed') await this.workOutCommissions(tx, actor, (await this.repo.lead(id, tx))!, 'Sale completed');
     });
     return this.lead(organisationId, id);
+  }
+
+  /**
+   * Commissions for a completed sale, from the car's terms at the moment of the sale. Held while the dealer
+   * still has to decide who brought the customer. Re-run after a decision: brokers no longer credited have
+   * their commission cancelled, with the reason kept.
+   */
+  private async workOutCommissions(tx: Sql, actor: Actor, lead: LeadRow, why: string) {
+    if (lead.stage !== 'completed' || !lead.stockItemId || !lead.salePriceUgx) return;
+    const car = await this.stock.get(lead.stockItemId, tx);
+    const terms = car?.commissionKind ? { kind: car.commissionKind, fixedUgx: car.commissionFixedUgx, percent: car.commissionPercent } : undefined;
+    const shares = new Map<string, number>();
+    if (lead.brokerUserId) shares.set(lead.brokerUserId, lead.splitBrokerUserId ? lead.splitPercent ?? 50 : 100);
+    if (lead.splitBrokerUserId) shares.set(lead.splitBrokerUserId, 100 - (lead.splitPercent ?? 50));
+    const status = lead.needsDecision ? 'on_hold' as const : 'pending' as const;
+    const current = await this.repo.commissionsForLead(tx, lead.id);
+    for (const existing of current) {
+      if (!shares.has(existing.brokerUserId) && existing.status !== 'cancelled' && existing.status !== 'paid') {
+        await this.repo.setCommissionStatus(tx, existing.id, existing.status, 'cancelled', null);
+        await this.repo.commissionEvent(tx, { organisationId: lead.organisationId, commissionId: existing.id, fromStatus: existing.status, toStatus: 'cancelled', amountUgx: existing.amountUgx, note: why, actorUserId: actor.userId });
+      }
+    }
+    if (!terms) return;
+    for (const [broker, share] of shares) {
+      if (current.find((c) => c.brokerUserId === broker)?.status === 'paid') continue; // a paid record is never rewritten
+      const amount = commissionAmount(terms, lead.salePriceUgx, share);
+      const { row, before } = await this.repo.upsertCommission(tx, { organisationId: lead.organisationId, leadId: lead.id, stockItemId: lead.stockItemId, brokerUserId: broker,
+        kind: terms.kind, percent: terms.kind === 'percent' ? terms.percent : null, salePriceUgx: lead.salePriceUgx, sharePercent: share, amountUgx: amount, status });
+      await this.repo.commissionEvent(tx, { organisationId: lead.organisationId, commissionId: row.id, fromStatus: before?.status ?? null, toStatus: row.status, amountUgx: amount, note: why, actorUserId: actor.userId });
+    }
+  }
+
+  /**
+   * The dealer decides who brought a customer two people claimed (D-128): keep this enquiry's broker, credit the
+   * earlier registration, split between the two brokers, or record that it was the dealer's own customer.
+   * The decision and its reason are kept for good; commissions follow it.
+   */
+  async decide(actor: Actor, organisationId: string, id: string, d: { outcome: 'keep' | 'earlier' | 'split' | 'dealer'; reason: string; splitPercent?: number }): Promise<LeadRow> {
+    const l = await this.lead(organisationId, id);
+    if (!l.needsDecision) throw new SellingError('no_decision_needed', 'Nobody else claims this customer');
+    const earlier = l.earlierLeadId ? await this.repo.lead(l.earlierLeadId) : undefined;
+    let broker: string | null = l.brokerUserId;
+    let split: string | null = null;
+    let pct: number | null = null;
+    if (d.outcome === 'earlier') broker = earlier?.brokerUserId ?? null;
+    if (d.outcome === 'dealer') broker = null;
+    if (d.outcome === 'split') {
+      if (!l.brokerUserId || !earlier?.brokerUserId || earlier.brokerUserId === l.brokerUserId) throw new SellingError('split_needs_two_brokers', 'A split needs two different brokers');
+      split = earlier.brokerUserId;
+      pct = d.splitPercent ?? 50;
+    }
+    await withTx(this.pool, async (tx) => {
+      await this.repo.decide(tx, { organisationId, leadId: id, outcome: d.outcome, brokerUserId: broker, splitBrokerUserId: split, splitPercent: pct, reason: d.reason, decidedBy: actor.userId });
+      await this.repo.event(tx, { organisationId, leadId: id, kind: 'note', note: `Decided who brought the customer: ${d.reason}`, actorUserId: actor.userId });
+      await this.workOutCommissions(tx, actor, (await this.repo.lead(id, tx))!, `Decision: ${d.reason}`);
+    });
+    return this.lead(organisationId, id);
+  }
+
+  async commissions(organisationId: string) {
+    return this.repo.commissions({ organisationId });
+  }
+
+  /** Approve a pending commission, mark an approved one paid (with a reference), or cancel one not yet paid, with a reason. */
+  async commissionAction(actor: Actor, organisationId: string, id: string, action: 'approve' | 'paid' | 'cancel', note?: string) {
+    const c = await this.repo.commission(id);
+    if (!c || c.organisationId !== organisationId) throw new SellingError('commission_not_found', 'No such commission');
+    const move = ({ approve: ['pending', 'approved'], paid: ['approved', 'paid'], cancel: [c.status, 'cancelled'] } as const)[action];
+    if (move[0] !== c.status || (action === 'cancel' && (c.status === 'paid' || c.status === 'cancelled'))) {
+      throw new SellingError('commission_state', action === 'approve' ? 'Only a pending commission can be approved' : action === 'paid' ? 'Approve the commission before marking it paid' : 'This commission can no longer be cancelled');
+    }
+    await withTx(this.pool, async (tx) => {
+      if (!(await this.repo.setCommissionStatus(tx, id, move[0], move[1], action === 'paid' ? note ?? null : null))) throw new SellingError('commission_state', 'Someone else changed this commission. Reload and try again.');
+      await this.repo.commissionEvent(tx, { organisationId, commissionId: id, fromStatus: move[0], toStatus: move[1], amountUgx: c.amountUgx, note: note ?? null, actorUserId: actor.userId });
+    });
+    return (await this.repo.commission(id))!;
   }
 
   async addNote(actor: Actor, organisationId: string, id: string, note: string): Promise<void> {
@@ -205,7 +310,9 @@ export class SellingService {
   /** What the dealer's staff see for each enquiry: the customer (decrypted for them only), the car and the stage. */
   async leadViews(rows: LeadRow[]) {
     const cars = new Map<string, string>();
-    const users = await this.iam.firstNames(rows.flatMap((r) => [r.createdBy, r.brokerUserId].filter((x): x is string => !!x)));
+    const earlierRows = new Map<string, LeadRow | undefined>();
+    for (const r of rows) if (r.earlierLeadId && !earlierRows.has(r.earlierLeadId)) earlierRows.set(r.earlierLeadId, await this.repo.lead(r.earlierLeadId));
+    const users = await this.iam.firstNames(rows.flatMap((r) => [r.createdBy, r.brokerUserId, r.splitBrokerUserId, earlierRows.get(r.earlierLeadId ?? '')?.brokerUserId].filter((x): x is string => !!x)));
     return Promise.all(rows.map(async (r) => {
       const person = await this.parties.reveal(r.partyId);
       let car: string | null = null;
@@ -223,6 +330,13 @@ export class SellingService {
         consentToContact: r.consentToContact, message: r.message,
         stockId: r.stockItemId, car, salePriceUgx: r.salePriceUgx,
         broker: r.brokerUserId ? users.get(r.brokerUserId) ?? 'A broker' : null,
+        splitBroker: r.splitBrokerUserId ? { name: users.get(r.splitBrokerUserId) ?? 'A broker', percent: 100 - (r.splitPercent ?? 50) } : null,
+        protectedUntil: r.protectedUntil ? new Date(r.protectedUntil).toISOString() : null,
+        needsDecision: r.needsDecision,
+        earlier: (() => {
+          const e = r.earlierLeadId ? earlierRows.get(r.earlierLeadId) : undefined;
+          return e ? { at: new Date(e.createdAt).toISOString(), by: e.brokerUserId ? users.get(e.brokerUserId) ?? 'A broker' : 'Your team', broker: !!e.brokerUserId } : null;
+        })(),
         addedBy: r.createdBy ? users.get(r.createdBy) ?? null : null,
         createdAt: new Date(r.createdAt).toISOString(), updatedAt: new Date(r.updatedAt).toISOString(),
       };

@@ -4,7 +4,7 @@ import { Body, Controller, Delete, Get, Header, Headers, HttpCode, Inject, Param
 import { tidyName, tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
-import { CurrentActor, IamService, Public, type Actor } from '../iam/index.js';
+import { BrokersService, CurrentActor, IamService, Public, type Actor } from '../iam/index.js';
 import { dealerOrg } from './dealer-access.js';
 import { LEAD_SOURCES, LEAD_STAGES, LINK_CHANNELS, type LinkRow } from './selling.repository.js';
 import { SellingError, SellingService } from './selling.service.js';
@@ -14,7 +14,7 @@ const Phone = z.string().regex(/^\+[1-9]\d{7,14}$/, 'a phone number in internati
 const Name = z.string().trim().min(2).max(80).transform(tidyName);
 const STATUS: Record<string, number> = {
   link_not_found: 404, lead_not_found: 404, stock_not_found: 404, car_not_available: 410, car_not_linked: 409, stage_conflict: 409, lead_closed: 409,
-  sale_price_required: 400, consent_required: 400, too_many: 429,
+  sale_price_required: 400, consent_required: 400, too_many: 429, no_decision_needed: 409, commission_not_found: 404, commission_state: 409, split_needs_two_brokers: 400,
 };
 const TITLE: Record<number, string> = { 400: 'Invalid request', 404: 'Not found', 409: 'Conflict', 410: 'Gone', 429: 'Too many requests' };
 
@@ -118,16 +118,57 @@ export class SellingController {
   }
 }
 
+@Controller('dealer')
+export class DealerCommissionsController {
+  constructor(@Inject(SellingService) private readonly selling: SellingService, @Inject(IamService) private readonly iam: IamService) {}
+
+  /** POST /v1/dealer/leads/:id/decision: who brought a customer two people claimed (D-128). Managers only. */
+  @Post('leads/:id/decision')
+  @HttpCode(200)
+  async decide(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string, @Body() body: unknown) {
+    const org = await dealerOrg(this.iam, actor, orgId, 'dealer.costs.manage');
+    if (!Uuid.safeParse(id).success) sellingProblem(new SellingError('lead_not_found', 'No such enquiry'));
+    const b = parse(z.object({ outcome: z.enum(['keep', 'earlier', 'split', 'dealer']), reason: z.string().trim().min(3).max(300).transform(tidySentence),
+      splitPercent: z.number().int().min(1).max(99).optional() }), body);
+    const lead = await this.selling.decide(actor, org, id, b).catch(sellingProblem);
+    return (await this.selling.leadViews([lead]))[0];
+  }
+
+  /** GET /v1/dealer/commissions: commission records for this dealer's sales (managers). */
+  @Get('commissions')
+  async list(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined) {
+    const org = await dealerOrg(this.iam, actor, orgId, 'dealer.costs.manage');
+    const rows = await this.selling.commissions(org);
+    const names = await this.iam.firstNames(rows.map((r) => r.brokerUserId));
+    return { items: rows.map((c) => ({ commissionId: c.id, leadId: c.leadId, stockId: c.stockItemId, broker: names.get(c.brokerUserId) ?? 'A broker', status: c.status,
+      kind: c.kind, percent: c.percent, salePriceUgx: c.salePriceUgx, sharePercent: c.sharePercent, amountUgx: c.amountUgx, paidReference: c.paidReference,
+      createdAt: new Date(c.createdAt).toISOString() })) };
+  }
+
+  /** POST /v1/dealer/commissions/:id/approve | paid | cancel (a note: the payment reference, or why it was cancelled). */
+  @Post('commissions/:id/:action')
+  @HttpCode(200)
+  async act(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string, @Param('action') action: string, @Body() body: unknown) {
+    const org = await dealerOrg(this.iam, actor, orgId, 'dealer.costs.manage');
+    const a = z.enum(['approve', 'paid', 'cancel']).safeParse(action);
+    if (!a.success || !Uuid.safeParse(id).success) throw notFound('commission_not_found', 'No such commission');
+    const { note } = parse(z.object({ note: z.string().trim().max(200).transform(tidySentence).optional() }), body ?? {});
+    if (a.data === 'cancel' && !note) throw badRequest('reason_required', 'Say why the commission is cancelled');
+    const c = await this.selling.commissionAction(actor, org, id, a.data, note).catch(sellingProblem);
+    return { commissionId: c.id, status: c.status, amountUgx: c.amountUgx, paidReference: c.paidReference };
+  }
+}
+
 /** The public car page a shared link opens. No sign-in; nothing about the dealer's business beyond its name. */
 @Controller('cars')
 export class PublicCarController {
-  constructor(@Inject(SellingService) private readonly selling: SellingService) {}
+  constructor(@Inject(SellingService) private readonly selling: SellingService, @Inject(BrokersService) private readonly brokers: BrokersService) {}
 
   @Public()
   @Get(':token')
   @Header('Cache-Control', 'no-store')
   async car(@Param('token') token: string) {
-    return this.selling.publicCar(token).catch(sellingProblem);
+    return this.selling.publicCar(token, (id) => this.brokers.contact(id)).catch(sellingProblem);
   }
 
   @Public()

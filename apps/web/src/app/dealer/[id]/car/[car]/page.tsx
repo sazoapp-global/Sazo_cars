@@ -65,6 +65,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
       items={[
         { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', active: true },
         { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
+        ...(manager ? [{ href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' as const }] : []),
         { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell' },
         { href: `/business/${id}`, label: 'Business details', icon: 'verified_user' as const },
       ]}>

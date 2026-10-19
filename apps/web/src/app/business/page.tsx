@@ -125,6 +125,17 @@ export default async function Business() {
         </div>
       </section>
 
+      {/* brokers */}
+      <section className="border-b border-line bg-soft/60" aria-labelledby="brokers">
+        <div className="mx-auto flex max-w-[1280px] flex-col gap-3 px-4 py-6 md:flex-row md:items-center md:justify-between md:px-8 lg:px-12">
+          <div>
+            <h2 id="brokers" className="font-display text-xl font-bold">Are you a car broker?</h2>
+            <p className="text-muted">Share cars from approved dealers with your buyers, keep the customers you bring, and follow your commission. You need your National ID.</p>
+          </div>
+          <Link href="/broker" className="btn btn-ghost bg-white"><Icon name="handshake" />Brokers</Link>
+        </div>
+      </section>
+
       {/* value chain */}
       <section className="mx-auto max-w-[1280px] px-4 py-14 text-center md:px-8 lg:px-12" aria-labelledby="chain">
         <p className="text-[11px] font-bold uppercase tracking-wider text-label">The SAZO network</p>

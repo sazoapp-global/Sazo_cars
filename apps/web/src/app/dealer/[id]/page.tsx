@@ -65,6 +65,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       items={[
         { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', count: inStock.length, active: show === 'in_stock' },
         { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
+        ...(manager ? [{ href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' as const }] : []),
         { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell', count: soldList.length, active: show === 'sold' },
         ...(staff ? [{ href: `/dealer/${id}#staff-section`, label: 'Team', icon: 'group' as const, count: staff.length }] : []),
         ...(manager ? [{ href: `/dealer/${id}#settings-section`, label: 'Settings', icon: 'edit' as const }] : []),

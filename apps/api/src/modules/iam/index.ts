@@ -5,3 +5,4 @@ export { authProblem } from './auth.controller.js';
 export { IamService, BUSINESS_ORG_TYPES } from './iam.service.js';
 export { Public, RequirePermission, CurrentActor } from './auth.guard.js';
 export { can, canForOrg, type Actor, type OrgAccess } from './actor.js';
+export { BrokersService, BrokerApplicationError, type BrokerApplicationView } from './brokers.service.js';

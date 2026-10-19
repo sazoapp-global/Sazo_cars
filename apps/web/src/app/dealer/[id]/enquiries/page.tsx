@@ -6,7 +6,7 @@ import { Icon } from '@/components/icon';
 import { NumberStrip, WorkspaceFrame } from '@/components/workspace-frame';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation, StockItem } from '@/lib/types';
-import { addLead, moveLead, noteLead } from '../../actions';
+import { addLead, decideLead, moveLead, noteLead } from '../../actions';
 import { carName } from '../../labels';
 
 export const metadata: Metadata = { title: 'Enquiries', robots: { index: false } };
@@ -14,6 +14,7 @@ export const metadata: Metadata = { title: 'Enquiries', robots: { index: false }
 interface Lead {
   leadId: string; stage: string; source: string; open: boolean; customer: { name: string | null; phone: string | null }; consentToContact: boolean; message: string | null;
   stockId: string | null; car: string | null; salePriceUgx: number | null; broker: string | null; addedBy: string | null; createdAt: string; updatedAt: string;
+  splitBroker: { name: string; percent: number } | null; protectedUntil: string | null; needsDecision: boolean; earlier: { at: string; by: string; broker: boolean } | null;
 }
 interface LeadEvent { kind: string; fromStage: string | null; toStage: string | null; note: string | null; by: string | null; at: string }
 
@@ -44,6 +45,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
   const byStage = (s: string) => data.items.filter((l) => l.stage === s).length;
   const month = data.thisMonthBySource;
   const hidden = <input type="hidden" name="org" value={id} />;
+  const manager = org.role === 'org_manager';
 
   return (
     <WorkspaceFrame kind="Dealer" name={name} approved
@@ -51,6 +53,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
       items={[
         { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', count: cars.length },
         { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum', active: true },
+        ...(manager ? [{ href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' as const }] : []),
         { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell' },
         { href: `/business/${id}`, label: 'Business details', icon: 'verified_user' as const },
       ]}>
@@ -107,11 +110,31 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
                   {l.customer.phone && <p className="text-sm"><a href={`tel:${l.customer.phone}`} className="link">{l.customer.phone}</a>
                     {l.consentToContact && <> · <a href={`https://wa.me/${l.customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="link">WhatsApp</a></>}</p>}
                   <p className="text-sm text-muted">{l.car ?? 'No car chosen'}. {sourceLabel(l.source)}{l.broker ? ` (${l.broker})` : ''}{l.addedBy ? `, added by ${l.addedBy}` : ''}. {formatDate(l.createdAt)}</p>
+                  {l.broker && <p className="mt-1 text-sm">Brought by broker {l.broker}{l.splitBroker ? `, shared with ${l.splitBroker.name} (${l.splitBroker.percent}%)` : ''}{l.protectedUntil && l.open ? `. Their customer until ${formatDate(l.protectedUntil)}` : ''}.</p>}
                   {l.message && <p className="mt-1 text-sm">&ldquo;{l.message}&rdquo;</p>}
                   {!l.consentToContact && <p className="mt-1 text-xs font-semibold text-warn-text">Did not agree to be contacted</p>}
                 </div>
                 <span className={`chip ${l.stage === 'completed' ? 'border-ok-line bg-ok-fill text-ok-text' : l.stage === 'lost' ? 'border-line bg-soft text-muted' : 'border-line-strong bg-white text-on-surface'}`}>{stageLabel(l.stage)}{l.salePriceUgx ? `, ${formatUgx(l.salePriceUgx)}` : ''}</span>
               </div>
+              {l.needsDecision && (
+                <div className="mt-3 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm">
+                  <p className="font-semibold text-warn-text">Two claims on this customer. {l.earlier ? `${l.earlier.by} registered them first, on ${formatDate(l.earlier.at)}.` : ''} Commission is held until a manager decides.</p>
+                  {manager && (
+                    <form action={decideLead} className="mt-2 grid gap-2 sm:grid-cols-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                      <div><label htmlFor={`o-${l.leadId}`} className="label">Who brought the customer?</label>
+                        <select id={`o-${l.leadId}`} name="outcome" className="field" defaultValue="keep">
+                          <option value="keep">{l.broker ?? 'This enquiry'}</option>
+                          {l.earlier && <option value="earlier">{l.earlier.broker ? l.earlier.by : 'Our own customer from before'}</option>}
+                          {l.earlier?.broker && l.broker && <option value="split">Both brokers share</option>}
+                          <option value="dealer">Our own customer (no broker)</option>
+                        </select></div>
+                      <div><label htmlFor={`sp-${l.leadId}`} className="label">If shared, {l.broker ?? 'this broker'}&apos;s percent</label><input id={`sp-${l.leadId}`} name="split" inputMode="numeric" defaultValue="50" className="field tabular-nums" /></div>
+                      <div className="sm:col-span-2"><label htmlFor={`dr-${l.leadId}`} className="label">Reason (kept on record)</label><input id={`dr-${l.leadId}`} name="reason" required minLength={3} className="field" /></div>
+                      <div><button className="btn btn-primary">Decide</button></div>
+                    </form>
+                  )}
+                </div>
+              )}
               {(l.open || l.stage === 'lost') && (
                 <form action={moveLead} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">{hidden}<input type="hidden" name="lead" value={l.leadId} />
                   <div><label htmlFor={`s-${l.leadId}`} className="label">Move to</label>
