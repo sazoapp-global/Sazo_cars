@@ -26,7 +26,15 @@ test('manage my account and delete it', async ({ page }) => {
   await page.getByRole('button', { name: 'Save names' }).click();
   await expect(page.getByRole('status')).toContainText('Names saved');
   await expect(page.getByRole('heading', { name: 'Akello N. Ruth' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Settings for Akello N. Ruth' })).toContainText('AR');
+  await expect(page.getByRole('button', { name: 'Settings for Akello N. Ruth' })).toContainText('AR');
+  // The account opens in a popup over the page, not on a new page.
+  await page.getByRole('button', { name: 'Settings for Akello N. Ruth' }).click();
+  const popup = page.getByRole('dialog', { name: 'Your account' });
+  await expect(popup).toContainText('Akello Ruth Nambi');
+  await expect(popup.getByRole('link', { name: 'Open settings' })).toBeVisible();
+  await a11y(page);
+  await popup.getByRole('button', { name: 'Close' }).click();
+  await expect(popup).toBeHidden();
 
   // Add an email (confirmed by link) and a password: 100%, and she can log in with them.
   const email = `ruth${stamp}@example.com`;
@@ -107,7 +115,7 @@ test('create an account with email and password, then log in with it (D-100)', a
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByRole('heading', { name: 'Welcome to SAZO, Mike' })).toBeVisible();
   await a11y(page);
-  await expect(page.getByRole('link', { name: 'Settings for Anguzu J. Mike' })).toContainText('AM');
+  await expect(page.getByRole('button', { name: 'Settings for Anguzu J. Mike' })).toContainText('AM');
   await shot(page, 'signed-up');
 
   await page.goto('/account');

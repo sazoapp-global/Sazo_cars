@@ -134,6 +134,25 @@ export class IdentityService {
     return (await this.byId(id))!;
   }
 
+  /**
+   * For SAZO admins: one person's account at a glance, shown in a popup over the console (name, contact,
+   * businesses and their National ID check). The NIN is decrypted for this view only.
+   */
+  async accountFor(userId: string) {
+    const u = await this.repo.userById(userId);
+    if (!u) return undefined;
+    const memberships = (await this.repo.memberships(userId)).filter((m) => m.status !== 'removed');
+    const r = (await this.pool.query<{ id: string; status: string; nin_ciphertext: Buffer; nin_key_version: number; id_photo_evidence_id: string; decision_reason: string | null; created_at: Date }>(
+      `SELECT id, status, nin_ciphertext, nin_key_version, id_photo_evidence_id, decision_reason, created_at FROM iam.identity_checks
+        WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, [userId])).rows[0];
+    return {
+      userId: u.id, displayName: u.displayName, name: [u.surname, u.firstName, u.middleName].filter(Boolean).join(' ') || u.displayName,
+      phone: u.phone, email: u.email, emailVerified: u.emailVerified, gender: u.gender, status: u.status,
+      businesses: memberships.map((m) => ({ organisationId: m.organisationId, name: m.organisationName, type: m.organisationType, organisationStatus: m.organisationStatus, role: m.role, status: m.status })),
+      identity: r ? { checkId: r.id, status: r.status, nin: this.keyring.decrypt(r.nin_ciphertext, r.nin_key_version), idPhotoEvidenceId: r.id_photo_evidence_id, decisionReason: r.decision_reason, sentAt: r.created_at.toISOString() } : null,
+    };
+  }
+
   /** The user a check belongs to (to tell them the decision). */
   async owner(id: string): Promise<string | undefined> {
     return (await this.pool.query<{ user_id: string }>(`SELECT user_id FROM iam.identity_checks WHERE id = $1`, [id])).rows[0]?.user_id;

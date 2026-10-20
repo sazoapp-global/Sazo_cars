@@ -72,7 +72,7 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   await expect(inspection).toContainText('Passed');
   await expect(inspection).toContainText('No structural damage found');
   await expect(inspection).toContainText('60% tread left on the most worn tyre');
-  await expect(page.getByRole('link', { name: /Buyer Test/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Buyer Test/ })).toBeVisible();
   await noSeriousA11yIssues(page);
 
   await page.getByRole('link', { name: 'Timeline', exact: true }).click();

@@ -2,6 +2,7 @@ import { formatDate } from '@sazo/contracts';
 import { api } from '@/lib/api';
 import type { Organisation } from '@/lib/types';
 import { decideOrganisation } from '../actions';
+import { PersonPopup } from '../person-popup';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
 
@@ -45,7 +46,7 @@ export default async function Organisations({ searchParams }: { searchParams: SP
               <ul className="mt-2 space-y-1 text-sm" aria-label={`Managers of ${o.tradingName ?? o.legalName}`}>
                 {(managers.get(o.id) ?? []).map((m) => (
                   <li key={m.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="font-semibold">{m.name}</span>
+                    <PersonPopup userId={m.userId} name={m.name} />
                     <span className={ID_STATE[m.identity][1]}>{ID_STATE[m.identity][0]}</span>
                     {m.nin && <span className="sazo-id">NIN {m.nin}</span>}
                     {m.idPhotoEvidenceId && <a className="link" href={`/admin/files/${m.idPhotoEvidenceId}`} target="_blank" rel="noreferrer">ID photo</a>}

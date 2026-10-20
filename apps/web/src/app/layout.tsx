@@ -12,6 +12,7 @@ import { THEME_COOKIE, THEME_SCRIPT, parseTheme } from '@/lib/theme';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
+import { AccountPopup } from './account/account-popup';
 import { Logo } from '@/components/logo';
 import { MainNav } from '@/components/main-nav';
 import { MobileNav } from '@/components/mobile-nav';
@@ -61,9 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
             <ThemeToggle />
             {me ? (
-              <Link href="/account" className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm font-semibold hover:bg-soft sm:pr-3" aria-label={`Settings for ${me.displayName}`}>
-                <span className="avatar" aria-hidden>{me.initials}</span><span className="hidden max-w-[10rem] truncate sm:inline">{me.displayName}</span>
-              </Link>
+              <AccountPopup displayName={me.displayName} initials={me.initials} />
             ) : (
               <>
                 <Link href="/sign-in" className="px-2 text-sm font-semibold text-ink hover:text-primary-container">Log in</Link>

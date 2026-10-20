@@ -1,10 +1,11 @@
 import { formatDate } from '@sazo/contracts';
 import { decideIdentity } from '../actions';
+import { PersonPopup } from '../person-popup';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
 
 interface Check {
-  checkId: string; createdAt: string; idPhotoEvidenceId: string; nin: string;
+  checkId: string; userId: string; createdAt: string; idPhotoEvidenceId: string; nin: string;
   person: { name: string | null; phone: string | null; gender: string | null };
   businesses: { organisationId: string; name: string; type: string; status: string }[];
 }
@@ -27,6 +28,7 @@ export default async function IdentityChecks({ searchParams }: { searchParams: S
           {data.items.map((c) => (
             <li key={c.checkId} className="card p-4">
               <h2 className="font-display text-lg font-bold">{c.person.name ?? 'No name given'}</h2>
+              <div className="text-sm"><PersonPopup userId={c.userId} name={c.person.name ?? 'No name given'} label="Open account details" /></div>
               <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
                 <dt className="text-muted">National ID number</dt><dd className="sazo-id font-semibold">{c.nin}</dd>
                 <dt className="text-muted">Phone</dt><dd>{c.person.phone ?? 'Not given'}</dd>

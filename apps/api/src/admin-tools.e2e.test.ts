@@ -90,6 +90,14 @@ describe.skipIf(!base)('admin identity checks, announcements and FAQs (e2e)', ()
     expect(managers).toEqual([expect.objectContaining({ identity: 'pending', nin: 'CM90000000ABCD', idPhotoEvidenceId: photo })]);
     await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop and ID checked' }).expect(200);
     expect((await http.get('/v1/me/identity').set(bearer(manager)).expect(200)).body.check).toMatchObject({ status: 'approved' });
+
+    // The console popup: one person's account at a glance, for admins only; each look is audited.
+    const person = (await http.get(`/v1/admin/people/${managers[0].userId}`).set(bearer(adminToken)).expect(200)).body;
+    expect(person).toMatchObject({ userId: managers[0].userId, phone: expect.any(String), identity: { status: 'approved', nin: 'CM90000000ABCD' },
+      businesses: [expect.objectContaining({ organisationId: orgId, role: 'org_manager', organisationStatus: 'approved' })] });
+    await http.get(`/v1/admin/people/${managers[0].userId}`).set(bearer(manager)).expect(403);
+    await http.get('/v1/admin/people/not-a-uuid').set(bearer(adminToken)).expect(404);
+    expect((await db.query(`SELECT count(*)::int AS n FROM iam.audit_entries WHERE action = 'person.viewed' AND target_id = $1`, [managers[0].userId])).rows[0].n).toBe(1);
   });
 
   it('A-05: a manager added later is checked on their own; a rejection says why and they can send again', async () => {

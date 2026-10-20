@@ -70,6 +70,16 @@ export class IdentityController {
     }) };
   }
 
+  /** GET /v1/admin/people/:userId: one person's account for the console popup (businesses, contact, ID check). */
+  @Get('admin/people/:userId')
+  @RequirePermission('organisation.approve')
+  async person(@CurrentActor() actor: Actor, @Param('userId') userId: string) {
+    const view = Uuid.safeParse(userId).success ? await this.identity.accountFor(userId) : undefined;
+    if (!view) throw notFound('person_not_found', 'No such person');
+    await this.iam.audit({ actor, action: 'person.viewed', targetType: 'user', targetId: userId });
+    return view;
+  }
+
   /** POST /v1/admin/identity-checks/:id/decision: approve or reject one check, with a reason the person sees. */
   @Post('admin/identity-checks/:id/decision')
   @HttpCode(200)
