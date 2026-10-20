@@ -2,7 +2,7 @@
 // signal halfway through the next job and watch it sync when the signal comes back.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { API, apiSignIn, createAdmin, signInInApp, testPhoto } from './helpers';
+import { API, apiSignIn, createAdmin, sendIdentity, signInInApp, testPhoto } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567010${stamp}`;
@@ -27,6 +27,7 @@ test.beforeAll(async ({ request }) => {
   const org = await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${managerToken}` }, data: { type: 'garage', legalName: `Kansanga Motors ${stamp} Ltd`, tradingName: 'Kansanga Motors' } });
   expect(org.ok()).toBeTruthy();
   orgId = (await org.json()).id;
+  await sendIdentity(request, managerToken, `garage manager ${stamp}`);
   const approved = await request.post(`${API}/admin/organisations/${orgId}/decision`, { headers: { Authorization: `Bearer ${adminToken}` }, data: { decision: 'approve', reason: 'E2E' } });
   expect(approved.ok()).toBeTruthy();
 });

@@ -12,7 +12,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { testPhoto } from './test-photos.js';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -82,7 +82,7 @@ describe.skipIf(!base)('inspector workspace (e2e)', () => {
     managerToken = await signIn('+256772400001', 'Ruth (Centre manager)');
     orgId = (await http.post('/v1/organisations').set(bearer(managerToken)).send({ type: 'inspection_centre', legalName: 'Kampala Vehicle Inspection Ltd', tradingName: 'KVI Bugolobi' }).expect(201)).body.id;
     expect((await http.get('/v1/inspections').set(asOrg(managerToken)).expect(403)).body.code).toBe('organisation_not_approved');
-    await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Licence and premises checked' }).expect(200);
+    await approveOrg(app, http, adminToken, orgId, 'Licence and premises checked');
 
     await http.post('/v1/garage/staff').set(asOrg(managerToken)).send({ phone: '+256772400002', displayName: 'Denis (Inspector)', role: 'org_staff' }).expect(201);
     inspectorToken = await signIn('+256772400002');
@@ -90,7 +90,7 @@ describe.skipIf(!base)('inspector workspace (e2e)', () => {
     expect((await http.get('/v1/garage/jobs').set(asOrg(inspectorToken)).expect(403)).body.code).toBe('not_a_garage');
     const garageOwner = await signIn('+256772400009', 'Garage owner');
     const garageId = (await http.post('/v1/organisations').set(bearer(garageOwner)).send({ type: 'garage', legalName: 'Some Garage Ltd' }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${garageId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(200);
+    await approveOrg(app, http, adminToken, garageId, 'Workshop checked');
     expect((await http.get('/v1/inspections').set({ ...bearer(garageOwner), 'X-Organisation-Id': garageId }).expect(403)).body.code).toBe('not_an_inspector');
   });
 

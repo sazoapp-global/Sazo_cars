@@ -2,7 +2,7 @@
 // paint thickness), condition, photos, result — then a finding that differs from the records is explained and sent.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { API, apiSignIn, createAdmin, signInInApp, testPhoto } from './helpers';
+import { API, apiSignIn, createAdmin, sendIdentity, signInInApp, testPhoto } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567030${stamp}`;
@@ -20,6 +20,7 @@ test.beforeAll(async ({ request }) => {
   const managerToken = await apiSignIn(request, MANAGER, 'Denis Inspector');
   const org = await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${managerToken}` }, data: { type: 'inspection_centre', legalName: `Bugolobi Inspection ${stamp} Ltd`, tradingName: 'Bugolobi Inspection' } });
   expect(org.ok()).toBeTruthy();
+  await sendIdentity(request, managerToken, `inspection manager ${stamp}`);
   const approved = await request.post(`${API}/admin/organisations/${(await org.json()).id}/decision`, { headers: { Authorization: `Bearer ${adminToken}` }, data: { decision: 'approve', reason: 'E2E check' } });
   expect(approved.ok()).toBeTruthy();
 });

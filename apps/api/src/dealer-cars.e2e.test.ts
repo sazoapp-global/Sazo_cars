@@ -14,7 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { testPhoto } from './test-photos.js';
 
 const base = process.env.TEST_DATABASE_URL;
@@ -52,7 +52,7 @@ describe.skipIf(!base)('dealer cars, costs and clocks (e2e)', () => {
   async function dealer(phone: string, name: string, adminToken: string) {
     const t = await signIn(phone, name);
     const id = (await http.post('/v1/organisations').set(bearer(t)).send({ type: 'dealer', legalName: `${name} Ltd` }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${id}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Yard visited' }).expect(200);
+    await approveOrg(app, http, adminToken, id, 'Yard visited');
     return { t, id };
   }
 

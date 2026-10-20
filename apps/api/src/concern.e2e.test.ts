@@ -12,7 +12,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { testPhoto } from './test-photos.js';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -85,7 +85,7 @@ describe.skipIf(!base)('concerns (e2e)', () => {
   it('a garage reports a copied plate: the car shows "being checked" until SAZO decides', async () => {
     managerToken = await signIn('+256772600001', 'Owner');
     orgId = (await http.post('/v1/organisations').set(bearer(managerToken)).send({ type: 'garage', legalName: 'Bweyogerere Motors Ltd', tradingName: 'Bweyogerere Motors' }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(200);
+    await approveOrg(app, http, adminToken, orgId, 'Workshop checked');
     await http.post('/v1/garage/staff').set(asOrg(managerToken)).send({ phone: '+256772600002', displayName: 'Musa', role: 'org_staff' }).expect(201);
     mechanicToken = await signIn('+256772600002');
     vehicleRef = (await http.get('/v1/vehicles/search').query({ q: 'UBU 606E' }).expect(200)).body.matches[0].vehicleRef;

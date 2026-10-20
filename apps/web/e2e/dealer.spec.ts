@@ -21,6 +21,10 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('button', { name: 'Register business' }).click();
   await expect(dealer.getByText(`${NAME} is registered`)).toBeVisible();
   const businessUrl = dealer.url();
+  await dealer.getByLabel('National ID number (NIN)').fill(`CM9000${stamp}A`);
+  await dealer.getByLabel('Photo of your National ID').setInputFiles({ name: 'id.png', mimeType: 'image/png', buffer: testPhoto(`dealer owner id ${stamp}`) });
+  await dealer.getByRole('button', { name: 'Send my ID' }).click();
+  await expect(dealer.getByRole('status')).toContainText('Your National ID was sent');
   /** The "Add a car" panel stays open after a mistake; open it only if it is closed. */
   const openAdd = async () => { if (!(await dealer.getByLabel('Make', { exact: true }).isVisible())) await dealer.getByText('Add a car', { exact: true }).click(); };
   const openMileage = async () => { if (!(await dealer.getByLabel('Mileage now (km)').isVisible())) await dealer.getByText(/Add the mileage now/).click(); };

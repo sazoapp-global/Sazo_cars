@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { testPhoto } from './test-photos.js';
 import sharp from 'sharp';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -94,7 +94,7 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
 
     // Pending: nothing works yet.
     expect((await http.get('/v1/garage/vehicles/lookup').query({ plate: 'UBQ 101A' }).set(asGarage(managerToken)).expect(403)).body.code).toBe('organisation_not_approved');
-    await http.post(`/v1/admin/organisations/${garageId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Visited the workshop' }).expect(200);
+    await approveOrg(app, http, adminToken, garageId, 'Visited the workshop');
 
     const added = await http.post('/v1/garage/staff').set(asGarage(managerToken)).send({ phone: '+256772300002', displayName: 'Musa (Mechanic)', role: 'org_staff' }).expect(201);
     expect(added.body).toMatchObject({ displayName: 'Musa (Mechanic)', role: 'org_staff', status: 'active' });
@@ -266,7 +266,7 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
   it('Security S2: a garage sees only the customer name it typed, never one another garage typed for the same phone', async () => {
     const owner2 = await signIn('+256772300020', 'Other garage owner');
     const garage2 = (await http.post('/v1/organisations').set(bearer(owner2)).send({ type: 'garage', legalName: 'Other Garage Ltd' }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${garage2}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(200);
+    await approveOrg(app, http, adminToken, garage2, 'Workshop checked');
     const job = await http.put(`/v1/garage/jobs/${randomUUID()}`).set({ ...bearer(owner2), 'X-Organisation-Id': garage2 })
       .send({ plateEntered: 'UBQ 101A', workTypes: ['service'], clientCreatedAt: new Date().toISOString(), form: { customer: { phone: CUSTOMER } } }).expect(200);
     expect(JSON.stringify(job.body)).not.toContain('Peter');

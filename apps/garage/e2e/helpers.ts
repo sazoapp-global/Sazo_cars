@@ -88,3 +88,15 @@ export function testPhoto(seed: string, width = 480, height = 360): Buffer {
   ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
+
+/** A-05: a business manager sends a made-up National ID through the API before SAZO approves the business. */
+export async function sendIdentity(request: APIRequestContext, token: string, seed: string) {
+  const headers = { Authorization: `Bearer ${token}` };
+  const bytes = testPhoto(`national id ${seed}`);
+  const slot = await (await request.post(`${API}/evidence/uploads`, { headers, data: {
+    kind: 'official_document', mimeType: 'image/png', sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } })).json();
+  expect((await request.put(`${API}/evidence/uploads/${slot.evidenceId}/content`, { headers: { ...headers, 'Content-Type': 'image/png' }, data: bytes })).ok()).toBeTruthy();
+  expect((await request.post(`${API}/evidence/${slot.evidenceId}/complete`, { headers })).ok()).toBeTruthy();
+  const nin = `CM${createHash('sha256').update(seed).digest('hex').slice(0, 12).toUpperCase()}`;
+  expect((await request.post(`${API}/me/identity`, { headers, data: { nin, idPhotoEvidenceId: slot.evidenceId } })).ok()).toBeTruthy();
+}

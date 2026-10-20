@@ -5,6 +5,7 @@ import { CommunityModule } from './modules/community/index.js';
 import { ConcernModule } from './modules/concern/index.js';
 import { DealerModule } from './modules/dealer/index.js';
 import { GarageModule } from './modules/garage/index.js';
+import { HelpModule } from './modules/help/index.js';
 import { IamModule } from './modules/iam/index.js';
 import { InspectionModule } from './modules/inspection/index.js';
 import { IngestModule } from './modules/ingest/index.js';
@@ -49,6 +50,7 @@ export class AppModule {
         ConcernModule,
         CommunityModule,
         AccountModule,
+        HelpModule,
       ],
       controllers: [HealthController],
     };

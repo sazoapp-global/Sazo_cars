@@ -7,10 +7,11 @@ import { ReportModule } from '../report/index.js';
 import { AccountController } from './account.controller.js';
 import { AccountService } from './account.service.js';
 import { AdminExportController } from './admin-export.controller.js';
+import { IdentityController } from './identity.controller.js';
 
 @Module({
   imports: [IamModule, ObservationsModule, ReportModule, CommunityModule, NotifyModule],
-  controllers: [AccountController, AdminExportController],
+  controllers: [AccountController, AdminExportController, IdentityController],
   providers: [AccountService],
 })
 export class AccountModule {}

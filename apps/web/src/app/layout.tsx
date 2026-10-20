@@ -29,6 +29,7 @@ async function currentUser(): Promise<Me | undefined> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [me, theme] = await Promise.all([currentUser(), cookies().then((c) => parseTheme(c.get(THEME_COOKIE)?.value))]);
+  const unread = me ? await api<{ unread: number }>('/me/announcements', { auth: true }).then((r) => r.unread).catch(() => 0) : 0;
   return (
     // An explicit choice is drawn by the server; "same as device" is settled by THEME_SCRIPT before paint.
     <html lang="en-UG" {...(theme !== 'system' ? { 'data-theme': theme } : {})} suppressHydrationWarning>
@@ -50,6 +51,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {me && (
               <Link href="/saved" className="flex items-center gap-1 rounded-lg p-2 text-sm font-semibold text-muted hover:text-primary-container">
                 <Icon name="bookmark" size={20} className="sm:hidden" /><span className="sr-only sm:not-sr-only">Saved</span>
+              </Link>
+            )}
+            {me && (
+              <Link href="/notifications" className="relative rounded-lg p-2 text-muted hover:text-primary-container" aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}>
+                <Icon name="notifications" size={22} />
+                {unread > 0 && <span className="absolute right-0.5 top-0.5 min-w-[18px] rounded-full bg-bad-text px-1 text-center text-[11px] font-bold leading-[18px] text-white" aria-hidden>{unread > 9 ? '9+' : unread}</span>}
               </Link>
             )}
             <ThemeToggle />
@@ -78,6 +85,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <li><Link href="/#check" className="hover:text-primary-container">Check a car</Link></li>
                 <li><Link href="/compare" className="hover:text-primary-container">Compare cars</Link></li>
                 <li><Link href="/#how" className="hover:text-primary-container">How it works</Link></li>
+                <li><Link href="/help" className="hover:text-primary-container">Help</Link></li>
               </ul>
             </div>
             <div>

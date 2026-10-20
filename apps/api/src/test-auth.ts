@@ -1,5 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import type request from 'supertest';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { IamService, IdentityService } from './modules/iam/index.js';
 import { ConsoleEmailSender, ConsoleSmsSender } from './modules/notify/index.js';
 
 // Tests only: the sign-up details for a made-up person from a short name ("Sarah Namukasa", "Owner").
@@ -23,4 +25,19 @@ export async function signInWithCode(app: INestApplication, http: ReturnType<typ
     body = (await http.post('/v1/auth/second-step').send({ challengeId: body.challengeId, code, rememberDevice: false }).expect(200)).body;
   }
   return body.accessToken as string;
+}
+
+/**
+ * Tests only: a SAZO admin approves a business (A-05). Every active manager first needs an identity check, so
+ * any manager who has none gets a made-up National ID here, then the business is approved over HTTP.
+ */
+export async function approveOrg(app: INestApplication, http: ReturnType<typeof request>, adminToken: string, orgId: string, reason = 'Checked') {
+  const iam = app.get(IamService, { strict: false });
+  const identity = app.get(IdentityService, { strict: false });
+  const managers = (await iam.listMembers(orgId)).filter((m) => m.status === 'active' && m.role === 'org_manager').map((m) => m.userId);
+  const status = await identity.statusOf(managers);
+  for (const u of managers) {
+    if (status.get(u) === 'missing') await identity.submit(u, `CM${randomBytes(6).toString('hex').toUpperCase()}`, randomUUID());
+  }
+  return http.post(`/v1/admin/organisations/${orgId}/decision`).set({ Authorization: `Bearer ${adminToken}` }).send({ decision: 'approve', reason }).expect(200);
 }

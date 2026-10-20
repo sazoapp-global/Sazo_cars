@@ -16,7 +16,7 @@ import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { ConsoleEmailSender } from './modules/notify/index.js';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { testPhoto } from './test-photos.js';
 
 const base = process.env.TEST_DATABASE_URL;
@@ -86,7 +86,7 @@ describe.skipIf(!base)('brokers: identity check, marketplace, protection, decisi
     adminToken = (await app.get(AuthService).issueTokens(adminId)).accessToken;
     manager = await signIn('+256772800001', 'Joseph Manager');
     orgId = (await http.post('/v1/organisations').set(bearer(manager)).send({ type: 'dealer', legalName: 'Kyambogo Bond Ltd', tradingName: 'Kyambogo Bond' }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Yard visited' }).expect(200);
+    await approveOrg(app, http, adminToken, orgId, 'Yard visited');
     await http.post('/v1/garage/staff').set(as(manager)).send({ phone: '+256772800002', displayName: 'Lucy Sales', role: 'org_staff' }).expect(201);
     staff = await signIn('+256772800002');
     const add = async (chassis: string, price: number, details: object) =>
@@ -231,7 +231,7 @@ describe.skipIf(!base)('brokers: identity check, marketplace, protection, decisi
     await http.get(`/v1/cars/${b1Token}`).expect(410);
     const other = await signIn('+256772800099', 'Other Dealer');
     const otherOrg = (await http.post('/v1/organisations').set(bearer(other)).send({ type: 'dealer', legalName: 'Other Ltd' }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${otherOrg}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Yard visited' }).expect(200);
+    await approveOrg(app, http, adminToken, otherOrg, 'Yard visited');
     await http.post(`/v1/dealer/commissions/${c.commissionId}/cancel`).set(as(other, otherOrg)).send({ note: 'x' }).expect(404);
   });
 

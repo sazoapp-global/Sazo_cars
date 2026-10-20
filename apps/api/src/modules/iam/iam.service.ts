@@ -8,6 +8,7 @@ import { withTx, type Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 import { NotificationsService } from '../notify/index.js';
 import type { Actor } from './actor.js';
+import { IdentityService } from './identity.service.js';
 import { IamRepository, type OrganisationRow } from './iam.repository.js';
 
 /** Limits agreed in the security review (S5). */
@@ -23,6 +24,7 @@ export class IamService {
     @Inject(IamRepository) private readonly repo: IamRepository,
     @Inject(NotificationsService) private readonly notify: NotificationsService,
     @Inject(PII_KEYRING) private readonly keyring: Keyring,
+    @Inject(IdentityService) private readonly identity: IdentityService,
   ) {}
 
   /** Write an audit entry (append-only). Pass a transaction to audit atomically with the change. */
@@ -74,6 +76,8 @@ export class IamService {
 
   async decideOrganisation(actor: Actor, id: string, decision: 'approve' | 'reject' | 'request_info' | 'suspend', reason: string): Promise<OrganisationRow | undefined> {
     await withTx(this.pool, async (tx) => {
+      // A-05: approving a business also approves its managers' identity checks; it is refused until they sent one.
+      if (decision === 'approve') await this.identity.approveManagersInTx(tx, actor, id, reason);
       await this.repo.decideOrganisation(tx, id, decision, reason, actor.userId);
       await this.repo.audit(tx, { actorUserId: actor.userId, action: `organisation.${decision}`, targetType: 'organisation', targetId: id, details: { reason } });
     });

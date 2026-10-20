@@ -11,7 +11,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -75,7 +75,7 @@ describe.skipIf(!base)('limits (e2e, security S5)', () => {
   });
 
   it('a business can add up to 3 staff a minute', async () => {
-    await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Checked' }).expect(200);
+    await approveOrg(app, http, adminToken, orgId, 'Checked');
     const rs = await Promise.all([2, 3, 4, 5].map((i) =>
       http.post('/v1/garage/staff').set({ ...bearer(owner), 'X-Organisation-Id': orgId }).send({ phone: `+25677270010${i}`, displayName: `Mechanic ${i}`, role: 'org_staff' })));
     expect(statuses(rs)).toEqual([201, 201, 201, 429]);

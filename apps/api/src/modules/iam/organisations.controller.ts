@@ -5,6 +5,7 @@ import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import type { Actor } from './actor.js';
 import { CurrentActor, RequirePermission } from './auth.guard.js';
 import { BUSINESS_ORG_TYPES, IamService } from './iam.service.js';
+import { IdentityError } from './identity.service.js';
 
 const Register = z.object({
   type: z.enum(BUSINESS_ORG_TYPES),
@@ -71,6 +72,9 @@ export class OrganisationsController {
     const d = Decision.safeParse(body);
     if (!d.success) throw badRequest('invalid_request', 'decision and reason are required');
     if (!z.string().uuid().safeParse(id).success || !(await this.iam.organisation(id))) throw notFound('organisation_not_found', 'No such organisation');
-    return this.iam.decideOrganisation(actor, id, d.data.decision, d.data.reason);
+    return this.iam.decideOrganisation(actor, id, d.data.decision, d.data.reason).catch((err) => {
+      if (err instanceof IdentityError) throw new Problem(422, err.code, 'Unprocessable', err.message);
+      throw err;
+    });
   }
 }

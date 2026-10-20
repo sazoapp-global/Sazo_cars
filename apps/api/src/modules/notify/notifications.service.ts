@@ -16,6 +16,8 @@ const TEMPLATES: Record<string, { version: number; body: string }> = {
   org_info_requested: { version: 1, body: 'SAZO needs more information about {organisation}: {reason}. Reply on the SAZO website.' },
   org_rejected: { version: 1, body: 'SAZO could not approve {organisation} at this time. Contact SAZO support for details.' },
   org_suspended: { version: 1, body: '{organisation} has been suspended on SAZO and cannot record history for now. Contact SAZO support.' },
+  identity_approved: { version: 1, body: 'SAZO checked your National ID. You can now manage your business on SAZO.' },
+  identity_rejected: { version: 1, body: 'SAZO could not accept your National ID: {reason}. Send it again from your business page on SAZO.' },
   phone_change_code: { version: 1, body: 'Your SAZO code to move your account to this number is {code}. It expires in 10 minutes. Never share it.' },
   phone_changed: { version: 1, body: 'Your SAZO account now uses a different phone number. If this was not you, contact SAZO at once.' },
   account_deleted: { version: 1, body: 'Your SAZO account has been deleted. Thank you for using SAZO.' },

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
+import { IMAGE_TYPES, filesFrom, uploadEvidence } from '@/lib/upload';
 
 export type RegisterState = { error?: string; fields?: Record<string, string> };
 const TYPES = ['garage', 'dealer', 'inspector', 'inspection_centre'];
@@ -50,4 +51,23 @@ export async function sendDocuments(form: FormData): Promise<void> {
     back('error=The documents could not be sent. Please try again.');
   }
   back(`done=${encodeURIComponent(`${ids.length} ${ids.length === 1 ? 'document' : 'documents'} sent to SAZO.`)}`);
+}
+
+/** A-05: the manager's National ID number and a photo of their ID, for SAZO to check with the business. */
+export async function sendIdentity(form: FormData): Promise<void> {
+  const id = String(form.get('id') ?? '');
+  const back = (q: string) => redirect(`/business/${id}?${q}#identity`);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) redirect('/account');
+  const nin = String(form.get('nin') ?? '').replace(/\s+/g, '').toUpperCase();
+  if (!/^C[MF][A-Z0-9]{12}$/.test(nin)) back('error=' + encodeURIComponent('Enter your National ID number: 14 letters and numbers starting with CM or CF.'));
+  const [photo] = filesFrom(form, 'idPhoto');
+  if (!photo) back('error=' + encodeURIComponent('Add a photo of your National ID.'));
+  if (!IMAGE_TYPES.includes(photo!.type)) back('error=' + encodeURIComponent('The ID photo must be a JPEG, PNG or WebP image.'));
+  try {
+    const up = await uploadEvidence(photo!, 'official_document');
+    await api('/me/identity', { method: 'POST', auth: true, body: { nin, idPhotoEvidenceId: up.id } });
+  } catch (err) {
+    back('error=' + encodeURIComponent(err instanceof ApiError && err.detail ? err.detail : 'Your ID could not be sent. Please try again.'));
+  }
+  back('done=' + encodeURIComponent('Your National ID was sent. SAZO checks it with your business.'));
 }

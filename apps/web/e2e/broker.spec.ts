@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { API_LOG } from '../playwright.config';
-import { API, a11y, apiToken, createAdmin, shot, signIn, testPhoto } from './helpers';
+import { API, a11y, apiToken, createAdmin, shot, signIn, testPhoto, sendIdentity } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const BROKER = `+2567070${stamp}`;
@@ -21,6 +21,7 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   const adminToken = await apiToken(request, ADMIN);
   const as = { Authorization: `Bearer ${manager}` };
   const org = (await (await request.post(`${API}/organisations`, { headers: as, data: { type: 'dealer', legalName: `${DEALER} Ltd`, tradingName: DEALER } })).json()).id;
+  await sendIdentity(request, manager, `dealer ${stamp}`);
   expect((await request.post(`${API}/admin/organisations/${org}/decision`, { headers: { Authorization: `Bearer ${adminToken}` }, data: { decision: 'approve', reason: 'Yard visited' } })).ok()).toBeTruthy();
   const dealerHeaders = { ...as, 'X-Organisation-Id': org };
   const car = await (await request.post(`${API}/dealer/stock`, { headers: dealerHeaders, data: { chassisNumber: `ZRR80-${stamp}`, askingPriceUgx: 52_000_000,

@@ -1,7 +1,7 @@
 // SAZO staff work their queues in the browser: approve a garage, settle a cloned plate, see the sources.
 // Expects a freshly seeded database (CI makes one), because settling the plate changes data.
 import { expect, test } from '@playwright/test';
-import { API, a11y, apiToken, createAdmin, shot, signIn as signInAs } from './helpers';
+import { API, a11y, apiToken, createAdmin, shot, signIn as signInAs, sendIdentity } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567030${stamp}`;
@@ -33,6 +33,7 @@ test('approve a garage that registered', async ({ page, request }) => {
   const phone = `+2567050${stamp}`;
   const t = await apiToken(request, phone, 'Musa Manager');
   await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${t}` }, data: { type: 'garage', legalName: `Bugolobi Car Care ${stamp} Ltd`, district: 'Kampala' } });
+  await sendIdentity(request, t, `musa ${stamp}`);
 
   await signIn(page, ADMIN);
   await expect(page.getByRole('heading', { name: /Good to see you/ })).toBeVisible();
@@ -40,6 +41,7 @@ test('approve a garage that registered', async ({ page, request }) => {
   await a11y(page);
   await page.getByRole('link', { name: 'Businesses', exact: true }).click();
   const card = page.getByRole('listitem').filter({ hasText: `Bugolobi Car Care ${stamp} Ltd` });
+  await expect(card).toContainText('ID sent: check it before approving');
   await card.getByLabel(/Reason/).fill('Visited the workshop on Port Bell Road');
   await card.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByRole('status')).toContainText('Decision recorded: approve');
@@ -74,4 +76,37 @@ test('data sources show which are simulated', async ({ page }) => {
   await page.goto('/admin/sources');
   await expect(page.getByText('Simulated').first()).toBeVisible();
   await a11y(page);
+});
+
+test('announcements reach the bell and help answers reach the Help page (A-06, A-07)', async ({ browser }) => {
+  const page = await (await browser.newContext()).newPage();
+  await signIn(page, ADMIN);
+  await page.getByRole('link', { name: 'Announcements' }).click();
+  await page.getByLabel('Who is it for?').selectOption('everyone');
+  await page.getByLabel('Title').fill(`Testing week ${stamp}`);
+  await page.getByLabel('Message').fill('Records on SAZO are simulated this week.');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page.getByRole('status')).toContainText('Announcement sent');
+  await a11y(page);
+
+  await page.getByRole('link', { name: 'Help answers' }).click();
+  await page.getByText('Add a question').click();
+  await page.getByLabel('Question').fill(`How do I check a car ${stamp}?`);
+  await page.getByLabel('Topic').fill('Getting started');
+  await page.getByLabel('Answer').fill('Type its number plate or VIN on the home page.');
+  await page.getByLabel('Status').selectOption('published');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Added');
+  await a11y(page);
+
+  const buyer = await (await browser.newContext()).newPage();
+  await signInAs(buyer, `+2567060${stamp}`, { name: 'Ruth Buyer' });
+  await expect(buyer.getByRole('link', { name: /Notifications, \d+ new/ })).toBeVisible();
+  await buyer.getByRole('link', { name: /Notifications/ }).click();
+  await expect(buyer.getByRole('list', { name: 'Messages from SAZO' })).toContainText(`Testing week ${stamp}`);
+  await a11y(buyer);
+  await buyer.goto('/help');
+  await buyer.getByText(`How do I check a car ${stamp}?`).click();
+  await expect(buyer.getByText('Type its number plate or VIN on the home page.')).toBeVisible();
+  await a11y(buyer);
 });

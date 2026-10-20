@@ -6,6 +6,10 @@ import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
 
 const STATUSES = [['pending_verification', 'Waiting'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['suspended', 'Suspended']] as const;
+interface Manager { userId: string; name: string; identity: 'approved' | 'pending' | 'missing'; nin?: string; idPhotoEvidenceId?: string }
+const ID_STATE: Record<Manager['identity'], [string, string]> = {
+  approved: ['ID checked', 'text-ok-text'], pending: ['ID sent: check it before approving', 'text-warn-text'], missing: ['No National ID sent yet', 'text-bad-text'],
+};
 const TYPE: Record<string, string> = { garage: 'Garage', dealer: 'Dealer', inspector: 'Inspector', inspection_centre: 'Inspection centre', lender: 'Lender', insurer: 'Insurer', auction: 'Auction', rental: 'Rental', importer: 'Importer' };
 
 export default async function Organisations({ searchParams }: { searchParams: SP }) {
@@ -15,10 +19,12 @@ export default async function Organisations({ searchParams }: { searchParams: SP
   const data = await adminFetch<{ items: Organisation[] }>(`/admin/organisations?status=${status}`);
   const docs = new Map(data === 'forbidden' ? [] : await Promise.all(data.items.map(async (o) =>
     [o.id, (await api<{ evidenceIds: string[] }>(`/admin/organisations/${o.id}/documents`, { auth: true }).catch(() => ({ evidenceIds: [] }))).evidenceIds] as const)));
+  const managers = new Map(data === 'forbidden' ? [] : await Promise.all(data.items.map(async (o) =>
+    [o.id, (await api<{ items: Manager[] }>(`/admin/organisations/${o.id}/managers`, { auth: true }).catch(() => ({ items: [] as Manager[] }))).items] as const)));
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Businesses</h1>
-      <p className="mb-4 text-muted">Check each business (registration, location, contact person) before it can record vehicle history.</p>
+      <p className="mb-4 text-muted">Check each business (registration, location, contact person) and each manager&apos;s National ID before it can record vehicle history. Approving a business also approves its managers&apos; IDs.</p>
       <Notice done={sp.done} error={sp.error} />
       <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
         {STATUSES.map(([s, label]) => (
@@ -36,6 +42,16 @@ export default async function Organisations({ searchParams }: { searchParams: SP
               </div>
               <p className="text-sm">{[o.tradingName ? o.legalName : null, o.registrationNumber ? `Reg. no. ${o.registrationNumber}` : 'No registration number given', o.district ?? 'District not given'].filter(Boolean).join(' · ')}</p>
               <p className="mt-1 text-sm">{(docs.get(o.id) ?? []).length === 0 ? <span className="text-warn-text">No documents sent yet.</span> : <>Documents: {(docs.get(o.id) ?? []).map((d, i) => <a key={d} className="link mr-2" href={`/admin/files/${d}`} target="_blank" rel="noreferrer">document {i + 1}</a>)}</>}</p>
+              <ul className="mt-2 space-y-1 text-sm" aria-label={`Managers of ${o.tradingName ?? o.legalName}`}>
+                {(managers.get(o.id) ?? []).map((m) => (
+                  <li key={m.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="font-semibold">{m.name}</span>
+                    <span className={ID_STATE[m.identity][1]}>{ID_STATE[m.identity][0]}</span>
+                    {m.nin && <span className="sazo-id">NIN {m.nin}</span>}
+                    {m.idPhotoEvidenceId && <a className="link" href={`/admin/files/${m.idPhotoEvidenceId}`} target="_blank" rel="noreferrer">ID photo</a>}
+                  </li>
+                ))}
+              </ul>
               <form action={decideOrganisation} className="mt-3 flex flex-col gap-2 md:flex-row md:items-end">
                 <input type="hidden" name="id" value={o.id} />
                 <div className="flex-1"><label htmlFor={`r-${o.id}`} className="label">Reason (kept in the audit log)</label>

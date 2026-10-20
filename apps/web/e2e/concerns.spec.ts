@@ -1,7 +1,7 @@
 // A garage reports a problem with a car (O-002): buyers see a neutral "being checked" notice; a SAZO
 // reviewer upholds it and buyers then see what was confirmed — never who reported it.
 import { expect, test, type APIRequestContext } from '@playwright/test';
-import { API, a11y, apiToken as signInApi, createAdmin, shot, signIn } from './helpers';
+import { API, a11y, apiToken as signInApi, createAdmin, sendIdentity, shot, signIn } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567110${stamp}`;
@@ -17,6 +17,7 @@ test.beforeAll(async ({ request }) => {
   const admin = await apiToken(request, ADMIN, 'Ruth (SAZO reviewer)');
   const owner = await apiToken(request, OWNER, 'Garage owner');
   const org = await (await request.post(`${API}/organisations`, { headers: owner, data: { type: 'garage', legalName: `Najjera Motors ${stamp} Ltd`, tradingName: `Najjera Motors ${stamp}` } })).json();
+  await sendIdentity(request, owner.Authorization.slice(7), `concerns owner ${stamp}`);
   expect((await request.post(`${API}/admin/organisations/${org.id}/decision`, { headers: admin, data: { decision: 'approve', reason: 'Workshop checked' } })).ok()).toBeTruthy();
   const res = await request.post(`${API}/concerns`, { headers: { ...owner, 'X-Organisation-Id': org.id },
     data: { plate: PLATE, category: 'odometer_tampered', description: 'Instrument cluster screws scratched; pedal wear far beyond the reading' } });

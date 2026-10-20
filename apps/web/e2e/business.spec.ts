@@ -1,6 +1,6 @@
 // A garage owner registers on the website, sends a document, answers SAZO's question, and is approved.
 import { expect, test } from '@playwright/test';
-import { a11y, createAdmin, shot, signIn } from './helpers';
+import { a11y, createAdmin, shot, signIn, testPhoto } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const OWNER = `+2567060${stamp}`;
@@ -30,6 +30,11 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await owner.getByLabel('Files').setInputFiles({ name: 'licence.pdf', mimeType: 'application/pdf', buffer: PDF });
   await owner.getByRole('button', { name: 'Send to SAZO' }).click();
   await expect(owner.getByRole('status')).toContainText('1 document sent to SAZO');
+  // A-05: the manager's National ID, checked by SAZO together with the business.
+  await owner.getByLabel('National ID number (NIN)').fill('cm 9000 1234 abcd'.replace('abcd', String(stamp).slice(-4).padStart(4, '0')));
+  await owner.getByLabel('Photo of your National ID').setInputFiles({ name: 'id.png', mimeType: 'image/png', buffer: testPhoto(`owner id ${stamp}`) });
+  await owner.getByRole('button', { name: 'Send my ID' }).click();
+  await expect(owner.getByRole('status')).toContainText('Your National ID was sent');
   await shot(owner, 'business-status');
 
   // SAZO looks at the document and asks for more.
@@ -51,6 +56,8 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   // Approved.
   await admin.goto('/admin/organisations');
   const again = admin.getByRole('listitem').filter({ hasText: NAME });
+  await expect(again).toContainText('ID sent: check it before approving');
+  await expect(again.getByRole('link', { name: 'ID photo' })).toBeVisible();
   await again.getByLabel(/Reason/).fill('Signboard photo matches; licence valid');
   await again.getByRole('button', { name: 'Approve' }).click();
   await expect(admin.getByRole('status')).toContainText('approve');

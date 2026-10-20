@@ -12,7 +12,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { testPhoto } from './test-photos.js';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -86,12 +86,12 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     managerToken = await signIn('+256772500001', 'Grace (Dealer manager)');
     orgId = (await http.post('/v1/organisations').set(bearer(managerToken)).send({ type: 'dealer', legalName: 'Ntinda Car Bond Ltd', tradingName: 'Ntinda Car Bond' }).expect(201)).body.id;
     expect((await http.get('/v1/dealer/stock').set(asOrg(managerToken)).expect(403)).body.code).toBe('organisation_not_approved');
-    await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Yard visited, licence checked' }).expect(200);
+    await approveOrg(app, http, adminToken, orgId, 'Yard visited, licence checked');
     await http.post('/v1/garage/staff').set(asOrg(managerToken)).send({ phone: '+256772500002', displayName: 'Sam (Sales)', role: 'org_staff' }).expect(201);
     staffToken = await signIn('+256772500002');
     const other = await signIn('+256772500009', 'A garage');
     const garageId = (await http.post('/v1/organisations').set(bearer(other)).send({ type: 'garage', legalName: 'Garage Ltd' }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${garageId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(200);
+    await approveOrg(app, http, adminToken, garageId, 'Workshop checked');
     expect((await http.get('/v1/dealer/stock').set({ ...bearer(other), 'X-Organisation-Id': garageId }).expect(403)).body.code).toBe('not_a_dealer');
   });
 

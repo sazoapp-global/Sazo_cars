@@ -11,7 +11,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
-import { signInWithCode } from './test-auth.js';
+import { signInWithCode, approveOrg } from './test-auth.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
@@ -146,7 +146,7 @@ describe.skipIf(!base)('account settings (e2e)', () => {
   it('delete the account: refused while sole manager of a business with staff; then everything personal goes', async () => {
     const manager = await signIn('+256772800070', 'Garage boss');
     const orgId = (await http.post('/v1/organisations').set(bearer(manager)).send({ type: 'garage', legalName: 'Kyanja Motors Ltd' }).expect(201)).body.id;
-    await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(200);
+    await approveOrg(app, http, adminToken, orgId, 'Workshop checked');
     // "My data" includes the business: its details, status and this person's role.
     const mine = (await http.get('/v1/me/export').set(bearer(manager)).expect(200)).body.profile.businesses;
     expect(mine).toEqual([expect.objectContaining({ name: 'Kyanja Motors Ltd', legalName: 'Kyanja Motors Ltd', type: 'garage', yourRole: 'org_manager', status: 'approved', registeredAt: expect.any(String) })]);

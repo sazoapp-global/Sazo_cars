@@ -111,3 +111,49 @@ export async function decideBroker(form: FormData) {
   } catch (err) { back('/admin/brokers', failure(err), false); }
   back('/admin/brokers', decision === 'approve' ? 'Approved. They can now use the broker marketplace.' : 'Rejected. They can see your reason.');
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A-05: approve or reject one manager's National ID (managers added after their business was approved). */
+export async function decideIdentity(form: FormData) {
+  const id = text(form, 'id');
+  const decision = text(form, 'decision') === 'approve' ? 'approve' : 'reject';
+  const reason = text(form, 'reason');
+  if (!UUID_RE.test(id)) back('/admin/identity', 'No such check.', false);
+  if (reason.length < 3) back('/admin/identity', 'Write a reason (at least 3 characters).', false);
+  try {
+    await api(`/admin/identity-checks/${id}/decision`, { method: 'POST', auth: true, body: { decision, reason } });
+  } catch (err) { back('/admin/identity', failure(err), false); }
+  back('/admin/identity', decision === 'approve' ? 'ID approved. They get an SMS.' : 'Rejected. They see your reason and can send it again.');
+}
+
+/** A-06: send an announcement to everyone or one group. */
+export async function sendAnnouncement(form: FormData) {
+  const body = { audience: text(form, 'audience'), title: text(form, 'title'), body: text(form, 'body') };
+  if (body.title.length < 3 || body.body.length < 3) back('/admin/announcements', 'Write a title and a message.', false);
+  try { await api('/admin/announcements', { method: 'POST', auth: true, body }); }
+  catch (err) { back('/admin/announcements', failure(err), false); }
+  back('/admin/announcements', 'Announcement sent. It shows under the bell.');
+}
+
+export async function withdrawAnnouncement(form: FormData) {
+  const id = text(form, 'id');
+  if (!UUID_RE.test(id)) back('/admin/announcements', 'No such announcement.', false);
+  try { await api(`/admin/announcements/${id}/withdraw`, { method: 'POST', auth: true }); }
+  catch (err) { back('/admin/announcements', failure(err), false); }
+  back('/admin/announcements', 'Withdrawn. People no longer see it.');
+}
+
+/** A-07: write a new help answer, or change one (its words, who it is for, or draft / published / hidden). */
+export async function saveFaq(form: FormData) {
+  const id = text(form, 'id');
+  const fields = { audience: text(form, 'audience'), topic: text(form, 'topic'), question: text(form, 'question'), answer: text(form, 'answer'),
+    status: text(form, 'status') || 'draft', position: Number(text(form, 'position') || '100') };
+  const only = text(form, 'only');
+  const body = only === 'status' ? { status: fields.status } : fields;
+  try {
+    if (id && UUID_RE.test(id)) await api(`/admin/faqs/${id}`, { method: 'PATCH', auth: true, body });
+    else await api('/admin/faqs', { method: 'POST', auth: true, body });
+  } catch (err) { back('/admin/faqs', failure(err), false); }
+  back('/admin/faqs', id ? 'Saved. The change is kept in its history.' : 'Added.');
+}

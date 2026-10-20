@@ -639,6 +639,156 @@ paths:
         '409': { description: already_in_stock }
         '422': { description: listing_rejected }
 
+  /me/identity:
+    get:
+      tags: [Account]
+      operationId: getMyIdentityCheck
+      summary: My latest National ID check (A-05), or null
+      responses:
+        '200': { description: "{ check: { checkId, status: pending|approved|rejected, decisionReason, decidedAt, createdAt } | null }" }
+    post:
+      tags: [Account]
+      operationId: sendMyIdentity
+      summary: "A business manager sends their National ID number (14 characters, CM or CF) and a photo of their ID (their own official_document upload). A business is approved only once every active manager has sent one; approving the business approves it."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [nin, idPhotoEvidenceId], properties: { nin: { type: string }, idPhotoEvidenceId: { type: string, format: uuid } } }
+      responses:
+        '201': { description: IdentityCheck }
+        '409': { description: already_sent / nin_in_use }
+        '422': { description: id_photo_invalid }
+  /admin/identity-checks:
+    get:
+      tags: [Admin]
+      operationId: adminListIdentityChecks
+      summary: "Managers' National ID checks with the decrypted number, photo and businesses (identity.approve)"
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [pending, approved, rejected] } }
+      responses:
+        '200': { description: "{ items: IdentityCheckForStaff[] }" }
+  /admin/identity-checks/{checkId}/decision:
+    post:
+      tags: [Admin]
+      operationId: adminDecideIdentityCheck
+      summary: Approve or reject one check with a reason (sent to the person by SMS)
+      parameters:
+        - { name: checkId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [decision, reason], properties: { decision: { type: string, enum: [approve, reject] }, reason: { type: string } } }
+      responses:
+        '200': { description: IdentityCheck }
+        '409': { description: already_decided }
+  /admin/organisations/{organisationId}/managers:
+    get:
+      tags: [Admin]
+      operationId: adminOrganisationManagers
+      summary: "Each active manager and their identity check: missing, pending (with NIN and photo) or approved"
+      parameters:
+        - { name: organisationId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: "{ items: [{ userId, name, identity, checkId?, nin?, idPhotoEvidenceId? }] }" }
+  /me/announcements:
+    get:
+      tags: [Account]
+      operationId: myAnnouncements
+      summary: "The bell (A-06): live announcements for my groups, newest first, and how many are unread"
+      responses:
+        '200': { description: "{ unread, items: [{ id, title, body, createdAt, read }] }" }
+  /me/announcements/read:
+    post:
+      tags: [Account]
+      operationId: markAnnouncementsRead
+      summary: Mark announcements as read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ids], properties: { ids: { type: array, maxItems: 50, items: { type: string, format: uuid } } } }
+      responses:
+        '204': { description: Marked }
+  /help/faqs:
+    get:
+      tags: [Account]
+      operationId: helpFaqs
+      summary: "Help (A-07): published questions for everyone, plus those for my groups when signed in"
+      security: []
+      responses:
+        '200': { description: "{ items: [{ id, topic, question, answer }] }" }
+  /admin/announcements:
+    get:
+      tags: [Admin]
+      operationId: adminListAnnouncements
+      summary: Every announcement with how many have read it (announcement.manage)
+      responses:
+        '200': { description: "{ items: Announcement[] }" }
+    post:
+      tags: [Admin]
+      operationId: adminSendAnnouncement
+      summary: "Send to everyone, buyers, garages, dealers, inspectors, partners, brokers or SAZO staff"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [audience, title, body], properties: { audience: { type: string }, title: { type: string, maxLength: 120 }, body: { type: string, maxLength: 2000 } } }
+      responses:
+        '201': { description: Announcement }
+  /admin/announcements/{announcementId}/withdraw:
+    post:
+      tags: [Admin]
+      operationId: adminWithdrawAnnouncement
+      summary: Withdraw an announcement (never edited)
+      parameters:
+        - { name: announcementId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Withdrawn }
+        '409': { description: already_withdrawn }
+  /admin/faqs:
+    get:
+      tags: [Admin]
+      operationId: adminListFaqs
+      summary: All help questions, drafts included (faq.manage)
+      responses:
+        '200': { description: "{ items: Faq[] }" }
+    post:
+      tags: [Admin]
+      operationId: adminCreateFaq
+      summary: Add a question (draft, published or hidden) for one group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [audience, topic, question, answer], properties: { audience: { type: string }, topic: { type: string }, question: { type: string }, answer: { type: string }, status: { type: string, enum: [draft, published, hidden] }, position: { type: integer } } }
+      responses:
+        '201': { description: Faq }
+  /admin/faqs/{faqId}:
+    patch:
+      tags: [Admin]
+      operationId: adminUpdateFaq
+      summary: Change any fields; the change is kept with before and after
+      parameters:
+        - { name: faqId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Faq }
+  /admin/faqs/{faqId}/changes:
+    get:
+      tags: [Admin]
+      operationId: adminFaqChanges
+      summary: Every change to one question, newest first
+      parameters:
+        - { name: faqId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: "{ items: [{ changedBy, changedAt, before, after }] }" }
+
   /dealer/imports:
     post:
       tags: [Dealer]

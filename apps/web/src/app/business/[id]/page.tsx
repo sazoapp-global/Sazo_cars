@@ -4,9 +4,11 @@ import { notFound, redirect } from 'next/navigation';
 import { Icon, type IconName } from '@/components/icon';
 import { api, isSignedIn } from '@/lib/api';
 import type { MyOrganisation } from '@/lib/types';
-import { sendDocuments } from '../actions';
+import { sendDocuments, sendIdentity } from '../actions';
 
 export const metadata: Metadata = { title: 'Your business' };
+
+interface IdentityCheck { status: 'pending' | 'approved' | 'rejected'; decisionReason: string | null }
 
 /** Businesses that work in the SAZO phone app (garages, inspectors). */
 const WORKSHOP = ['garage', 'inspector', 'inspection_centre'];
@@ -16,7 +18,11 @@ export default async function BusinessStatus({ params, searchParams }: { params:
   const { id } = await params;
   const sp = await searchParams;
   if (!(await isSignedIn())) redirect(`/sign-in?next=/business/${id}`);
-  const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
+  const [orgs, identity] = await Promise.all([
+    api<MyOrganisation[]>('/me/organisations', { auth: true }),
+    api<{ check: IdentityCheck | null }>('/me/identity', { auth: true }).then((r) => r.check).catch(() => null),
+  ]);
+  const org = orgs.find((o) => o.id === id);
   if (!org) notFound();
   const name = org.tradingName ?? org.legalName;
   const pending = org.status === 'pending_verification';
@@ -27,7 +33,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
   ];
   return (
     <div className="mx-auto max-w-2xl space-y-5 px-4 py-8 md:px-8">
-      {sp.new && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{name} is registered. Next: send your documents.</p>}
+      {sp.new && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{name} is registered. Next: send your documents and your National ID.</p>}
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
       <h1 className="font-display text-2xl font-bold">{name}</h1>
@@ -56,6 +62,32 @@ export default async function BusinessStatus({ params, searchParams }: { params:
             <input id="documents" name="documents" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" />
             <button className="btn btn-primary">Send to SAZO</button>
           </form>
+        </section>
+      )}
+
+      {org.role === 'org_manager' && (
+        <section id="identity" className="card scroll-mt-24 p-4" aria-labelledby="identity-h">
+          <h2 id="identity-h" className="font-display text-lg font-semibold">Your National ID</h2>
+          {identity?.status === 'approved' ? (
+            <p className="mt-1 flex items-center gap-2 font-semibold text-ok-text"><Icon name="verified_user" />Checked by SAZO.</p>
+          ) : identity?.status === 'pending' ? (
+            <p className="mt-1 text-muted">Sent. SAZO checks it {pending ? 'together with your business' : 'soon'}; we&apos;ll send you an SMS.</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted">
+                {identity?.status === 'rejected' ? <>SAZO could not accept your last ID: “{identity.decisionReason}”. Please send it again. </> : null}
+                Every manager sends their National ID number and a clear photo of their ID. SAZO approves {pending ? 'the business' : 'you'} only after checking it. It is stored securely and used only to confirm who you are.
+              </p>
+              <form action={sendIdentity} className="mt-3 grid gap-3 sm:grid-cols-2">
+                <input type="hidden" name="id" value={org.id} />
+                <div><label htmlFor="nin" className="label">National ID number (NIN)</label>
+                  <input id="nin" name="nin" required className="field sazo-id" autoCapitalize="characters" autoComplete="off" maxLength={20} placeholder="CM90001234ABCD" /></div>
+                <div><label htmlFor="idPhoto" className="label">Photo of your National ID</label>
+                  <input id="idPhoto" name="idPhoto" type="file" required accept="image/jpeg,image/png,image/webp" capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+                <div className="sm:col-span-2"><button className="btn btn-primary"><Icon name="badge" />Send my ID</button></div>
+              </form>
+            </>
+          )}
         </section>
       )}
 
