@@ -76,3 +76,22 @@ test('add a car SAZO does not know: it shows as not yet confirmed', async ({ pag
   await expect(page).toHaveURL(/\/v\/SZV-/);
   await expect(page.getByText('Not yet confirmed by an official record', { exact: true })).toBeVisible();
 });
+
+test('I-07: book an inspection from a report, then cancel it', async ({ page }) => {
+  await signIn(page, `+2567092${stamp}`, { name: 'Ivan Booker' });
+  await page.goto('/check?q=UBJ214K');
+  await page.getByRole('link', { name: 'Book an inspection' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Book an inspection' })).toBeVisible();
+  await expect(page.getByLabel('Number plate *')).toHaveValue('UBJ 214K');
+  await a11y(page);
+  await page.getByLabel('Where is the car?').fill('Ntinda, near the stage');
+  await page.getByRole('button', { name: 'Send request' }).click();
+  await expect(page.getByRole('status')).toContainText('Request sent');
+  const booking = page.locator('li', { hasText: 'UBJ 214K' }).first();
+  await expect(booking).toContainText('Waiting for the inspector');
+  await expect(booking).toContainText('Ntinda, near the stage');
+  await a11y(page);
+  await shot(page, 'buyer-inspections');
+  await booking.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('li', { hasText: 'UBJ 214K' }).first()).toContainText('Cancelled');
+});

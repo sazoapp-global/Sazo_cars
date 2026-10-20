@@ -8,6 +8,7 @@ import { go, useOnline } from '../lib/route';
 import { syncAll } from '../lib/sync';
 import type { Garage, Me, ServerInspection } from '../lib/types';
 import { uuidv7 } from '../lib/uuid';
+import { BookingRequests } from './booking-requests';
 
 export const RESULT = (passed: boolean | undefined) => (passed === undefined ? undefined : passed
   ? { text: 'Passed', cls: 'text-ok-text bg-ok-fill border-ok-line', icon: 'check_circle' as const }
@@ -36,9 +37,9 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => { if (online) void syncAll(workplace.id).then(refresh); }, [online, workplace.id, refresh]);
 
-  async function start() {
+  async function start(plate = '') {
     const id = uuidv7();
-    await saveInspection({ id, orgId: workplace.id, plateEntered: '', form: {}, photos: {}, clientCreatedAt: new Date().toISOString(), dirty: false, updatedAt: '', step: 0 });
+    await saveInspection({ id, orgId: workplace.id, plateEntered: plate, form: {}, photos: {}, clientCreatedAt: new Date().toISOString(), dirty: false, updatedAt: '', step: 0 });
     go({ name: 'inspection', id });
   }
 
@@ -48,6 +49,7 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
   return (
     <div className="space-y-6 p-4 pb-10">
       <button type="button" className="btn btn-focal w-full !min-h-16 text-lg" onClick={() => void start()}><Icon name="add" size={24} />New inspection</button>
+      {online && <BookingRequests workplace={workplace} onStart={(plate) => void start(plate)} />}
 
       {local.length > 0 && (
         <section aria-labelledby="on-phone">

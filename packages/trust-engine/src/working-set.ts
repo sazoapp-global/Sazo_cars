@@ -33,10 +33,12 @@ export function buildWorkingSet(input: VehicleInput, ctx: EngineContext): Workin
   }
   // A relation only exists once the observation that makes it has been recorded (as-of, G4).
   const known = new Set(all.map((o) => o.id));
-  for (const r of (input.relations ?? []).filter((x) => known.has(x.from))) {
+  // A withdrawal by the sender has no record of its own and exists from the time it was made (P-05).
+  const exists = (x: { from: string | null; at?: string }) => (x.from ? known.has(x.from) : !!x.at && Date.parse(x.at) <= Date.parse(ctx.asOf));
+  for (const r of (input.relations ?? []).filter(exists)) {
     if (r.kind === 'retracts') exclusions.set(r.to, 'retracted');
     if (r.kind === 'corrects') exclusions.set(r.to, 'corrected');
-    if (r.kind === 'duplicates') exclusions.set(r.from, 'duplicate');
+    if (r.kind === 'duplicates' && r.from) exclusions.set(r.from, 'duplicate');
   }
   // C10: automatic duplicate detection — same source, type, attributes, within 1 day.
   for (let i = 0; i < all.length; i++) {

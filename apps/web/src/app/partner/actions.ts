@@ -5,7 +5,7 @@ import { ApiError, api } from '@/lib/api';
 import { csvRecords } from '@/lib/csv';
 import type { Submission } from '@/lib/types';
 
-interface Item { identifiers: { vin?: string; chassisNumber?: string; plate?: string }; records: { type: string; attributes: Record<string, unknown>; time: { at: string; precision: 'day' } }[] }
+interface Item { identifiers: { vin?: string; chassisNumber?: string; plate?: string }; records: { type: string; attributes: Record<string, unknown>; time: { at: string; precision: 'day' }; correctsObservationId?: string }[] }
 
 /** A stable UUID from content, so re-sending the same file (or batch) can't create duplicates (X5). */
 function keyFrom(text: string): string {
@@ -26,7 +26,8 @@ function itemFrom(v: Record<string, string>, domain: string): { item?: Item; err
   const built = buildAttributes(v.record_type ?? '', v);
   if (!built.ok) errors.push(...built.errors.map((e) => e.message));
   if (errors.length || !built.ok) return { errors };
-  return { item: { identifiers, records: [{ type: v.record_type!, attributes: built.attributes, time: { at: `${v.date}T09:00:00.000Z`, precision: 'day' } }] }, errors };
+  const corrects = /^[0-9a-f-]{36}$/i.test(v.corrects ?? '') ? { correctsObservationId: v.corrects } : {};
+  return { item: { identifiers, records: [{ type: v.record_type!, attributes: built.attributes, time: { at: `${v.date}T09:00:00.000Z`, precision: 'day' }, ...corrects }] }, errors };
 }
 
 export type EntryState = { values?: Record<string, string>; errors?: string[]; result?: Submission };
@@ -94,4 +95,20 @@ export async function uploadCsv(_prev: UploadState, form: FormData): Promise<Upl
     return { fileName: file.name, total: records.length, rows: rows.sort((a, b) => a.row - b.row), submissionIds, error: err instanceof ApiError && err.status === 403 ? 'You cannot send records for this source.' : 'Sending stopped part-way. Upload the same file again: rows already received will not be duplicated.' };
   }
   return { fileName: file.name, total: records.length, rows: rows.sort((a, b) => a.row - b.row), submissionIds };
+}
+
+export type WithdrawState = { error?: string; done?: boolean };
+
+/** P-05: withdraw a record sent by mistake. It stays in the history, marked withdrawn, and no longer counts. */
+export async function withdrawRecord(_prev: WithdrawState, form: FormData): Promise<WithdrawState> {
+  const source = String(form.get('source') ?? '');
+  const id = String(form.get('observationId') ?? '');
+  const reason = String(form.get('reason') ?? '').trim();
+  if (reason.length < 5) return { error: 'Say why, in at least 5 characters.' };
+  try {
+    await api(`/ingest/sources/${encodeURIComponent(source)}/records/${encodeURIComponent(id)}/withdraw`, { method: 'POST', auth: true, body: { reason } });
+    return { done: true };
+  } catch (err) {
+    return { error: err instanceof ApiError ? (err.detail ?? err.code) : 'Could not withdraw. Try again.' };
+  }
 }

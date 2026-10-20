@@ -117,6 +117,15 @@ export class VehicleRegistry {
     return out;
   }
 
+  /** A car's active VIN or chassis number and current plate, to send a correction for the same car (P-05). */
+  async presentableIdentifiers(vehicleId: string): Promise<{ vin?: string; chassisNumber?: string; plate?: string }> {
+    const idents = (await this.repo.identifiers(vehicleId)).filter((i) => i.status === 'active');
+    const vin = idents.find((i) => i.type === 'vin')?.valueRaw;
+    const chassisNumber = idents.find((i) => i.type === 'chassis_number')?.valueRaw;
+    const plate = await this.repo.currentPlate(vehicleId);
+    return { ...(vin ? { vin } : {}), ...(chassisNumber ? { chassisNumber } : {}), ...(plate ? { plate } : {}) };
+  }
+
   idForRef(ref: string): Promise<string | undefined> {
     return this.repo.idForRef(ref);
   }

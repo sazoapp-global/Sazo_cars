@@ -10,13 +10,17 @@ const STATUS: Record<string, { text: string; cls: string }> = {
   rejected: { text: 'Not accepted', cls: 'border-bad-line bg-bad-fill text-bad-text' },
 };
 
-export function EntryForm({ source, domain, types, fields, idempotencyKey }: {
-  source: string; domain: string; types: string[]; fields: Record<string, FieldSpec[]>; idempotencyKey: string;
+/** P-05: correcting a record already sent. The new record replaces it; the old one stays in the history. */
+export interface Correction { observationId: string; type: string; identifiers: { vin?: string; chassisNumber?: string; plate?: string }; values: Record<string, string> }
+
+export function EntryForm({ source, domain, types, fields, idempotencyKey, correction }: {
+  source: string; domain: string; types: string[]; fields: Record<string, FieldSpec[]>; idempotencyKey: string; correction?: Correction;
 }) {
   const [state, action, pending] = useActionState<EntryState, FormData>(submitRecord, {});
-  const [type, setType] = useState(state.values?.record_type ?? types[0]!);
-  const v = state.values ?? {};
+  const [type, setType] = useState(state.values?.record_type ?? correction?.type ?? types[0]!);
+  const v = state.values ?? correction?.values ?? {};
   const item = state.result?.items[0];
+  const ids = correction?.identifiers;
 
   if (item) {
     const s = STATUS[item.status] ?? STATUS.needs_review!;
@@ -27,7 +31,8 @@ export function EntryForm({ source, domain, types, fields, idempotencyKey }: {
           {item.errors.map((e) => <p key={e.path} className="text-sm text-on-surface">{e.message}</p>)}
           {item.vehicleRef && <p className="mt-1 text-sm text-on-surface">Vehicle <Link className="link sazo-id" href={`/v/${item.vehicleRef}`}>{item.vehicleRef}</Link></p>}
         </div>
-        <a href={`/partner/${source}`} className="btn btn-primary">Enter another record</a>
+        {correction && item.status === 'accepted' && <p className="text-sm">The earlier record is kept in the car&apos;s history, marked corrected, and no longer counts.</p>}
+        <a href={correction ? `/partner/${source}?tab=records` : `/partner/${source}`} className="btn btn-primary">{correction ? 'Back to records sent' : 'Enter another record'}</a>
       </div>
     );
   }
@@ -37,6 +42,17 @@ export function EntryForm({ source, domain, types, fields, idempotencyKey }: {
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="domain" value={domain} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+      {correction && <input type="hidden" name="corrects" value={correction.observationId} />}
+      {ids ? (
+        <div className="card space-y-1 p-4">
+          <p className="font-semibold">Correcting a record for this car</p>
+          <p className="text-sm text-muted">Change what was wrong and send. The earlier record is never edited: it stays in the history, marked corrected.</p>
+          <p className="sazo-id text-sm">{[ids.plate, ids.chassisNumber, ids.vin].filter(Boolean).join(' · ')}</p>
+          {ids.vin && <input type="hidden" name="vin" value={ids.vin} />}
+          {ids.chassisNumber && <input type="hidden" name="chassis_number" value={ids.chassisNumber} />}
+          {ids.plate && <input type="hidden" name="plate" value={ids.plate} />}
+        </div>
+      ) : (
       <fieldset className="card space-y-3 p-4">
         <legend className="px-1 font-semibold">Which vehicle? (at least one)</legend>
         <div className="grid gap-3 md:grid-cols-3">
@@ -45,6 +61,7 @@ export function EntryForm({ source, domain, types, fields, idempotencyKey }: {
           <div><label htmlFor="plate" className="label">Number plate</label><input id="plate" name="plate" defaultValue={v.plate} className="field sazo-id" autoComplete="off" /></div>
         </div>
       </fieldset>
+      )}
       <fieldset className="card space-y-3 p-4">
         <legend className="px-1 font-semibold">The record</legend>
         <div className="grid gap-3 md:grid-cols-2">
@@ -74,7 +91,7 @@ export function EntryForm({ source, domain, types, fields, idempotencyKey }: {
         </div>
       </fieldset>
       {state.errors && <ul role="alert" className="list-disc rounded-lg border border-bad-line bg-bad-fill p-3 pl-8 text-sm font-semibold text-bad-text">{state.errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-      <button className="btn btn-primary" disabled={pending}>{pending ? 'Sending…' : 'Send record'}</button>
+      <button className="btn btn-primary" disabled={pending}>{pending ? 'Sending…' : correction ? 'Send correction' : 'Send record'}</button>
     </form>
   );
 }

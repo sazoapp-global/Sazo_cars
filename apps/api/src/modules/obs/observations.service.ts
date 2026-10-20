@@ -14,6 +14,8 @@ export interface RecordInput {
   attributes: Record<string, unknown>;
   time: { at: string | null; precision: 'exact' | 'day' | 'month' | 'year' | 'unknown' };
   evidenceIds?: string[];
+  /** P-05: this record corrects an earlier one from the same source (same type, same car, still active). */
+  correctsObservationId?: string;
 }
 
 export interface StoredObservation {
@@ -207,14 +209,49 @@ export class ObservationsService implements OnModuleInit {
     return rows.map((r) => r.vehicle_id);
   }
 
-  async relationsFor(vehicleIds: string[]): Promise<{ from: string; to: string; kind: 'corrects' | 'retracts' | 'duplicates' | 'corroborates' }[]> {
-    const { rows } = await this.pool.query(
-      `SELECT r.from_observation_id AS "from", r.to_observation_id AS "to", r.kind
+  async relationsFor(vehicleIds: string[]): Promise<{ from: string | null; to: string; kind: 'corrects' | 'retracts' | 'duplicates' | 'corroborates'; at: string }[]> {
+    const { rows } = await this.pool.query<{ from: string | null; to: string; kind: 'corrects' | 'retracts' | 'duplicates' | 'corroborates'; at: Date }>(
+      `SELECT r.from_observation_id AS "from", r.to_observation_id AS "to", r.kind, r.created_at AS at
          FROM obs.observation_relations r JOIN obs.observations o ON o.id = r.to_observation_id
         WHERE o.vehicle_id = ANY($1)`,
       [vehicleIds],
     );
-    return rows;
+    return rows.map((r) => ({ ...r, at: new Date(r.at).toISOString() }));
+  }
+
+  /**
+   * P-05: one source's recent records with their state (active, corrected or withdrawn). Newest first.
+   * `vehicleId` is internal; callers map it to the public reference.
+   */
+  async recordsOfSource(sourceId: string, limit: number): Promise<{ id: string; vehicleId: string; type: string; attributes: Record<string, unknown>;
+    eventTime: string | null; precision: string; recordedAt: string; state: 'active' | 'corrected' | 'withdrawn'; correctedBy: string | null; corrects: string | null; withdrawReason: string | null }[]> {
+    const { rows } = await this.pool.query<{ id: string; vehicle_id: string; type: string; attributes: Record<string, unknown>; event_time: Date | null; precision: string;
+      recorded_at: Date; corrected_by: string | null; corrects: string | null; withdrawn: boolean; withdraw_reason: string | null }>(
+      `SELECT o.id, o.vehicle_id, o.type, o.attributes, o.event_time, o.event_time_precision AS precision, o.recorded_at,
+              (SELECT r.from_observation_id FROM obs.observation_relations r WHERE r.to_observation_id = o.id AND r.kind = 'corrects' ORDER BY r.created_at DESC LIMIT 1) AS corrected_by,
+              (SELECT r.to_observation_id FROM obs.observation_relations r WHERE r.from_observation_id = o.id AND r.kind = 'corrects' LIMIT 1) AS corrects,
+              EXISTS (SELECT 1 FROM obs.observation_relations r WHERE r.to_observation_id = o.id AND r.kind = 'retracts') AS withdrawn,
+              (SELECT r.reason FROM obs.observation_relations r WHERE r.to_observation_id = o.id AND r.kind = 'retracts' ORDER BY r.created_at DESC LIMIT 1) AS withdraw_reason
+         FROM obs.observations o
+        WHERE o.source_id = $1
+        ORDER BY o.recorded_at DESC, o.id
+        LIMIT $2`, [sourceId, limit]);
+    return rows.map((r) => ({
+      id: r.id, vehicleId: r.vehicle_id, type: r.type, attributes: r.attributes, eventTime: r.event_time ? new Date(r.event_time).toISOString() : null,
+      precision: r.precision, recordedAt: new Date(r.recorded_at).toISOString(),
+      state: r.withdrawn ? 'withdrawn' : r.corrected_by ? 'corrected' : 'active', correctedBy: r.corrected_by, corrects: r.corrects, withdrawReason: r.withdraw_reason,
+    }));
+  }
+
+  /** One record's owner and state, for checking a correction or withdrawal (P-05). */
+  async recordState(id: string, sql: Sql = this.pool, lock = false): Promise<{ id: string; vehicleId: string; sourceId: string; type: string; state: 'active' | 'corrected' | 'withdrawn' } | undefined> {
+    const { rows } = await sql.query<{ id: string; vehicle_id: string; source_id: string; type: string; corrected: boolean; withdrawn: boolean }>(
+      `SELECT o.id, o.vehicle_id, o.source_id, o.type,
+              EXISTS (SELECT 1 FROM obs.observation_relations r WHERE r.to_observation_id = o.id AND r.kind = 'corrects') AS corrected,
+              EXISTS (SELECT 1 FROM obs.observation_relations r WHERE r.to_observation_id = o.id AND r.kind = 'retracts') AS withdrawn
+         FROM obs.observations o WHERE o.id = $1${lock ? ' FOR UPDATE' : ''}`, [id]);
+    const r = rows[0];
+    return r && { id: r.id, vehicleId: r.vehicle_id, sourceId: r.source_id, type: r.type, state: r.withdrawn ? 'withdrawn' : r.corrected ? 'corrected' : 'active' };
   }
 
   async attestationsFor(vehicleIds: string[]): Promise<{ eventId?: string; observationId?: string; attesterKind: 'registered_owner' | 'customer' | 'inspector' | 'organisation'; response: 'confirmed' | 'disputed' | 'no_response' }[]> {
@@ -242,7 +279,7 @@ export class ObservationsService implements OnModuleInit {
     return new Map(rows.map((r) => [r.sourceId, { confirmed: r.confirmed, disputed: r.disputed }]));
   }
 
-  async addRelation(emit: Emit, tx: Sql, rel: { from: string; to: string; kind: 'corrects' | 'retracts' | 'duplicates' | 'corroborates'; reason?: string; byUserId?: string | null }): Promise<void> {
+  async addRelation(emit: Emit, tx: Sql, rel: { from: string | null; to: string; kind: 'corrects' | 'retracts' | 'duplicates' | 'corroborates'; reason?: string; byUserId?: string | null }): Promise<void> {
     const { rows } = await tx.query<{ vehicle_id: string }>('SELECT vehicle_id FROM obs.observations WHERE id = $1', [rel.to]);
     if (!rows[0]) throw new Error('observation not found');
     await tx.query(

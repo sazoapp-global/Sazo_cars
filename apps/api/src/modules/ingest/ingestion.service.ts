@@ -46,6 +46,19 @@ export class IngestionError extends Error {
   }
 }
 
+export class RecordChangeError extends Error {
+  constructor(readonly code: 'record_not_found' | 'record_not_active', message: string) {
+    super(message);
+  }
+}
+
+/** Thrown inside the item transaction so nothing is stored when a correction does not fit (P-05). */
+class CorrectionRefused extends Error {
+  constructor(readonly error: { path: string; code: string; message: string }) {
+    super(error.message);
+  }
+}
+
 /** Channels where evidence rules (D-057) are enforced at intake. */
 const CAPTURE_CHANNELS = new Set(['garage_app', 'inspector_app']);
 
@@ -89,6 +102,29 @@ export class IngestionService {
   }
 
   /** Recent submissions for a source, newest first, with how their items fared. */
+  /** P-05: a source's recent records with their state, cars by public reference. */
+  async recordsOfSource(sourceId: string, limit: number) {
+    const rows = await this.observations.recordsOfSource(sourceId, limit);
+    const cars = new Map<string, { ref: string | null; identifiers: { vin?: string; chassisNumber?: string; plate?: string } }>();
+    for (const v of new Set(rows.map((r) => r.vehicleId))) {
+      cars.set(v, { ref: (await this.registry.getVehicle(v))?.publicRef ?? null, identifiers: await this.registry.presentableIdentifiers(v) });
+    }
+    return rows.map(({ vehicleId, ...r }) => ({ ...r, vehicleRef: cars.get(vehicleId)!.ref, identifiers: cars.get(vehicleId)!.identifiers }));
+  }
+
+  /**
+   * P-05: the sender withdraws a record it sent, with a reason. Nothing is edited or deleted: a "retracts"
+   * relation is added, the record stays in the history marked withdrawn, and the car's scores are worked out again.
+   */
+  async withdraw(source: SourceRow, observationId: string, reason: string, userId: string): Promise<void> {
+    await this.bus.transaction(async (tx, emit) => {
+      const old = await this.observations.recordState(observationId, tx, true);
+      if (!old || old.sourceId !== source.id) throw new RecordChangeError('record_not_found', 'No such record from this source');
+      if (old.state !== 'active') throw new RecordChangeError('record_not_active', `That record was already ${old.state}`);
+      await this.observations.addRelation(emit, tx, { from: null, to: old.id, kind: 'retracts', reason, byUserId: userId });
+    });
+  }
+
   async recentSubmissions(sourceId: string, limit: number) {
     const { rows } = await this.pool.query(
       `SELECT s.id AS "submissionId", s.status, s.received_at AS "receivedAt",
@@ -185,6 +221,15 @@ export class IngestionService {
     }
     if (!records.length && !errors.length) errors.push({ path: 'records', code: 'no_records', message: 'item has no records' });
 
+    // P-05: a correction must point at an active record this source sent, of the same type.
+    for (const [ri, r] of records.entries()) {
+      if (!r.correctsObservationId) continue;
+      const old = await this.observations.recordState(r.correctsObservationId);
+      if (!old || old.sourceId !== source.id) errors.push({ path: `records[${ri}].correctsObservationId`, code: 'record_not_found', message: 'no such record from this source' });
+      else if (old.type !== r.type) errors.push({ path: `records[${ri}].correctsObservationId`, code: 'correction_type_mismatch', message: `a correction must be the same kind of record (${old.type})` });
+      else if (old.state !== 'active') errors.push({ path: `records[${ri}].correctsObservationId`, code: 'record_not_active', message: `that record was already ${old.state}` });
+    }
+
     // 2. Required evidence on capture channels (D-057).
     if (!errors.length && CAPTURE_CHANNELS.has(source.channel) && !opts.legacyImport) {
       const kinds = await this.observations.evidenceKinds(records.flatMap((r) => r.evidenceIds ?? []));
@@ -204,6 +249,17 @@ export class IngestionService {
 
     // 3. Resolve the vehicle and store observations atomically; events are delivered after commit.
     const firstTime = records.map((r) => r.time.at).filter(Boolean).sort()[0] ?? null;
+    try {
+      return await this.storeItem(source, submissionId, itemId, item, records, opts, firstTime, forced);
+    } catch (err) {
+      if (!(err instanceof CorrectionRefused)) throw err;
+      await this.pool.query(`UPDATE ingest.submission_items SET status = 'rejected', errors = $2 WHERE id = $1`, [itemId, JSON.stringify([err.error])]);
+      return [];
+    }
+  }
+
+  private storeItem(source: SourceRow, submissionId: string, itemId: string, item: SubmissionItemInput, records: RecordInput[],
+    opts: { userId?: string | null; organisationId?: string | null }, firstTime: string | null, forced?: Resolution): Promise<string[]> {
     return this.bus.transaction(async (tx, emit): Promise<string[]> => {
       const resolution = forced ?? (await this.registry.resolve(tx, item.identifiers, {
         submissionItemId: itemId, submissionId, eventTime: firstTime,
@@ -223,6 +279,15 @@ export class IngestionService {
         vehicleId, sourceId: source.id, sourceDomain: source.domain, evidenceClass: source.evidenceClass, submissionId,
         submissionItemId: itemId, records, enteredByUserId: opts.userId, actingForOrganisationId: opts.organisationId,
       });
+      // P-05: link each correction to the record it replaces. The old record is never edited (D-020).
+      for (const [i, r] of records.entries()) {
+        if (!r.correctsObservationId) continue;
+        const old = await this.observations.recordState(r.correctsObservationId, tx);
+        if (!old || old.vehicleId !== vehicleId || old.state !== 'active') {
+          throw new CorrectionRefused({ path: `records[${i}].correctsObservationId`, code: 'correction_vehicle_mismatch', message: 'a correction must be for the same car as the record it corrects' });
+        }
+        await this.observations.addRelation(emit, tx, { from: observationIds[i]!, to: old.id, kind: 'corrects', reason: 'corrected by the sender', byUserId: opts.userId ?? null });
+      }
       await this.registry.linkProvenance(tx, resolution.newIdentifierIds, observationIds[0]!);
       await this.registry.applyIdentifierRecords(tx, vehicleId, records.map((r, i) => ({
         observationId: observationIds[i]!, type: r.type, attributes: r.attributes, eventTime: r.time.at,

@@ -639,6 +639,93 @@ paths:
         '409': { description: already_in_stock }
         '422': { description: listing_rejected }
 
+  /inspectors:
+    get:
+      tags: [Inspections]
+      operationId: listInspectors
+      summary: "I-07: approved inspectors and inspection centres a buyer can ask to check a car"
+      parameters:
+        - { name: district, in: query, schema: { type: string } }
+      responses:
+        '200': { description: "{ items: [{ organisationId, name, type, district }] }" }
+  /bookings:
+    post:
+      tags: [Inspections]
+      operationId: requestInspectionBooking
+      summary: "I-07: a buyer asks an inspector to check a car on a preferred day (today to 60 days ahead). The inspector's managers get an SMS. Up to 5 requests a day. No money moves through SAZO."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organisationId, plate, preferredDate]
+              properties:
+                organisationId: { type: string, format: uuid }
+                plate: { type: string, minLength: 2, maxLength: 15 }
+                vehicleRef: { type: string }
+                preferredDate: { type: string, format: date }
+                place: { type: string, maxLength: 120 }
+                note: { type: string, maxLength: 500 }
+      responses:
+        '201': { description: "Booking (inspector.phone is shared only once accepted)" }
+        '400': { description: invalid_booking / bad_date }
+        '404': { description: inspector_not_found / vehicle_not_found }
+        '429': { description: limit_reached }
+  /me/bookings:
+    get:
+      tags: [Inspections]
+      operationId: myInspectionBookings
+      summary: "I-07: my booking requests, newest first"
+      responses:
+        '200': { description: "{ items: Booking[] }" }
+  /me/bookings/{bookingId}/cancel:
+    post:
+      tags: [Inspections]
+      operationId: cancelInspectionBooking
+      summary: "I-07: cancel a request that is still open or accepted"
+      parameters:
+        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Booking }
+        '404': { description: booking_not_found }
+        '409': { description: not_allowed_now }
+  /inspection-bookings:
+    get:
+      tags: [Inspections]
+      operationId: listInspectorBookings
+      summary: "I-07: requests to this inspector (X-Organisation-Id), open and upcoming first. The buyer's phone is shown only once accepted."
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [requested, accepted, declined, cancelled, done] } }
+      responses:
+        '200': { description: "{ items: [{ bookingId, plate, preferredDate, place, note, status, scheduledAt, responseNote, buyer: { givenName, phone } }] }" }
+        '403': { description: organisation_not_approved / not_an_inspector }
+  /inspection-bookings/{bookingId}/decision:
+    post:
+      tags: [Inspections]
+      operationId: decideInspectorBooking
+      summary: "I-07: accept with a date and time, decline with a reason, or mark done after the visit. The buyer gets an SMS when accepted or declined."
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: bookingId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [accept, decline, done] }
+                scheduledAt: { type: string, format: date-time, description: Needed to accept }
+                note: { type: string, maxLength: 500, description: Needed to decline }
+      responses:
+        '200': { description: Booking }
+        '400': { description: invalid_decision / bad_date }
+        '404': { description: booking_not_found }
+        '409': { description: not_allowed_now }
+
   /me/identity:
     get:
       tags: [Account]
@@ -1986,6 +2073,37 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
 
+  /ingest/sources/{code}/records:
+    get:
+      tags: [Ingestion]
+      operationId: listSourceRecords
+      summary: "P-05: recent records this source sent, newest first, with their state (active, corrected or withdrawn), the car's public reference and the identifiers to send a correction with"
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 30 } }
+      responses:
+        '200': { description: "{ items: [{ id, type, attributes, eventTime, precision, recordedAt, state, correctedBy, corrects, withdrawReason, vehicleRef, identifiers }] }" }
+        '404': { description: source_not_found }
+  /ingest/sources/{code}/records/{observationId}/withdraw:
+    post:
+      tags: [Ingestion]
+      operationId: withdrawSourceRecord
+      summary: "P-05: withdraw a record sent by mistake, with a reason. Nothing is deleted: the record stays in the history, marked withdrawn, and no longer counts. To fix a detail, send a correction instead (correctsObservationId)."
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string } }
+        - { name: observationId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [reason], properties: { reason: { type: string, minLength: 5, maxLength: 300 } } }
+      responses:
+        '200': { description: "{ observationId, state: withdrawn }" }
+        '400': { description: invalid_reason }
+        '403': { description: organisation_not_approved }
+        '404': { description: source_not_found / record_not_found }
+        '409': { description: record_not_active }
+
   /ingest/submissions/{submissionId}:
     get:
       tags: [Ingestion]
@@ -3129,6 +3247,7 @@ components:
                     time: { $ref: '#/components/schemas/FuzzyTime' }
                     evidenceIds: { type: array, items: { type: string, format: uuid } }
                     sourceRecordId: { type: string, description: "The partner's own id, for traceability" }
+                    correctsObservationId: { type: string, format: uuid, description: "P-05: this record corrects an earlier active record from the same source, of the same type and for the same car. The old record is never edited: it stays in the history, marked corrected, and no longer counts. Item errors: record_not_found, correction_type_mismatch, record_not_active, correction_vehicle_mismatch." }
     SubmissionAccepted:
       type: object
       required: [submissionId, status]

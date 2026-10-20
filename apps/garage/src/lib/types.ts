@@ -68,3 +68,10 @@ export interface ServerInspection {
 }
 export interface InspectionWarning { code: string; severity: 'attention' | 'serious'; message: string; blocking: boolean }
 export interface InspectionSubmitResult { inspectionId: string; submissionId: string; status: 'submitted' | 'accepted' | 'rejected'; vehicleRef?: string; rejectionReason?: string }
+
+/** I-07: a buyer asked this inspector to check a car. */
+export interface InspectionBooking {
+  bookingId: string; plate: string; preferredDate: string; place: string | null; note: string | null;
+  status: 'requested' | 'accepted' | 'declined' | 'cancelled' | 'done'; scheduledAt: string | null; responseNote: string | null;
+  createdAt: string; updatedAt: string; buyer: { givenName: string; phone: string | null };
+}

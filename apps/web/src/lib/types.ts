@@ -128,6 +128,12 @@ export interface MyOrganisation {
 export interface PartnerSource { code: string; name: string; domain: string; channel: string; isSimulated: boolean; evidenceClass: string }
 export interface SubmissionItem { sequence: number; status: 'pending' | 'accepted' | 'rejected' | 'needs_review'; vehicleRef?: string; resolution?: string; errors: { path: string; code: string; message: string }[] }
 export interface Submission { submissionId: string; sourceCode: string; status: string; items: SubmissionItem[] }
+/** P-05: a record a source sent, with its state. */
+export interface PartnerRecord {
+  id: string; type: string; attributes: Record<string, unknown>; eventTime: string | null; precision: string; recordedAt: string;
+  state: 'active' | 'corrected' | 'withdrawn'; correctedBy: string | null; corrects: string | null; withdrawReason: string | null;
+  vehicleRef: string | null; identifiers: { vin?: string; chassisNumber?: string; plate?: string };
+}
 export interface SubmissionSummary { submissionId: string; status: string; receivedAt: string; items: number; accepted: number; rejected: number; needsReview: number }
 
 // ---------- buyer
@@ -177,4 +183,13 @@ export interface ModelCommunity {
 export interface ModerationCase {
   caseId: string; type: 'model_review' | 'creator_link'; model: string; author: string; submittedAt: string; reason: string | null;
   rating?: number; body?: string; verifiedOwner?: boolean; url?: string; platform?: string; title?: string | null;
+}
+
+// ---------- inspection bookings (I-07)
+export type BookingStatus = 'requested' | 'accepted' | 'declined' | 'cancelled' | 'done';
+export interface Inspector { organisationId: string; name: string; type: 'inspector' | 'inspection_centre'; district: string | null }
+export interface Booking {
+  bookingId: string; plate: string; preferredDate: string; place: string | null; note: string | null; status: BookingStatus;
+  scheduledAt: string | null; responseNote: string | null; createdAt: string; updatedAt: string; vehicleRef: string | null;
+  inspector: { organisationId: string; name: string; phone: string | null };
 }

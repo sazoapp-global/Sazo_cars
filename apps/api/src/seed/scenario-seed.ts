@@ -152,7 +152,7 @@ async function seedVehicle(sc: Scenario, deps: {
 
   // Corrections and other relations.
   for (const r of v.relations ?? []) {
-    await deps.bus.transaction((tx, emit) => deps.observations.addRelation(emit, tx, { from: builderToDb.get(r.from)!, to: builderToDb.get(r.to)!, kind: r.kind, reason: 'seed' }));
+    await deps.bus.transaction((tx, emit) => deps.observations.addRelation(emit, tx, { from: r.from ? builderToDb.get(r.from)! : null, to: builderToDb.get(r.to)!, kind: r.kind, reason: 'seed' }));
   }
   // Owner / customer confirmations: builder event keys are "<scenario>-<SOURCE>-<yyyy-mm-dd>".
   for (const a of v.attestations ?? []) {

@@ -58,3 +58,49 @@ test('a CSV file: good rows are added, bad rows explained, re-sending makes no d
   await upload();
   expect(await page.getByRole('link', { name: 'submission 1' }).getAttribute('href')).toBe(firstSubmission);
 });
+
+test('P-05 and P-09: correct a record, withdraw one with a reason, and look up a car', async ({ page }) => {
+  await signIn(page, ADMIN, { next: '/partner' });
+  await page.getByRole('link', { name: /Bank \/ lender/ }).first().click();
+  await page.getByLabel('Number plate').fill('UBJ 214K');
+  await page.getByLabel('Type of record').selectOption('finance_lien_registered');
+  await page.getByLabel('Date it happened').fill('2026-09-01');
+  await page.getByRole('button', { name: 'Send record' }).click();
+  await expect(page.getByRole('status')).toContainText('Received and added to the vehicle');
+
+  // Correct it: a new record replaces it; the old one stays, marked corrected.
+  await page.goto(page.url().split('?')[0]!);
+  await page.getByRole('link', { name: 'Correct or withdraw' }).click();
+  const sent = page.locator('section[aria-labelledby="sent"] li');
+  await expect(sent.first()).toContainText('Finance registered');
+  await expect(sent.first()).toContainText('Counts');
+  await a11y(page);
+  await sent.first().getByRole('link', { name: 'Correct' }).click();
+  await expect(page.getByText('Correcting a record for this car')).toBeVisible();
+  await expect(page.getByLabel('Date it happened')).toHaveValue('2026-09-01');
+  await page.getByLabel('Date it happened').fill('2026-09-02');
+  await page.getByRole('button', { name: 'Send correction' }).click();
+  await expect(page.getByRole('status')).toContainText('Received and added to the vehicle');
+  await expect(page.getByText('marked corrected, and no longer counts')).toBeVisible();
+  await page.getByRole('link', { name: 'Back to records sent' }).click();
+  await expect(sent.first()).toContainText('a correction');
+  await expect(sent.nth(1)).toContainText('Corrected');
+  await shot(page, 'partner-records');
+
+  // Withdraw the correction with a reason.
+  await sent.first().getByRole('link', { name: 'Withdraw' }).click();
+  await page.getByLabel(/Why are you withdrawing it/).fill('Sent for the wrong car');
+  await page.getByRole('button', { name: 'Withdraw record' }).click();
+  await expect(page.getByRole('status')).toContainText('Withdrawn.');
+  await page.getByRole('link', { name: 'Back to records sent' }).click();
+  await expect(sent.first()).toContainText('Withdrawn');
+  await expect(sent.first()).toContainText('Reason: Sent for the wrong car');
+  await expect(sent.first().getByRole('link', { name: 'Correct' })).toHaveCount(0);
+
+  // Look up a car before acting on it.
+  await page.getByRole('link', { name: 'Look up a car' }).click();
+  await page.getByLabel('Plate, VIN or chassis number').fill('UBJ 214K');
+  await page.getByRole('button', { name: 'Look up' }).click();
+  await expect(page.locator('a[href^="/v/SZV-"]').first()).toBeVisible();
+  await a11y(page);
+});

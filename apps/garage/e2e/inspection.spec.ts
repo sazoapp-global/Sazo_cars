@@ -7,6 +7,8 @@ import { API, apiSignIn, createAdmin, sendIdentity, signInInApp, testPhoto } fro
 const stamp = String(Date.now()).slice(-7);
 const ADMIN = `+2567030${stamp}`;
 const MANAGER = `+2567040${stamp}`;
+const BUYER = `+2567041${stamp}`;
+let orgId = '';
 const shot = async (page: Page, name: string) => { if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name}.png`, fullPage: true }); };
 const a11y = async (page: Page) => {
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
@@ -20,6 +22,7 @@ test.beforeAll(async ({ request }) => {
   const managerToken = await apiSignIn(request, MANAGER, 'Denis Inspector');
   const org = await request.post(`${API}/organisations`, { headers: { Authorization: `Bearer ${managerToken}` }, data: { type: 'inspection_centre', legalName: `Bugolobi Inspection ${stamp} Ltd`, tradingName: 'Bugolobi Inspection' } });
   expect(org.ok()).toBeTruthy();
+  orgId = (await org.json()).id;
   await sendIdentity(request, managerToken, `inspection manager ${stamp}`);
   const approved = await request.post(`${API}/admin/organisations/${(await org.json()).id}/decision`, { headers: { Authorization: `Bearer ${adminToken}` }, data: { decision: 'approve', reason: 'E2E check' } });
   expect(approved.ok()).toBeTruthy();
@@ -91,6 +94,44 @@ test('inspect a car and send the checklist', async ({ page }) => {
   await expect(page.getByText('Thick on Bonnet')).toBeVisible();
   await expect(page.getByText('Rear wiper not working')).toBeVisible();
   await shot(page, 'i5-sent');
+
+  // I-06: a printed summary for the customer; the app's menus are left off the paper.
+  await expect(page.getByRole('button', { name: 'Print summary for the customer' })).toBeVisible();
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.getByText('SAZO · Inspection summary')).toBeVisible();
+  await expect(page.getByText(/found on the day of the inspection only/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Print summary for the customer' })).toBeHidden();
+  await expect(page.getByRole('navigation', { name: 'Workspace' })).toBeHidden();
+  await shot(page, 'i6-print');
+  await page.emulateMedia({ media: 'screen' });
+});
+
+test('I-07: a buyer\'s booking request is accepted with a time, then marked done', async ({ page, request }) => {
+  const buyerToken = await apiSignIn(request, BUYER, 'Grace Buyer');
+  const day = new Date(Date.now() + 3 * 3_600_000 + 2 * 86_400_000).toISOString().slice(0, 10);
+  const made = await request.post(`${API}/bookings`, { headers: { Authorization: `Bearer ${buyerToken}` }, data: { organisationId: orgId, plate: 'UBK 703A', preferredDate: day, place: 'Kololo', note: 'Check the gearbox please' } });
+  expect(made.status()).toBe(201);
+
+  await signInInApp(page, `0${MANAGER.slice(4)}`);
+  const card = page.getByRole('listitem').filter({ hasText: 'Check the gearbox please' });
+  await expect(page.getByRole('heading', { name: 'Booking requests' })).toBeVisible();
+  await expect(card).toContainText('New request');
+  await expect(card).toContainText('Grace');
+  await expect(card.getByRole('link', { name: BUYER })).toHaveCount(0);
+  await a11y(page);
+  await card.getByRole('button', { name: 'Accept' }).click();
+  await card.getByLabel('Day and time').fill(`${day}T14:30`);
+  await card.getByRole('button', { name: 'Confirm booking' }).click();
+  await expect(card).toContainText('Booked');
+  await expect(card).toContainText('14:30');
+  await expect(card.getByRole('link', { name: BUYER })).toBeVisible();
+  await shot(page, 'i7-booking');
+
+  const mine = await request.get(`${API}/me/bookings`, { headers: { Authorization: `Bearer ${buyerToken}` } });
+  expect((await mine.json()).items[0]).toMatchObject({ status: 'accepted', inspector: { name: 'Bugolobi Inspection' } });
+
+  await card.getByRole('button', { name: 'Mark done' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Check the gearbox please' })).toHaveCount(0);
 });
 
 test('report a problem with a car (O-002) and follow what SAZO decides', async ({ page }) => {

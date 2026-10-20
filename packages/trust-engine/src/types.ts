@@ -46,9 +46,12 @@ export interface EngineObservation {
 }
 
 export interface EngineRelation {
-  from: string;
+  /** The record that makes the relation. Null for a withdrawal by the sender with no new record (P-05). */
+  from: string | null;
   to: string;
   kind: 'corrects' | 'retracts' | 'duplicates' | 'corroborates';
+  /** When the relation was made; used for a withdrawal, which has no record of its own to date it. */
+  at?: string;
 }
 
 export interface EngineAttestation {

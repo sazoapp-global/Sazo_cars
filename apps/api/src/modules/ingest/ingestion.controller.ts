@@ -23,6 +23,7 @@ const SubmissionSchema = z.object({
       time: TimeSchema,
       evidenceIds: z.array(z.string().uuid()).optional(),
       sourceRecordId: z.string().optional(),
+      correctsObservationId: z.string().uuid().optional(),
     })).min(1),
   })).min(1).max(1000),
 });

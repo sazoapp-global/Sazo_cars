@@ -91,6 +91,11 @@ export class IamService {
     return org;
   }
 
+  /** Active managers of a business with their phones (to tell them about a booking request, I-07). */
+  managerPhones(organisationId: string) {
+    return this.repo.managerPhones(organisationId);
+  }
+
   /** The verified phone a user signs in with (used to match the registry's owner record, O-007). */
   async userPhone(userId: string): Promise<string | undefined> {
     return (await this.repo.userById(userId))?.phone ?? undefined;

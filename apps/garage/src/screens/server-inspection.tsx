@@ -28,8 +28,14 @@ export function ServerInspectionView({ id, workplace }: { id: string; workplace:
   const result = RESULT(f.result?.passed);
   const thick = (f.paint?.readings ?? []).filter((r) => r.microns > REPAINT_MICRONS);
   return (
-    <div className="space-y-4 p-4">
-      <button type="button" className="flex items-center gap-1 font-semibold text-primary-container" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Inspections</button>
+    <div className="space-y-4 p-4 print:p-0">
+      <button type="button" className="flex items-center gap-1 font-semibold text-primary-container print:hidden" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Inspections</button>
+      {/* I-06: only on paper. The customer gets a printed summary of what was found. */}
+      <div className="hidden border-b-4 border-lime pb-3 print:block">
+        <p className="font-display text-xl font-extrabold text-primary">SAZO · Inspection summary</p>
+        <p className="font-semibold">{workplace.name}</p>
+        <p className="text-sm">Printed {when(new Date().toISOString())}</p>
+      </div>
       <div className="flex items-center justify-between gap-2"><PlateText value={i.plateEntered} /><span className="sazo-id text-sm text-label">{i.publicRef}</span></div>
       <div className="flex flex-wrap gap-2"><Chip s={JOB_STATUS[i.status]!} />{result && <Chip s={result} />}</div>
       {i.status === 'draft' && <p className="text-sm text-muted">This inspection was started on another phone. Finish it there.</p>}
@@ -49,7 +55,14 @@ export function ServerInspectionView({ id, workplace }: { id: string; workplace:
           <div key={k} className="flex justify-between gap-3 p-3"><dt className="text-muted">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>
         ))}
       </dl>
-      <p className="text-xs text-muted">Inspections are never edited after sending. To correct one, tell SAZO. A correction is added next to it.</p>
+      {i.status !== 'draft' && (
+        <button type="button" className="btn btn-primary w-full print:hidden" onClick={() => window.print()}><Icon name="print" size={20} />Print summary for the customer</button>
+      )}
+      <p className="text-xs text-muted print:hidden">Inspections are never edited after sending. To correct one, tell SAZO. A correction is added next to it.</p>
+      <div className="hidden space-y-1 text-sm print:block">
+        <p>This summary records what the inspector found on the day of the inspection only. A car&apos;s condition can change after that day.</p>
+        <p>Inspection reference <span className="sazo-id font-semibold">{i.publicRef}</span>.{i.vehicleRef ? <> Look the car up on SAZO with <span className="sazo-id font-semibold">{i.vehicleRef}</span> or its plate to see its full history.</> : ' Look the car up on SAZO by its plate to see its full history.'}</p>
+      </div>
     </div>
   );
 }

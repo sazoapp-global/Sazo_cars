@@ -46,6 +46,7 @@ export default async function VehiclePage({ params, searchParams }: Props) {
       <form action={saved ? unsaveCar : saveCar}><input type="hidden" name="ref" value={ref} />
         <button className="btn btn-ghost" aria-pressed={saved}><Icon name={saved ? 'bookmark_added' : 'bookmark'} />{saved ? 'Saved' : 'Save this car'}</button></form>
       <Link href={`/compare?r=${ref}`} className="btn btn-ghost"><Icon name="compare_arrows" />Compare</Link>
+      <Link href={`/inspections/book?${new URLSearchParams({ ref, ...(r.vehicle.currentPlate ? { plate: r.vehicle.currentPlate } : {}) })}`} className="btn btn-ghost"><Icon name="fact_check" />Book an inspection</Link>
       <PrintButton primary />
       {mine ? (
         <Link href={mine.status === 'verified' ? `/my-cars/${ref}` : '/my-cars'} className="btn btn-ghost"><Icon name="key" />{mine.status === 'verified' ? 'Your car' : 'Logbook being checked'}</Link>

@@ -27,9 +27,9 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
   const app = inspector ? 'SAZO Inspect' : 'SAZO Garage';
 
   return (
-    <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+    <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[248px_minmax(0,1fr)] print:block print:bg-white">
       {/* side menu: tablets and computers */}
-      <aside aria-label={app} className="sticky top-0 hidden h-dvh flex-col border-r-4 border-lime bg-primary text-white lg:flex">
+      <aside aria-label={app} className="sticky top-0 hidden print:!hidden h-dvh flex-col border-r-4 border-lime bg-primary text-white lg:flex">
         <div className="border-b border-white/15 px-5 py-4">
           <p className="flex items-center gap-2 font-display font-extrabold"><span aria-hidden className="grid size-7 place-items-center rounded-md bg-lime text-primary"><Icon name={inspector ? 'fact_check' : 'garage'} size={18} /></span>{app}</p>
           <p className="mt-3 font-semibold leading-snug">{garage.name}</p>
@@ -66,7 +66,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         {/* top bar: phones */}
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b-4 border-lime bg-primary px-4 py-3 text-white lg:hidden">
+        <header className="sticky top-0 z-20 print:hidden flex items-center justify-between gap-3 border-b-4 border-lime bg-primary px-4 py-3 text-white lg:hidden">
           <button type="button" onClick={() => go({ name: 'home' })} className="min-w-0 text-left">
             <span className="block font-display text-lg font-extrabold leading-tight">{app}</span>
             <span className="block truncate text-sm text-white/80">{garage.name}</span>
@@ -76,7 +76,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
           </span>
         </header>
         {!online && (
-          <div className="bg-ink px-4 py-2.5 text-sm text-white">
+          <div className="bg-ink px-4 py-2.5 text-sm text-white print:hidden">
             <p className="font-bold">You’re offline</p>
             <p className="text-white/85">{unsent ? `${unsent} ${unsent === 1 ? 'job is' : 'jobs are'} saved on this phone. They’ll upload automatically when there’s signal.` : 'Keep working. Everything is saved on this phone and uploads when there’s signal.'}</p>
           </div>
@@ -85,7 +85,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
 
         {/* bottom tabs: phones */}
         {!inWizard && (
-          <nav aria-label="Workspace" className="fixed inset-x-0 bottom-0 z-20 grid border-t-2 border-ink bg-white pb-[env(safe-area-inset-bottom)] lg:hidden" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+          <nav aria-label="Workspace" className="fixed inset-x-0 bottom-0 z-20 grid print:!hidden border-t-2 border-ink bg-white pb-[env(safe-area-inset-bottom)] lg:hidden" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
             {tabs.map((t) => {
               const active = current === t.route || (t.route === 'more' && (current === 'staff' || current === 'more'));
               return (
