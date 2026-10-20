@@ -244,12 +244,12 @@ export class ObservationsService implements OnModuleInit {
   }
 
   /** One record's owner and state, for checking a correction or withdrawal (P-05). */
-  async recordState(id: string, sql: Sql = this.pool, lock = false): Promise<{ id: string; vehicleId: string; sourceId: string; type: string; state: 'active' | 'corrected' | 'withdrawn' } | undefined> {
+  async recordState(id: string, sql: Sql = this.pool): Promise<{ id: string; vehicleId: string; sourceId: string; type: string; state: 'active' | 'corrected' | 'withdrawn' } | undefined> {
     const { rows } = await sql.query<{ id: string; vehicle_id: string; source_id: string; type: string; corrected: boolean; withdrawn: boolean }>(
       `SELECT o.id, o.vehicle_id, o.source_id, o.type,
               EXISTS (SELECT 1 FROM obs.observation_relations r WHERE r.to_observation_id = o.id AND r.kind = 'corrects') AS corrected,
               EXISTS (SELECT 1 FROM obs.observation_relations r WHERE r.to_observation_id = o.id AND r.kind = 'retracts') AS withdrawn
-         FROM obs.observations o WHERE o.id = $1${lock ? ' FOR UPDATE' : ''}`, [id]);
+         FROM obs.observations o WHERE o.id = $1`, [id]);
     const r = rows[0];
     return r && { id: r.id, vehicleId: r.vehicle_id, sourceId: r.source_id, type: r.type, state: r.withdrawn ? 'withdrawn' : r.corrected ? 'corrected' : 'active' };
   }

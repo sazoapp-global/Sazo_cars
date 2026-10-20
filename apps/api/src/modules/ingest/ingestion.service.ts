@@ -117,12 +117,18 @@ export class IngestionService {
    * relation is added, the record stays in the history marked withdrawn, and the car's scores are worked out again.
    */
   async withdraw(source: SourceRow, observationId: string, reason: string, userId: string): Promise<void> {
-    await this.bus.transaction(async (tx, emit) => {
-      const old = await this.observations.recordState(observationId, tx, true);
-      if (!old || old.sourceId !== source.id) throw new RecordChangeError('record_not_found', 'No such record from this source');
-      if (old.state !== 'active') throw new RecordChangeError('record_not_active', `That record was already ${old.state}`);
-      await this.observations.addRelation(emit, tx, { from: null, to: old.id, kind: 'retracts', reason, byUserId: userId });
-    });
+    try {
+      await this.bus.transaction(async (tx, emit) => {
+        const old = await this.observations.recordState(observationId, tx);
+        if (!old || old.sourceId !== source.id) throw new RecordChangeError('record_not_found', 'No such record from this source');
+        if (old.state !== 'active') throw new RecordChangeError('record_not_active', `That record was already ${old.state}`);
+        await this.observations.addRelation(emit, tx, { from: null, to: old.id, kind: 'retracts', reason, byUserId: userId });
+      });
+    } catch (err) {
+      // Two withdrawals at once: the database keeps one per record (observations are append-only, so no row lock).
+      if ((err as { code?: string }).code === '23505') throw new RecordChangeError('record_not_active', 'That record was already withdrawn');
+      throw err;
+    }
   }
 
   async recentSubmissions(sourceId: string, limit: number) {
