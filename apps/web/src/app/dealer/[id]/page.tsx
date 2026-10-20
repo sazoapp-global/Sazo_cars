@@ -66,6 +66,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
         { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', count: inStock.length, active: show === 'in_stock' },
         { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
         ...(manager ? [{ href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' as const }] : []),
+        ...(manager ? [{ href: `/dealer/${id}/import`, label: 'Add many cars', icon: 'upload_file' as const }] : []),
         { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell', count: soldList.length, active: show === 'sold' },
         ...(staff ? [{ href: `/dealer/${id}#staff-section`, label: 'Team', icon: 'group' as const, count: staff.length }] : []),
         ...(manager ? [{ href: `/dealer/${id}#settings-section`, label: 'Settings', icon: 'edit' as const }] : []),
@@ -107,7 +108,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
 
       <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={(inStock.length === 0 && show === 'in_stock') || sp.add === '1'}>
         <summary className="flex cursor-pointer list-none items-center gap-2 font-display text-lg font-bold text-primary-container"><Icon name="add" />Add a car</summary>
-        <p className="mt-1 text-sm text-muted">Start with the basics. You can add import costs and more photos later.</p>
+        <p className="mt-1 text-sm text-muted">Start with the basics. You can add import costs and more photos later.{manager && <> Many cars at once? <Link href={`/dealer/${id}/import`} className="link">Add them from an Excel file</Link>.</>}</p>
         <form action={addStock} className="mt-3 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="org" value={id} />
           <div className="sm:col-span-2"><label htmlFor="photos" className="label">Photos of the car</label>

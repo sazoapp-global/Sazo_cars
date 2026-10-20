@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
 import type { SearchResult } from '@/lib/types';
+import { readCarsFile } from '@/lib/dealer-import';
 import { IMAGE_TYPES, filesFrom, uploadEvidence } from '@/lib/upload';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -326,4 +327,35 @@ export async function commissionAction(form: FormData) {
     await api(`/dealer/commissions/${c}/${action}`, { method: 'POST', ...asDealer(org), body: text(form, 'note') ? { note: text(form, 'note') } : {} });
   } catch (err) { go({ error: reason(err, 'Could not update the commission.') }); }
   go({ done: action === 'approve' ? 'Commission approved.' : action === 'paid' ? 'Marked as paid.' : 'Commission cancelled.' });
+}
+
+// Many cars from a file (D-131, managers) ---------------------------------------------------------------
+
+const toImport = (org: string, q: Record<string, string>): never => redirect(`/dealer/${org}/import?${new URLSearchParams(q)}`);
+
+/** Read the file and let SAZO check every row. Nothing is added yet. */
+export async function checkCarsFile(form: FormData) {
+  const { org } = ids(form);
+  const file = form.get('file');
+  if (!(file instanceof File)) toImport(org, { error: 'Choose your Excel or CSV file.' });
+  const read = await readCarsFile(file as File);
+  if (!read.ok) toImport(org, { error: read.error });
+  let id: string | undefined;
+  try {
+    id = (await api<{ importId: string }>('/dealer/imports', { method: 'POST', ...asDealer(org), body: { fileName: (file as File).name.slice(0, 200) || 'cars', rows: (read as { rows: Record<string, string>[] }).rows } })).importId;
+  } catch (err) { toImport(org, { error: reason(err, 'SAZO could not check the file. Please try again.') }); }
+  toImport(org, { file: id! });
+}
+
+/** Add the rows that are ready. */
+export async function addCarsFromFile(form: FormData) {
+  const { org } = ids(form);
+  const file = text(form, 'file');
+  if (!UUID.test(file)) toImport(org, {});
+  let added = 0;
+  try {
+    const res = await api<{ results: { stockId?: string }[] | null }>(`/dealer/imports/${file}/add`, { method: 'POST', ...asDealer(org) });
+    added = (res.results ?? []).filter((r) => r.stockId).length;
+  } catch (err) { toImport(org, { file, error: reason(err, 'SAZO could not add the cars. Please try again.') }); }
+  toImport(org, { file, done: added === 1 ? '1 car added.' : `${added} cars added.` });
 }

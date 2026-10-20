@@ -8,6 +8,7 @@ import { canForOrg, CurrentActor, IamService, type Actor } from '../iam/index.js
 import { COST_CATEGORIES, CUSTOMS_STATUSES, IMPORT_STAGES } from './dealer.repository.js';
 import { dealerOrg, type DealerPermission } from './dealer-access.js';
 import { DealerError, DealerService } from './dealer.service.js';
+import { DealerImportService } from './import.service.js';
 
 const Uuid = z.string().uuid();
 const Price = z.number().int().positive().max(100_000_000_000);
@@ -58,6 +59,11 @@ const Cost = z.object({
   note: z.string().trim().max(300).transform(tidySentence).optional(),
   shareRule: z.string().trim().max(200).transform(tidySentence).optional(),
 }).refine((c) => c.currency === 'UGX' || c.rateToUgx !== undefined, { message: 'rateToUgx is needed for a cost not in UGX', path: ['rateToUgx'] });
+/** One row per car, keyed by the column keys in @sazo/contracts DEALER_IMPORT_COLUMNS (the website reads the file). */
+const ImportFile = z.object({
+  fileName: z.string().trim().min(1).max(200),
+  rows: z.array(z.record(z.string().max(40), z.string().max(600))).max(1000),
+}).strict();
 const Settings = z.object({
   stockAgeAlertDays: z.array(z.number().int().min(1).max(3650)).min(1).max(5),
   leadProtectionDays: z.number().int().min(1).max(365),
@@ -67,6 +73,7 @@ const Settings = z.object({
 const STATUS: Record<string, number> = {
   stock_not_found: 404, vehicle_not_found: 404, cost_not_found: 404, photo_not_found: 404, identifiers_required: 400, make_required: 400, link_first: 400, rate_required: 400,
   commission_incomplete: 400, odometer_photo_required: 422, photo_not_allowed: 422, too_many_photos: 422, too_many_listings: 429, already_in_stock: 409, not_in_stock: 409,
+  import_empty: 400, import_too_big: 400, import_already_added: 409, import_not_found: 404,
   already_linked: 409, already_reversed: 409, costs_locked: 409, waiting_for_review: 409, listing_rejected: 422, organisation_not_approved: 403,
 };
 const TITLE: Record<number, string> = { 400: 'Invalid request', 403: 'Forbidden', 404: 'Not found', 409: 'Conflict', 422: 'Unprocessable', 429: 'Too many requests' };
@@ -87,7 +94,8 @@ function parse<T>(schema: z.ZodType<T>, body: unknown): T {
 
 @Controller('dealer')
 export class DealerController {
-  constructor(@Inject(DealerService) private readonly dealer: DealerService, @Inject(IamService) private readonly iam: IamService) {}
+  constructor(@Inject(DealerService) private readonly dealer: DealerService, @Inject(IamService) private readonly iam: IamService,
+    @Inject(DealerImportService) private readonly imports: DealerImportService) {}
 
   private org(actor: Actor, orgId: string | undefined, permission: DealerPermission = 'dealer.stock.manage'): Promise<string> {
     return dealerOrg(this.iam, actor, orgId, permission);
@@ -125,6 +133,31 @@ export class DealerController {
     const b = parse(Add, body);
     if (b.details && !this.canManage(actor, org)) { delete b.details.commissionKind; delete b.details.commissionFixedUgx; delete b.details.commissionPercent; delete b.details.customsValueUgx; }
     return this.one(actor, org, await this.dealer.add(actor, org, b).catch(problem));
+  }
+
+  /** POST /v1/dealer/imports: check a file of cars (managers; D-131). Nothing is added yet. */
+  @Post('imports')
+  async checkImport(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Body() body: unknown) {
+    const org = await this.org(actor, orgId, 'dealer.costs.manage');
+    const b = parse(ImportFile, body);
+    return this.imports.check(actor, org, b.fileName, b.rows).catch(problem);
+  }
+
+  /** GET /v1/dealer/imports/:id */
+  @Get('imports/:id')
+  async getImport(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string) {
+    const org = await this.org(actor, orgId, 'dealer.costs.manage');
+    if (!Uuid.safeParse(id).success) problem(new DealerError('import_not_found', 'No such file'));
+    return this.imports.get(org, id).catch(problem);
+  }
+
+  /** POST /v1/dealer/imports/:id/add: add the rows that are ready. Once per file. */
+  @Post('imports/:id/add')
+  @HttpCode(200)
+  async addImport(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string) {
+    const org = await this.org(actor, orgId, 'dealer.costs.manage');
+    if (!Uuid.safeParse(id).success) problem(new DealerError('import_not_found', 'No such file'));
+    return this.imports.add(actor, org, id).catch(problem);
   }
 
   /** GET /v1/dealer/stock/:id */

@@ -15,7 +15,8 @@ import { DealerRepository, type CostCategory, type CostRow, type DealerSettings,
 
 export type DealerErrorCode = 'stock_not_found' | 'vehicle_not_found' | 'identifiers_required' | 'odometer_photo_required' | 'too_many_listings' | 'already_in_stock'
   | 'waiting_for_review' | 'listing_rejected' | 'not_in_stock' | 'organisation_not_approved' | 'already_linked' | 'link_first' | 'costs_locked'
-  | 'cost_not_found' | 'already_reversed' | 'photo_not_allowed' | 'too_many_photos' | 'photo_not_found' | 'commission_incomplete' | 'make_required' | 'rate_required';
+  | 'cost_not_found' | 'already_reversed' | 'photo_not_allowed' | 'too_many_photos' | 'photo_not_found' | 'commission_incomplete' | 'make_required' | 'rate_required'
+  | 'import_empty' | 'import_too_big' | 'import_already_added' | 'import_not_found';
 
 export class DealerError extends Error {
   constructor(readonly code: DealerErrorCode, message: string, readonly details: unknown[] = []) {
@@ -28,8 +29,8 @@ export interface AddStock {
   details?: Partial<StockDetails>;
 }
 export interface LinkStock { vin?: string; chassisNumber?: string; plate?: string; vehicleRef?: string; mileageKm?: number; odometerPhotoId?: string }
-/** New listings a dealer can add per day (Security S3: stops one dealer flooding many cars' histories). */
-export const DAILY_LISTINGS = 50;
+/** New listings a dealer can add per day (Security S3: stops one dealer flooding many cars' histories; 200 since D-131). */
+export const DAILY_LISTINGS = 200;
 export const MAX_PHOTOS = 12;
 /** A customs deadline this close counts as "soon" (amber). */
 export const BOND_SOON_DAYS = 30;

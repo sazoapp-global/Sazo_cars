@@ -2,6 +2,7 @@
 // enters its bond deadline, import costs and broker terms, changes a price, sends a buyer a report link,
 // records a sale (price kept private) and adds a salesperson.
 import { expect, test } from '@playwright/test';
+import writeXlsxFile from 'write-excel-file/node';
 import { a11y, createAdmin, shot, signIn, testPhoto } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
@@ -181,4 +182,28 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('button', { name: 'Add the car' }).click();
   await expect(dealer.getByRole('status')).toContainText('It is now in SAZO with its listing');
   await expect(dealer.getByRole('region', { name: 'What SAZO records show' })).toBeVisible();
+
+  // Many cars at once from an Excel file (D-131): every row is checked first, then the ready ones are added.
+  await dealer.goto(listUrl);
+  await dealer.getByRole('link', { name: 'Add many cars' }).first().click();
+  await expect(dealer.getByRole('heading', { name: 'Add many cars from a file' })).toBeVisible();
+  const template = await dealer.request.get(dealer.url().replace(/\/import.*$/, '/import/template.xlsx'));
+  expect(template.headers()['content-type']).toContain('spreadsheetml');
+  const sheet = await writeXlsxFile([
+    ['Make', 'Model', 'Year', 'Chassis number or VIN', 'Asking price (UGX)', 'Where is it now', 'Cost currency', 'Rate to UGX', 'Car price (purchase or auction)'].map((value) => ({ value })),
+    ['Toyota', 'Premio', 2016, `NZT260-${stamp}`, 42000000, 'In the bond', 'USD', 3700, 6200].map((value) => ({ value })),
+    ['Honda', 'Fit', 2014, '', '', 'Shipping', '', '', ''].map((value) => ({ value })),
+  ]).toBuffer();
+  await dealer.getByLabel('Excel (.xlsx) or CSV file').setInputFiles({ name: 'shipment.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: sheet });
+  await dealer.getByRole('button', { name: 'Check the file' }).click();
+  const rows = dealer.getByRole('list', { name: 'Rows in the file' });
+  await expect(rows.getByRole('listitem').filter({ hasText: 'Premio' })).toContainText('Ready');
+  await expect(rows.getByRole('listitem').filter({ hasText: 'Fit' })).toContainText('Asking price is missing');
+  await a11y(dealer);
+  await shot(dealer, 'dealer-import');
+  await dealer.getByRole('button', { name: 'Add the 1 ready car' }).click();
+  await expect(dealer.getByRole('status')).toContainText('1 car added');
+  await rows.getByRole('link', { name: 'Added: open' }).click();
+  await expect(dealer.getByRole('heading', { name: /Toyota Premio/ })).toBeVisible();
+  await expect(dealer.getByRole('region', { name: 'Costs' })).toContainText('22,940,000');
 });

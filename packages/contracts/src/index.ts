@@ -7,3 +7,4 @@ export * from './partner.js';
 export * from './inspection-form.js';
 export * from './concerns.js';
 export * from './people.js';
+export * from './dealer-import.js';

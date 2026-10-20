@@ -639,6 +639,51 @@ paths:
         '409': { description: already_in_stock }
         '422': { description: listing_rejected }
 
+  /dealer/imports:
+    post:
+      tags: [Dealer]
+      operationId: checkDealerImport
+      summary: "Many cars from a file (D-131, managers only, dealer.costs.manage). The website reads the Excel or CSV file and sends one object per row keyed by the column keys in @sazo/contracts DEALER_IMPORT_COLUMNS (up to 200 rows). Every row is checked and the problems are explained in plain words; nothing is added yet."
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileName, rows]
+              properties:
+                fileName: { type: string, maxLength: 200 }
+                rows: { type: array, maxItems: 200, items: { type: object, additionalProperties: { type: string, maxLength: 600 } } }
+      responses:
+        '201': { description: "DealerImport: { importId, fileName, status: checked, ready, withProblems, rows: [{ line, row, problems }], results: null }" }
+        '400': { description: import_empty / import_too_big / invalid_request }
+        '403': { description: forbidden (not a manager) }
+        '409': { description: import_already_added (the same rows were already added) }
+  /dealer/imports/{importId}:
+    get:
+      tags: [Dealer]
+      operationId: getDealerImport
+      summary: A checked file and, once added, what happened to each row
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: importId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: DealerImport }
+        '404': { description: import_not_found }
+  /dealer/imports/{importId}/add:
+    post:
+      tags: [Dealer]
+      operationId: addDealerImport
+      summary: "Add the ready rows, each as POST /dealer/stock would, plus its costs. Runs once per file; calling again returns the same results."
+      parameters:
+        - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
+        - { name: importId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: "DealerImport with status added and results: [{ line, stockId?, costsAdded?, error? }]" }
+        '409': { description: import_already_added }
+
   /dealer/stock/{stockId}:
     get:
       tags: [Dealer]

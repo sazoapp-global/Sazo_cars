@@ -7,6 +7,7 @@ import { VehicleModule } from '../vehicle/index.js';
 import { DealerController } from './dealer.controller.js';
 import { DealerRepository } from './dealer.repository.js';
 import { DealerService } from './dealer.service.js';
+import { DealerImportService } from './import.service.js';
 import { ForSaleController } from './for-sale.controller.js';
 import { AdminBrokersController, BrokerController } from './broker.controller.js';
 import { BrokerService } from './broker.service.js';
@@ -17,6 +18,6 @@ import { SellingService } from './selling.service.js';
 @Module({
   imports: [IamModule, VehicleModule, IngestModule, ReportModule, ObservationsModule],
   controllers: [DealerController, ForSaleController, SellingController, DealerCommissionsController, PublicCarController, BrokerController, AdminBrokersController],
-  providers: [DealerRepository, DealerService, SellingRepository, SellingService, BrokerService],
+  providers: [DealerRepository, DealerService, DealerImportService, SellingRepository, SellingService, BrokerService],
 })
 export class DealerModule {}
