@@ -8,8 +8,10 @@ export interface PhotoFacts {
   dhash: string;
   width: number;
   height: number;
-  /** Average brightness, 0 (black) to 255 (white). */
+  /** Average brightness, 0 (black) to 255 (white). Kept for reviewers; not a reason on its own. */
   brightness: number;
+  /** Brightness of the brightest part of the picture (the brightest of 32 x 32 blocks), 0 to 255. */
+  peak: number;
 }
 
 export interface CheckFinding {
@@ -21,7 +23,12 @@ export interface CheckFinding {
 
 export const PHOTO_RULES = {
   minSide: 320,
-  minBrightness: 28,
+  /**
+   * Too dark = nothing in the picture is bright enough to read. Judged on the brightest part, not the
+   * average: an odometer photo is mostly a dark dashboard with a small lit display, so its average is low
+   * even when the digits are perfectly readable.
+   */
+  minPeakBrightness: 40,
   /** Fingerprints this many bits apart or fewer count as the same picture. */
   nearCopyBits: 6,
   /** A photo taken more than this long before it reached SAZO is flagged (offline phones upload the same day). */
@@ -39,9 +46,10 @@ export async function photoFacts(bytes: Buffer, mime: string): Promise<PhotoFact
     const meta = await img.metadata();
     if (!meta.width || !meta.height) return undefined;
     const grey = img.clone().greyscale();
-    const [{ data: tiny }, stats] = await Promise.all([
+    const [{ data: tiny }, stats, { data: blocks }] = await Promise.all([
       grey.clone().resize(9, 8, { fit: 'fill' }).raw().toBuffer({ resolveWithObject: true }),
       grey.clone().stats(),
+      grey.clone().resize(32, 32, { fit: 'fill' }).raw().toBuffer({ resolveWithObject: true }),
     ]);
     let bits = 0n;
     for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) bits = (bits << 1n) | (tiny[y * 9 + x]! > tiny[y * 9 + x + 1]! ? 1n : 0n);
@@ -52,6 +60,7 @@ export async function photoFacts(bytes: Buffer, mime: string): Promise<PhotoFact
       width: portrait ? meta.height : meta.width,
       height: portrait ? meta.width : meta.height,
       brightness: Math.round(stats.channels[0]!.mean),
+      peak: blocks.reduce((m, v) => Math.max(m, v), 0),
     };
   } catch {
     return undefined;
@@ -64,7 +73,7 @@ export function localFindings(mime: string, facts: PhotoFacts | undefined, captu
   if (IMAGE_TYPES.has(mime)) {
     if (!facts) out.push({ check: 'quality', outcome: 'flag', reason: 'not_a_readable_image' });
     else if (Math.min(facts.width, facts.height) < PHOTO_RULES.minSide) out.push({ check: 'quality', outcome: 'flag', reason: 'too_small', detail: { width: facts.width, height: facts.height } });
-    else if (facts.brightness < PHOTO_RULES.minBrightness) out.push({ check: 'quality', outcome: 'flag', reason: 'too_dark', detail: { brightness: facts.brightness } });
+    else if (facts.peak < PHOTO_RULES.minPeakBrightness) out.push({ check: 'quality', outcome: 'flag', reason: 'too_dark', detail: { brightness: facts.brightness, peak: facts.peak } });
     else out.push({ check: 'quality', outcome: 'pass' });
   }
   if (capturedAt) {

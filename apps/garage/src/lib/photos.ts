@@ -35,9 +35,11 @@ export async function quickCheck(blob: Blob): Promise<'too_dark' | 'too_small' |
     const ctx = canvas.getContext('2d')!;
     ctx.drawImage(bitmap, 0, 0, 32, 32);
     const px = ctx.getImageData(0, 0, 32, 32).data;
-    let sum = 0;
-    for (let i = 0; i < px.length; i += 4) sum += 0.299 * px[i]! + 0.587 * px[i + 1]! + 0.114 * px[i + 2]!;
-    return sum / (px.length / 4) < 28 ? 'too_dark' : undefined;
+    // Too dark only when nothing in the picture is lit: an odometer photo is mostly dark dashboard around a
+    // small bright display, so the brightest block counts, not the average.
+    let peak = 0;
+    for (let i = 0; i < px.length; i += 4) peak = Math.max(peak, 0.299 * px[i]! + 0.587 * px[i + 1]! + 0.114 * px[i + 2]!);
+    return peak < 40 ? 'too_dark' : undefined;
   } catch {
     return undefined; // can't tell on this phone — the server will check
   }

@@ -11,7 +11,7 @@ import pg from 'pg';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
-import { testPhoto } from './test-photos.js';
+import { testDashboardPhoto, testPhoto } from './test-photos.js';
 import sharp from 'sharp';
 import { signInWithCode, approveOrg } from './test-auth.js';
 import { loadConfig } from './config.js';
@@ -324,6 +324,8 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     const reasons = (b: { checks: { problems: { reason: string }[] } }) => b.checks.problems.map((p) => p.reason);
     expect(reasons(await send(Buffer.from('not a photo at all')))).toEqual(['not_a_readable_image']);
     expect(reasons(await send(await testPhoto('x01 dark', { brightness: 10 })))).toEqual(['too_dark']);
+    // A dark dashboard with a lit odometer is readable: judged on its brightest part, not its average.
+    expect(reasons(await send(await testDashboardPhoto('084213'), 'odometer_photo', new Date().toISOString()))).toEqual([]);
     expect(reasons(await send(await testPhoto('x01 tiny', { width: 200, height: 150 })))).toEqual(['too_small']);
     expect(reasons(await send(await testPhoto('x01 old'), 'odometer_photo', new Date(Date.now() - 5 * 86_400_000).toISOString()))).toEqual(['taken_long_before_upload']);
     // The same photo again (exact copy), and the same picture re-saved at another quality (near copy).

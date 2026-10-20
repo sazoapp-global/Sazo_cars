@@ -21,3 +21,12 @@ export async function testPhoto(seed: string, opts: { width?: number; height?: n
   }
   return sharp(px, { raw: { width, height, channels: 3 } }).jpeg({ quality: 85 }).toBuffer();
 }
+
+/** A night-time dashboard: almost all dark, with a small lit odometer display (average brightness about 14). */
+export async function testDashboardPhoto(reading: string): Promise<Buffer> {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900"><rect width="100%" height="100%" fill="rgb(12,12,12)"/>
+    <circle cx="600" cy="450" r="220" fill="rgb(22,22,26)" stroke="rgb(90,90,90)" stroke-width="8"/>
+    <rect x="480" y="510" width="240" height="60" fill="rgb(20,40,20)"/>
+    <text x="490" y="555" font-size="48" fill="rgb(180,255,180)" font-family="monospace">${reading}</text></svg>`;
+  return sharp(Buffer.from(svg)).jpeg({ quality: 85 }).toBuffer();
+}
