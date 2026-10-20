@@ -52,7 +52,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Mileage now (km)').fill('150000');
   await dealer.getByLabel('Odometer photo').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: testPhoto(`dealer odometer ${stamp}`) });
   await dealer.getByRole('button', { name: 'Add the car' }).click();
-  await expect(dealer.getByRole('status')).toContainText('The listing is now part of the car’s SAZO history');
+  await expect(dealer.getByRole('status')).toContainText('It is now in SAZO with its listing');
   await expect(dealer.getByRole('region', { name: 'What SAZO records show' })).toBeVisible();
 
   // A car still on its way from Japan: make and model now, chassis number later.
@@ -65,15 +65,16 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Where is it now?').selectOption('shipping');
   await dealer.getByLabel('Photos of the car').setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: testPhoto(`harrier front ${stamp}`) });
   await dealer.getByRole('button', { name: 'Add the car' }).click();
-  await expect(dealer.getByRole('status')).toContainText('Add the chassis number when you have it');
+  await expect(dealer.getByRole('status')).toContainText('Add the number plate or chassis number when you have it');
   await expect(dealer.getByRole('heading', { name: '2018 Toyota Harrier' })).toBeVisible();
   await expect(dealer.getByRole('img', { name: /2018 Toyota Harrier, photo 1/ })).toBeVisible();
-  const linkForm = dealer.getByRole('region', { name: 'Add the chassis number' });
+  const linkForm = dealer.getByRole('region', { name: 'Add the plate or chassis number' });
   await linkForm.getByLabel(/Chassis number or VIN/).fill(`ZSU60-${stamp}`);
   await linkForm.getByLabel('Number plate').fill('UBX 777Q');
   await linkForm.getByRole('button', { name: 'Link to SAZO' }).click();
   await expect(dealer.getByRole('status')).toContainText('Linked');
   await expect(dealer.getByText('Not yet confirmed')).toBeVisible();
+
 
   // The customs bond deadline the dealer was given.
   const inTen = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
@@ -169,4 +170,15 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(dealer.getByRole('status')).toContainText('Sam Sales can now sign in');
   await expect(dealer.getByRole('region', { name: 'Your team' })).toContainText('Sam Sales');
+
+  // A car SAZO has never seen, by its plate only: it is added to SAZO, not refused (D-130).
+  await dealer.goto(listUrl);
+  await openAdd();
+  await dealer.getByLabel('Make', { exact: true }).fill('nissan');
+  await dealer.getByLabel('Model', { exact: true }).fill('note');
+  await dealer.getByLabel('Number plate').fill(`UBY ${String(stamp).slice(-3)}N`);
+  await dealer.getByLabel('Asking price (UGX) *').fill('18000000');
+  await dealer.getByRole('button', { name: 'Add the car' }).click();
+  await expect(dealer.getByRole('status')).toContainText('It is now in SAZO with its listing');
+  await expect(dealer.getByRole('region', { name: 'What SAZO records show' })).toBeVisible();
 });

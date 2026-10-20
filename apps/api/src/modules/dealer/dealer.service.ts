@@ -14,7 +14,7 @@ import { VehicleRegistry } from '../vehicle/index.js';
 import { DealerRepository, type CostCategory, type CostRow, type DealerSettings, type StockDetails, type StockRow, type StockStatus } from './dealer.repository.js';
 
 export type DealerErrorCode = 'stock_not_found' | 'vehicle_not_found' | 'identifiers_required' | 'odometer_photo_required' | 'too_many_listings' | 'already_in_stock'
-  | 'vehicle_needs_review' | 'listing_rejected' | 'not_in_stock' | 'organisation_not_approved' | 'already_linked' | 'link_first' | 'costs_locked'
+  | 'waiting_for_review' | 'listing_rejected' | 'not_in_stock' | 'organisation_not_approved' | 'already_linked' | 'link_first' | 'costs_locked'
   | 'cost_not_found' | 'already_reversed' | 'photo_not_allowed' | 'too_many_photos' | 'photo_not_found' | 'commission_incomplete' | 'make_required' | 'rate_required';
 
 export class DealerError extends Error {
@@ -88,16 +88,16 @@ export class DealerService {
       const plate = idents.find((i) => i.type === 'registration_plate');
       return { vehicleId, ids: { ...(vin ? { vin: vin.valueRaw } : chassis ? { chassisNumber: chassis.valueRaw } : {}), ...(plate ? { plate: plate.valueRaw } : {}) } };
     }
-    if (!input.vin && !input.chassisNumber) throw new DealerError('identifiers_required', 'For a car SAZO does not know yet, give its VIN or chassis number (and plate if it has one)');
-    return { ids: { ...(input.vin ? { vin: input.vin } : { chassisNumber: input.chassisNumber! }), ...(input.plate ? { plate: input.plate } : {}) } };
+    if (!input.vin && !input.chassisNumber && !input.plate) throw new DealerError('identifiers_required', 'Enter the number plate or the chassis number');
+    return { ids: { ...(input.vin ? { vin: input.vin } : input.chassisNumber ? { chassisNumber: input.chassisNumber } : {}), ...(input.plate ? { plate: input.plate } : {}) } };
   }
 
-  private async send(actor: Actor, organisationId: string, ids: Record<string, string>, records: { type: string; attributes: Record<string, unknown>; evidenceIds?: string[] }[], at = new Date().toISOString()) {
+  private async send(userId: string, organisationId: string, ids: Record<string, string>, records: { type: string; attributes: Record<string, unknown>; evidenceIds?: string[] }[], at = new Date().toISOString()) {
     const source = await this.ensureSource(organisationId);
     try {
       const res = await this.ingestion.submit(source, { schemaVersion: 1, items: [{ identifiers: ids, records: records.map((r) => ({ ...r, time: { at, precision: 'day' as const } })) }] },
-        { idempotencyKey: randomUUID(), userId: actor.userId, organisationId });
-      return res.items[0]!;
+        { idempotencyKey: randomUUID(), userId, organisationId });
+      return Object.assign(res.items[0]!, { submissionId: res.submissionId });
     } catch (err) {
       if (err instanceof IngestionError && err.code === 'organisation_not_approved') throw new DealerError('organisation_not_approved', err.message);
       throw err;
@@ -115,61 +115,96 @@ export class DealerService {
 
   /**
    * Publish the listing (and mileage) to the car's history and return its SAZO vehicle. A car SAZO knew nothing
-   * about also gets the make, model and year the dealer typed, as a dealer's declaration (lowest weight).
+   * about is added to SAZO here (D-130: never refused; provisional until an official record matches, P-010), with
+   * the make, model and year the dealer typed as a dealer's declaration (lowest weight). When SAZO must first
+   * check which car it is (S24), the listing waits for the reviewer: `pending` is returned instead of a vehicle.
    */
-  private async publish(actor: Actor, organisationId: string, input: LinkStock, askingPriceUgx: number, details: Partial<StockDetails>): Promise<string> {
+  private async publish(actor: Actor, organisationId: string, input: LinkStock, askingPriceUgx: number, details: Partial<StockDetails>): Promise<{ vehicleId?: string; pending?: string }> {
     const { vehicleId: known, ids } = await this.identifiers(input);
     if (known && (await this.repo.live(organisationId, known))) throw new DealerError('already_in_stock', 'This car is already in your stock');
     const records = [
       { type: 'listing_published', attributes: { askingPrice: money(askingPriceUgx) } },
       ...(input.mileageKm !== undefined ? [{ type: 'odometer_reading', evidenceIds: [input.odometerPhotoId!], attributes: { km: input.mileageKm, originalValue: input.mileageKm, originalUnit: 'km', method: 'dashboard' } }] : []),
     ];
-    const item = await this.send(actor, organisationId, ids, records);
-    if (item.status === 'needs_review') throw new DealerError('vehicle_needs_review', 'SAZO needs to check which car this is. It will appear in the car’s history once a reviewer has matched it; add it to your stock then.');
+    const item = await this.send(actor.userId, organisationId, ids, records);
+    if (item.status === 'needs_review') return { pending: item.submissionId };
     if (item.status !== 'accepted' || !item.vehicleId) throw new DealerError('listing_rejected', 'SAZO could not accept this listing', item.errors);
-    if (details.make) {
-      const v = await this.registry.getVehicle(item.vehicleId);
-      const summary = v ? await this.reports.publicSummary(v.publicRef).catch(() => undefined) : undefined;
-      if (!summary?.vehicle?.make) {
-        const spec = { make: details.make, ...(details.model ? { model: details.model } : {}), ...(details.modelYear ? { year: details.modelYear } : {}),
-          ...(details.engineCc ? { engineCc: details.engineCc } : {}), ...(details.fuel ? { fuel: details.fuel } : {}), ...(details.transmission ? { transmission: details.transmission } : {}) };
-        await this.send(actor, organisationId, ids, [{ type: 'spec_declared', attributes: spec }]).catch(() => undefined);
+    await this.declareSpec(actor.userId, organisationId, item.vehicleId, ids, details);
+    return { vehicleId: item.vehicleId };
+  }
+
+  /** The make, model and year the dealer typed, for a car SAZO has no make for yet. */
+  private async declareSpec(userId: string, organisationId: string, vehicleId: string, ids: Record<string, string>, details: Partial<StockDetails>) {
+    if (!details.make) return;
+    const v = await this.registry.getVehicle(vehicleId);
+    const summary = v ? await this.reports.publicSummary(v.publicRef).catch(() => undefined) : undefined;
+    if (summary?.vehicle?.make) return;
+    const spec = { make: details.make, ...(details.model ? { model: details.model } : {}), ...(details.modelYear ? { year: details.modelYear } : {}),
+      ...(details.engineCc ? { engineCc: details.engineCc } : {}), ...(details.fuel ? { fuel: details.fuel } : {}), ...(details.transmission ? { transmission: details.transmission } : {}) };
+    const sendIds = v ? (await this.identifiers({ vehicleRef: v.publicRef })).ids : ids;
+    await this.send(userId, organisationId, sendIds, [{ type: 'spec_declared', attributes: spec }]).catch(() => undefined);
+  }
+
+  /**
+   * Cars waiting for SAZO's reviewer (D-130): once the reviewer has matched the listing to a SAZO vehicle, the car
+   * is linked by itself; if the reviewer turned it down, it stays in stock unlinked and the dealer can add the
+   * chassis number again. Runs whenever the dealer looks at their stock.
+   */
+  async syncPending(organisationId: string): Promise<void> {
+    for (const r of await this.repo.pending(organisationId)) {
+      const sub = await this.ingestion.get(r.pendingSubmissionId!);
+      const item = sub?.items[0];
+      if (!item || item.status === 'needs_review' || item.status === 'pending') continue;
+      if (item.status !== 'accepted' || !item.vehicleId || (await this.repo.live(organisationId, item.vehicleId))) {
+        await this.repo.setPending(r.id, null);
+        continue;
       }
+      if (!(await this.repo.link(r.id, item.vehicleId, null))) continue;
+      await this.declareSpec(r.createdBy, organisationId, item.vehicleId, {}, r);
+      await this.iam.audit({ actor: { userId: r.createdBy } as Actor, organisationId, action: 'dealer.car_linked', targetType: 'dealer_stock', targetId: r.id, details: { afterReview: true } });
     }
-    return item.vehicleId;
   }
 
   async add(actor: Actor, organisationId: string, input: AddStock): Promise<StockRow> {
     if ((await this.repo.listedToday(organisationId)) >= DAILY_LISTINGS) throw new DealerError('too_many_listings', `A dealer can add up to ${DAILY_LISTINGS} cars a day. Call SAZO if you need more.`);
     const details = input.details ?? {};
-    const hasIds = !!(input.vehicleRef || input.vin || input.chassisNumber);
-    if (!hasIds && !input.plate && !details.make) throw new DealerError('make_required', 'Enter the make and model, or the chassis number');
-    if (!hasIds && input.plate && !details.make) throw new DealerError('identifiers_required', 'For a car SAZO does not know yet, give its VIN or chassis number (and plate if it has one)');
-    if (!hasIds && input.mileageKm !== undefined) throw new DealerError('link_first', 'Add the mileage when you add the chassis number');
+    const hasIds = !!(input.vehicleRef || input.vin || input.chassisNumber || input.plate);
+    if (!hasIds && !details.make) throw new DealerError('make_required', 'Enter the make and model, or the number plate or chassis number');
+    if (!hasIds && input.mileageKm !== undefined) throw new DealerError('link_first', 'Add the mileage with the number plate or chassis number');
     await this.checkOdometer(organisationId, input.mileageKm, input.odometerPhotoId);
-    const vehicleId = hasIds ? await this.publish(actor, organisationId, input, input.askingPriceUgx, details) : null;
-    const row = await this.repo.insert({ organisationId, vehicleId, askingPriceUgx: input.askingPriceUgx, listedMileageKm: input.mileageKm ?? null, notes: input.notes ?? null, createdBy: actor.userId,
+    const published = hasIds ? await this.publish(actor, organisationId, input, input.askingPriceUgx, details) : {};
+    const row = await this.repo.insert({ organisationId, vehicleId: published.vehicleId ?? null, pendingSubmissionId: published.pending ?? null, askingPriceUgx: input.askingPriceUgx,
+      listedMileageKm: input.mileageKm ?? null, notes: input.notes ?? null, createdBy: actor.userId,
       details: { ...details, receivedOn: details.receivedOn ?? new Date().toISOString().slice(0, 10) } });
     if (!row) throw new DealerError('already_in_stock', 'This car is already in your stock');
-    await this.iam.audit({ actor, organisationId, action: 'dealer.car_added', targetType: 'dealer_stock', targetId: row.id, details: { linked: !!vehicleId } });
+    await this.iam.audit({ actor, organisationId, action: 'dealer.car_added', targetType: 'dealer_stock', targetId: row.id, details: { linked: !!published.vehicleId, waitingForReview: !!published.pending } });
     return row;
   }
 
-  /** Step 2 for a car added without its chassis number: link it to its SAZO vehicle, which publishes the listing. */
+  /** Step 2 for a car added without its plate or chassis number: link it to its SAZO vehicle, which publishes the listing. */
   async link(actor: Actor, organisationId: string, id: string, input: LinkStock): Promise<StockRow> {
     const r = await this.get(organisationId, id);
     if (r.status !== 'in_stock') throw new DealerError('not_in_stock', 'This car is no longer in your stock');
     if (r.vehicleId) throw new DealerError('already_linked', 'This car is already linked to its SAZO record');
+    if (r.pendingSubmissionId) throw new DealerError('waiting_for_review', 'SAZO is checking which car this is. It will be linked by itself once that is done.');
     await this.checkOdometer(organisationId, input.mileageKm, input.odometerPhotoId);
-    const vehicleId = await this.publish(actor, organisationId, input, r.askingPriceUgx, r);
-    const ok = await this.repo.link(id, vehicleId, input.mileageKm ?? null);
-    if (ok === undefined) throw new DealerError('already_in_stock', 'This car is already in your stock');
-    await this.iam.audit({ actor, organisationId, action: 'dealer.car_linked', targetType: 'dealer_stock', targetId: id });
+    const published = await this.publish(actor, organisationId, input, r.askingPriceUgx, r);
+    if (published.pending) {
+      await this.repo.setPending(id, published.pending);
+    } else {
+      const ok = await this.repo.link(id, published.vehicleId!, input.mileageKm ?? null);
+      if (ok === undefined) throw new DealerError('already_in_stock', 'This car is already in your stock');
+    }
+    await this.iam.audit({ actor, organisationId, action: 'dealer.car_linked', targetType: 'dealer_stock', targetId: id, details: { waitingForReview: !!published.pending } });
     return this.get(organisationId, id);
   }
 
   async get(organisationId: string, id: string): Promise<StockRow> {
-    const r = await this.repo.get(id);
+    let r = await this.repo.get(id);
+    if (r?.pendingSubmissionId && r.organisationId === organisationId) {
+      await this.syncPending(organisationId).catch(() => undefined);
+      r = await this.repo.get(id);
+    }
     if (!r || r.organisationId !== organisationId) throw new DealerError('stock_not_found', 'No such car in your stock');
     return r;
   }
@@ -180,7 +215,7 @@ export class DealerService {
     if (r.status !== 'in_stock') throw new DealerError('not_in_stock', 'This car is no longer in your stock');
     if (r.vehicleId) {
       const { ids } = await this.identifiersOf(r);
-      const item = await this.send(actor, organisationId, ids, [{ type: 'listing_published', attributes: { askingPrice: money(price) } }]);
+      const item = await this.send(actor.userId, organisationId, ids, [{ type: 'listing_published', attributes: { askingPrice: money(price) } }]);
       if (item.status !== 'accepted') throw new DealerError('listing_rejected', 'SAZO could not accept this price', item.errors);
     }
     await this.repo.setPrice(id, price);
@@ -216,7 +251,7 @@ export class DealerService {
     const at = `${soldOn}T12:00:00Z`;
     if (r.vehicleId) {
       const { ids } = await this.identifiersOf(r);
-      const item = await this.send(actor, organisationId, ids, [{ type: 'sale_recorded', attributes: { price: money(price) } }], at);
+      const item = await this.send(actor.userId, organisationId, ids, [{ type: 'sale_recorded', attributes: { price: money(price) } }], at);
       if (item.status !== 'accepted') throw new DealerError('listing_rejected', 'SAZO could not record the sale', item.errors);
     }
     if (!(await this.repo.markSold(id, price, at))) throw new DealerError('not_in_stock', 'This car is no longer in your stock');
@@ -234,7 +269,8 @@ export class DealerService {
     return this.identifiers({ vehicleRef: v!.publicRef });
   }
 
-  list(organisationId: string, status?: StockStatus) {
+  async list(organisationId: string, status?: StockStatus) {
+    await this.syncPending(organisationId).catch(() => undefined);
     return this.repo.list(organisationId, status);
   }
 
@@ -361,6 +397,7 @@ export class DealerService {
       stockId: r.id,
       vehicleRef: v?.publicRef,
       linked: !!r.vehicleId,
+      waitingForReview: !r.vehicleId && !!r.pendingSubmissionId,
       status: r.status,
       askingPriceUgx: r.askingPriceUgx,
       listedMileageKm: r.listedMileageKm,

@@ -67,7 +67,7 @@ const Settings = z.object({
 const STATUS: Record<string, number> = {
   stock_not_found: 404, vehicle_not_found: 404, cost_not_found: 404, photo_not_found: 404, identifiers_required: 400, make_required: 400, link_first: 400, rate_required: 400,
   commission_incomplete: 400, odometer_photo_required: 422, photo_not_allowed: 422, too_many_photos: 422, too_many_listings: 429, already_in_stock: 409, not_in_stock: 409,
-  already_linked: 409, already_reversed: 409, costs_locked: 409, vehicle_needs_review: 422, listing_rejected: 422, organisation_not_approved: 403,
+  already_linked: 409, already_reversed: 409, costs_locked: 409, waiting_for_review: 409, listing_rejected: 422, organisation_not_approved: 403,
 };
 const TITLE: Record<number, string> = { 400: 'Invalid request', 403: 'Forbidden', 404: 'Not found', 409: 'Conflict', 422: 'Unprocessable', 429: 'Too many requests' };
 

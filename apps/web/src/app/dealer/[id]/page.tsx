@@ -107,7 +107,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
 
       <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={(inStock.length === 0 && show === 'in_stock') || sp.add === '1'}>
         <summary className="flex cursor-pointer list-none items-center gap-2 font-display text-lg font-bold text-primary-container"><Icon name="add" />Add a car</summary>
-        <p className="mt-1 text-sm text-muted">Start with the basics. You can add the chassis number, import costs and more photos later.</p>
+        <p className="mt-1 text-sm text-muted">Start with the basics. You can add import costs and more photos later.</p>
         <form action={addStock} className="mt-3 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="org" value={id} />
           <div className="sm:col-span-2"><label htmlFor="photos" className="label">Photos of the car</label>
@@ -126,9 +126,9 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
             <div><label htmlFor="yard" className="label">Bond or yard</label><input id="yard" name="yard" className="field" placeholder="Kyambogo" /></div>
           </div>
           <div><label htmlFor="anchor" className="label">Chassis number or VIN</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" />
-            <p className="mt-1 text-sm text-muted">Add when you have it. Buyers see the SAZO history once it is added.</p></div>
+            <p className="mt-1 text-sm text-muted">With the plate or the chassis number the car joins SAZO at once, even if SAZO does not know it yet.</p></div>
           <div><label htmlFor="plate" className="label">Number plate</label><input id="plate" name="plate" className="field sazo-id" autoCapitalize="characters" autoComplete="off" placeholder="UBK 482M" /></div>
-          <details className="sm:col-span-2"><summary className="cursor-pointer text-sm font-semibold text-primary">Add the mileage now (needs the chassis number and an odometer photo)</summary>
+          <details className="sm:col-span-2"><summary className="cursor-pointer text-sm font-semibold text-primary">Add the mileage now (needs the plate or chassis number and an odometer photo)</summary>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" /></div>
               <div><label htmlFor="odometer" className="label">Odometer photo</label>
@@ -176,7 +176,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         {v?.currentPlate && <Plate value={v.currentPlate} size="sm" />}
-                        {!c.linked && <span className="chip border-line-strong bg-white text-muted">Chassis number needed</span>}
+                        {!c.linked && <span className="chip border-line-strong bg-white text-muted">{c.waitingForReview ? 'SAZO is checking' : 'Plate or chassis number needed'}</span>}
                         {v?.status === 'provisional' && <span className="chip border-warn-line bg-warn-fill text-warn-text">Not yet confirmed</span>}
                       </div>
                       <h2 className="mt-1 font-display text-base font-bold"><Link href={carHref} className="hover:underline">{title}</Link></h2>
@@ -184,7 +184,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                       {c.status === 'in_stock' && <div className="mt-1 flex flex-wrap gap-1"><StockAge c={c} /><BondClock c={c} /></div>}
                     </div>
                     <div>
-                      {!c.linked ? <p className="text-sm text-muted">Add the chassis number to see what SAZO records show.</p> : <>
+                      {!c.linked ? <p className="text-sm text-muted">{c.waitingForReview ? 'SAZO is checking which car this is. It joins SAZO by itself once that is done.' : 'Add the plate or chassis number to see what SAZO records show.'}</p> : <>
                       <p className="text-sm font-semibold">{f.serious + f.attention === 0 ? <span className="text-ok-text">Nothing flagged</span> : <>
                         {f.serious > 0 && <span className="text-bad-text">{f.serious} serious</span>}{f.serious > 0 && f.attention > 0 && ' · '}{f.attention > 0 && <span className="text-warn-text">{f.attention} to check</span>}</>}</p>
                       <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="What the records show">

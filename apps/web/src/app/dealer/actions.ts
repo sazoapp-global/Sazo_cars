@@ -39,7 +39,11 @@ async function odometerFor(form: FormData, km: number | undefined, fail: (msg: s
 }
 
 /** How SAZO should find the car: by its reference when the plate or chassis is already known, otherwise as typed. */
-async function identifiers(plate: string, anchor: string, fail: (msg: string) => never): Promise<Record<string, string> | undefined> {
+/**
+ * How the car is sent to SAZO. A car SAZO already knows goes by its reference; a car SAZO does not know yet goes
+ * by what the dealer typed, and SAZO adds it (D-130). It is never refused for being new.
+ */
+async function identifiers(plate: string, anchor: string): Promise<Record<string, string> | undefined> {
   if (!plate && !anchor) return undefined;
   const find = async (q: string) => (await api<SearchResult>(`/vehicles/search?q=${encodeURIComponent(q)}`)).matches;
   const byAnchor = anchor ? await find(anchor) : [];
@@ -47,8 +51,13 @@ async function identifiers(plate: string, anchor: string, fail: (msg: string) =>
   if (anchor) return { ...(anchor.length === 17 ? { vin: anchor } : { chassisNumber: anchor }), ...(plate ? { plate } : {}) };
   const byPlate = await find(plate);
   if (byPlate.length === 1) return { vehicleRef: byPlate[0]!.vehicleRef };
-  return fail(byPlate.length > 1 ? `More than one car uses ${plate}. Enter the chassis number too.` : `SAZO does not know ${plate} yet. Enter its chassis number too.`);
+  return { plate };
 }
+
+interface Added { stockId: string; linked: boolean; waitingForReview?: boolean }
+const addedMessage = (a: Added) => a.linked ? 'Car added. It is now in SAZO with its listing.'
+  : a.waitingForReview ? 'Car added. SAZO is checking which car this is; it joins SAZO by itself once that is done.'
+  : 'Car added. Add the number plate or chassis number when you have it so it joins SAZO.';
 
 function details(form: FormData, keys: string[]) {
   const d: Record<string, unknown> = {};
@@ -72,34 +81,35 @@ export async function addStock(form: FormData) {
   const km = text(form, 'mileage') ? digits(text(form, 'mileage')) : undefined;
   const d = details(form, ['make', 'model', 'modelYear', 'engineCc', 'fuel', 'yard', 'stage']);
   if (!price) fail('Enter the asking price in UGX.');
-  if (!plate && !anchor && !d.make) fail('Enter the make and model, or the chassis number.');
-  if (km !== undefined && !anchor && !plate) fail('Add the mileage when you add the chassis number.');
-  const idents = await identifiers(plate, anchor, fail);
+  if (!plate && !anchor && !d.make) fail('Enter the make and model, or the number plate or chassis number.');
+  if (km !== undefined && !anchor && !plate) fail('Add the mileage with the number plate or chassis number.');
+  const idents = await identifiers(plate, anchor);
   const odometerPhotoId = await odometerFor(form, km, fail);
-  let car: string | undefined;
+  let added: Added | undefined;
   try {
-    car = (await api<{ stockId: string }>('/dealer/stock', { method: 'POST', ...asDealer(org), body: {
+    added = await api<Added>('/dealer/stock', { method: 'POST', ...asDealer(org), body: {
       ...(idents ?? {}), askingPriceUgx: price, ...(km !== undefined ? { mileageKm: km, odometerPhotoId } : {}),
-      ...(text(form, 'notes') ? { notes: text(form, 'notes') } : {}), details: d } })).stockId;
+      ...(text(form, 'notes') ? { notes: text(form, 'notes') } : {}), details: d } });
   } catch (err) { fail(reason(err, 'Could not add the car. Please try again.')); }
-  await sendPhotos(org, car!, filesFrom(form, 'photos'));
-  toCar(org, car!, { done: idents ? 'Car added. The listing is now part of the car’s SAZO history.' : 'Car added. Add the chassis number when you have it so buyers can see its SAZO history.' });
+  await sendPhotos(org, added!.stockId, filesFrom(form, 'photos'));
+  toCar(org, added!.stockId, { done: addedMessage(added!) });
 }
 
-/** Step 2 for a car added without its chassis number. */
+/** Step 2 for a car added without its plate or chassis number. */
 export async function linkCar(form: FormData) {
   const { org, car } = ids(form);
   const fail = (error: string) => toCar(org, car, { error, at: 'link' });
   const plate = text(form, 'plate').toUpperCase();
   const anchor = normalizeIdentifier(text(form, 'anchor'));
-  if (!anchor && !plate) fail('Enter the chassis number (or the VIN).');
+  if (!anchor && !plate) fail('Enter the number plate or the chassis number (or VIN).');
   const km = text(form, 'mileage') ? digits(text(form, 'mileage')) : undefined;
-  const idents = await identifiers(plate, anchor, fail);
+  const idents = await identifiers(plate, anchor);
   const odometerPhotoId = await odometerFor(form, km, fail);
+  let linked: Added | undefined;
   try {
-    await api(`/dealer/stock/${car}/link`, { method: 'POST', ...asDealer(org), body: { ...idents, ...(km !== undefined ? { mileageKm: km, odometerPhotoId } : {}) } });
+    linked = await api<Added>(`/dealer/stock/${car}/link`, { method: 'POST', ...asDealer(org), body: { ...idents, ...(km !== undefined ? { mileageKm: km, odometerPhotoId } : {}) } });
   } catch (err) { fail(reason(err, 'Could not link the car. Please try again.')); }
-  toCar(org, car, { done: 'Linked. The listing is now part of the car’s SAZO history.' });
+  toCar(org, car, { done: linked!.waitingForReview ? 'Sent. SAZO is checking which car this is; it joins SAZO by itself once that is done.' : 'Linked. The car is now in SAZO with its listing.' });
 }
 
 /** Car details, stage and the customs bond clock (whichever fields the form sent). */

@@ -613,7 +613,7 @@ paths:
     post:
       tags: [Dealer]
       operationId: addDealerStock
-      summary: Add a car. With a vehicleRef, VIN or chassis number it joins the car's history at once; with only details (make, model) it waits for POST /dealer/stock/{stockId}/link
+      summary: "Add a car. A car SAZO does not know is never refused (D-130): with a vehicleRef, plate, VIN or chassis number it joins SAZO at once (provisional when new). If SAZO must first check which car it is, the car is still added with waitingForReview true and is linked by itself once a reviewer has matched it. With only details (make, model) it waits for POST /dealer/stock/{stockId}/link"
       parameters:
         - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -635,9 +635,9 @@ paths:
                 details: { $ref: '#/components/schemas/StockDetails' }
       responses:
         '201': { description: StockItem }
-        '400': { description: identifiers_required / make_required / link_first }
+        '400': { description: make_required / link_first }
         '409': { description: already_in_stock }
-        '422': { description: vehicle_needs_review / listing_rejected }
+        '422': { description: listing_rejected }
 
   /dealer/stock/{stockId}:
     get:
@@ -702,13 +702,13 @@ paths:
     post:
       tags: [Dealer]
       operationId: linkDealerStock
-      summary: Add the chassis number (or VIN) of a car added without it; publishes the listing to the car's history
+      summary: Add the plate, chassis number or VIN of a car added without them; the car joins SAZO (or waits for SAZO's reviewer, see addDealerStock)
       parameters:
         - { name: X-Organisation-Id, in: header, required: true, schema: { type: string, format: uuid } }
         - { name: stockId, in: path, required: true, schema: { type: string, format: uuid } }
       responses:
         '200': { description: StockItem }
-        '409': { description: already_linked / already_in_stock }
+        '409': { description: already_linked / already_in_stock / waiting_for_review }
 
   /dealer/stock/{stockId}/costs:
     get:

@@ -21,6 +21,8 @@ export interface StockDetails {
 export interface StockRow extends StockDetails {
   id: string; organisationId: string; vehicleId: string | null; status: StockStatus; askingPriceUgx: number; listedMileageKm: number | null;
   notes: string | null; createdBy: string; listedAt: Date; soldAt: Date | null; salePriceUgx: number | null;
+  /** Set while SAZO's reviewer checks which car this is (D-130); cleared when it is matched or turned down. */
+  pendingSubmissionId: string | null;
 }
 export interface CostRow {
   id: string; category: CostCategory; amount: number; currency: string; rateToUgx: number; amountUgx: number; note: string | null; shareRule: string | null;
@@ -36,7 +38,7 @@ const COLS = `id, organisation_id AS "organisationId", vehicle_id AS "vehicleId"
   ${DATE('received_on', 'receivedOn')}, ${DATE('bond_arrived_on', 'bondArrivedOn')}, customs_status AS "customsStatus",
   ${DATE('customs_deadline', 'customsDeadline')}, ${DATE('customs_extension_until', 'customsExtensionUntil')}, customs_value_ugx::float8 AS "customsValueUgx",
   tiktok_url AS "tiktokUrl", open_to_brokers AS "openToBrokers", commission_kind AS "commissionKind", commission_fixed_ugx::float8 AS "commissionFixedUgx",
-  commission_percent::float8 AS "commissionPercent"`;
+  commission_percent::float8 AS "commissionPercent", pending_submission_id AS "pendingSubmissionId"`;
 
 /** Column for each detail field (whitelist: only these can be set by updateDetails). */
 const DETAIL_COLUMNS: Record<keyof StockDetails, string> = {
@@ -72,10 +74,10 @@ export class DealerRepository {
   }
 
   /** Returns undefined if the car is already in this dealer's stock (unique live index). */
-  async insert(r: { organisationId: string; vehicleId: string | null; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null; createdBy: string; details: Partial<StockDetails> }): Promise<StockRow | undefined> {
+  async insert(r: { organisationId: string; vehicleId: string | null; pendingSubmissionId?: string | null; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null; createdBy: string; details: Partial<StockDetails> }): Promise<StockRow | undefined> {
     const keys = (Object.keys(r.details) as (keyof StockDetails)[]).filter((k) => DETAIL_COLUMNS[k] && r.details[k] !== undefined);
-    const cols = ['organisation_id', 'vehicle_id', 'asking_price_ugx', 'listed_mileage_km', 'notes', 'created_by_user_id', ...keys.map((k) => DETAIL_COLUMNS[k])];
-    const vals = [r.organisationId, r.vehicleId, r.askingPriceUgx, r.listedMileageKm, r.notes, r.createdBy, ...keys.map((k) => r.details[k])];
+    const cols = ['organisation_id', 'vehicle_id', 'pending_submission_id', 'asking_price_ugx', 'listed_mileage_km', 'notes', 'created_by_user_id', ...keys.map((k) => DETAIL_COLUMNS[k])];
+    const vals = [r.organisationId, r.vehicleId, r.pendingSubmissionId ?? null, r.askingPriceUgx, r.listedMileageKm, r.notes, r.createdBy, ...keys.map((k) => r.details[k])];
     try {
       return (await this.pool.query<StockRow>(
         `INSERT INTO dealer.stock_items (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING ${COLS}`, vals)).rows[0];
@@ -106,13 +108,24 @@ export class DealerRepository {
   async link(id: string, vehicleId: string, listedMileageKm: number | null): Promise<boolean | undefined> {
     try {
       const r = await this.pool.query(
-        `UPDATE dealer.stock_items SET vehicle_id = $2, listed_mileage_km = COALESCE($3, listed_mileage_km), listed_at = now()
+        `UPDATE dealer.stock_items SET vehicle_id = $2, listed_mileage_km = COALESCE($3, listed_mileage_km), listed_at = now(), pending_submission_id = NULL
           WHERE id = $1 AND vehicle_id IS NULL AND status = 'in_stock'`, [id, vehicleId, listedMileageKm]);
       return r.rowCount === 1;
     } catch (err) {
       if ((err as { code?: string }).code === '23505') return undefined;
       throw err;
     }
+  }
+
+  /** Mark a car as waiting for SAZO's reviewer (or clear it with null). */
+  async setPending(id: string, submissionId: string | null): Promise<void> {
+    await this.pool.query(`UPDATE dealer.stock_items SET pending_submission_id = $2 WHERE id = $1 AND vehicle_id IS NULL`, [id, submissionId]);
+  }
+
+  /** This dealer's cars still waiting for SAZO's reviewer. */
+  async pending(organisationId: string): Promise<StockRow[]> {
+    return (await this.pool.query<StockRow>(
+      `SELECT ${COLS} FROM dealer.stock_items WHERE organisation_id = $1 AND pending_submission_id IS NOT NULL AND vehicle_id IS NULL`, [organisationId])).rows;
   }
 
   async markSold(id: string, price: number, at: string): Promise<boolean> {

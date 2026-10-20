@@ -116,10 +116,9 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     expect(ledger.some((i: { type: string; attributes: { km?: number } }) => i.type === 'odometer_reading' && i.attributes.km === 131000)).toBe(true);
   });
 
-  it('a car SAZO does not know needs its VIN or chassis, and stays "not yet confirmed"', async () => {
-    expect((await http.post('/v1/dealer/stock').set(asStaff()).send({ plate: 'UBT 505D', askingPriceUgx: 20_000_000 }).expect(400)).body.code).toBe('identifiers_required');
-    const res = await http.post('/v1/dealer/stock').set(asStaff()).send({ plate: 'UBT 505D', chassisNumber: 'GRX130-6011111', askingPriceUgx: 20_000_000 }).expect(201);
-    expect(res.body.vehicle).toMatchObject({ status: 'provisional' });
+  it('a car SAZO does not know is added to SAZO, never refused, and stays "not yet confirmed" (D-130)', async () => {
+    const byPlate = await http.post('/v1/dealer/stock').set(asStaff()).send({ plate: 'UBT 505D', askingPriceUgx: 20_000_000 }).expect(201);
+    expect(byPlate.body).toMatchObject({ linked: true, waitingForReview: false, vehicle: { status: 'provisional' } });
   });
 
   it('buyers see cars in stock at approved dealers to pick for comparing, with nothing confidential', async () => {

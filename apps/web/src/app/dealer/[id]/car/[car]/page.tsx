@@ -74,7 +74,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {c.vehicle?.currentPlate && <Plate value={c.vehicle.currentPlate} size="sm" />}
-            {!c.linked && <span className="chip border-line-strong bg-white text-muted">Chassis number needed</span>}
+            {!c.linked && <span className="chip border-line-strong bg-white text-muted">{c.waitingForReview ? 'SAZO is checking' : 'Plate or chassis number needed'}</span>}
             {c.vehicle?.status === 'provisional' && <span className="chip border-warn-line bg-warn-fill text-warn-text">Not yet confirmed</span>}
             {c.status !== 'in_stock' && <span className="chip border-line bg-soft text-on-surface">{c.status === 'sold' ? `Sold ${formatDate(c.soldAt)}` : 'Removed'}</span>}
           </div>
@@ -139,10 +139,16 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
         </Section>
       )}
 
-      {live && !c.linked && (
-        <Section id="link" title="Add the chassis number" icon="add_link" note="Once added, the car and its asking price join its SAZO history, and buyers and brokers can see it.">
+      {live && !c.linked && c.waitingForReview && (
+        <Section id="link" title="SAZO is checking this car" icon="hourglass_empty" note="The plate or chassis number matches a car SAZO has not confirmed yet, so a SAZO reviewer checks which car it is. The car joins SAZO by itself once that is done. You can keep selling it meanwhile.">
+          <p className="text-sm text-muted">Nothing to do for now.</p>
+        </Section>
+      )}
+
+      {live && !c.linked && !c.waitingForReview && (
+        <Section id="link" title="Add the plate or chassis number" icon="add_link" note="Once added, the car and its asking price join SAZO, even if SAZO did not know the car before, and buyers and brokers can see it.">
           <form action={linkCar} className="grid gap-3 sm:grid-cols-2">{hidden}
-            <div><label htmlFor="anchor" className="label">Chassis number or VIN *</label><input id="anchor" name="anchor" required className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>
+            <div><label htmlFor="anchor" className="label">Chassis number or VIN</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>
             <div><label htmlFor="plate" className="label">Number plate</label><input id="plate" name="plate" className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>
             <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" /></div>
             <div><label htmlFor="odometer" className="label">Odometer photo (needed with a mileage)</label><input id="odometer" name="odometer" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className={fileInput} /></div>

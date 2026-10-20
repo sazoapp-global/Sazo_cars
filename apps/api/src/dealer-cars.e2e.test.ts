@@ -35,6 +35,7 @@ describe.skipIf(!base)('dealer cars, costs and clocks (e2e)', () => {
   let orgId: string;
   let otherOrg: string;
   let otherManager: string;
+  let adminToken: string;
 
   const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
   const as = (t: string, org = orgId) => ({ ...bearer(t), 'X-Organisation-Id': org });
@@ -65,7 +66,7 @@ describe.skipIf(!base)('dealer cars, costs and clocks (e2e)', () => {
     await app.init();
     http = request(app.getHttpServer());
     const adminId = await app.get(IamService).ensureUser('+256700000994', 'Test Admin', 'sazo_admin');
-    const adminToken = (await app.get(AuthService).issueTokens(adminId)).accessToken;
+    adminToken = (await app.get(AuthService).issueTokens(adminId)).accessToken;
     ({ t: manager, id: orgId } = await dealer('+256772600001', 'Kyambogo Motors', adminToken));
     ({ t: otherManager, id: otherOrg } = await dealer('+256772600009', 'Nakawa Bond', adminToken));
     await http.post('/v1/garage/staff').set(as(manager)).send({ phone: '+256772600002', displayName: 'Ruth Sales', role: 'org_staff' }).expect(201);
@@ -109,6 +110,34 @@ describe.skipIf(!base)('dealer cars, costs and clocks (e2e)', () => {
     const ledger = (await http.get(`/v1/vehicles/${res.body.vehicleRef}/evidence`).set(bearer(manager)).expect(200)).body.items;
     expect(ledger.find((i: { type: string }) => i.type === 'listing_published').attributes.askingPrice.amount).toBe(74_000_000);
     expect(ledger.some((i: { type: string; evidenceClass: string }) => i.type === 'spec_declared' && i.evidenceClass === 'dealer')).toBe(true);
+  });
+
+  it('a car SAZO does not know is added to SAZO at once by its plate, with the make the dealer typed (D-130)', async () => {
+    const plateOnly = await http.post('/v1/dealer/stock').set(as(staff)).send({ plate: 'UBQ 777Z', askingPriceUgx: 30_000_000 }).expect(201);
+    expect(plateOnly.body).toMatchObject({ linked: true, waitingForReview: false, vehicle: { status: 'provisional' } });
+    expect(plateOnly.body.vehicleRef).toMatch(/^SZV-/);
+    const withMake = await http.post('/v1/dealer/stock').set(as(staff)).send({ plate: 'UBQ 778Z', askingPriceUgx: 31_000_000, details: { make: 'nissan', model: 'x-trail', modelYear: 2015 } }).expect(201);
+    expect(withMake.body).toMatchObject({ linked: true, vehicle: { make: 'Nissan', model: 'X-Trail', status: 'provisional' } });
+    expect((await http.get('/v1/vehicles/search').query({ q: 'UBQ 778Z' }).expect(200)).body.matches[0].vehicleRef).toBe(withMake.body.vehicleRef);
+    // The same plate again at this dealer is the same car, not a second one.
+    expect((await http.post('/v1/dealer/stock').set(as(staff)).send({ plate: 'UBQ 778Z', askingPriceUgx: 1_000_000 }).expect(409)).body.code).toBe('already_in_stock');
+  });
+
+  it('when SAZO must check which car it is, the car still goes into stock and joins SAZO once the reviewer has matched it (D-130)', async () => {
+    const provisional = (await http.post('/v1/dealer/stock').set(as(staff)).send({ plate: 'UBQ 779Z', askingPriceUgx: 32_000_000 }).expect(201)).body.vehicleRef;
+    // Another dealer adds the same plate with a chassis number: SAZO cannot tell on its own if it is the same car (S24).
+    const added = await http.post('/v1/dealer/stock').set(as(otherManager, otherOrg)).send({ plate: 'UBQ 779Z', chassisNumber: 'NZE161-7011111', askingPriceUgx: 33_000_000,
+      details: { make: 'toyota', model: 'fielder' } }).expect(201);
+    expect(added.body).toMatchObject({ linked: false, waitingForReview: true, details: { make: 'Toyota' } });
+    expect(added.body.vehicleRef).toBeUndefined();
+    expect((await http.post(`/v1/dealer/stock/${added.body.stockId}/link`).set(as(otherManager, otherOrg)).send({ chassisNumber: 'NZE161-7011111' }).expect(409)).body.code).toBe('waiting_for_review');
+    const queue = (await http.get('/v1/admin/resolutions').query({ outcome: 'ambiguous' }).set(bearer(adminToken)).expect(200)).body.items;
+    const pending = queue.find((d: { candidateVehicleRefs: string[] }) => d.candidateVehicleRefs.includes(provisional));
+    await http.post(`/v1/admin/resolutions/${pending.decisionId}/decide`).set(bearer(adminToken)).send({ outcome: 'matched', vehicleRef: provisional, reason: 'Same Fielder, plate and photos match' }).expect(200);
+    const after = await http.get(`/v1/dealer/stock/${added.body.stockId}`).set(as(otherManager, otherOrg)).expect(200);
+    expect(after.body).toMatchObject({ linked: true, waitingForReview: false, vehicleRef: provisional });
+    const ledger = (await http.get(`/v1/vehicles/${provisional}/evidence`).set(bearer(manager)).expect(200)).body.items;
+    expect(ledger.filter((i: { type: string }) => i.type === 'listing_published').map((i: { attributes: { askingPrice: { amount: number } } }) => i.attributes.askingPrice.amount)).toContain(33_000_000);
   });
 
   it('keeps the two clocks apart: days in stock against the dealer’s levels, and the customs bond deadline with any extension', async () => {
