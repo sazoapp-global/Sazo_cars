@@ -770,6 +770,16 @@ paths:
       responses:
         '200': { description: IdentityCheck }
         '409': { description: already_decided }
+  /admin/people/{userId}:
+    get:
+      tags: [Admin]
+      operationId: adminPersonAccount
+      summary: "One person's account for the console popup: name, contact, account status, businesses and their latest National ID check (NIN decrypted for this view). Each look is audited (organisation.approve)."
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: "{ userId, name, displayName, phone, email, emailVerified, gender, status, businesses[], identity | null }" }
+        '404': { description: person_not_found }
   /admin/organisations/{organisationId}/managers:
     get:
       tags: [Admin]
