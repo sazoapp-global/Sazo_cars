@@ -11,7 +11,7 @@ import { AppFrame } from '@/components/app-frame/app-frame';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { CostEntry, Me, MyOrganisation, StockItem } from '@/lib/types';
 import { shareReport } from '../../../../buyer-actions';
-import { addCost, addPhotos, changePrice, createLink, linkCar, removePhoto, removeStock, revokeLink, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
+import { addCost, addPhotos, changePrice, createLink, linkCar, markSold, removePhoto, removeStock, revokeLink, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
@@ -86,11 +86,64 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
+      {/* All the car's details beside the side bar (approved 25 Oct 2026): photos first, then what the records show and the actions. */}
+      <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr]">
+        <Section id="photos" title="Photos" icon="photo_library" note={c.photos.length ? undefined : 'No photos yet. Photos taken by your team, up to 12.'}>
+          {c.photos.length > 0 ? (
+            <>
+              <a href={`/dealer/${id}/car/${c.stockId}/photo/${c.photos[0]!.photoId}`} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-line">
+                <img src={`/dealer/${id}/car/${c.stockId}/photo/${c.photos[0]!.photoId}`} alt={`${title}, main photo`} className="aspect-[4/3] w-full object-cover" />
+              </a>
+              <ul className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                {c.photos.slice(1).map((p) => (
+                  <li key={p.photoId} className="relative overflow-hidden rounded-md border border-line">
+                    <a href={`/dealer/${id}/car/${c.stockId}/photo/${p.photoId}`} target="_blank" rel="noopener noreferrer"><img src={`/dealer/${id}/car/${c.stockId}/photo/${p.photoId}`} alt={`${title}, photo ${p.position + 1}`} className="aspect-[4/3] w-full object-cover" /></a>
+                    {live && <form action={removePhoto} className="absolute right-0.5 top-0.5">{hidden}<input type="hidden" name="photo" value={p.photoId} />
+                      <button className="rounded-full bg-white/90 p-1 shadow" aria-label={`Remove photo ${p.position + 1}`}><Icon name="delete" size={14} /></button></form>}
+                  </li>
+                ))}
+              </ul>
+              {live && <form action={removePhoto} className="mt-2">{hidden}<input type="hidden" name="photo" value={c.photos[0]!.photoId} /><button className="link text-xs">Remove the main photo</button></form>}
+            </>
+          ) : <div className="grid aspect-[4/3] place-items-center rounded-lg bg-soft text-label"><Icon name="directions_car" size={56} /></div>}
+          {live && c.photos.length < 12 && (
+            <form action={addPhotos} className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border-2 border-dashed border-line-strong p-3">{hidden}
+              <div className="min-w-0 flex-1"><label htmlFor="newphotos" className="label">Add photos</label><input id="newphotos" name="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" className={fileInput} /></div>
+              <button className="btn btn-ghost"><Icon name="photo_camera" />Add</button>
+            </form>
+          )}
+        </Section>
+        <div className="space-y-4">
+          {c.linked ? (
+        <Section id="records" title="What SAZO records show" icon="fact_check" note="Buyers see the same.">
+          <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            {c.questions.map((x) => {
+              const st = statusIcon(x.status);
+              return <li key={x.question} className={`flex items-center gap-1 font-semibold ${st.cls}`}><Icon name={st.icon} size={16} />{QUESTION_TITLES[x.question]?.short}</li>;
+            })}
+          </ul>
+          {c.vehicleRef && <p className="mt-2"><Link href={`/v/${c.vehicleRef}`} className="link text-sm">Open the full SAZO report</Link></p>}
+        </Section>
+          ) : (
+            <Section id="records" title="What SAZO records show" icon="fact_check">
+              <p className="text-sm text-muted">{c.heldUntilApproval ? 'Private until SAZO approves your business. Then the car joins SAZO by itself and its records show here.' : c.waitingForReview ? 'SAZO is checking which car this is. Its records show here once that is done.' : 'Add the plate or chassis number to see what SAZO records show.'}</p>
+            </Section>
+          )}
+          {manager && costs && (
+            <section className="rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="cost-sum-h">
+              <h2 id="cost-sum-h" className="flex items-center gap-2 font-display text-lg font-bold"><Icon name="receipt_long" />Costs so far</h2>
+              <p className="mt-2 font-display text-2xl font-extrabold tabular-nums">{formatUgx(costs.totalUgx)}</p>
+              <p className="text-sm"><a href="#costs" className="link">See every cost</a></p>
+            </section>
+          )}
+        </div>
+      </div>
+
       {live && (
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {c.vehicleRef && <form action={shareReport} className="col-span-2 sm:col-span-1"><input type="hidden" name="ref" value={c.vehicleRef} />
-            <button className="btn btn-primary w-full"><Icon name="share" />Report link for a buyer</button></form>}
-          <details className="open:col-span-2">
+        <div className="flex flex-wrap gap-2">
+          {c.vehicleRef && <form action={shareReport}><input type="hidden" name="ref" value={c.vehicleRef} />
+            <button className="btn btn-primary"><Icon name="share" />Report link for a buyer</button></form>}
+          <details className="w-full sm:w-auto">
             <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Change price</summary>
             <form action={changePrice} className="mt-2 flex gap-2">{hidden}<input type="hidden" name="from" value="car" />
               <label htmlFor="newprice" className="sr-only">New asking price (UGX)</label>
@@ -98,7 +151,17 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
               <button className="btn btn-ghost">Save</button>
             </form>
           </details>
-          <form action={removeStock}>{hidden}<button className="btn btn-ghost w-full bg-white"><Icon name="delete" />Remove</button></form>
+          {approved && (
+            <details className="w-full sm:w-auto">
+              <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Mark as sold</summary>
+              <form action={markSold} className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_auto]">{hidden}<input type="hidden" name="from" value="car" />
+                <div><label htmlFor="soldfor" className="label">Sold for (UGX), private</label><input id="soldfor" name="price" required inputMode="numeric" className="field tabular-nums" /></div>
+                <div><label htmlFor="soldon" className="label">Date</label><input id="soldon" name="soldOn" type="date" max={today} defaultValue={today} className="field" /></div>
+                <button className="btn btn-primary self-end">Record the sale</button>
+              </form>
+            </details>
+          )}
+          <form action={removeStock}>{hidden}<button className="btn btn-ghost w-full bg-white" aria-label={`Remove ${title} without a sale`}><Icon name="delete" />Remove</button></form>
         </div>
       )}
 
@@ -161,37 +224,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
         </Section>
       )}
 
-      {c.linked && (
-        <Section id="records" title="What SAZO records show" icon="fact_check" note="Buyers see the same.">
-          <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-            {c.questions.map((x) => {
-              const st = statusIcon(x.status);
-              return <li key={x.question} className={`flex items-center gap-1 font-semibold ${st.cls}`}><Icon name={st.icon} size={16} />{QUESTION_TITLES[x.question]?.short}</li>;
-            })}
-          </ul>
-          {c.vehicleRef && <p className="mt-2"><Link href={`/v/${c.vehicleRef}`} className="link text-sm">Open the full SAZO report</Link></p>}
-        </Section>
-      )}
 
-      <Section id="photos" title="Photos" icon="photo_library" note="Photos taken by your team. Up to 12.">
-        {c.photos.length > 0 && (
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {c.photos.map((p) => (
-              <li key={p.photoId} className="relative overflow-hidden rounded-lg border border-line">
-                <img src={`/dealer/${id}/car/${c.stockId}/photo/${p.photoId}`} alt={`${title}, photo ${p.position + 1}`} className="aspect-[4/3] w-full object-cover" />
-                {live && <form action={removePhoto} className="absolute right-1 top-1">{hidden}<input type="hidden" name="photo" value={p.photoId} />
-                  <button className="rounded-full bg-white/90 p-1.5 shadow" aria-label={`Remove photo ${p.position + 1}`}><Icon name="delete" size={16} /></button></form>}
-              </li>
-            ))}
-          </ul>
-        )}
-        {live && c.photos.length < 12 && (
-          <form action={addPhotos} className="mt-3 flex flex-wrap items-end gap-2">{hidden}
-            <div className="min-w-0 flex-1"><label htmlFor="newphotos" className="label">Add photos</label><input id="newphotos" name="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" className={fileInput} /></div>
-            <button className="btn btn-ghost"><Icon name="photo_camera" />Add</button>
-          </form>
-        )}
-      </Section>
 
       <Section id="details" title="About the car" icon="directions_car">
         <form action={updateCar} data-draft={`car-details-${car}`} className="grid gap-3 sm:grid-cols-2">{hidden}<input type="hidden" name="at" value="details" />

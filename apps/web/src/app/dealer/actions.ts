@@ -204,10 +204,11 @@ export async function changePrice(form: FormData) {
 export async function markSold(form: FormData) {
   const { org, car } = ids(form);
   const price = digits(text(form, 'price'));
-  if (!price) toList(org, { error: 'Enter the price it sold for. Buyers never see it.' });
+  const fail = (error: string) => (text(form, 'from') === 'car' ? toCar(org, car, { error }) : toList(org, { error }));
+  if (!price) fail('Enter the price it sold for. Buyers never see it.');
   try {
     await api(`/dealer/stock/${car}/sold`, { method: 'POST', ...asDealer(org), body: { salePriceUgx: price, ...(text(form, 'soldOn') ? { soldOn: text(form, 'soldOn') } : {}) } });
-  } catch (err) { toList(org, { error: reason(err, 'Could not record the sale.') }); }
+  } catch (err) { fail(reason(err, 'Could not record the sale.')); }
   toList(org, { done: 'Sale recorded.', show: 'sold' });
 }
 

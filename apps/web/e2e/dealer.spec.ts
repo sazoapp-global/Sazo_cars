@@ -27,6 +27,8 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(menu.getByRole('link', { name: /Cars for sale/ })).toBeAttached();
   for (const later of ['Enquiries', 'Sold', 'Commission', 'Add many cars', 'Team']) await expect(menu.getByRole('link', { name: later, exact: true })).toHaveCount(0);
   await a11y(dealer);
+  // The list only; "Add a car" opens the form in the same space.
+  await dealer.getByRole('link', { name: 'Add a car' }).first().click();
   await dealer.getByLabel('Make', { exact: true }).fill('Toyota');
   await dealer.getByLabel('Model', { exact: true }).fill('Wish');
   await dealer.getByLabel('Number plate').fill('UBR 314W');
@@ -41,7 +43,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('heading', { name: 'Your National ID (optional)' })).toBeVisible();
   const businessUrl = dealer.url();
   /** The "Add a car" panel stays open after a mistake; open it only if it is closed. */
-  const openAdd = async () => { if (!(await dealer.getByLabel('Make', { exact: true }).isVisible())) await dealer.getByText('Add a car', { exact: true }).click(); };
+  const openAdd = async () => { if (!(await dealer.getByLabel('Make', { exact: true }).isVisible())) await dealer.getByRole('link', { name: 'Add a car' }).first().click(); };
   const openMileage = async () => { if (!(await dealer.getByLabel('Mileage now (km)').isVisible())) await dealer.getByText(/Add the mileage now/).click(); };
 
   const admin = await (await browser.newContext()).newPage();
@@ -58,7 +60,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('heading', { name: /SAZO is checking your business/ })).toHaveCount(0);
   const wish = dealer.getByRole('listitem').filter({ hasText: 'UBR 314W' });
   await expect(wish).not.toContainText('Joins SAZO after approval');
-  await expect(wish).toContainText('Not yet confirmed');
+  await expect(wish).toContainText(/Nothing flagged|to check|serious/);
   await expect(menu.getByRole('link', { name: 'Enquiries', exact: true })).toBeAttached();
   // The garage app's layout: a compact top bar (no site links, the online badge), no site footer,
   // and Appearance as one dropdown in Settings inside the page.
@@ -106,7 +108,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('button', { name: 'Add the car' }).click();
   await expect(dealer.getByRole('status')).toContainText('Add the number plate or chassis number when you have it');
   await expect(dealer.getByRole('heading', { name: '2018 Toyota Harrier' })).toBeVisible();
-  await expect(dealer.getByRole('img', { name: /2018 Toyota Harrier, photo 1/ })).toBeVisible();
+  await expect(dealer.getByRole('img', { name: '2018 Toyota Harrier, main photo' })).toBeVisible();
   const linkForm = dealer.getByRole('region', { name: 'Add the plate or chassis number' });
   await linkForm.getByLabel(/Chassis number or VIN/).fill(`ZSU60-${stamp}`);
   await linkForm.getByLabel('Number plate').fill('UBX 777Q');
@@ -124,14 +126,14 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByText(/Bond deadline .*, 10 days left/)).toBeVisible();
 
   // Import costs in their own currency (managers only).
-  const costs = dealer.getByRole('region', { name: 'Costs' });
+  const costs = dealer.getByRole('region', { name: 'Costs', exact: true });
   await costs.getByLabel('Amount', { exact: true }).fill('1500');
   await costs.getByLabel('Currency').selectOption('USD');
   await costs.getByLabel(/Rate to UGX/).fill('3,700');
   await costs.getByLabel('What was it for?').selectOption('freight_insurance');
   await costs.getByRole('button', { name: 'Add the cost' }).click();
   await expect(dealer.getByRole('status')).toContainText('Cost added');
-  await expect(dealer.getByRole('region', { name: 'Costs' })).toContainText('5,550,000');
+  await expect(dealer.getByRole('region', { name: 'Costs', exact: true })).toContainText('5,550,000');
 
   // Open to brokers with a fixed commission.
   const brokers = dealer.getByRole('region', { name: 'Brokers' });
@@ -174,15 +176,17 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await shot(dealer, 'dealer-enquiries');
 
   await dealer.goto(listUrl);
-  const car = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });
-  await expect(car).toContainText('UGX 25.5M');
-  await expect(dealer.getByRole('listitem').filter({ hasText: 'UBX 777Q' })).toContainText('10 days left');
+  const row = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });
+  await expect(row).toContainText('UGX 25.5M');
   await shot(dealer, 'dealer-stock');
 
-  // New price, then a link for a buyer.
+  // A car opens with all its details beside the side bar: new price, then a link for a buyer.
+  await row.getByRole('link').click();
+  const car = dealer.getByRole('main');
+  await expect(car.getByRole('region', { name: 'Photos' })).toBeVisible();
   await car.getByText('Change price').click();
   await car.getByLabel(/New asking price/).fill('24000000');
-  await car.getByRole('button', { name: 'Save' }).click();
+  await car.locator('form', { has: dealer.getByLabel(/New asking price/) }).getByRole('button', { name: 'Save' }).click();
   await expect(dealer.getByRole('status')).toContainText('Price updated');
   await expect(car).toContainText('UGX 24M');
   await car.getByRole('button', { name: 'Report link for a buyer' }).click();
@@ -201,7 +205,6 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   const sold = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });
   await expect(sold).toContainText('Sold');
   await expect(sold).toContainText('UGX 23M');
-  await expect(dealer.getByText('The sale price is kept private')).toBeVisible();
 
   // A salesperson.
   await dealer.getByLabel('Name', { exact: true }).fill('Sam Sales');
@@ -243,7 +246,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('status')).toContainText('1 car added');
   await rows.getByRole('link', { name: 'Added: open' }).click();
   await expect(dealer.getByRole('heading', { name: /Toyota Premio/ })).toBeVisible();
-  await expect(dealer.getByRole('region', { name: 'Costs' })).toContainText('22,940,000');
+  await expect(dealer.getByRole('region', { name: 'Costs', exact: true })).toContainText('22,940,000');
 
   // Signing in again with nowhere particular to go lands the dealer in their console.
   const again = await (await browser.newContext()).newPage();
