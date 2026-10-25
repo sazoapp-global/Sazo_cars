@@ -1,8 +1,10 @@
 // Shared by the garage app browser tests: log in through the API or the app, answering a second step
-// (managers, D-105) from the codes the API prints in its log.
+// from the codes the API prints in its log. SAZO staff set up an authenticator app; the tests play the app (D-145).
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { createHash, createHmac } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import zlib from 'node:zlib';
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { API_LOG, API_PORT } from '../playwright.config';
@@ -16,6 +18,29 @@ const personFor = (name: string) => {
   const words = name.replace(/[^\p{L}\s'-]/gu, ' ').trim().split(/\s+/);
   return { firstName: words[0]!, surname: words.length > 1 ? words.slice(1).join(' ') : 'Test' };
 };
+
+/** The RFC 6238 code an authenticator app would show for this key. */
+function totp(key: string, at = Date.now()): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0; let value = 0; const bytes: number[] = [];
+  for (const ch of key.replace(/\s/g, '')) { value = (value << 5) | alphabet.indexOf(ch); bits += 5; if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; } }
+  const counter = Buffer.alloc(8); counter.writeBigUInt64BE(BigInt(Math.floor(at / 30_000)));
+  const h = createHmac('sha1', Buffer.from(bytes)).update(counter).digest();
+  const o = h[h.length - 1]! & 15;
+  return String((((h[o]! & 127) << 24) | (h[o + 1]! << 16) | (h[o + 2]! << 8) | h[o + 3]!) % 1_000_000).padStart(6, '0');
+}
+const KEYS = path.join(tmpdir(), 'sazo-e2e-garage-authenticator-keys.json');
+type Keys = Record<string, { key: string; step: number }>;
+const readKeys = (): Keys => (existsSync(KEYS) ? JSON.parse(readFileSync(KEYS, 'utf8')) as Keys : {});
+const rememberKey = (phone: string, key: string, step = Math.floor(Date.now() / 30_000)) => writeFileSync(KEYS, JSON.stringify({ ...readKeys(), [phone]: { key, step } }));
+/** A code not used yet for this person's app (each works once; waits for the next 30 seconds if needed). */
+async function nextAppCode(phone: string): Promise<string> {
+  const k = readKeys()[phone]!;
+  let step = Math.floor(Date.now() / 30_000);
+  while (step <= k.step) { await new Promise((r) => setTimeout(r, 1000)); step = Math.floor(Date.now() / 30_000); }
+  rememberKey(phone, k.key, step);
+  return totp(k.key, step * 30_000);
+}
 
 /** A SAZO admin with full details (create-admin script). */
 export function createAdmin(phone: string, name: string) {
@@ -33,9 +58,16 @@ export async function apiSignIn(request: APIRequestContext, phone: string, name?
   before = codesSoFar();
   const p = name ? personFor(name) : undefined;
   let body = await (await request.post(`${API}/auth/otp/verify`, { data: { phone, code: lastCode(), ...(signup && p ? { signup: { ...p, gender: 'female', dateOfBirth: '1989-09-09' } } : {}) } })).json();
-  if (body.status === 'second_step') {
+  if (body.status === 'second_step' && body.channel === 'authenticator') {
+    body = await (await request.post(`${API}/auth/second-step`, { data: { challengeId: body.challengeId, code: await nextAppCode(phone), rememberDevice: false } })).json();
+  } else if (body.status === 'second_step') {
     await expect.poll(codesSoFar).toBeGreaterThan(before);
     body = await (await request.post(`${API}/auth/second-step`, { data: { challengeId: body.challengeId, code: lastCode(), rememberDevice: false } })).json();
+  }
+  if (body.status === 'setup_authenticator') {
+    const { secret } = await (await request.post(`${API}/auth/authenticator/start`, { data: { setupToken: body.setupToken } })).json();
+    rememberKey(phone, secret);
+    body = await (await request.post(`${API}/auth/authenticator/confirm`, { data: { setupToken: body.setupToken, code: totp(secret) } })).json();
   }
   expect(body.accessToken).toBeTruthy();
   return body.accessToken as string;
@@ -52,7 +84,7 @@ export async function signInInApp(page: Page, localPhone: string) {
   await page.getByLabel('6-digit code').fill(lastCode());
   before = codesSoFar();
   await page.getByRole('button', { name: 'Log in' }).click();
-  const second = page.getByRole('heading', { name: 'Confirm it’s you' });
+  const second = page.getByRole('heading', { name: /Confirm it.s you/ });
   const home = page.getByRole('banner').or(page.getByRole('heading', { name: 'Finish your details' }));
   await expect(second.or(home)).toBeVisible();
   if (await second.isVisible()) {
