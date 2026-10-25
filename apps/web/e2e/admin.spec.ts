@@ -83,7 +83,11 @@ test('data sources show which are simulated', async ({ page }) => {
   await signIn(page, ADMIN);
   await page.goto('/admin/sources');
   await expect(page.getByText('Simulated').first()).toBeVisible();
+  // The site footer is left out of the console; public pages keep it.
+  await expect(page.getByRole('contentinfo')).toHaveCount(0);
   await a11y(page);
+  await page.goto('/');
+  await expect(page.getByRole('contentinfo')).toBeVisible();
 });
 
 test('announcements reach the bell and help answers reach the Help page (A-06, A-07)', async ({ browser }) => {

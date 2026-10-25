@@ -13,6 +13,7 @@ import { api, isSignedIn } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
 import { AccountPopup } from './account/account-popup';
+import { HideIn } from '@/components/app-frame/hide-in';
 import { WorkspaceName } from '@/components/app-frame/workspace-name';
 import { Logo } from '@/components/logo';
 import { MainNav } from '@/components/main-nav';
@@ -73,6 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
         <main id="main" className="flex-1">{children}</main>
+        <HideIn workspaces={['console']}>
         <footer className="mt-16 border-t border-line bg-white print:hidden">
           <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr] md:px-8 lg:px-12">
             <div>
@@ -101,6 +103,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <p className="mx-auto max-w-[1280px] px-4 py-4 text-xs text-label md:px-8 lg:px-12">© {new Date().getFullYear()} SAZO · Kampala, Uganda</p>
           </div>
         </footer>
+        </HideIn>
       </body>
     </html>
   );
