@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "tsc -b packages/contracts packages/trust-engine packages/scenarios",
+    "prepare": "npm run build",
     "typecheck": "tsc -p tsconfig.tests.json",
     "test": "vitest run",
     "lint": "eslint . && npm run lint:boundaries",

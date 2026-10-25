@@ -22,7 +22,7 @@ The repository is private: Git will ask you to sign in to GitHub (use a personal
 
 ```bash
 npm run dev:services          # starts Postgres and Redis in Docker
-npm run build                 # builds the shared packages
+npm run build                 # builds the shared packages (also done by npm install and before each app starts)
 npm run db:migrate            # creates the tables
 npm run seed -w @sazo/api     # loads the 27 sample cars
 ```
