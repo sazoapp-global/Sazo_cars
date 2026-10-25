@@ -7,7 +7,7 @@ import { Icon } from '@/components/icon';
 import { Plate } from '@/components/plate';
 import { statusIcon } from '@/components/status';
 import { ShareButtons } from '@/components/share-buttons';
-import { WorkspaceFrame } from '@/components/workspace-frame';
+import { AppFrame } from '@/components/app-frame/app-frame';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { CostEntry, Me, MyOrganisation, StockItem } from '@/lib/types';
 import { shareReport } from '../../../../buyer-actions';
@@ -61,15 +61,8 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const hidden = <><input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} /></>;
 
   return (
-    <WorkspaceFrame kind="Dealer" name={name} approved
-      person={me ? { name: me.displayName, role: manager ? 'Manager' : 'Sales' } : undefined}
-      items={[
-        { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', active: true },
-        { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
-        ...(manager ? [{ href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' as const }] : []),
-        { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell' },
-        { href: `/business/${id}`, label: 'Business details', icon: 'verified_user' as const },
-      ]}>
+    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
+      person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
       <p><Link href={`/dealer/${id}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All cars</Link></p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -282,6 +275,6 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           ) : <p className="mt-2 text-sm text-muted">Costs can no longer change after the car is sold or removed.</p>}
         </Section>
       )}
-    </WorkspaceFrame>
+    </AppFrame>
   );
 }

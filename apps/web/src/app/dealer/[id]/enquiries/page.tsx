@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
-import { NumberStrip, WorkspaceFrame } from '@/components/workspace-frame';
+import { AppFrame } from '@/components/app-frame/app-frame';
+import { NumberStrip } from '@/components/number-strip';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation, StockItem } from '@/lib/types';
 import { addLead, decideLead, moveLead, noteLead } from '../../actions';
@@ -49,15 +50,8 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
   const manager = org.role === 'org_manager';
 
   return (
-    <WorkspaceFrame kind="Dealer" name={name} approved
-      person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}
-      items={[
-        { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', count: cars.length },
-        { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum', active: true },
-        ...(manager ? [{ href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' as const }] : []),
-        { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell' },
-        { href: `/business/${id}`, label: 'Business details', icon: 'verified_user' as const },
-      ]}>
+    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
+      person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
       <div>
         <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">Enquiries</h1>
         <p className="mt-1 max-w-2xl text-muted">People who asked about your cars, from your shared links or added by your team. Only your business sees their names and numbers.</p>
@@ -167,6 +161,6 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
           ))}
         </ul>
       )}
-    </WorkspaceFrame>
+    </AppFrame>
   );
 }

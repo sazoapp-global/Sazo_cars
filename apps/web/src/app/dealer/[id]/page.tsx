@@ -7,7 +7,8 @@ import { Plate } from '@/components/plate';
 import { statusIcon } from '@/components/status';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { DealerSettings, Me, MyOrganisation, StaffMember, StockItem } from '@/lib/types';
-import { NumberStrip, WorkspaceFrame } from '@/components/workspace-frame';
+import { AppFrame } from '@/components/app-frame/app-frame';
+import { NumberStrip } from '@/components/number-strip';
 import { shareReport } from '../../buyer-actions';
 import { addStaff, addStock, changePrice, markSold, removeStock, saveSettings } from '../actions';
 import { BondClock, FUELS, STAGES, StockAge, carName, stageLabel } from '../labels';
@@ -60,18 +61,9 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   };
 
   return (
-    <WorkspaceFrame kind="Dealer" name={name} approved
+    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}
-      items={[
-        { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront', count: inStock.length, active: show === 'in_stock' },
-        { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
-        ...(manager ? [{ href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' as const }] : []),
-        ...(manager ? [{ href: `/dealer/${id}/import`, label: 'Add many cars', icon: 'upload_file' as const }] : []),
-        { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell', count: soldList.length, active: show === 'sold' },
-        ...(staff ? [{ href: `/dealer/${id}#staff-section`, label: 'Team', icon: 'group' as const, count: staff.length }] : []),
-        ...(manager ? [{ href: `/dealer/${id}#settings-section`, label: 'Settings', icon: 'edit' as const }] : []),
-        { href: `/business/${id}`, label: 'Business details', icon: 'verified_user' as const },
-      ]}>
+      badges={{ stock: inStock.length, sold: soldList.length, ...(staff ? { team: staff.length } : {}) }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{name}: cars for sale</h1>
@@ -272,6 +264,6 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           </form>
         </section>
       )}
-    </WorkspaceFrame>
+    </AppFrame>
   );
 }

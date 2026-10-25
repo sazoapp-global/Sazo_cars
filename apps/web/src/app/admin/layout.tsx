@@ -1,13 +1,17 @@
 import type { Metadata } from 'next';
-import { AdminNav } from './admin-nav';
+import { AppFrame } from '@/components/app-frame/app-frame';
+import { api } from '@/lib/api';
+import type { Me } from '@/lib/types';
 
 export const metadata: Metadata = { title: { default: 'Admin', template: '%s · SAZO admin' }, robots: { index: false, follow: false } };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+/** The SAZO console: the shared frame with the console's modules for this person's role. Pages check access themselves. */
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const me = await api<Me>('/me', { auth: true }).catch(() => undefined);
+  const role = me?.platformRoles.includes('sazo_admin') ? 'SAZO admin' : me?.platformRoles.includes('sazo_reviewer') ? 'SAZO reviewer' : undefined;
   return (
-    <div className="mx-auto flex max-w-[1280px] flex-col gap-6 px-4 py-6 md:flex-row md:px-8">
-      <AdminNav />
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
+    <AppFrame workspace="console" viewer={{ platformRoles: me?.platformRoles ?? [] }} person={me && role ? { name: me.displayName, role } : undefined}>
+      {children}
+    </AppFrame>
   );
 }

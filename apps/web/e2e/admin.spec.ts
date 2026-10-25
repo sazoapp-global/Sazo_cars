@@ -17,7 +17,6 @@ test('people who are not SAZO staff cannot open the console', async ({ page }) =
 
 test("only an administrator downloads a person's data as a JSON file", async ({ page }) => {
   await signIn(page, ADMIN);
-  await page.getByRole('navigation', { name: 'Admin' }).getByText('Accounts').click();
   await page.getByRole('link', { name: "People's data" }).click();
   await expect(page.getByRole('heading', { name: "People's data" })).toBeVisible();
   await a11y(page);
@@ -40,7 +39,6 @@ test('approve a garage that registered', async ({ page, request }) => {
   await expect(page.getByRole('heading', { name: /Good to see you/ })).toBeVisible();
   await shot(page, 'admin-home');
   await a11y(page);
-  await page.getByRole('navigation', { name: 'Admin' }).getByText('Accounts').click();
   await page.getByRole('link', { name: 'Businesses', exact: true }).click();
   const card = page.getByRole('listitem').filter({ hasText: `Bugolobi Car Care ${stamp} Ltd` });
   await expect(card).toContainText('ID sent: check it before approving');
@@ -91,11 +89,10 @@ test('data sources show which are simulated', async ({ page }) => {
 test('announcements reach the bell and help answers reach the Help page (A-06, A-07)', async ({ browser }) => {
   const page = await (await browser.newContext()).newPage();
   await signIn(page, ADMIN);
-  await page.getByRole('navigation', { name: 'Admin' }).getByText('Messages and content').click();
   await page.getByRole('link', { name: 'Announcements' }).click();
   await page.getByLabel('Who is it for?').selectOption('everyone');
   await page.getByLabel('Title').fill(`Testing week ${stamp}`);
-  await page.getByLabel('Message').fill('Records on SAZO are simulated this week.');
+  await page.getByLabel('Message', { exact: true }).fill('Records on SAZO are simulated this week.');
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.getByRole('status')).toContainText('Announcement sent');
   await a11y(page);

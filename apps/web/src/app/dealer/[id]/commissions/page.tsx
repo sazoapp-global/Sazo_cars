@@ -1,7 +1,8 @@
 import { formatDate, formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import { NumberStrip, WorkspaceFrame } from '@/components/workspace-frame';
+import { AppFrame } from '@/components/app-frame/app-frame';
+import { NumberStrip } from '@/components/number-strip';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation } from '@/lib/types';
 import { commissionAction } from '../../actions';
@@ -31,13 +32,8 @@ export default async function Commissions({ params, searchParams }: { params: Pr
   const hidden = (c: Commission) => <><input type="hidden" name="org" value={id} /><input type="hidden" name="commission" value={c.commissionId} /></>;
 
   return (
-    <WorkspaceFrame kind="Dealer" name={org.tradingName ?? org.legalName} approved person={me ? { name: me.displayName, role: 'Manager' } : undefined}
-      items={[
-        { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront' },
-        { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
-        { href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments', active: true },
-        { href: `/dealer/${id}?show=sold`, label: 'Sold', icon: 'sell' },
-      ]}>
+    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: org.tradingName ?? org.legalName, approved: true }}
+      person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
       <div>
         <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">Broker commission</h1>
         <p className="mt-1 max-w-2xl text-muted">Worked out when a sale a broker brought is completed, from the car&apos;s commission at that moment. SAZO keeps the record; you pay the broker directly.</p>
@@ -83,6 +79,6 @@ export default async function Commissions({ params, searchParams }: { params: Pr
           ))}
         </ul>
       )}
-    </WorkspaceFrame>
+    </AppFrame>
   );
 }

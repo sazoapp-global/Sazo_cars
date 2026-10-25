@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
-import { WorkspaceFrame } from '@/components/workspace-frame';
+import { AppFrame } from '@/components/app-frame/app-frame';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { ImportStage, Me, MyOrganisation } from '@/lib/types';
 import { addCarsFromFile, checkCarsFile } from '../../actions';
@@ -40,13 +40,8 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
   const result = (line: number) => checked?.results?.find((r) => r.line === line);
 
   return (
-    <WorkspaceFrame kind="Dealer" name={org.tradingName ?? org.legalName} approved person={me ? { name: me.displayName, role: 'Manager' } : undefined}
-      items={[
-        { href: `/dealer/${id}`, label: 'For sale', icon: 'storefront' },
-        { href: `/dealer/${id}/import`, label: 'Add many cars', icon: 'upload_file', active: true },
-        { href: `/dealer/${id}/enquiries`, label: 'Enquiries', icon: 'forum' },
-        { href: `/dealer/${id}/commissions`, label: 'Commission', icon: 'payments' },
-      ]}>
+    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: org.tradingName ?? org.legalName, approved: true }}
+      person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
       <div>
         <p><Link href={`/dealer/${id}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All cars</Link></p>
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight md:text-3xl">Add many cars from a file</h1>
@@ -114,6 +109,6 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
           <p className="mt-3"><Link href={`/dealer/${id}/import`} className="link text-sm">Check another file</Link></p>
         </section>
       )}
-    </WorkspaceFrame>
+    </AppFrame>
   );
 }

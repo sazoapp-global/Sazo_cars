@@ -13,6 +13,7 @@ import { api, isSignedIn } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
 import { AccountPopup } from './account/account-popup';
+import { WorkspaceName } from '@/components/app-frame/workspace-name';
 import { Logo } from '@/components/logo';
 import { MainNav } from '@/components/main-nav';
 import { MobileNav } from '@/components/mobile-nav';
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="relative mx-auto flex h-16 max-w-[1280px] items-center gap-2 px-4 sm:gap-4 md:h-20 md:px-8 lg:px-12">
             <MobileNav signedIn={!!me} />
             <Logo />
+            <WorkspaceName />
             <div className="flex-1 md:ml-8"><MainNav /></div>
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
               <Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link>
