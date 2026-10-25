@@ -69,7 +69,8 @@ Used by every security review (the `sazo-security-review` skill). Each line is a
 
 - Passwords only as scrypt hashes (`iam/passwords.ts`); never logged, never in `iam.login_attempts`.
 - Every log-in attempt is recorded (`iam.login_attempts`, append-only); lock-outs count failures since the last success or password change.
-- Sensitive roles (`AuthService.isSensitive`): 12+ character passwords and a second step on new devices. Any new role that can change car history or SAZO itself must be added there (and, from part 2, in role settings).
+- Sensitive roles (`AuthService.isSensitive`): 12+ character passwords and stricter lock-outs. Any new role that can change car history or SAZO itself must be added there (and, from part 2, in role settings).
+- Everyone gets a second step on a new device (D-145). SAZO staff (`STAFF_ROLES`) must use an authenticator app: keys are stored encrypted, each 30-second code works once, backup codes are stored as hashes. A password reset needs the emailed link and an SMS code to the account's phone.
 - Email links and second-step codes are single use, short-lived, stored only as hashes. Reset links are checked before a weak new password can use them up.
 - Google: state + PKCE + nonce; the API only accepts the registered redirect address; ID tokens checked for signature, issuer, audience, expiry and nonce.
 - Date of birth is encrypted with the personal-data keyring and included in key rotation (`npm run pii:rotate`).

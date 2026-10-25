@@ -73,7 +73,7 @@ End-to-end tests need a migrated database: set `TEST_DATABASE_URL` (CI does this
 | Customer details encrypted in the personal-data store; confirmation links single-use and never logged | ✅ |
 | **Consumer website (Next.js):** search by plate/VIN/chassis, several-cars and not-found guidance, public summary (no figures), phone-code sign-in, full report (Vehicle Health + Record Confidence with reasons, key facts, 7 questions, price range estimate), timeline, evidence ledger with filters, customer confirmation page for garage SMS links | ✅ |
 | Browser tests on a phone-sized screen, with automatic accessibility checks (axe, WCAG 2 AA) | ✅ |
-| **Garage phone app (installable, works offline):** log in by phone code or email and password (second step for managers), find the car by plate (or carry on without signal), work-type tiles, mileage + odometer photo, details per type of work, customer + consent + cost, check-and-send with explained warnings, job list with customer-confirmation status, staff management. Drafts and photos are kept on the phone and sync when the signal returns | ✅ |
+| **Garage phone app (installable, works offline):** log in by phone code or email and password (second step on a new phone), find the car by plate (or carry on without signal), work-type tiles, mileage + odometer photo, details per type of work, customer + consent + cost, check-and-send with explained warnings, job list with customer-confirmation status, staff management. Drafts and photos are kept on the phone and sync when the signal returns | ✅ |
 | **Admin console (website `/admin`, SAZO staff only):** overview of what needs a person, business approvals, conflict review (records side by side, resolve/dismiss with reasoning, mark a record as a mistake or duplicate, settle a cloned plate, notes), uncertain vehicle matches, data sources (pause/retire/replace simulated feeds), recalculation | ✅ |
 | **Business sign-up (website `/business`):** for-businesses page, registration, approval progress, sending verification documents, SAZO's questions shown to the business, SMS on every decision; reviewers open the documents from the approval queue | ✅ |
 | **Partner data-entry console (website `/partner`):** for each data source (registry, customs, police, lender, insurer, auction, rental, manufacturer, dealer, inspection), enter one record with a form built from the record catalogue, or upload a CSV file (template per source; every row checked; good rows sent in batches; re-sending a file never duplicates); recent submissions with per-record results | ✅ |
@@ -102,7 +102,8 @@ People create an account first, then log in (D-100): email + password, phone + c
 npm run create-admin -w @sazo/api -- --phone +256772000001 --surname Anguzu --first Mike --gender male --dob 1990-05-17   # a SAZO admin
 curl -X POST localhost:3000/v1/auth/otp/request -H 'content-type: application/json' -d '{"phone":"+256772000001","intent":"login"}'
 curl -X POST localhost:3000/v1/auth/otp/verify  -H 'content-type: application/json' -d '{"phone":"+256772000001","code":"<from log>"}'
-# SAZO staff, managers and dealers get {"status":"second_step","challengeId":…}: send the second code to /v1/auth/second-step.
+# On a new device everyone gets {"status":"second_step","challengeId":…}: send the second code to /v1/auth/second-step (D-145).
+# Then possibly {"status":"add_phone"} (no phone yet) or {"status":"setup_authenticator"} (SAZO staff): see /v1/auth/phone/* and /v1/auth/authenticator/*.
 # then: -H "Authorization: Bearer <accessToken>" on /v1/me, /v1/vehicles/<ref>/report, /v1/admin/...
 ```
 

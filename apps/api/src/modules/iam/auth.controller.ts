@@ -1,20 +1,22 @@
-import { Body, Controller, Get, Headers, HttpCode, Inject, Ip, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Inject, Ip, Param, Post } from '@nestjs/common';
 import { Email, PersonDetails } from '@sazo/contracts';
 import { z } from 'zod';
 import { APP_CONFIG, type AppConfig } from '../../config.js';
-import { Problem, badRequest } from '../../platform/problem.js';
+import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import type { Actor } from './actor.js';
-import { CurrentActor, Public } from './auth.guard.js';
+import { CurrentActor, Public, RequirePermission } from './auth.guard.js';
 import { AuthError, AuthService, type LoginContext } from './auth.service.js';
 
 const Phone = z.string().regex(/^\+[1-9][0-9]{7,14}$/, 'Use international format, e.g. +256772123456');
 const Password = z.string().min(1).max(128);
 const DeviceToken = z.string().min(20).max(100).optional();
+const Code = z.string().regex(/^[0-9]{6}$/, 'Enter the 6-digit code');
+const SetupToken = z.string().min(20).max(2000);
 
 const STATUS: Record<string, number> = {
   rate_limited: 429, signup_details_required: 400, refresh_in_progress: 409, no_account: 404, account_exists: 409, email_in_use: 409,
   account_locked: 423, weak_password: 422, invalid_link: 410, too_young: 422, google_disabled: 503, google_failed: 502, wrong_password: 403,
-  details_locked: 409, invalid_code: 401, invalid_credentials: 401, invalid_token: 401, session_idle: 401, account_suspended: 403, phone_in_use: 409, same_phone: 400,
+  details_locked: 409, invalid_code: 401, invalid_credentials: 401, invalid_token: 401, session_idle: 401, account_suspended: 403, phone_in_use: 409, same_phone: 400, phone_required: 409,
 };
 const TITLES: Record<number, string> = { 400: 'Invalid request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not found', 409: 'Conflict', 410: 'Gone',
   422: 'Unprocessable', 423: 'Locked', 429: 'Too many requests', 502: 'Bad gateway', 503: 'Unavailable' };
@@ -77,12 +79,13 @@ export class AuthController {
     return this.auth.passwordLogin(b.email, b.password, ctxOf(ua, ip, b.deviceToken)).catch(authProblem);
   }
 
-  /** POST /v1/auth/second-step — the code sent to a sensitive role's phone or email on a new device (D-105). */
+  /** POST /v1/auth/second-step — on a new device (D-145): the texted or emailed code, the authenticator app's code, or the password. */
   @Public()
   @Post('auth/second-step')
   @HttpCode(200)
   async secondStep(@Body() body: unknown, @Headers('user-agent') ua?: string, @Ip() ip?: string) {
-    const b = parse(z.object({ challengeId: z.string().uuid(), code: z.string().regex(/^[0-9]{6}$/, 'Enter the 6-digit code'), rememberDevice: z.boolean().default(true) }), body);
+    // A 6-digit code, a backup code ("k7m2p-9xq4t") or, after a phone code, the account's password.
+    const b = parse(z.object({ challengeId: z.string().uuid(), code: z.string().trim().min(1, 'Enter the code').max(128), rememberDevice: z.boolean().default(true) }), body);
     return this.auth.completeSecondStep(b.challengeId, b.code, b.rememberDevice, ctxOf(ua, ip)).catch(authProblem);
   }
 
@@ -96,13 +99,75 @@ export class AuthController {
     return { status: 'sent_if_known' };
   }
 
-  /** POST /v1/auth/password/reset — new password from the emailed link; every device is signed out. */
+  /** POST /v1/auth/password/reset/code — the emailed link is good: text a code to the account's phone (D-145). */
+  @Public()
+  @Post('auth/password/reset/code')
+  @HttpCode(202)
+  async resetCode(@Body() body: unknown) {
+    const { token } = parse(z.object({ token: z.string().min(20).max(100) }), body);
+    return this.auth.resetStart(token).catch(authProblem);
+  }
+
+  /** POST /v1/auth/password/reset — new password from the emailed link and the texted code; every device is signed out. */
   @Public()
   @Post('auth/password/reset')
   @HttpCode(204)
   async reset(@Body() body: unknown) {
-    const b = parse(z.object({ token: z.string().min(20).max(100), password: Password }), body);
-    await this.auth.resetPassword(b.token, b.password).catch(authProblem);
+    const b = parse(z.object({ token: z.string().min(20).max(100), code: Code, password: Password }), body);
+    await this.auth.resetPassword(b.token, b.code, b.password).catch(authProblem);
+  }
+
+  /** POST /v1/auth/phone/add — an account with no phone adds one before going in: a code is texted to it. */
+  @Public()
+  @Post('auth/phone/add')
+  @HttpCode(202)
+  async addPhone(@Body() body: unknown) {
+    const b = parse(z.object({ setupToken: SetupToken, phone: Phone }), body);
+    return this.auth.addPhoneStart(b.setupToken, b.phone).catch(authProblem);
+  }
+
+  /** POST /v1/auth/phone/confirm — the code from that SMS: the phone is saved and the log-in carries on. */
+  @Public()
+  @Post('auth/phone/confirm')
+  @HttpCode(200)
+  async confirmPhone(@Body() body: unknown, @Headers('user-agent') ua?: string, @Ip() ip?: string) {
+    const b = parse(z.object({ setupToken: SetupToken, phone: Phone, code: Code }), body);
+    return this.auth.addPhoneFinish(b.setupToken, b.phone, b.code, ctxOf(ua, ip)).catch(authProblem);
+  }
+
+  /** POST /v1/auth/authenticator/start — SAZO staff: a new key for the authenticator app (shown as a QR code). */
+  @Public()
+  @Post('auth/authenticator/start')
+  @HttpCode(200)
+  async authenticatorStart(@Body() body: unknown) {
+    const b = parse(z.object({ setupToken: SetupToken }), body);
+    return this.auth.authenticatorStart(b.setupToken).catch(authProblem);
+  }
+
+  /** POST /v1/auth/authenticator/confirm — the first code from the app; answers with the tokens and ten backup codes. */
+  @Public()
+  @Post('auth/authenticator/confirm')
+  @HttpCode(200)
+  async authenticatorConfirm(@Body() body: unknown, @Headers('user-agent') ua?: string, @Ip() ip?: string) {
+    const b = parse(z.object({ setupToken: SetupToken, code: Code }), body);
+    return this.auth.authenticatorFinish(b.setupToken, b.code, ctxOf(ua, ip)).catch(authProblem);
+  }
+
+  /** GET /v1/me/authenticator — for Settings: required, set up, backup codes left. */
+  @Get('me/authenticator')
+  async myAuthenticator(@CurrentActor() actor: Actor) {
+    return this.auth.authenticatorStatus(actor.userId);
+  }
+
+  /** POST /v1/admin/people/:userId/authenticator/reset — clear someone's app; they set up a new one at next log-in. */
+  @Post('admin/people/:userId/authenticator/reset')
+  @HttpCode(200)
+  @RequirePermission('authenticator.reset')
+  async resetAuthenticator(@CurrentActor() actor: Actor, @Param('userId') userId: string) {
+    if (!z.string().uuid().safeParse(userId).success) throw notFound('person_not_found', 'No such person');
+    const cleared = await this.auth.resetAuthenticator(actor.userId, userId).catch(authProblem);
+    if (!cleared) throw notFound('no_authenticator', 'This person has no authenticator app set up');
+    return { status: 'cleared' };
   }
 
   /** POST /v1/auth/email/verify — the link in the confirmation email. */

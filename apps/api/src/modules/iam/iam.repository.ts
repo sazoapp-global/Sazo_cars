@@ -15,6 +15,9 @@ export interface UserRow {
 const USER_COLS = `id, display_name AS "displayName", phone_e164 AS phone, email, status, surname, first_name AS "firstName",
   middle_name AS "middleName", gender, email_verified_at IS NOT NULL AS "emailVerified", dob_ciphertext AS "dobCiphertext", dob_key_version AS "dobKeyVersion"`;
 
+export type OtpPurpose = 'sign_in' | 'change_phone' | 'reset_password' | 'add_phone';
+export type SecondStepChannel = 'sms' | 'email' | 'authenticator' | 'password';
+
 export interface NewAccount {
   surname: string; firstName: string; middleName?: string | null; displayName: string; gender: 'male' | 'female';
   dobCiphertext: Buffer; dobKeyVersion: number; phone?: string | null; email?: string | null; emailVerified?: boolean;
@@ -155,13 +158,13 @@ export class IamRepository {
     return rows[0]!.n;
   }
 
-  async createOtp(phone: string, codeHmac: string, ttlMinutes: number, purpose: 'sign_in' | 'change_phone' = 'sign_in', userId: string | null = null): Promise<void> {
+  async createOtp(phone: string, codeHmac: string, ttlMinutes: number, purpose: OtpPurpose = 'sign_in', userId: string | null = null): Promise<void> {
     await this.pool.query(
       `INSERT INTO iam.otp_challenges (phone_e164, code_hmac, expires_at, purpose, user_id) VALUES ($1, $2, now() + make_interval(mins => $3), $4, $5)`,
       [phone, codeHmac, ttlMinutes, purpose, userId]);
   }
 
-  async latestOpenOtp(phone: string, purpose: 'sign_in' | 'change_phone' = 'sign_in', userId: string | null = null): Promise<{ id: string; codeHmac: string; attempts: number } | undefined> {
+  async latestOpenOtp(phone: string, purpose: OtpPurpose = 'sign_in', userId: string | null = null): Promise<{ id: string; codeHmac: string; attempts: number } | undefined> {
     const { rows } = await this.pool.query(
       `SELECT id, code_hmac AS "codeHmac", attempts FROM iam.otp_challenges
         WHERE phone_e164 = $1 AND purpose = $2 AND user_id IS NOT DISTINCT FROM $3 AND consumed_at IS NULL AND expires_at > now()
@@ -460,7 +463,7 @@ export class IamRepository {
   }
 
   // second step and trusted devices
-  async createSecondStep(userId: string, channel: 'sms' | 'email', method: 'password' | 'phone_code' | 'google', codeHmac: string, ttlMinutes: number): Promise<string> {
+  async createSecondStep(userId: string, channel: SecondStepChannel, method: 'password' | 'phone_code' | 'google', codeHmac: string | null, ttlMinutes: number): Promise<string> {
     const { rows } = await this.pool.query<{ id: string }>(
       `INSERT INTO iam.second_step_challenges (user_id, channel, method, code_hmac, expires_at) VALUES ($1,$2,$3,$4, now() + make_interval(mins => $5)) RETURNING id`,
       [userId, channel, method, codeHmac, ttlMinutes]);
@@ -469,13 +472,13 @@ export class IamRepository {
 
   async recentSecondSteps(userId: string, minutes: number): Promise<number> {
     const { rows } = await this.pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM iam.second_step_challenges WHERE user_id = $1 AND created_at > now() - make_interval(mins => $2)`, [userId, minutes]);
+      `SELECT count(*)::int AS n FROM iam.second_step_challenges WHERE user_id = $1 AND channel IN ('sms', 'email') AND created_at > now() - make_interval(mins => $2)`, [userId, minutes]);
     return rows[0]!.n;
   }
 
-  async secondStep(id: string): Promise<{ id: string; userId: string; codeHmac: string; attempts: number; method: string } | undefined> {
+  async secondStep(id: string): Promise<{ id: string; userId: string; channel: SecondStepChannel; codeHmac: string | null; attempts: number; method: string } | undefined> {
     const { rows } = await this.pool.query(
-      `SELECT id, user_id AS "userId", code_hmac AS "codeHmac", attempts, method FROM iam.second_step_challenges
+      `SELECT id, user_id AS "userId", channel, code_hmac AS "codeHmac", attempts, method FROM iam.second_step_challenges
         WHERE id = $1 AND consumed_at IS NULL AND expires_at > now()`, [id]);
     return rows[0];
   }
@@ -496,5 +499,62 @@ export class IamRepository {
 
   async forgetDevices(userId: string): Promise<void> {
     await this.pool.query(`UPDATE iam.trusted_devices SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [userId]);
+  }
+
+  // ---------- authenticator app and backup codes (D-145)
+
+  async authenticator(userId: string): Promise<{ secretCiphertext: Buffer; keyVersion: number; confirmed: boolean; lastStep: number | null } | undefined> {
+    const { rows } = await this.pool.query(
+      `SELECT secret_ciphertext AS "secretCiphertext", key_version AS "keyVersion", confirmed_at IS NOT NULL AS confirmed, last_step::float8 AS "lastStep"
+         FROM iam.authenticators WHERE user_id = $1`, [userId]);
+    return rows[0];
+  }
+
+  /** Start (or restart) setting up: a new key that is not confirmed yet. Never replaces a confirmed one. */
+  async pendingAuthenticator(userId: string, secretCiphertext: Buffer, keyVersion: number): Promise<boolean> {
+    const r = await this.pool.query(
+      `INSERT INTO iam.authenticators (user_id, secret_ciphertext, key_version) VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET secret_ciphertext = EXCLUDED.secret_ciphertext, key_version = EXCLUDED.key_version, created_at = now(), last_step = NULL
+        WHERE iam.authenticators.confirmed_at IS NULL`, [userId, secretCiphertext, keyVersion]);
+    return r.rowCount === 1;
+  }
+
+  /** Confirm the app and store new backup codes, in one go. False if it was confirmed meanwhile. */
+  async confirmAuthenticator(userId: string, step: number, backupHmacs: string[]): Promise<boolean> {
+    return withTx(this.pool, async (tx) => {
+      const r = await tx.query(`UPDATE iam.authenticators SET confirmed_at = now(), last_step = $2 WHERE user_id = $1 AND confirmed_at IS NULL`, [userId, step]);
+      if (r.rowCount !== 1) return false;
+      await tx.query(`DELETE FROM iam.backup_codes WHERE user_id = $1`, [userId]);
+      for (const h of backupHmacs) await tx.query(`INSERT INTO iam.backup_codes (user_id, code_hmac) VALUES ($1, $2)`, [userId, h]);
+      return true;
+    });
+  }
+
+  /** Use a 30-second window once: false if this window (or a later one) was already used. */
+  async useTotpStep(userId: string, step: number): Promise<boolean> {
+    const r = await this.pool.query(
+      `UPDATE iam.authenticators SET last_step = $2 WHERE user_id = $1 AND confirmed_at IS NOT NULL AND (last_step IS NULL OR last_step < $2)`, [userId, step]);
+    return r.rowCount === 1;
+  }
+
+  async useBackupCode(userId: string, codeHmac: string): Promise<boolean> {
+    const r = await this.pool.query(
+      `UPDATE iam.backup_codes SET used_at = now()
+        WHERE id = (SELECT id FROM iam.backup_codes WHERE user_id = $1 AND code_hmac = $2 AND used_at IS NULL LIMIT 1 FOR UPDATE)`, [userId, codeHmac]);
+    return r.rowCount === 1;
+  }
+
+  async backupCodesLeft(userId: string): Promise<number> {
+    const { rows } = await this.pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM iam.backup_codes WHERE user_id = $1 AND used_at IS NULL`, [userId]);
+    return rows[0]!.n;
+  }
+
+  /** A super admin clears someone's app: they set up a new one at their next log-in. */
+  async removeAuthenticator(userId: string): Promise<boolean> {
+    return withTx(this.pool, async (tx) => {
+      const r = await tx.query(`DELETE FROM iam.authenticators WHERE user_id = $1`, [userId]);
+      await tx.query(`DELETE FROM iam.backup_codes WHERE user_id = $1`, [userId]);
+      return (r.rowCount ?? 0) > 0;
+    });
   }
 }

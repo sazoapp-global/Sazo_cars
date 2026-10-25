@@ -13,7 +13,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
-import { IamService } from './modules/iam/index.js';
+import { AuthService, IamService } from './modules/iam/index.js';
+import { currentStep, totpAt } from './modules/iam/totp.js';
 import { ConsoleEmailSender, ConsoleSmsSender } from './modules/notify/index.js';
 import { signInWithCode, testSignup } from './test-auth.js';
 
@@ -124,15 +125,31 @@ describe.skipIf(!base)('accounts (e2e)', () => {
   it('log in with email and password; unknown emails are told to sign up; wrong passwords lock the account (D-105)', async () => {
     expect((await http.post('/v1/auth/password/sign-in').send({ email: 'nobody@example.com', password: 'whatever-123' }).expect(404)).body.code).toBe('no_account');
     expect((await http.post('/v1/auth/password/sign-in').send({ email: EMAIL, password: 'wrong-password' }).expect(401)).body.code).toBe('invalid_credentials');
+    // A new device: everyone gets a second step (D-145). Mike has no phone yet, so the code comes by email.
     const ok = await http.post('/v1/auth/password/sign-in').send({ email: 'MIKE.ANGUZU@example.com', password: 'river-stone-7' }).expect(200);
-    expect(ok.body).toMatchObject({ status: 'signed_in', created: false });
+    expect(ok.body).toMatchObject({ status: 'second_step', channel: 'email', sentTo: 'm••••••@example.com' });
+    expect(ok.body.accessToken).toBeUndefined();
+    const second = await http.post('/v1/auth/second-step').send({ challengeId: ok.body.challengeId, code: codeIn(emailTo(EMAIL)!.text), rememberDevice: false }).expect(200);
+    // No phone on the account: he adds and confirms one before going in.
+    expect(second.body).toMatchObject({ status: 'add_phone' });
+    expect(second.body.accessToken).toBeUndefined();
+    const setupToken = second.body.setupToken as string;
+    expect((await http.post('/v1/auth/phone/add').send({ setupToken: 'x'.repeat(40), phone: '+256772900050' }).expect(410)).body.code).toBe('invalid_link');
+    expect((await http.post('/v1/auth/phone/add').send({ setupToken, phone: '+256772900050' }).expect(202)).body).toEqual({ sentTo: '+256 ••• ••050' });
+    expect(smsTo('+256772900050')).toContain('add this number');
+    await http.post('/v1/auth/phone/confirm').send({ setupToken, phone: '+256772900050', code: codeIn(smsTo('+256772900050')) === '000000' ? '111111' : '000000' }).expect(401);
+    const added = await http.post('/v1/auth/phone/confirm').send({ setupToken, phone: '+256772900050', code: codeIn(smsTo('+256772900050')) }).expect(200);
+    expect(added.body).toMatchObject({ status: 'signed_in', created: false });
+    expect((await http.get('/v1/me/profile').set(bearer(added.body.accessToken)).expect(200)).body.phone).toBe('+256772900050');
+    // The set-up can't be used again.
+    await http.post('/v1/auth/phone/add').send({ setupToken, phone: '+256772900051' }).expect(410);
 
     for (let i = 0; i < 10; i++) await http.post('/v1/auth/password/sign-in').send({ email: EMAIL, password: `wrong-${i}-password` }).expect(401);
     expect((await http.post('/v1/auth/password/sign-in').send({ email: EMAIL, password: 'river-stone-7' }).expect(423)).body.code).toBe('account_locked');
 
     // Every attempt is recorded (D-111) — and no password ever is.
     const { rows } = await db.query(`SELECT success, failure_reason, method FROM iam.login_attempts WHERE method = 'password' ORDER BY at`);
-    expect(rows.filter((r) => r.success)).toHaveLength(2);
+    expect(rows.filter((r) => r.success)).toHaveLength(1); // the sign-up; the log-in finished with its second step
     expect(rows.map((r) => r.failure_reason)).toEqual(expect.arrayContaining(['no_account', 'wrong_password', 'locked']));
     const dump = JSON.stringify((await db.query(`SELECT * FROM iam.login_attempts`)).rows);
     expect(dump).not.toMatch(/river-stone|wrong-1-password|mike\.anguzu/);
@@ -144,15 +161,27 @@ describe.skipIf(!base)('accounts (e2e)', () => {
     await http.post('/v1/auth/password/forgot').send({ email: EMAIL }).expect(202);
     const mail = emailTo(EMAIL)!;
     expect(mail.subject).toBe('Reset your SAZO password');
+    expect(mail.text).toContain('text a code to the phone');
     const token = linkToken(mail.text);
-    expect((await http.post('/v1/auth/password/reset').send({ token, password: '12345678' }).expect(422)).body.code).toBe('weak_password');
-    // A refused password doesn't use up the link; a good one does.
-    await http.post('/v1/auth/password/reset').send({ token, password: 'lake-victoria-22' }).expect(204);
-    await http.post('/v1/auth/password/reset').send({ token, password: 'lake-victoria-23' }).expect(410);
+    // The link alone is not enough (D-145): a code is texted to the account's phone.
+    expect((await http.post('/v1/auth/password/reset').send({ token, code: '123456', password: 'lake-victoria-22' }).expect(401)).body.code).toBe('invalid_code');
+    expect((await http.post('/v1/auth/password/reset/code').send({ token: 'y'.repeat(40) }).expect(410)).body.code).toBe('invalid_link');
+    expect((await http.post('/v1/auth/password/reset/code').send({ token }).expect(202)).body).toEqual({ sentTo: '+256 ••• ••050' });
+    const sms = smsTo('+256772900050')!;
+    expect(sms).toContain('reset your password');
+    const code = codeIn(sms);
+    await http.post('/v1/auth/password/reset').send({ token, code: code === '000000' ? '111111' : '000000', password: 'lake-victoria-22' }).expect(401);
+    expect((await http.post('/v1/auth/password/reset').send({ token, code, password: '12345678' }).expect(422)).body.code).toBe('weak_password');
+    // A wrong code or a refused password doesn't use up the link; a good one does.
+    await http.post('/v1/auth/password/reset').send({ token, code, password: 'lake-victoria-22' }).expect(204);
+    await http.post('/v1/auth/password/reset').send({ token, code, password: 'lake-victoria-23' }).expect(410);
     await http.get('/v1/me').set(bearer(mikeToken)).expect(401);
     expect(emailTo(EMAIL)!.subject).toBe('Your SAZO password was changed');
-    // The new password also ends the lock-out.
-    mikeToken = (await http.post('/v1/auth/password/sign-in').send({ email: EMAIL, password: 'lake-victoria-22' }).expect(200)).body.accessToken;
+    // The new password also ends the lock-out; the second step now texts his phone.
+    const again = await http.post('/v1/auth/password/sign-in').send({ email: EMAIL, password: 'lake-victoria-22' }).expect(200);
+    expect(again.body).toMatchObject({ status: 'second_step', channel: 'sms' });
+    mikeToken = (await http.post('/v1/auth/second-step').send({ challengeId: again.body.challengeId, code: codeIn(smsTo('+256772900050')) }).expect(200)).body.accessToken;
+    expect(mikeToken).toBeTruthy();
   });
 
   it('a phone sign-up starts lower and completes the profile with email and password in Settings (D-102)', async () => {
@@ -171,7 +200,24 @@ describe.skipIf(!base)('accounts (e2e)', () => {
     // Changing it needs the current one; and now she can log in either way.
     expect((await http.put('/v1/me/password').set(bearer(token)).send({ newPassword: 'another-boat-5' }).expect(403)).body.code).toBe('wrong_password');
     await http.put('/v1/me/password').set(bearer(token)).send({ currentPassword: 'papyrus-boat-4', newPassword: 'another-boat-5' }).expect(204);
-    await http.post('/v1/auth/password/sign-in').send({ email: 'ruth@example.com', password: 'another-boat-5' }).expect(200);
+    expect((await http.post('/v1/auth/password/sign-in').send({ email: 'ruth@example.com', password: 'another-boat-5' }).expect(200)).body).toMatchObject({ status: 'second_step', channel: 'sms' });
+    // Logging in by phone code: the second step goes to the confirmed email, so a stolen SIM alone is not enough.
+    await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
+    const byPhone = await http.post('/v1/auth/otp/verify').send({ phone, code: codeIn(smsTo(phone)) }).expect(200);
+    expect(byPhone.body).toMatchObject({ status: 'second_step', channel: 'email', sentTo: 'r•••@example.com' });
+    expect(emailTo('ruth@example.com')!.subject).toBe('Your SAZO sign-in code');
+  });
+
+  it('a phone code with no confirmed email is followed by the password, when the account has one (D-145)', async () => {
+    const phone = '+256772900060';
+    const token = await signInWithCode(app, http, phone, 'Paul Okello');
+    await http.put('/v1/me/password').set(bearer(token)).send({ newPassword: 'mango-tree-41' }).expect(204);
+    await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
+    const r = await http.post('/v1/auth/otp/verify').send({ phone, code: codeIn(smsTo(phone)) }).expect(200);
+    expect(r.body).toMatchObject({ status: 'second_step', channel: 'password' });
+    expect(r.body.sentTo).toBeUndefined();
+    expect((await http.post('/v1/auth/second-step').send({ challengeId: r.body.challengeId, code: 'not-my-password' }).expect(401)).body.detail).toBe('Wrong password');
+    expect((await http.post('/v1/auth/second-step').send({ challengeId: r.body.challengeId, code: 'mango-tree-41' }).expect(200)).body.status).toBe('signed_in');
   });
 
   it('older accounts finish their details once; gender and date of birth then need SAZO staff to change (D-101)', async () => {
@@ -204,20 +250,67 @@ describe.skipIf(!base)('accounts (e2e)', () => {
     expect(smsTo(phone)).toContain('sign-in code');
     await http.post('/v1/auth/second-step').send({ challengeId: first.body.challengeId, code: code === '000000' ? '111111' : '000000' }).expect(401);
     const done = await http.post('/v1/auth/second-step').send({ challengeId: first.body.challengeId, code, rememberDevice: true }).expect(200);
-    expect(done.body).toMatchObject({ status: 'signed_in' });
-    expect(done.body.deviceToken).toMatch(/^[A-Za-z0-9_-]{40,}$/);
     await http.post('/v1/auth/second-step').send({ challengeId: first.body.challengeId, code }).expect(401); // used
 
-    // The remembered device logs straight in; another device still gets the second step.
-    expect((await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71', deviceToken: done.body.deviceToken }).expect(200)).body.status).toBe('signed_in');
-    expect((await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71' }).expect(200)).body.status).toBe('second_step');
-    // Logging in by phone code: the second step goes to the confirmed email, so a stolen SIM alone is not enough.
+    // SAZO staff must set up an authenticator app before going in (D-145).
+    expect(done.body).toMatchObject({ status: 'setup_authenticator' });
+    expect(done.body.accessToken).toBeUndefined();
+    const setupToken = done.body.setupToken as string;
+    const setup = (await http.post('/v1/auth/authenticator/start').send({ setupToken }).expect(200)).body;
+    expect(setup.secret).toMatch(/^[A-Z2-7]{32}$/);
+    expect(setup.otpauthUrl).toBe(`otpauth://totp/SAZO%3Ajoan%40sazo.example?secret=${setup.secret}&issuer=SAZO&algorithm=SHA1&digits=6&period=30`);
+    const { rows: [stored] } = await db.query(`SELECT secret_ciphertext FROM iam.authenticators WHERE user_id = $1`, [u.id]);
+    expect(stored.secret_ciphertext.toString('latin1')).not.toContain(setup.secret); // kept encrypted
+    const step = currentStep();
+    const wrong = totpAt(setup.secret, step) === '000000' ? '111111' : '000000';
+    expect((await http.post('/v1/auth/authenticator/confirm').send({ setupToken, code: wrong }).expect(401)).body.code).toBe('invalid_code');
+    const enrolled = await http.post('/v1/auth/authenticator/confirm').send({ setupToken, code: totpAt(setup.secret, step) }).expect(200);
+    expect(enrolled.body).toMatchObject({ status: 'signed_in', created: false });
+    expect(enrolled.body.deviceToken).toMatch(/^[A-Za-z0-9_-]{40,}$/);
+    const backup = enrolled.body.backupCodes as string[];
+    expect(backup).toHaveLength(10);
+    expect(backup[0]).toMatch(/^[a-z2-9]{5}-[a-z2-9]{5}$/);
+    await http.post('/v1/auth/authenticator/start').send({ setupToken }).expect(410); // done
+    expect((await http.get('/v1/me/authenticator').set(bearer(enrolled.body.accessToken)).expect(200)).body).toEqual({ required: true, setUp: true, backupCodesLeft: 10 });
+
+    // The remembered device logs straight in; another device uses the app, never SMS.
+    expect((await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71', deviceToken: enrolled.body.deviceToken }).expect(200)).body.status).toBe('signed_in');
+    const smsBefore = smsTo(phone);
+    const other = await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71' }).expect(200);
+    expect(other.body).toMatchObject({ status: 'second_step', channel: 'authenticator' });
+    expect(other.body.sentTo).toBeUndefined();
+    expect(smsTo(phone)).toBe(smsBefore);
+    // The code already used at set-up can't be used again; the next one works.
+    await http.post('/v1/auth/second-step').send({ challengeId: other.body.challengeId, code: totpAt(setup.secret, step) }).expect(401);
+    expect((await http.post('/v1/auth/second-step').send({ challengeId: other.body.challengeId, code: totpAt(setup.secret, step + 1) }).expect(200)).body.status).toBe('signed_in');
+    // A backup code works once, typed any way.
+    const third = await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71' }).expect(200);
+    expect((await http.post('/v1/auth/second-step').send({ challengeId: third.body.challengeId, code: backup[0]!.toUpperCase().replace('-', ' ') }).expect(200)).body.status).toBe('signed_in');
+    const fourth = await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71' }).expect(200);
+    await http.post('/v1/auth/second-step').send({ challengeId: fourth.body.challengeId, code: backup[0] }).expect(401);
+    // A phone code is also followed by the app for staff.
     await http.post('/v1/auth/otp/request').send({ phone }).expect(202);
     const byPhone = await http.post('/v1/auth/otp/verify').send({ phone, code: codeIn(smsTo(phone)) }).expect(200);
-    expect(byPhone.body).toMatchObject({ status: 'second_step', channel: 'email', sentTo: 'j•••@sazo.example' });
-    expect(emailTo('joan@sazo.example')!.subject).toBe('Your SAZO sign-in code');
-    // Five wrong passwords lock a sensitive account (ten for others).
-    for (let i = 0; i < 5; i++) await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: `nope-${i}-nope-nope` }).expect(401);
+    expect(byPhone.body).toMatchObject({ status: 'second_step', channel: 'authenticator' });
+
+    // Lost phone: an administrator clears the app. Joan is signed out and sets up a new one at her next log-in.
+    const adminId = await app.get(IamService).ensureUser('+256772900021', 'Admin', 'sazo_admin');
+    await db.query(`INSERT INTO iam.authenticators (user_id, secret_ciphertext, key_version, confirmed_at) SELECT $1, secret_ciphertext, key_version, now() FROM iam.authenticators WHERE user_id = $2`, [adminId, u.id]);
+    const adminToken = (await app.get(AuthService).issueTokens(adminId)).accessToken;
+    await http.post(`/v1/admin/people/${u.id}/authenticator/reset`).set(bearer(token)).expect(403);
+    await http.post(`/v1/admin/people/${adminId}/authenticator/reset`).set(bearer(adminToken)).expect(409);
+    await http.post(`/v1/admin/people/${u.id}/authenticator/reset`).set(bearer(adminToken)).expect(200);
+    await http.post(`/v1/admin/people/${u.id}/authenticator/reset`).set(bearer(adminToken)).expect(404);
+    await http.get('/v1/me').set(bearer(enrolled.body.accessToken)).expect(401);
+    const after = await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71', deviceToken: enrolled.body.deviceToken }).expect(200);
+    expect(after.body).toMatchObject({ status: 'second_step', channel: 'sms' }); // remembered devices were forgotten
+    const again = await http.post('/v1/auth/second-step').send({ challengeId: after.body.challengeId, code: codeIn(smsTo(phone)) }).expect(200);
+    expect(again.body.status).toBe('setup_authenticator');
+    const { rows: audit } = await db.query(`SELECT action FROM iam.audit_entries WHERE target_id = $1 AND action LIKE 'account.authenticator%' ORDER BY at`, [u.id]);
+    expect(audit.map((a) => a.action)).toEqual(['account.authenticator_set', 'account.authenticator_reset']);
+
+    // Five wrong answers lock a sensitive account (ten for others). The used backup code above counts too.
+    for (let i = 0; i < 4; i++) await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: `nope-${i}-nope-nope` }).expect(401);
     await http.post('/v1/auth/password/sign-in').send({ email: 'joan@sazo.example', password: 'nile-river-bank-71' }).expect(423);
     expect(u.id).toBeTruthy();
   });
@@ -243,12 +336,19 @@ describe.skipIf(!base)('accounts (e2e)', () => {
     expect(made.body).toMatchObject({ status: 'signed_in', created: true });
     expect((await http.get('/v1/me/profile').set(bearer(made.body.accessToken)).expect(200)).body).toMatchObject({ email: 'grace@gmail.com', emailVerified: true, hasGoogle: true, hasPassword: false, progress: { percent: 50 } });
 
+    // Next time on a new device: a code to her email (no phone yet), then she is asked to add a phone.
     const again = await googleRoundTrip({ sub: 'g-111', email: 'grace@gmail.com', email_verified: true });
-    expect(again.body).toMatchObject({ status: 'signed_in', created: false });
+    expect(again.body).toMatchObject({ status: 'second_step', channel: 'email' });
+    const graceNext = await http.post('/v1/auth/second-step').send({ challengeId: again.body.challengeId, code: codeIn(emailTo('grace@gmail.com')!.text) }).expect(200);
+    expect(graceNext.body.status).toBe('add_phone');
+    // With no phone she can't reset a password by herself.
+    await http.post('/v1/auth/password/forgot').send({ email: 'grace@gmail.com' }).expect(202);
+    expect((await http.post('/v1/auth/password/reset/code').send({ token: linkToken(emailTo('grace@gmail.com')!.text) }).expect(409)).body.code).toBe('phone_required');
     // A Google account with the same confirmed email as an existing SAZO account is linked to it.
     const mike = await googleRoundTrip({ sub: 'g-222', email: EMAIL, email_verified: true });
-    expect(mike.body.status).toBe('signed_in');
-    expect((await http.get('/v1/me').set(bearer(mike.body.accessToken)).expect(200)).body.displayName).toBe('Anguzu J. Mike');
+    expect(mike.body).toMatchObject({ status: 'second_step', channel: 'sms' });
+    const mikeIn = await http.post('/v1/auth/second-step').send({ challengeId: mike.body.challengeId, code: codeIn(smsTo('+256772900050')) }).expect(200);
+    expect((await http.get('/v1/me').set(bearer(mikeIn.body.accessToken)).expect(200)).body.displayName).toBe('Anguzu J. Mike');
     // A token Google didn't sign, or for another browser (nonce), is refused.
     const start = await http.post('/v1/auth/google/start').send({ redirectUri: `${WEB}/auth/google/callback` }).expect(200);
     pendingClaims.set('bad-nonce', { sub: 'g-333', nonce: 'someone-elses-nonce' });

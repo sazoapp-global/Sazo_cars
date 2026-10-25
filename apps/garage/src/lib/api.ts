@@ -75,12 +75,26 @@ export async function request<T>(path: string, opts: { method?: string; body?: u
   return data as T;
 }
 
-type LoginResult = (Tokens & { status: 'signed_in'; deviceToken?: string }) | { status: 'second_step'; challengeId: string; channel: 'sms' | 'email'; sentTo: string };
-export type SecondStep = { challengeId: string; channel: 'sms' | 'email'; sentTo: string };
+type Channel = 'sms' | 'email' | 'authenticator' | 'password';
+type LoginResult = (Tokens & { status: 'signed_in'; deviceToken?: string })
+  | { status: 'second_step'; challengeId: string; channel: Channel; sentTo?: string }
+  | { status: 'add_phone'; setupToken: string }
+  | { status: 'setup_authenticator'; setupToken: string };
+/**
+ * What the log-in still needs (D-145): a second step on a new phone; adding a phone when the account has none;
+ * or, for SAZO staff, setting up an authenticator app (done on the SAZO website).
+ */
+export type NextStep =
+  | { kind: 'second'; challengeId: string; channel: Channel; sentTo?: string }
+  | { kind: 'add_phone'; setupToken: string }
+  | { kind: 'setup_authenticator' };
+export type SecondStep = Extract<NextStep, { kind: 'second' }>;
 
-/** A remembered device skips the second step for 90 days (D-105). Kept on this phone only. */
-async function finish(r: LoginResult): Promise<SecondStep | undefined> {
-  if (r.status === 'second_step') return { challengeId: r.challengeId, channel: r.channel, sentTo: r.sentTo };
+/** A remembered device skips the second step for 90 days. Kept on this phone only. */
+async function finish(r: LoginResult): Promise<NextStep | undefined> {
+  if (r.status === 'second_step') return { kind: 'second', challengeId: r.challengeId, channel: r.channel, sentTo: r.sentTo };
+  if (r.status === 'add_phone') return { kind: 'add_phone', setupToken: r.setupToken };
+  if (r.status === 'setup_authenticator') return { kind: 'setup_authenticator' };
   if (r.deviceToken) await kv.set('deviceToken', r.deviceToken);
   await store(r);
   listeners.forEach((l) => l(true));
@@ -92,16 +106,25 @@ export async function requestCode(phone: string): Promise<void> {
   await request('/auth/otp/request', { method: 'POST', body: { phone, intent: 'login' } });
 }
 
-export async function verifyCode(phone: string, code: string): Promise<SecondStep | undefined> {
+export async function verifyCode(phone: string, code: string): Promise<NextStep | undefined> {
   return finish(await request<LoginResult>('/auth/otp/verify', { method: 'POST', body: { phone, code, deviceToken: await kv.get<string>('deviceToken') } }));
 }
 
-export async function passwordLogin(email: string, password: string): Promise<SecondStep | undefined> {
+export async function passwordLogin(email: string, password: string): Promise<NextStep | undefined> {
   return finish(await request<LoginResult>('/auth/password/sign-in', { method: 'POST', body: { email, password, deviceToken: await kv.get<string>('deviceToken') } }));
 }
 
-export async function secondStep(challengeId: string, code: string, rememberDevice: boolean): Promise<void> {
-  await finish(await request<LoginResult>('/auth/second-step', { method: 'POST', body: { challengeId, code, rememberDevice } }));
+export async function secondStep(challengeId: string, code: string, rememberDevice: boolean): Promise<NextStep | undefined> {
+  return finish(await request<LoginResult>('/auth/second-step', { method: 'POST', body: { challengeId, code, rememberDevice } }));
+}
+
+/** An account with no phone adds one before going in: a code is texted to it. */
+export async function addPhone(setupToken: string, phone: string): Promise<{ sentTo: string }> {
+  return request('/auth/phone/add', { method: 'POST', body: { setupToken, phone } });
+}
+
+export async function confirmPhone(setupToken: string, phone: string, code: string): Promise<NextStep | undefined> {
+  return finish(await request<LoginResult>('/auth/phone/confirm', { method: 'POST', body: { setupToken, phone, code } }));
 }
 
 export async function signOut(): Promise<void> {

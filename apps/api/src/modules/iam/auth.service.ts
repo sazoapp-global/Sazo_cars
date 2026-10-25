@@ -1,6 +1,6 @@
 // Accounts and log-in (D-100 – D-105): create an account first (email + password, phone + code, or Google),
 // then log in with any method the person has set up. Short-lived access tokens, rotating refresh tokens,
-// every attempt recorded, lock-outs, and a second step on new devices for sensitive roles.
+// every attempt recorded, lock-outs, and a second step on new devices for everyone (D-145).
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MINIMUM_AGE, ageOn, passwordProblems, personDisplayName, personInitials, type PersonDetails } from '@sazo/contracts';
@@ -13,8 +13,9 @@ import { DB_POOL } from '../../platform/tokens.js';
 import { NotificationsService } from '../notify/index.js';
 import type { Actor } from './actor.js';
 import { GoogleSignIn, type GoogleProfile } from './google.js';
-import { IamRepository, type UserRow } from './iam.repository.js';
+import { IamRepository, type SecondStepChannel, type UserRow } from './iam.repository.js';
 import { burnPasswordTime, hashPassword, verifyPassword } from './passwords.js';
+import { matchTotp, newBackupCode, newTotpSecret, normaliseBackupCode, otpauthUrl } from './totp.js';
 
 /** Refreshes this close together count as one browser racing itself, not a stolen token. */
 const REFRESH_GRACE_SECONDS = 10;
@@ -24,7 +25,7 @@ export class AuthError extends Error {
     readonly code: 'rate_limited' | 'invalid_code' | 'signup_details_required' | 'invalid_token' | 'account_suspended' | 'refresh_in_progress'
       | 'phone_in_use' | 'same_phone' | 'no_account' | 'account_exists' | 'invalid_credentials' | 'account_locked' | 'weak_password'
       | 'email_in_use' | 'invalid_link' | 'too_young' | 'google_disabled' | 'google_failed' | 'wrong_password' | 'details_locked'
-      | 'session_idle',
+      | 'session_idle' | 'phone_required',
     message: string,
     readonly details: unknown[] = [],
   ) {
@@ -35,9 +36,16 @@ export class AuthError extends Error {
 export interface Tokens { accessToken: string; refreshToken: string; expiresIn: number }
 /** Where the request came from: recorded with every log-in attempt. `deviceToken` = this device passed the second step before. */
 export interface LoginContext { userAgent?: string; ip?: string | null; deviceToken?: string }
+/**
+ * `second_step`: on a new device (D-145). `add_phone`: the account has no phone yet and must add one before going in.
+ * `setup_authenticator`: SAZO staff set up an authenticator app before going in. Backup codes are shown once.
+ */
 export type LoginResult =
-  | ({ status: 'signed_in'; created: boolean; deviceToken?: string } & Tokens)
-  | { status: 'second_step'; challengeId: string; channel: 'sms' | 'email'; sentTo: string };
+  | ({ status: 'signed_in'; created: boolean; deviceToken?: string; backupCodes?: string[] } & Tokens)
+  | { status: 'second_step'; challengeId: string; channel: SecondStepChannel; sentTo?: string }
+  | { status: 'add_phone'; setupToken: string }
+  | { status: 'setup_authenticator'; setupToken: string };
+type FirstFactor = 'password' | 'phone_code' | 'google';
 export type GoogleResult = LoginResult | { status: 'needs_details'; signupToken: string; suggested: { firstName: string | null; surname: string | null; email: string | null } };
 
 const OTP_TTL_MINUTES = 10;
@@ -52,6 +60,9 @@ const VERIFY_LINK_MINUTES = 24 * 60;
 const RESET_LINK_MINUTES = 60;
 /** Roles whose accounts can change car history or SAZO itself: stricter passwords and a second step (D-105). */
 const SENSITIVE_PLATFORM_ROLES = new Set(['sazo_reviewer', 'sazo_admin', 'super_admin', 'partner_operator']);
+/** SAZO's own staff: an authenticator app instead of SMS for their second step (D-145). */
+const STAFF_ROLES = new Set(['sazo_reviewer', 'sazo_admin', 'super_admin']);
+const BACKUP_CODES = 10;
 const mask = (phone: string) => `${phone.slice(0, 4)} ••• ••${phone.slice(-3)}`;
 const maskEmail = (e: string) => e.replace(/^(.)(.*)(@.*)$/, (_, a: string, b: string, c: string) => `${a}${'•'.repeat(Math.min(b.length, 6))}${c}`);
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
@@ -183,32 +194,80 @@ export class AuthService {
   }
 
   /**
-   * After the first factor: refuse inactive accounts, ask sensitive roles for a second step on a new device,
-   * otherwise issue tokens. Every outcome is recorded.
+   * After the first factor: refuse inactive accounts, then a second step on a new device for everyone (D-145),
+   * then anything the account must do before going in (add a phone; staff set up an authenticator app).
    */
-  private async completeLogin(user: UserRow, method: 'password' | 'phone_code' | 'google', idHash: Buffer, ctx: LoginContext, created: boolean): Promise<LoginResult> {
+  private async completeLogin(user: UserRow, method: FirstFactor, idHash: Buffer, ctx: LoginContext, created: boolean): Promise<LoginResult> {
     if (user.status !== 'active') {
       await this.repo.recordLoginAttempt({ userId: user.id, identifierHash: idHash, method, success: false, failureReason: 'not_active', ip: ctx.ip, userAgent: ctx.userAgent });
       throw new AuthError('account_suspended', 'This account is not active');
     }
-    if (!created && (await this.isSensitive(user.id)) && !(ctx.deviceToken && (await this.repo.isTrustedDevice(user.id, sha256(ctx.deviceToken))))) {
-      return this.startSecondStep(user, method);
+    const trusted = !!ctx.deviceToken && (await this.repo.isTrustedDevice(user.id, sha256(ctx.deviceToken)));
+    if (!created && !trusted) {
+      const second = await this.startSecondStep(user, method);
+      if (second) return second;
     }
-    await this.repo.recordLoginAttempt({ userId: user.id, identifierHash: idHash, method, success: true, ip: ctx.ip, userAgent: ctx.userAgent });
-    return { status: 'signed_in', created, ...(await this.issueTokens(user.id, ctx.userAgent)) };
+    return this.finishLogin(user.id, { method, created, trust: false }, ctx, idHash);
   }
 
-  /** Managers, dealer staff, partner data entry and SAZO staff (D-105). Mechanics and buyers are not. */
+  /**
+   * Both factors are done. Still to do before going in, never at sign-up itself: add and confirm a phone when the
+   * account has none, then (SAZO staff) set up an authenticator app. Otherwise the tokens.
+   */
+  private async finishLogin(userId: string, f: { method: FirstFactor | 'second_step'; created: boolean; trust: boolean }, ctx: LoginContext, idHash: Buffer | null): Promise<LoginResult> {
+    const user = (await this.repo.userById(userId))!;
+    if (!f.created) {
+      if (!user.phone) return { status: 'add_phone', setupToken: await this.setupToken(user.id, f.trust) };
+      if (await this.needsAuthenticator(user.id)) return { status: 'setup_authenticator', setupToken: await this.setupToken(user.id, f.trust) };
+    }
+    await this.repo.recordLoginAttempt({ userId: user.id, identifierHash: idHash, method: f.method, success: true, ip: ctx.ip, userAgent: ctx.userAgent });
+    let deviceToken: string | undefined;
+    if (f.trust) {
+      deviceToken = randomBytes(32).toString('base64url');
+      await this.repo.trustDevice(user.id, sha256(deviceToken), ctx.userAgent, TRUSTED_DEVICE_DAYS);
+    }
+    return { status: 'signed_in', created: f.created, ...(deviceToken ? { deviceToken } : {}), ...(await this.issueTokens(user.id, ctx.userAgent)) };
+  }
+
+  /** Managers, dealer staff, partner data entry and SAZO staff (D-105): stricter passwords and lock-outs. */
   async isSensitive(userId: string): Promise<boolean> {
     const [platform, memberships] = await Promise.all([this.repo.platformRolesAndPermissions(userId), this.repo.memberships(userId)]);
     return platform.roles.some((r) => SENSITIVE_PLATFORM_ROLES.has(r))
       || memberships.some((m) => m.status === 'active' && (m.role === 'org_manager' || m.role === 'partner_operator' || m.organisationType === 'dealer'));
   }
 
-  private async startSecondStep(user: UserRow, method: 'password' | 'phone_code' | 'google'): Promise<LoginResult> {
+  /** SAZO staff must use an authenticator app, not SMS (D-145). */
+  async isStaff(userId: string): Promise<boolean> {
+    return (await this.repo.platformRolesAndPermissions(userId)).roles.some((r) => STAFF_ROLES.has(r));
+  }
+
+  private async needsAuthenticator(userId: string): Promise<boolean> {
+    return (await this.isStaff(userId)) && !(await this.repo.authenticator(userId))?.confirmed;
+  }
+
+  /**
+   * Which second step: the authenticator app when set up; otherwise a code to the other contact. A phone code
+   * already proves the SIM, so it is followed by an email code, or the password when the email isn't confirmed.
+   * Undefined = nothing else to ask (a phone-only account: the phone code is the whole log-in).
+   */
+  private async secondChannel(user: UserRow, method: FirstFactor): Promise<SecondStepChannel | undefined> {
+    if ((await this.repo.authenticator(user.id))?.confirmed) return 'authenticator';
+    if (method === 'phone_code') {
+      if (user.email && user.emailVerified) return 'email';
+      return (await this.repo.password(user.id)) ? 'password' : undefined;
+    }
+    return user.phone ? 'sms' : user.email ? 'email' : undefined;
+  }
+
+  private async startSecondStep(user: UserRow, method: FirstFactor): Promise<LoginResult | undefined> {
+    const channel = await this.secondChannel(user, method);
+    if (!channel) return undefined;
+    // Nothing is sent for the app or the password; wrong answers count towards the lock-out instead.
+    if (channel === 'authenticator' || channel === 'password') {
+      const challengeId = await this.repo.createSecondStep(user.id, channel, method, null, SECOND_STEP_TTL_MINUTES);
+      return { status: 'second_step', challengeId, channel };
+    }
     if ((await this.repo.recentSecondSteps(user.id, 60)) >= OTP_MAX_PER_HOUR) throw new AuthError('rate_limited', 'Too many codes requested; try again later');
-    // A phone code proves the SIM, so the second step goes by email when possible (a stolen SIM alone is not enough).
-    const channel: 'sms' | 'email' = method === 'phone_code' && user.email && user.emailVerified ? 'email' : user.phone ? 'sms' : 'email';
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
     const challengeId = await this.repo.createSecondStep(user.id, channel, method, this.secondStepHmac(user.id, code), SECOND_STEP_TTL_MINUTES);
     if (channel === 'sms') await this.notify.sendSmsToPhone(user.phone!, 'second_step', { code }, 'otp', user.id);
@@ -220,27 +279,157 @@ export class AuthService {
     return createHmac('sha256', this.cfg.HMAC_SECRET).update(`2fa:${userId}:${code}`).digest('hex');
   }
 
-  /** Finish a log-in with the second-step code; optionally remember this device (no second step here for 90 days). */
+  private backupHmac(userId: string, code: string): string {
+    return createHmac('sha256', this.cfg.HMAC_SECRET).update(`backup:${userId}:${normaliseBackupCode(code)}`).digest('hex');
+  }
+
+  private async checkSecondStep(c: { userId: string; channel: SecondStepChannel; codeHmac: string | null }, code: string): Promise<boolean> {
+    if (c.channel === 'password') {
+      const stored = await this.repo.password(c.userId);
+      return !!stored && (await verifyPassword(code, stored.hash));
+    }
+    if (c.channel === 'authenticator') {
+      if (/^\d{6}$/.test(code)) {
+        const a = await this.repo.authenticator(c.userId);
+        const step = a?.confirmed ? matchTotp(this.keyring.decrypt(a.secretCiphertext, a.keyVersion), code) : undefined;
+        return step !== undefined && (await this.repo.useTotpStep(c.userId, step));
+      }
+      return this.repo.useBackupCode(c.userId, this.backupHmac(c.userId, code));
+    }
+    if (!c.codeHmac || !/^\d{6}$/.test(code)) return false;
+    const a = Buffer.from(c.codeHmac, 'hex');
+    const b = Buffer.from(this.secondStepHmac(c.userId, code), 'hex');
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+
+  /**
+   * Finish a log-in with the second step: the texted or emailed code, the authenticator app's code (or a backup
+   * code), or the password. Optionally remember this device (no second step here for 90 days).
+   */
   async completeSecondStep(challengeId: string, code: string, rememberDevice: boolean, ctx: LoginContext = {}): Promise<LoginResult> {
     const c = await this.repo.secondStep(challengeId);
     if (!c || c.attempts >= OTP_MAX_ATTEMPTS) throw new AuthError('invalid_code', 'Code is wrong or expired. Log in again');
     const user = await this.repo.userById(c.userId);
-    const a = Buffer.from(c.codeHmac, 'hex');
-    const b = Buffer.from(this.secondStepHmac(c.userId, code), 'hex');
-    if (!user || !(a.length === b.length && timingSafeEqual(a, b))) {
+    if (!user || !(await this.checkSecondStep(c, code))) {
       await this.repo.secondStepAttempt(c.id, false);
-      await this.repo.recordLoginAttempt({ userId: c.userId, identifierHash: null, method: 'second_step', success: false, failureReason: 'wrong_code', ip: ctx.ip, userAgent: ctx.userAgent });
-      throw new AuthError('invalid_code', 'Code is wrong or expired');
+      await this.repo.recordLoginAttempt({ userId: c.userId, identifierHash: null, method: 'second_step', success: false, failureReason: c.channel === 'password' ? 'wrong_password' : 'wrong_code', ip: ctx.ip, userAgent: ctx.userAgent });
+      throw new AuthError('invalid_code', c.channel === 'password' ? 'Wrong password' : 'Code is wrong or expired');
     }
     await this.repo.secondStepAttempt(c.id, true);
     if (user.status !== 'active') throw new AuthError('account_suspended', 'This account is not active');
-    await this.repo.recordLoginAttempt({ userId: user.id, identifierHash: null, method: 'second_step', success: true, ip: ctx.ip, userAgent: ctx.userAgent });
-    let deviceToken: string | undefined;
-    if (rememberDevice) {
-      deviceToken = randomBytes(32).toString('base64url');
-      await this.repo.trustDevice(user.id, sha256(deviceToken), ctx.userAgent, TRUSTED_DEVICE_DAYS);
+    if (c.channel === 'authenticator' && !/^\d{6}$/.test(code)) {
+      await this.repo.audit(this.pool, { actorUserId: user.id, action: 'account.backup_code_used', targetType: 'user', targetId: user.id, details: { left: await this.repo.backupCodesLeft(user.id) } });
     }
-    return { status: 'signed_in', created: false, ...(deviceToken ? { deviceToken } : {}), ...(await this.issueTokens(user.id, ctx.userAgent)) };
+    return this.finishLogin(user.id, { method: 'second_step', created: false, trust: rememberDevice }, ctx, null);
+  }
+
+  // ---------- before going in: add a phone, set up the authenticator app (D-145)
+
+  private setupKey(): Uint8Array {
+    return new TextEncoder().encode(`${this.cfg.JWT_SECRET}:login-setup`);
+  }
+
+  /** Proof that both factors passed, good for 15 minutes, to finish the steps before going in. */
+  private setupToken(userId: string, trust: boolean): Promise<string> {
+    return new SignJWT({ t: trust }).setProtectedHeader({ alg: 'HS256' }).setSubject(userId).setAudience('sazo-login-setup')
+      .setIssuedAt().setExpirationTime('15m').sign(this.setupKey());
+  }
+
+  private async readSetupToken(token: string): Promise<{ user: UserRow; trust: boolean }> {
+    try {
+      const { payload } = await jwtVerify(token, this.setupKey(), { audience: 'sazo-login-setup', algorithms: ['HS256'] });
+      const user = await this.repo.userById(String(payload.sub));
+      if (!user) throw new Error('gone');
+      if (user.status !== 'active') throw new AuthError('account_suspended', 'This account is not active');
+      return { user, trust: payload.t === true };
+    } catch (err) {
+      if (err instanceof AuthError) throw err;
+      throw new AuthError('invalid_link', 'This took too long. Log in again');
+    }
+  }
+
+  /** Text a code to the phone being added. */
+  async addPhoneStart(setupToken: string, phone: string): Promise<{ sentTo: string }> {
+    const { user } = await this.readSetupToken(setupToken);
+    if (user.phone) throw new AuthError('invalid_link', 'Your account already has a phone. Log in again');
+    const other = await this.repo.userByPhone(phone);
+    if (other && other.id !== user.id) throw new AuthError('phone_in_use', 'Another SAZO account uses that number');
+    if ((await this.repo.recentOtpCount(phone, 60)) >= OTP_MAX_PER_HOUR) throw new AuthError('rate_limited', 'Too many codes requested; try again later');
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    await this.repo.createOtp(phone, this.codeHmac(phone, code), OTP_TTL_MINUTES, 'add_phone', user.id);
+    await this.notify.sendSmsToPhone(phone, 'phone_add_code', { code }, 'otp', user.id);
+    return { sentTo: mask(phone) };
+  }
+
+  /** The code was right: the phone is saved, and the log-in carries on. */
+  async addPhoneFinish(setupToken: string, phone: string, code: string, ctx: LoginContext = {}): Promise<LoginResult> {
+    const { user, trust } = await this.readSetupToken(setupToken);
+    if (user.phone) throw new AuthError('invalid_link', 'Your account already has a phone. Log in again');
+    const challenge = await this.repo.latestOpenOtp(phone, 'add_phone', user.id);
+    if (!challenge || challenge.attempts >= OTP_MAX_ATTEMPTS) throw new AuthError('invalid_code', 'Code is wrong or expired. Send a new code');
+    const a = Buffer.from(challenge.codeHmac, 'hex');
+    const b = Buffer.from(this.codeHmac(phone, code), 'hex');
+    if (!(a.length === b.length && timingSafeEqual(a, b))) {
+      await this.repo.otpAttempt(challenge.id, false);
+      throw new AuthError('invalid_code', 'Code is wrong or expired');
+    }
+    await this.repo.otpAttempt(challenge.id, true);
+    if (!(await this.repo.setPhone(user.id, phone))) throw new AuthError('phone_in_use', 'Another SAZO account uses that number');
+    await this.repo.audit(this.pool, { actorUserId: user.id, action: 'account.phone_added', targetType: 'user', targetId: user.id });
+    return this.finishLogin(user.id, { method: 'second_step', created: false, trust }, ctx, null);
+  }
+
+  /** A new key for the app, as text and as the link the QR code holds. Asking again gives a fresh key. */
+  async authenticatorStart(setupToken: string): Promise<{ secret: string; otpauthUrl: string }> {
+    const { user } = await this.readSetupToken(setupToken);
+    if (!(await this.needsAuthenticator(user.id))) throw new AuthError('invalid_link', 'Your authenticator app is already set up. Log in again');
+    const secret = newTotpSecret();
+    if (!(await this.repo.pendingAuthenticator(user.id, this.keyring.encrypt(secret), this.keyring.current))) {
+      throw new AuthError('invalid_link', 'Your authenticator app is already set up. Log in again');
+    }
+    return { secret, otpauthUrl: otpauthUrl(secret, user.email ?? user.phone ?? user.displayName) };
+  }
+
+  /** The first code from the app confirms it. Ten backup codes are made and shown this once. */
+  async authenticatorFinish(setupToken: string, code: string, ctx: LoginContext = {}): Promise<LoginResult> {
+    const { user, trust } = await this.readSetupToken(setupToken);
+    if ((await this.repo.recentFailures(user.id, LOCK_MINUTES)) >= LOCK_AFTER.sensitive) {
+      throw new AuthError('account_locked', `Too many wrong codes. Try again in ${LOCK_MINUTES} minutes.`);
+    }
+    const a = await this.repo.authenticator(user.id);
+    if (!a || a.confirmed) throw new AuthError('invalid_link', 'Start the set-up again');
+    const step = /^\d{6}$/.test(code) ? matchTotp(this.keyring.decrypt(a.secretCiphertext, a.keyVersion), code) : undefined;
+    if (step === undefined) {
+      await this.repo.recordLoginAttempt({ userId: user.id, identifierHash: null, method: 'second_step', success: false, failureReason: 'wrong_setup_code', ip: ctx.ip, userAgent: ctx.userAgent });
+      throw new AuthError('invalid_code', 'That code is wrong. Check the time on your phone is right, then type the newest code');
+    }
+    const codes = Array.from({ length: BACKUP_CODES }, newBackupCode);
+    if (!(await this.repo.confirmAuthenticator(user.id, step, codes.map((c) => this.backupHmac(user.id, c))))) {
+      throw new AuthError('invalid_link', 'Your authenticator app is already set up. Log in again');
+    }
+    await this.repo.audit(this.pool, { actorUserId: user.id, action: 'account.authenticator_set', targetType: 'user', targetId: user.id });
+    const r = await this.finishLogin(user.id, { method: 'second_step', created: false, trust }, ctx, null);
+    return r.status === 'signed_in' ? { ...r, backupCodes: codes } : r;
+  }
+
+  /** For Settings: is the app set up, and how many backup codes are left. */
+  async authenticatorStatus(userId: string): Promise<{ required: boolean; setUp: boolean; backupCodesLeft: number }> {
+    const [staff, a] = await Promise.all([this.isStaff(userId), this.repo.authenticator(userId)]);
+    return { required: staff, setUp: !!a?.confirmed, backupCodesLeft: a?.confirmed ? await this.repo.backupCodesLeft(userId) : 0 };
+  }
+
+  /**
+   * A SAZO administrator clears someone's app (lost phone, no backup codes left). They are signed out everywhere
+   * and set up a new app at their next log-in, after the code to their phone or email.
+   */
+  async resetAuthenticator(actorUserId: string, userId: string): Promise<boolean> {
+    if (actorUserId === userId) throw new AuthError('details_locked', 'Another administrator must clear your own app');
+    const removed = await this.repo.removeAuthenticator(userId);
+    if (!removed) return false;
+    await this.repo.revokeAllSessions(userId, 'authenticator_reset');
+    await this.repo.forgetDevices(userId);
+    await this.repo.audit(this.pool, { actorUserId, action: 'account.authenticator_reset', targetType: 'user', targetId: userId });
+    return true;
   }
 
   // ---------- email links
@@ -285,14 +474,43 @@ export class AuthService {
     await this.notify.sendEmail(email, 'reset_password', { name: user.firstName ?? user.displayName, link: `${this.cfg.PUBLIC_WEB_URL}/reset-password?token=${token}` }, 'account', user.id);
   }
 
-  /** A new password from the emailed link: confirms the email, signs out every device, forgets remembered devices. */
-  async resetPassword(token: string, password: string): Promise<void> {
+  /**
+   * Step two of a reset (D-145): the emailed link is good, so text a code to the account's phone. An account with
+   * no phone can't reset this way: the person logs in another way and adds one, or contacts SAZO support.
+   */
+  async resetStart(token: string): Promise<{ sentTo: string }> {
     const peek = await this.repo.peekEmailToken(sha256(token), 'reset_password');
     if (!peek) throw new AuthError('invalid_link', 'This link has expired or was already used. Ask for a new one');
     const user = (await this.repo.userById(peek.userId))!;
-    await this.checkPassword(user, password); // a refused password doesn't use up the link
+    if (!user.phone) throw new AuthError('phone_required', 'Your account has no phone number, and a reset needs a code texted to your phone. Log in another way and add a phone in Settings, or contact SAZO support');
+    if ((await this.repo.recentOtpCount(user.phone, 60)) >= OTP_MAX_PER_HOUR) throw new AuthError('rate_limited', 'Too many codes requested; try again later');
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    await this.repo.createOtp(user.phone, this.codeHmac(user.phone, code), OTP_TTL_MINUTES, 'reset_password', user.id);
+    await this.notify.sendSmsToPhone(user.phone, 'reset_code', { code }, 'otp', user.id);
+    return { sentTo: mask(user.phone) };
+  }
+
+  /**
+   * A new password from the emailed link and the texted code: confirms the email, signs out every device and
+   * forgets remembered devices. A wrong code or a refused password doesn't use up the link.
+   */
+  async resetPassword(token: string, code: string, password: string): Promise<void> {
+    const peek = await this.repo.peekEmailToken(sha256(token), 'reset_password');
+    if (!peek) throw new AuthError('invalid_link', 'This link has expired or was already used. Ask for a new one');
+    const user = (await this.repo.userById(peek.userId))!;
+    if (!user.phone) throw new AuthError('phone_required', 'Your account has no phone number. Contact SAZO support');
+    const challenge = await this.repo.latestOpenOtp(user.phone, 'reset_password', user.id);
+    if (!challenge || challenge.attempts >= OTP_MAX_ATTEMPTS) throw new AuthError('invalid_code', 'Code is wrong or expired. Send a new code');
+    const a = Buffer.from(challenge.codeHmac, 'hex');
+    const b = Buffer.from(this.codeHmac(user.phone, code), 'hex');
+    if (!(a.length === b.length && timingSafeEqual(a, b))) {
+      await this.repo.otpAttempt(challenge.id, false);
+      throw new AuthError('invalid_code', 'Code is wrong or expired');
+    }
+    await this.checkPassword(user, password);
     const t = await this.repo.useEmailToken(sha256(token), 'reset_password');
     if (!t) throw new AuthError('invalid_link', 'This link has expired or was already used. Ask for a new one');
+    await this.repo.otpAttempt(challenge.id, true);
     await this.savePassword(user, password);
     await this.repo.markEmailVerified(user.id, t.email);
     await this.repo.revokeAllSessions(user.id, 'password_reset');

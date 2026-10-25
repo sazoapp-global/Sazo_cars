@@ -145,8 +145,19 @@ export class IdentityService {
       userId: u.id, displayName: u.displayName, name: [u.surname, u.firstName, u.middleName].filter(Boolean).join(' ') || u.displayName,
       phone: u.phone, email: u.email, emailVerified: u.emailVerified, gender: u.gender, status: u.status,
       businesses: memberships.map((m) => ({ organisationId: m.organisationId, name: m.organisationName, type: m.organisationType, organisationStatus: m.organisationStatus, role: m.role, status: m.status })),
+      authenticator: await this.authenticatorOf(userId),
       identity: r ? { checkId: r.id, status: r.status, nin: this.keyring.decrypt(r.nin_ciphertext, r.nin_key_version), idPhotoEvidenceId: r.id_photo_evidence_id, decisionReason: r.decision_reason, sentAt: r.created_at.toISOString() } : null,
     };
+  }
+
+  /** SAZO staff's authenticator app (D-145): null for people who don't need one and have none. */
+  private async authenticatorOf(userId: string): Promise<{ setUp: boolean; backupCodesLeft: number } | null> {
+    const { rows: [a] } = await this.pool.query<{ staff: boolean; set_up: boolean | null; left: number }>(
+      `SELECT EXISTS (SELECT 1 FROM iam.platform_role_assignments ur JOIN iam.roles ro ON ro.id = ur.role_id WHERE ur.user_id = $1 AND ro.code IN ('sazo_reviewer', 'sazo_admin', 'super_admin')) AS staff,
+              (SELECT confirmed_at IS NOT NULL FROM iam.authenticators WHERE user_id = $1) AS set_up,
+              (SELECT count(*)::int FROM iam.backup_codes WHERE user_id = $1 AND used_at IS NULL) AS left`, [userId]);
+    if (!a || (!a.staff && !a.set_up)) return null;
+    return { setUp: !!a.set_up, backupCodesLeft: a.set_up ? a.left : 0 };
   }
 
   /** The user a check belongs to (to tell them the decision). */

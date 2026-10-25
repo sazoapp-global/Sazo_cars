@@ -3,6 +3,7 @@ import type request from 'supertest';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { IamService, IdentityService } from './modules/iam/index.js';
 import { ConsoleEmailSender, ConsoleSmsSender } from './modules/notify/index.js';
+import { currentStep, totpAt } from './modules/iam/totp.js';
 
 // Tests only: the sign-up details for a made-up person from a short name ("Sarah Namukasa", "Owner").
 // Real sign-ups give surname, first name, gender and an 18+ date of birth (D-101).
@@ -23,6 +24,11 @@ export async function signInWithCode(app: INestApplication, http: ReturnType<typ
     const email = app.get(ConsoleEmailSender, { strict: false });
     const code = body.channel === 'sms' ? codeIn(sms.latest(phone)) : codeIn(email.lastMessage()?.text);
     body = (await http.post('/v1/auth/second-step').send({ challengeId: body.challengeId, code, rememberDevice: false }).expect(200)).body;
+  }
+  if (body.status === 'setup_authenticator') {
+    // SAZO staff set up an authenticator app (D-145): the test plays the app.
+    const { secret } = (await http.post('/v1/auth/authenticator/start').send({ setupToken: body.setupToken }).expect(200)).body;
+    body = (await http.post('/v1/auth/authenticator/confirm').send({ setupToken: body.setupToken, code: totpAt(secret, currentStep()) }).expect(200)).body;
   }
   return body.accessToken as string;
 }

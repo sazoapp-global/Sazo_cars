@@ -9,13 +9,21 @@ export const SECOND_STEP_COOKIE = 'sazo_2fa';
 export const GOOGLE_COOKIE = 'sazo_g';
 export const GOOGLE_SIGNUP_COOKIE = 'sazo_gs';
 export const REMEMBER_COOKIE = 'sazo_rm';
+/** Before going in (D-145): add a phone, or set up the authenticator app; then the backup codes, shown once. */
+export const SETUP_COOKIE = 'sazo_setup';
+export const BACKUP_COOKIE = 'sazo_bk';
+export const TOTP_KEY_COOKIE = 'sazo_totp';
 const secure = process.env.NODE_ENV === 'production';
 
+export type SecondStepChannel = 'sms' | 'email' | 'authenticator' | 'password';
 export type LoginResult =
-  | { status: 'signed_in'; accessToken: string; refreshToken: string; expiresIn: number; deviceToken?: string; created: boolean }
-  | { status: 'second_step'; challengeId: string; channel: 'sms' | 'email'; sentTo: string };
+  | { status: 'signed_in'; accessToken: string; refreshToken: string; expiresIn: number; deviceToken?: string; created: boolean; backupCodes?: string[] }
+  | { status: 'second_step'; challengeId: string; channel: SecondStepChannel; sentTo?: string }
+  | { status: 'add_phone'; setupToken: string }
+  | { status: 'setup_authenticator'; setupToken: string };
 
-export interface SecondStepPending { challengeId: string; channel: 'sms' | 'email'; sentTo: string; next: string; remember?: boolean }
+export interface SecondStepPending { challengeId: string; channel: SecondStepChannel; sentTo?: string; next: string; remember?: boolean }
+export interface SetupPending { kind: 'add_phone' | 'setup_authenticator'; setupToken: string; next: string; remember?: boolean }
 
 /** The browser's description and address, passed on so "Signed-in devices" and the log-in record are right. */
 export async function clientHeaders(): Promise<Record<string, string>> {
@@ -52,8 +60,15 @@ export async function afterLogin(r: LoginResult, next: string, remember = true):
     jar.set(SECOND_STEP_COOKIE, JSON.stringify(pending), { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 10 * 60 });
     return '/sign-in/verify';
   }
+  if (r.status === 'add_phone' || r.status === 'setup_authenticator') {
+    const pending: SetupPending = { kind: r.status, setupToken: r.setupToken, next: safeNext(next), remember };
+    jar.set(SETUP_COOKIE, JSON.stringify(pending), { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 15 * 60 });
+    jar.delete(SECOND_STEP_COOKIE);
+    return r.status === 'add_phone' ? '/sign-in/add-phone' : '/sign-in/authenticator';
+  }
   await storeTokens(r, remember);
   jar.delete(SECOND_STEP_COOKIE);
+  jar.delete(SETUP_COOKIE);
   const auth = { headers: { Authorization: `Bearer ${r.accessToken}` } };
   const me = await api<{ needsDetails: string[] }>('/me', auth).catch(() => undefined);
   // A brand-new account with nowhere particular to go: ask what brought them (the design's onboarding step).
@@ -64,7 +79,23 @@ export async function afterLogin(r: LoginResult, next: string, remember = true):
     const dealer = orgs.find((o) => o.type === 'dealer' && (o.status === 'approved' || o.status === 'pending_verification'));
     if (dealer) to = `/dealer/${dealer.id}`;
   }
-  return me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(to)}` : to;
+  const then = me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(to)}` : to;
+  if (r.backupCodes?.length) {
+    // Shown once on the next page, then forgotten.
+    jar.set(BACKUP_COOKIE, JSON.stringify(r.backupCodes), { httpOnly: true, sameSite: 'strict', secure, path: '/sign-in/backup-codes', maxAge: 10 * 60 });
+    return `/sign-in/backup-codes?next=${encodeURIComponent(then)}`;
+  }
+  return then;
+}
+
+export async function pendingSetup(kind: SetupPending['kind']): Promise<SetupPending | undefined> {
+  const raw = (await cookies()).get(SETUP_COOKIE)?.value;
+  try {
+    const p = raw ? (JSON.parse(raw) as SetupPending) : undefined;
+    return p?.kind === kind ? p : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function pendingSecondStep(): Promise<SecondStepPending | undefined> {
@@ -89,4 +120,25 @@ export function fieldErrors(errors: unknown): Record<string, string> {
     if (e.message && !out[key]) out[key] = e.message;
   }
   return out;
+}
+
+/** The authenticator key being set up (the same QR code after a refresh), until the first code confirms it. */
+export async function authenticatorKey(): Promise<{ secret: string; otpauthUrl: string } | undefined> {
+  const raw = (await cookies()).get(TOTP_KEY_COOKIE)?.value;
+  try {
+    return raw ? (JSON.parse(raw) as { secret: string; otpauthUrl: string }) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Backup codes just made, to show once. */
+export async function freshBackupCodes(): Promise<string[] | undefined> {
+  const raw = (await cookies()).get(BACKUP_COOKIE)?.value;
+  try {
+    const v = raw ? (JSON.parse(raw) as unknown) : undefined;
+    return Array.isArray(v) ? v.filter((c): c is string => typeof c === 'string') : undefined;
+  } catch {
+    return undefined;
+  }
 }

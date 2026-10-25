@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import zlib from 'node:zlib';
 import AxeBuilder from '@axe-core/playwright';
@@ -7,7 +7,7 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test';
 import { API_LOG } from '../playwright.config';
 
 export const API = 'http://localhost:3100/v1';
-const codes = () => [...readFileSync(API_LOG, 'utf8').matchAll(/Your SAZO (?:sign-in )?code (?:to move your account to this number )?is (\d{6})/g)];
+const codes = () => [...readFileSync(API_LOG, 'utf8').matchAll(/Your SAZO (?:sign-in )?code (?:to [a-z ]+ )?is (\d{6})/g)];
 export const codesSoFar = () => codes().length;
 export const lastCode = () => codes().at(-1)![1]!;
 
@@ -23,6 +23,29 @@ export async function a11y(page: Page) {
 export function personFor(name: string) {
   const words = name.replace(/[^\p{L}\s'-]/gu, ' ').trim().split(/\s+/);
   return { firstName: words[0]!, surname: words.length > 1 ? words.slice(1).join(' ') : 'Test' };
+}
+
+/** Plays the authenticator app for SAZO staff (D-145): the RFC 6238 code for a key shown on the set-up page. */
+export function totp(key: string, at = Date.now()): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0; let value = 0; const bytes: number[] = [];
+  for (const ch of key.replace(/\s/g, '')) { value = (value << 5) | alphabet.indexOf(ch); bits += 5; if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; } }
+  const counter = Buffer.alloc(8); counter.writeBigUInt64BE(BigInt(Math.floor(at / 30_000)));
+  const h = createHmac('sha1', Buffer.from(bytes)).update(counter).digest();
+  const o = h[h.length - 1]! & 15;
+  return String((((h[o]! & 127) << 24) | (h[o + 1]! << 16) | (h[o + 2]! << 8) | h[o + 3]!) % 1_000_000).padStart(6, '0');
+}
+
+/** SAZO staff's first log-in: set up the app from the page, then pass the backup codes page. */
+export async function setUpAuthenticator(page: Page): Promise<string> {
+  await page.getByRole('button', { name: 'Show my QR code' }).click();
+  await page.getByText('Can’t scan? Type this key instead').click();
+  const key = (await page.getByTestId('totp-key').textContent())!.replace(/\s/g, '');
+  await page.getByLabel('6-digit code from the app').fill(totp(key));
+  await page.getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByRole('heading', { name: 'Save your backup codes' })).toBeVisible();
+  await page.getByRole('button', { name: 'I have saved them' }).click();
+  return key;
 }
 
 /** Wait for the next code in the API log and type it. */
@@ -61,12 +84,14 @@ export async function signIn(page: Page, phone: string, opts: { name?: string; n
     await typeNextCode(page, before);
     before = codesSoFar();
     await panel.getByRole('button', { name: 'Log in to SAZO' }).click();
-    // SAZO staff, managers and dealers: a second step on a new device (D-105).
-    await page.waitForURL((u) => !/\/sign-in$/.test(u.pathname) || u.pathname === '/sign-in/verify');
+    // A second step on a new device when the account has a confirmed email (D-145); SAZO staff then set up their app.
+    await page.waitForURL((u) => !/\/sign-in$/.test(u.pathname));
     if (new URL(page.url()).pathname === '/sign-in/verify') {
       await typeNextCode(page, before);
       await page.getByRole('button', { name: 'Confirm' }).click();
+      await page.waitForURL((u) => u.pathname !== '/sign-in/verify');
     }
+    if (new URL(page.url()).pathname === '/sign-in/authenticator') await setUpAuthenticator(page);
   }
   await expect(page).not.toHaveURL(/\/sign-(in|up)/);
 }
@@ -86,6 +111,10 @@ export async function apiToken(request: APIRequestContext, phone: string, name?:
   if (body.status === 'second_step') {
     await expect.poll(codesSoFar).toBeGreaterThan(before);
     body = await (await request.post(`${API}/auth/second-step`, { data: { challengeId: body.challengeId, code: lastCode(), rememberDevice: false } })).json();
+  }
+  if (body.status === 'setup_authenticator') {
+    const { secret } = await (await request.post(`${API}/auth/authenticator/start`, { data: { setupToken: body.setupToken } })).json();
+    body = await (await request.post(`${API}/auth/authenticator/confirm`, { data: { setupToken: body.setupToken, code: totp(secret) } })).json();
   }
   expect(body.accessToken).toBeTruthy();
   return body.accessToken as string;

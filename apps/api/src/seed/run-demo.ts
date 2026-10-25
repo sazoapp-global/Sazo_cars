@@ -12,7 +12,10 @@ import request from 'supertest';
 import { PersonDetails } from '@sazo/contracts';
 import { createApp } from '../app.js';
 import { loadConfig } from '../config.js';
+import type pg from 'pg';
 import { AuthService, IamService } from '../modules/iam/index.js';
+import { PII_KEYRING, type Keyring } from '../platform/keyring.js';
+import { DB_POOL } from '../platform/tokens.js';
 import { ConsoleEmailSender } from '../modules/notify/index.js';
 import { signInWithCode } from '../test-auth.js';
 import { testPhoto } from '../test-photos.js';
@@ -23,6 +26,8 @@ import { seedScenarios } from './scenario-seed.js';
 const carPhoto = (seed: string, colour: string, model = '', i = 0) => demoCarPhoto(seed, colour, bodyOf(model), VIEWS[i % VIEWS.length]!);
 
 const PASSWORD = 'sazo-demo-2026';
+/** Demo SAZO staff share one authenticator key (D-145): add it to an authenticator app by hand to log in as them. */
+const DEMO_AUTHENTICATOR_KEY = 'SAZODEMOSAZODEMOSAZODEMOSAZODEMO';
 const config = loadConfig();
 if (config.NODE_ENV === 'production') throw new Error('Refusing to load demo data into production');
 
@@ -82,7 +87,12 @@ async function staff(who: string, phone: string, name: string, role: 'sazo_admin
   const [firstName, ...rest] = name.split(' ');
   const details = PersonDetails.parse({ surname: rest.join(' '), firstName, gender: 'female', dateOfBirth: '1986-04-12' });
   await app.get(AuthService, { strict: false }).completeDetails(id, details);
-  return person(who, phone, name, true);
+  const p = await person(who, phone, name, true); // sets up an authenticator app on the way in
+  const keyring = app.get<Keyring>(PII_KEYRING, { strict: false });
+  await app.get<pg.Pool>(DB_POOL, { strict: false }).query(
+    `UPDATE iam.authenticators SET secret_ciphertext = $2, key_version = $3, last_step = NULL WHERE user_id = $1`,
+    [id, keyring.encrypt(DEMO_AUTHENTICATOR_KEY), keyring.current]);
+  return p;
 }
 
 async function business(t: Token, type: string, legalName: string, tradingName: string, district: string): Promise<string> {
@@ -316,5 +326,6 @@ log('\nDemo data loaded. Log in on the website (or the garage app) with a phone 
 log(`Password for every demo account: ${PASSWORD}\n`);
 const width = Math.max(...people.map((x) => x.who.length));
 for (const { who, p } of people) log(`  ${who.padEnd(width)}  ${p.phone}  ${p.email}`);
-log('\nCodes and emails are printed in the API window, as usual on a developer computer.');
+log(`\nSAZO staff (admin and reviewer) use an authenticator app: add the key ${DEMO_AUTHENTICATOR_KEY} to it by hand (time based).`);
+log('Everyone else gets a code by SMS on a new device. Codes and emails are printed in the API window, as usual on a developer computer.');
 await app.close();

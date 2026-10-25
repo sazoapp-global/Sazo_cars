@@ -4,7 +4,8 @@
 import Link from 'next/link';
 import { Facts } from '@/components/popup';
 import { Icon } from '@/components/icon';
-import { personDetails } from './person-actions';
+import { api } from '@/lib/api';
+import { clearAuthenticator, personDetails } from './person-actions';
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'muted';
 const TONE: Record<Tone, string> = { ok: 'text-ok-text', warn: 'text-warn-text', bad: 'text-bad-text', muted: 'text-muted' };
@@ -46,7 +47,8 @@ const ID_STATUS: Record<string, string> = { pending: 'Sent, waiting for a check'
 
 /** A person's account, in the space beside the side bar (was a pop-up). The API audits the look. */
 export async function PersonView({ userId, back, backLabel }: { userId: string; back: string; backLabel: string }) {
-  const p = await personDetails(userId);
+  const [p, me] = await Promise.all([personDetails(userId), api<{ id: string; platformRoles: string[] }>('/me', { auth: true }).catch(() => undefined)]);
+  const canClear = !!me?.platformRoles.includes('sazo_admin') && me.id !== userId;
   return (
     <section aria-labelledby="person-h" className="space-y-4">
       <Back href={back} label={backLabel} />
@@ -71,6 +73,19 @@ export async function PersonView({ userId, back, backLabel }: { userId: string; 
                   </ul>
                 )}
               </section>
+              {p.authenticator && (
+                <section aria-label="Authenticator app">
+                  <h2 className="text-sm font-bold">Authenticator app</h2>
+                  <p className="text-sm text-muted">{p.authenticator.setUp ? `Set up. ${p.authenticator.backupCodesLeft} of 10 backup codes left.` : 'Not set up yet. Asked at their next log-in.'}</p>
+                  {canClear && p.authenticator.setUp && (
+                    <form action={clearAuthenticator} className="mt-2">
+                      <input type="hidden" name="userId" value={p.userId} />
+                      <input type="hidden" name="back" value={back} />
+                      <button type="submit" className="btn btn-ghost !min-h-10 text-sm">Clear their app (lost phone)</button>
+                    </form>
+                  )}
+                </section>
+              )}
             </div>
             <section aria-label="National ID" className="card space-y-2 p-4">
               <h2 className="text-sm font-bold">National ID</h2>

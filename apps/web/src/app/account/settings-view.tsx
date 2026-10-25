@@ -28,10 +28,11 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
   const me = await api<Me>('/me', { auth: true }).catch(() => undefined);
   if (!me) return <p className="card p-4">Sign in again to see your settings. <a href="/sign-in" className="link">Log in</a></p>;
   if (me.needsDetails.length) return <p className="card p-4">Add your details first. <a href={`/account/complete?next=${encodeURIComponent(back)}`} className="link">Add your details</a></p>;
-  const [profile, prefs, devices] = await Promise.all([
+  const [profile, prefs, devices, authenticator] = await Promise.all([
     api<Profile>('/me/profile', { auth: true }),
     api<{ visitConfirmationTexts: boolean }>('/me/preferences', { auth: true }),
     api<{ items: Device[] }>('/me/sessions', { auth: true }).then((r) => r.items),
+    api<{ required: boolean; setUp: boolean; backupCodesLeft: number }>('/me/authenticator', { auth: true }).catch(() => undefined),
   ]);
   const newPhone = sp.newPhone && /^\+[1-9]\d{7,14}$/.test(sp.newPhone) ? sp.newPhone : undefined;
 
@@ -172,6 +173,18 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
         </form>
         <p className="mt-2 text-sm text-muted">Sign-in codes and texts about your own requests (businesses, car claims) are always sent.</p>
       </section>
+
+      {authenticator?.required && (
+        <section className="card p-5" aria-labelledby="authenticator">
+          <h2 id="authenticator" className="font-display text-lg font-semibold">Authenticator app</h2>
+          <p className="mt-1 text-muted">As SAZO staff you confirm it&apos;s you with an authenticator app on a new device, never an SMS code.</p>
+          <p className="mt-2 flex items-center gap-2 text-sm">
+            <Icon name={authenticator.setUp ? 'check_circle' : 'info'} size={18} className={authenticator.setUp ? 'text-ok-text' : 'text-label'} />
+            {authenticator.setUp ? `Set up. ${authenticator.backupCodesLeft} of 10 backup codes left.` : 'Not set up yet. You set it up at your next log-in.'}
+          </p>
+          <p className="mt-2 text-sm text-muted">Lost your phone, or running out of backup codes? Ask a SAZO administrator to clear your app; you then set up a new one at your next log-in.</p>
+        </section>
+      )}
 
       <section className="card p-5" aria-labelledby="devices">
         <h2 id="devices" className="font-display text-lg font-semibold">Signed-in devices</h2>

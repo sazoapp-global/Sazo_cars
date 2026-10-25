@@ -149,7 +149,46 @@ test('create an account with email and password, then log in with it (D-100)', a
   await expect(login.getByText('No SAZO account uses this email.')).toBeVisible();
   await login.getByLabel('Email', { exact: true }).fill(email.toUpperCase());
   await login.getByLabel('Password', { exact: true }).fill('river-stone-7');
+  let before = codesSoFar();
   await login.getByRole('button', { name: 'Log in to SAZO' }).click();
+  // A new device: a code by email, since he has no phone yet (D-145).
+  await expect(page.getByRole('heading', { name: /Confirm it.s you/ })).toBeVisible();
+  await expect(page.getByText('We sent a code by email to')).toBeVisible();
+  await a11y(page);
+  await shot(page, 'second-step');
+  await expect.poll(codesSoFar).toBeGreaterThan(before);
+  await page.getByLabel('6-digit code').fill(lastCode());
+  await page.getByRole('button', { name: 'Confirm' }).click();
+  // No phone on the account: he adds one before going in.
+  await expect(page.getByRole('heading', { name: 'Add your phone' })).toBeVisible();
+  await a11y(page);
+  await shot(page, 'add-phone');
+  await page.getByLabel('Mobile number').fill(`0774${stamp}`);
+  before = codesSoFar();
+  await page.getByRole('button', { name: 'Send code' }).click();
+  await expect.poll(codesSoFar).toBeGreaterThan(before);
+  await page.getByLabel('6-digit code').fill(lastCode());
+  await page.getByRole('button', { name: 'Confirm and carry on' }).click();
   await expect(page.getByRole('heading', { name: 'Anguzu J. Mike' })).toBeVisible();
-  await expect(page.getByRole('progressbar', { name: 'Your profile' })).toHaveAttribute('aria-valuenow', '50');
+  await expect(page.getByRole('progressbar', { name: 'Your profile' })).toHaveAttribute('aria-valuenow', '75');
+
+  // Forgot password: the emailed link, then a code to the phone just added.
+  await page.getByRole('button', { name: 'Sign out here' }).click();
+  await page.goto('/forgot-password');
+  await page.getByLabel('Email').fill(email);
+  await page.getByRole('button', { name: /Send/ }).click();
+  await expect.poll(() => { try { return emailLink(email); } catch { return ''; } }).toContain('/reset-password?token=');
+  await page.goto(new URL(emailLink(email)).pathname + new URL(emailLink(email)).search);
+  await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible();
+  before = codesSoFar();
+  await page.getByRole('button', { name: 'Text me a code' }).click();
+  await expect(page.getByText(/We sent a code to \+256/)).toBeVisible();
+  await a11y(page);
+  await shot(page, 'reset-password');
+  await expect.poll(codesSoFar).toBeGreaterThan(before);
+  await page.getByLabel('6-digit code').fill(lastCode());
+  await page.getByLabel('New password', { exact: true }).fill('lake-victoria-22');
+  await page.getByLabel('New password again').fill('lake-victoria-22');
+  await page.getByRole('button', { name: 'Save new password' }).click();
+  await expect(page.getByText('Your password has been changed. Log in with the new one.')).toBeVisible();
 });
