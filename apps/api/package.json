@@ -16,9 +16,9 @@
   "dependencies": {
     "@aws-sdk/client-kms": "^3.1147.0",
     "@aws-sdk/client-sesv2": "^3.1149.0",
-    "@nestjs/common": "^11.2.7",
-    "@nestjs/core": "^11.2.7",
-    "@nestjs/platform-express": "^11.2.7",
+    "@nestjs/common": "^11.2.8",
+    "@nestjs/core": "^11.2.8",
+    "@nestjs/platform-express": "^11.2.8",
     "@sazo/contracts": "0.1.0",
     "@sazo/scenarios": "0.1.0",
     "@sazo/trust-engine": "0.1.0",
@@ -28,11 +28,11 @@
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "sharp": "^0.34.4",
-    "zod": "^4.6.5"
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.2.7",
+    "@nestjs/testing": "^11.2.8",
     "@swc/core": "^1.16.13",
     "@types/express": "^5.0.6",
     "@types/supertest": "^7.2.1",
