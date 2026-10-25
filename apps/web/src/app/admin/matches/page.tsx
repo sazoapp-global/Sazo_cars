@@ -1,3 +1,4 @@
+import { formatDate } from '@sazo/contracts';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import type { Decision, Summary } from '@/lib/types';
@@ -5,6 +6,7 @@ import { decideMatch } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { day } from '../labels';
 import { Forbidden, Notice, type SP } from '../notice';
+import { Back, Row, Rows, carHref, withQuery } from '../rows';
 
 const IDENT: Record<string, string> = { vin: 'VIN', chassisNumber: 'Chassis', plate: 'Plate', engineNumber: 'Engine no.' };
 
@@ -14,15 +16,16 @@ export default async function Matches({ searchParams }: { searchParams: SP }) {
   const data = await adminFetch<{ items: Decision[] }>('/admin/resolutions?outcome=ambiguous');
   const refs = data === 'forbidden' ? [] : [...new Set(data.items.flatMap((d) => d.candidateVehicleRefs))];
   const cars = new Map(await Promise.all(refs.map(async (r) => [r, await api<Summary>(`/vehicles/${r}/summary`).catch(() => undefined)] as const)));
-  return (
-    <>
-      <h1 className="font-display text-2xl font-bold">Vehicle matches</h1>
-      <p className="mb-4 text-muted">A record arrived and SAZO could not be sure which car it belongs to, for example a new chassis number with a plate that is on a car entered by its owner. Pick the car, make a new one, or reject the record.</p>
-      <Notice done={sp.done} error={sp.error} />
-      {data === 'forbidden' ? <Forbidden what="deciding vehicle matches" /> : data.items.length === 0 ? <p className="text-muted">Nothing waiting.</p> : (
-        <ul className="space-y-4">
-          {data.items.map((d) => (
-            <li key={d.decisionId} className="card p-4">
+  const PATH = '/admin/matches';
+  const Q = { status: sp.status, item: sp.item };
+  const one = data !== 'forbidden' && sp.item ? data.items.find((d) => d.decisionId === sp.item) : undefined;
+  if (one) {
+    const d = one;
+    return (
+      <>
+        <Back href={withQuery(PATH, Q, { item: undefined })} label="All vehicle matches" />
+        <Notice done={sp.done} error={sp.error} />
+        <section className="card p-4" aria-label="Details">
               <p className="text-sm text-muted">Arrived {day(d.decidedAt)}</p>
               <dl className="mt-1 flex flex-wrap gap-x-6 gap-y-1">
                 {Object.entries(d.presentedIdentifiers).map(([k, v]) => <div key={k}><dt className="text-[11px] font-bold uppercase tracking-wider text-label">{IDENT[k] ?? k}</dt><dd className="sazo-id font-semibold">{v}</dd></div>)}
@@ -38,7 +41,7 @@ export default async function Matches({ searchParams }: { searchParams: SP }) {
                         <input type="radio" name="choice" value={`matched:${r}`} required className="mt-1 h-5 w-5" />
                         <span><span className="font-semibold">{s ? [s.vehicle.year, s.vehicle.make, s.vehicle.model].filter(Boolean).join(' ') || 'Vehicle' : 'Vehicle'}</span>
                           {' '}<span className="sazo-id text-sm">{r}</span>{s?.vehicle.currentPlate ? ` · plate ${s.vehicle.currentPlate}` : ''}{s?.vehicle.status === 'provisional' ? ' · entered by owner, not yet confirmed' : ''}
-                          {' '}<Link className="link text-sm" href={`/v/${r}/evidence`} target="_blank">records</Link></span>
+                          {' '}<Link className="link text-sm" href={carHref(r, withQuery(PATH, Q, {}))}>records</Link></span>
                       </label>
                     );
                   })}
@@ -49,9 +52,19 @@ export default async function Matches({ searchParams }: { searchParams: SP }) {
                   <input id={`reason-${d.decisionId}`} name="reason" required minLength={3} className="field" placeholder="e.g. Owner confirmed by phone; chassis photo matches" /></div>
                 <button className="btn btn-primary">Record decision</button>
               </form>
-            </li>
-          ))}
-        </ul>
+        </section>
+      </>
+    );
+  }
+  return (
+    <>
+      <h1 className="font-display text-2xl font-bold">Vehicle matches</h1>
+      <p className="mb-4 text-muted">A record arrived and SAZO could not be sure which car it belongs to, for example a new chassis number with a plate that is on a car entered by its owner. Pick the car, make a new one, or reject the record.</p>
+      <Notice done={sp.done} error={sp.error} />
+      {data === 'forbidden' ? <Forbidden what="deciding vehicle matches" /> : data.items.length === 0 ? <p className="text-muted">Nothing waiting.</p> : (
+        <Rows label="Records waiting for a vehicle match">
+          {data.items.map((d) => <Row key={d.decisionId} href={withQuery(PATH, Q, { item: d.decisionId })} title={Object.values(d.presentedIdentifiers).join(' · ') || 'A record'} meta={`${d.candidateVehicleRefs.length} possible cars · arrived ${formatDate(d.decidedAt)}`} status={'Choose the car'} tone={'warn'} />)}
+        </Rows>
       )}
     </>
   );

@@ -48,7 +48,8 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
 
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN, { next: '/admin/organisations' });
-  const card = admin.getByRole('listitem').filter({ hasText: NAME });
+  await admin.getByRole('listitem').filter({ hasText: NAME }).getByRole('link').click();
+  const card = admin.getByRole('region', { name: 'Details' });
   await card.getByLabel(/Reason/).fill('Yard visited; trading licence valid');
   await card.getByRole('button', { name: 'Approve' }).click();
   await expect(admin.getByRole('status')).toContainText('approve');
@@ -165,13 +166,16 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await shot(visitor, 'car-page');
 
   await dealer.goto(`${listUrl}/enquiries`);
-  const lead = dealer.getByRole('listitem').filter({ hasText: 'Peter Okello' });
-  await expect(lead).toContainText('2018 Toyota Harrier');
+  const enq = dealer.getByRole('listitem').filter({ hasText: 'Peter Okello' });
+  await expect(enq).toContainText('2018 Toyota Harrier');
+  // An enquiry opens with all its details beside the side bar.
+  await enq.getByRole('link').click();
+  const lead = dealer.getByRole('region', { name: 'Enquiry from Peter Okello' });
   await expect(lead).toContainText('+256701234567');
   await lead.getByLabel('Move to').selectOption('viewing');
   await lead.getByRole('button', { name: 'Move' }).click();
   await expect(dealer.getByRole('status')).toContainText('Enquiry moved');
-  await expect(dealer.getByRole('listitem').filter({ hasText: 'Peter Okello' })).toContainText('Viewing');
+  await expect(dealer.getByRole('region', { name: 'Enquiry from Peter Okello' })).toContainText('Viewing');
   await a11y(dealer);
   await shot(dealer, 'dealer-enquiries');
 

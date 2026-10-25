@@ -30,7 +30,8 @@ test('review a model, suggest a video, moderator publishes', async ({ browser })
   await signIn(admin, ADMIN, { next: '/admin/moderation' });
   await a11y(admin);
   for (const text of [`(${stamp})`, `Owner review ${stamp}`]) {
-    const card = admin.getByRole('listitem').filter({ hasText: text });
+    await admin.getByRole('listitem').filter({ hasText: text }).getByRole('link').click();
+    const card = admin.getByRole('region', { name: 'Details' });
     await card.getByLabel(/Reason/).fill('About the model; no personal details');
     await card.getByRole('button', { name: 'Publish' }).click();
     await expect(admin.getByRole('status')).toContainText('Published');

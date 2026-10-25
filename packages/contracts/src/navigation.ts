@@ -96,7 +96,7 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
         { key: 'concerns', label: 'Reported problems', short: 'Problems', icon: 'report', href: '/admin/concerns', rule: STAFF },
         { key: 'sources', label: 'Data sources', short: 'Sources', icon: 'account_balance', href: '/admin/sources', rule: STAFF },
         { key: 'rebuild', label: 'Recalculate', short: 'Recalc', icon: 'history', href: '/admin/rebuild', rule: STAFF },
-        { key: 'send', label: 'Send records', short: 'Send', icon: 'receipt_long', href: '/partner', rule: STAFF },
+        { key: 'send', label: 'Send records', short: 'Send', icon: 'receipt_long', href: '/partner', alsoActive: ['/partner/'], rule: STAFF },
       ] },
       { key: 'content', label: 'Messages and content', short: 'Messages', icon: 'forum', links: [
         { key: 'moderation', label: 'Reviews and videos', short: 'Reviews', icon: 'forum', href: '/admin/moderation', rule: STAFF },

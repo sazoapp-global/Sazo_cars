@@ -49,6 +49,75 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
   const hidden = <input type="hidden" name="org" value={id} />;
   const manager = org.role === 'org_manager';
 
+  const one = opened ? data.items.find((x) => x.leadId === opened) : undefined;
+  if (one) {
+    const l = one;
+    return (
+      <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
+        person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
+        <p><Link href={`/dealer/${id}/enquiries${closed ? '?show=closed' : ''}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All enquiries</Link></p>
+        {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+        {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
+        <section className="rounded-[14px] border border-line bg-card p-4 md:p-5" aria-label={`Enquiry from ${l.customer.name ?? 'a customer'}`}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h2 className="font-display text-xl font-bold">{l.customer.name ?? 'Customer'}</h2>
+                  {l.customer.phone && <p className="text-sm"><a href={`tel:${l.customer.phone}`} className="link">{l.customer.phone}</a>
+                    {l.consentToContact && <> · <a href={`https://wa.me/${l.customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="link">WhatsApp</a></>}</p>}
+                  <p className="text-sm text-muted">{l.car ?? 'No car chosen'}. {sourceLabel(l.source)}{l.broker ? ` (${l.broker})` : ''}{l.addedBy ? `, added by ${l.addedBy}` : ''}. {formatDate(l.createdAt)}</p>
+                  {l.broker && <p className="mt-1 text-sm">Brought by broker {l.broker}{l.splitBroker ? `, shared with ${l.splitBroker.name} (${l.splitBroker.percent}%)` : ''}{l.protectedUntil && l.open ? `. Their customer until ${formatDate(l.protectedUntil)}` : ''}.</p>}
+                  {l.message && <p className="mt-1 text-sm">&ldquo;{l.message}&rdquo;</p>}
+                  {!l.consentToContact && <p className="mt-1 text-xs font-semibold text-warn-text">Did not agree to be contacted</p>}
+                </div>
+                <span className={`chip ${l.stage === 'completed' ? 'border-ok-line bg-ok-fill text-ok-text' : l.stage === 'lost' ? 'border-line bg-soft text-muted' : 'border-line-strong bg-white text-on-surface'}`}>{stageLabel(l.stage)}{l.salePriceUgx ? `, ${formatUgx(l.salePriceUgx)}` : ''}</span>
+              </div>
+              {l.needsDecision && (
+                <div className="mt-3 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm">
+                  <p className="font-semibold text-warn-text">Two claims on this customer. {l.earlier ? `${l.earlier.by} registered them first, on ${formatDate(l.earlier.at)}.` : ''} Commission is held until a manager decides.</p>
+                  {manager && (
+                    <form action={decideLead} data-draft={`lead-decide-${l.leadId}`} className="mt-2 grid gap-2 sm:grid-cols-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                      <div><label htmlFor={`o-${l.leadId}`} className="label">Who brought the customer?</label>
+                        <select id={`o-${l.leadId}`} name="outcome" className="field" defaultValue="keep">
+                          <option value="keep">{l.broker ?? 'This enquiry'}</option>
+                          {l.earlier && <option value="earlier">{l.earlier.broker ? l.earlier.by : 'Our own customer from before'}</option>}
+                          {l.earlier?.broker && l.broker && <option value="split">Both brokers share</option>}
+                          <option value="dealer">Our own customer (no broker)</option>
+                        </select></div>
+                      <div><label htmlFor={`sp-${l.leadId}`} className="label">If shared, {l.broker ?? 'this broker'}&apos;s percent</label><input id={`sp-${l.leadId}`} name="split" inputMode="numeric" defaultValue="50" className="field tabular-nums" /></div>
+                      <div className="sm:col-span-2"><label htmlFor={`dr-${l.leadId}`} className="label">Reason (kept on record)</label><input id={`dr-${l.leadId}`} name="reason" required minLength={3} className="field" /></div>
+                      <div><button className="btn btn-primary">Decide</button></div>
+                    </form>
+                  )}
+                </div>
+              )}
+              {(l.open || l.stage === 'lost') && (
+                <form action={moveLead} data-draft={`lead-move-${l.leadId}`} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                  <div><label htmlFor={`s-${l.leadId}`} className="label">Move to</label>
+                    <select id={`s-${l.leadId}`} name="stage" className="field" defaultValue="">
+                      <option value="" disabled>Choose</option>
+                      {STAGES.filter(([k]) => k !== l.stage && (l.stage !== 'lost' || k === 'enquiry')).map(([k, lab]) => <option key={k} value={k}>{lab}</option>)}
+                    </select></div>
+                  <div><label htmlFor={`p-${l.leadId}`} className="label">Sold for (UGX, only for Completed)</label><input id={`p-${l.leadId}`} name="price" inputMode="numeric" className="field tabular-nums" /></div>
+                  <button className="btn btn-ghost">Move</button>
+                </form>
+              )}
+              {(
+                  <div className="mt-4 space-y-2 border-t border-line pt-3"><h3 className="text-sm font-bold">History and notes</h3>
+                    <ol className="space-y-1 text-sm">
+                      {events.map((e, i) => <li key={i} className="text-muted">{formatDate(e.at)}: {e.kind === 'created' ? 'Enquiry received' : e.kind === 'stage' ? `Moved to ${stageLabel(e.toStage ?? '')}` : 'Note'}{e.note ? `. ${e.note}` : ''}{e.by ? ` (${e.by})` : ''}</li>)}
+                    </ol>
+                    <form action={noteLead} data-draft={`lead-note-${l.leadId}`} className="flex gap-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                      <label htmlFor={`n-${l.leadId}`} className="sr-only">Note</label>
+                      <input id={`n-${l.leadId}`} name="note" required minLength={2} maxLength={500} className="field !min-h-10 text-sm" placeholder="Called, coming Saturday" />
+                      <button className="btn btn-ghost !min-h-10">Save note</button>
+                    </form>
+                  </div>
+              )}
+        </section>
+      </AppFrame>
+    );
+  }
+
   return (
     <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
@@ -96,67 +165,17 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
       </nav>
 
       {data.items.length === 0 ? <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">{closed ? 'Nothing closed yet.' : 'No open enquiries. Share a car to get some.'}</p> : (
-        <ul className="divide-y divide-line rounded-[14px] border border-line" aria-label="Enquiries">
+        <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card" aria-label="Enquiries">
           {data.items.map((l) => (
-            <li key={l.leadId} className="p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-display text-base font-bold">{l.customer.name ?? 'Customer'}</p>
-                  {l.customer.phone && <p className="text-sm"><a href={`tel:${l.customer.phone}`} className="link">{l.customer.phone}</a>
-                    {l.consentToContact && <> · <a href={`https://wa.me/${l.customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="link">WhatsApp</a></>}</p>}
-                  <p className="text-sm text-muted">{l.car ?? 'No car chosen'}. {sourceLabel(l.source)}{l.broker ? ` (${l.broker})` : ''}{l.addedBy ? `, added by ${l.addedBy}` : ''}. {formatDate(l.createdAt)}</p>
-                  {l.broker && <p className="mt-1 text-sm">Brought by broker {l.broker}{l.splitBroker ? `, shared with ${l.splitBroker.name} (${l.splitBroker.percent}%)` : ''}{l.protectedUntil && l.open ? `. Their customer until ${formatDate(l.protectedUntil)}` : ''}.</p>}
-                  {l.message && <p className="mt-1 text-sm">&ldquo;{l.message}&rdquo;</p>}
-                  {!l.consentToContact && <p className="mt-1 text-xs font-semibold text-warn-text">Did not agree to be contacted</p>}
-                </div>
-                <span className={`chip ${l.stage === 'completed' ? 'border-ok-line bg-ok-fill text-ok-text' : l.stage === 'lost' ? 'border-line bg-soft text-muted' : 'border-line-strong bg-white text-on-surface'}`}>{stageLabel(l.stage)}{l.salePriceUgx ? `, ${formatUgx(l.salePriceUgx)}` : ''}</span>
-              </div>
-              {l.needsDecision && (
-                <div className="mt-3 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm">
-                  <p className="font-semibold text-warn-text">Two claims on this customer. {l.earlier ? `${l.earlier.by} registered them first, on ${formatDate(l.earlier.at)}.` : ''} Commission is held until a manager decides.</p>
-                  {manager && (
-                    <form action={decideLead} data-draft={`lead-decide-${l.leadId}`} className="mt-2 grid gap-2 sm:grid-cols-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
-                      <div><label htmlFor={`o-${l.leadId}`} className="label">Who brought the customer?</label>
-                        <select id={`o-${l.leadId}`} name="outcome" className="field" defaultValue="keep">
-                          <option value="keep">{l.broker ?? 'This enquiry'}</option>
-                          {l.earlier && <option value="earlier">{l.earlier.broker ? l.earlier.by : 'Our own customer from before'}</option>}
-                          {l.earlier?.broker && l.broker && <option value="split">Both brokers share</option>}
-                          <option value="dealer">Our own customer (no broker)</option>
-                        </select></div>
-                      <div><label htmlFor={`sp-${l.leadId}`} className="label">If shared, {l.broker ?? 'this broker'}&apos;s percent</label><input id={`sp-${l.leadId}`} name="split" inputMode="numeric" defaultValue="50" className="field tabular-nums" /></div>
-                      <div className="sm:col-span-2"><label htmlFor={`dr-${l.leadId}`} className="label">Reason (kept on record)</label><input id={`dr-${l.leadId}`} name="reason" required minLength={3} className="field" /></div>
-                      <div><button className="btn btn-primary">Decide</button></div>
-                    </form>
-                  )}
-                </div>
-              )}
-              {(l.open || l.stage === 'lost') && (
-                <form action={moveLead} data-draft={`lead-move-${l.leadId}`} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">{hidden}<input type="hidden" name="lead" value={l.leadId} />
-                  <div><label htmlFor={`s-${l.leadId}`} className="label">Move to</label>
-                    <select id={`s-${l.leadId}`} name="stage" className="field" defaultValue="">
-                      <option value="" disabled>Choose</option>
-                      {STAGES.filter(([k]) => k !== l.stage && (l.stage !== 'lost' || k === 'enquiry')).map(([k, lab]) => <option key={k} value={k}>{lab}</option>)}
-                    </select></div>
-                  <div><label htmlFor={`p-${l.leadId}`} className="label">Sold for (UGX, only for Completed)</label><input id={`p-${l.leadId}`} name="price" inputMode="numeric" className="field tabular-nums" /></div>
-                  <button className="btn btn-ghost">Move</button>
-                </form>
-              )}
-              <p className="mt-2" id={`e-${l.leadId}`}>
-                <Link className="link text-sm" href={opened === l.leadId ? `/dealer/${id}/enquiries${closed ? '?show=closed' : ''}`
-                  : `/dealer/${id}/enquiries?${new URLSearchParams({ ...(closed ? { show: 'closed' } : {}), open: l.leadId })}#e-${l.leadId}`}>{opened === l.leadId ? 'Hide history' : 'History and notes'}</Link>
-              </p>
-              {opened === l.leadId && (
-                  <div className="mt-2 space-y-2">
-                    <ol className="space-y-1 text-sm">
-                      {events.map((e, i) => <li key={i} className="text-muted">{formatDate(e.at)}: {e.kind === 'created' ? 'Enquiry received' : e.kind === 'stage' ? `Moved to ${stageLabel(e.toStage ?? '')}` : 'Note'}{e.note ? `. ${e.note}` : ''}{e.by ? ` (${e.by})` : ''}</li>)}
-                    </ol>
-                    <form action={noteLead} data-draft={`lead-note-${l.leadId}`} className="flex gap-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
-                      <label htmlFor={`n-${l.leadId}`} className="sr-only">Note</label>
-                      <input id={`n-${l.leadId}`} name="note" required minLength={2} maxLength={500} className="field !min-h-10 text-sm" placeholder="Called, coming Saturday" />
-                      <button className="btn btn-ghost !min-h-10">Save note</button>
-                    </form>
-                  </div>
-              )}
+            <li key={l.leadId}>
+              <Link href={`/dealer/${id}/enquiries?${new URLSearchParams({ ...(closed ? { show: 'closed' } : {}), open: l.leadId })}`} className="flex items-center gap-3 px-4 py-3 hover:bg-soft">
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">{l.customer.name ?? 'Customer'}{l.needsDecision && <span className="ml-2 chip border-warn-line bg-warn-fill text-warn-text">Needs a decision</span>}</span>
+                  <span className="block truncate text-sm text-muted">{l.car ?? 'No car chosen'} · {sourceLabel(l.source)}{l.broker ? ` (${l.broker})` : ''} · {formatDate(l.createdAt)}</span>
+                </span>
+                <span className={`hidden shrink-0 text-sm font-semibold sm:block ${l.stage === 'completed' ? 'text-ok-text' : l.stage === 'lost' ? 'text-muted' : 'text-on-surface'}`}>{stageLabel(l.stage)}{l.salePriceUgx ? `, ${formatUgx(l.salePriceUgx)}` : ''}</span>
+                <Icon name="chevron_right" size={20} className="shrink-0 text-label" />
+              </Link>
             </li>
           ))}
         </ul>

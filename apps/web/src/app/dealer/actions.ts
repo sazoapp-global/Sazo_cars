@@ -288,7 +288,8 @@ export async function moveLead(form: FormData) {
   try {
     await api(`/dealer/leads/${lead}`, { method: 'PATCH', ...asDealer(org), body: { stage, ...(price ? { salePriceUgx: price } : {}), ...(text(form, 'note') ? { note: text(form, 'note') } : {}) } });
   } catch (err) { toLeads(org, { error: reason(err, 'Could not move the enquiry.'), open: lead }); }
-  toLeads(org, { done: stage === 'completed' ? 'Sale recorded. The car is marked as sold.' : 'Enquiry moved.' });
+  // Stay on the enquiry; a completed or lost one is under Completed and lost.
+  toLeads(org, { done: stage === 'completed' ? 'Sale recorded. The car is marked as sold.' : 'Enquiry moved.', open: lead, ...(stage === 'completed' || stage === 'lost' ? { show: 'closed' } : {}) });
 }
 
 export async function noteLead(form: FormData) {
@@ -327,7 +328,7 @@ export async function commissionAction(form: FormData) {
   try {
     await api(`/dealer/commissions/${c}/${action}`, { method: 'POST', ...asDealer(org), body: text(form, 'note') ? { note: text(form, 'note') } : {} });
   } catch (err) { go({ error: reason(err, 'Could not update the commission.') }); }
-  go({ done: action === 'approve' ? 'Commission approved.' : action === 'paid' ? 'Marked as paid.' : 'Commission cancelled.' });
+  go({ done: action === 'approve' ? 'Commission approved.' : action === 'paid' ? 'Marked as paid.' : 'Commission cancelled.', item: c });
 }
 
 // Many cars from a file (D-131, managers) ---------------------------------------------------------------

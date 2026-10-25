@@ -56,21 +56,22 @@ test('approve a garage that registered', async ({ page, request }) => {
   await page.setViewportSize({ width: 412, height: 839 });
   await a11y(page);
   await page.getByRole('link', { name: 'Businesses', exact: true }).click();
-  const card = page.getByRole('listitem').filter({ hasText: `Bugolobi Car Care ${stamp} Ltd` });
+  // The list only; a business opens with all its details beside the side bar.
+  await page.getByRole('listitem').filter({ hasText: `Bugolobi Car Care ${stamp} Ltd` }).getByRole('link').click();
+  const card = page.getByRole('region', { name: 'Details' });
   await expect(card).toContainText('ID sent: check it before approving');
-  // A manager's account opens in a popup over the list, with the ID photo.
-  await card.getByRole('button', { name: /Account details for/ }).first().click();
-  const person = page.getByRole('dialog');
-  await expect(person).toContainText('National ID');
-  await expect(person).toContainText(`Bugolobi Car Care ${stamp} Ltd`);
-  await expect(person.getByRole('img', { name: /National ID photo/ })).toBeVisible();
+  // A manager's account opens in the same space (not a pop-up), with the ID photo, and Back returns.
+  await card.getByRole('link', { name: /Musa|Manager/ }).first().click();
+  await expect(page.getByRole('main')).toContainText('National ID');
+  await expect(page.getByRole('main')).toContainText(`Bugolobi Car Care ${stamp} Ltd`);
+  await expect(page.getByRole('img', { name: /National ID photo/ })).toBeVisible();
   await a11y(page);
-  await person.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('link', { name: 'Back to the business' }).click();
   await card.getByLabel(/Reason/).fill('Visited the workshop on Port Bell Road');
   await card.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByRole('status')).toContainText('Decision recorded: approve');
   await page.goto('/admin/organisations?status=approved');
-  await expect(page.getByRole('heading', { name: `Bugolobi Car Care ${stamp} Ltd` })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: `Bugolobi Car Care ${stamp} Ltd` })).toBeVisible();
 });
 
 test('settle a cloned plate: the genuine car keeps it', async ({ page, request }) => {

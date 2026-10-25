@@ -47,9 +47,10 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   // A SAZO admin compares the ID number with the photo and approves.
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN, { next: '/admin/brokers' });
-  const application = admin.getByRole('listitem').filter({ hasText: `CM${stamp}ABCDE` });
-  await expect(application).toContainText('Kato Ivan');
   await a11y(admin);
+  await admin.getByRole('listitem').filter({ hasText: 'Kato Ivan' }).getByRole('link').click();
+  const application = admin.getByRole('region', { name: 'Details' });
+  await expect(application).toContainText(`CM${stamp}ABCDE`);
   await application.getByLabel('Reason').fill('ID number and photo match');
   await application.getByRole('button', { name: 'Approve' }).click();
   await expect(admin.getByRole('status')).toContainText('Approved');
@@ -81,17 +82,19 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   // The dealer sees who brought her, completes the sale and approves the commission.
   const dealer = await (await browser.newContext()).newPage();
   await signIn(dealer, MANAGER, { next: `/dealer/${org}/enquiries` });
-  const lead = dealer.getByRole('listitem').filter({ hasText: 'Sarah Nambi' });
+  await dealer.getByRole('listitem').filter({ hasText: 'Sarah Nambi' }).getByRole('link').click();
+  const lead = dealer.getByRole('region', { name: 'Enquiry from Sarah Nambi' });
   await expect(lead).toContainText('Brought by broker Ivan');
   await lead.getByLabel('Move to').selectOption('completed');
   await lead.getByLabel(/Sold for/).fill('51,000,000');
   await lead.getByRole('button', { name: 'Move' }).click();
   await expect(dealer.getByRole('status')).toContainText('Sale recorded');
   await dealer.getByRole('link', { name: 'Commission' }).first().click();
-  const row = dealer.getByRole('listitem').filter({ hasText: 'Ivan' });
-  await expect(row).toContainText('UGX 450,000');
+  const crow = dealer.getByRole('listitem').filter({ hasText: 'Ivan' });
+  await expect(crow).toContainText('UGX 450,000');
   await a11y(dealer);
-  await row.getByRole('button', { name: 'Approve' }).click();
+  await crow.getByRole('link').click();
+  await dealer.getByRole('region', { name: /Commission for Ivan/ }).getByRole('button', { name: 'Approve' }).click();
   await expect(dealer.getByRole('status')).toContainText('Commission approved');
   await shot(dealer, 'dealer-commission');
 

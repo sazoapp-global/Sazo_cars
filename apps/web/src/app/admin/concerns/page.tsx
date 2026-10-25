@@ -3,6 +3,7 @@ import type { ConcernQueueItem } from '@/lib/types';
 import { decideConcern } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { Back, PersonView, Row, Rows, carHref, withQuery } from '../rows';
 
 export const metadata = { title: 'Reported problems' };
 const STATUSES = [['open', 'Waiting'], ['upheld', 'Upheld'], ['dismissed', 'Dismissed']] as const;
@@ -13,28 +14,24 @@ export default async function Concerns({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const status = STATUSES.some(([s]) => s === sp.status) ? sp.status! : 'open';
   const data = await adminFetch<{ items: ConcernQueueItem[] }>(`/admin/concerns?status=${status}`);
-  return (
-    <>
-      <h1 className="font-display text-2xl font-bold">Reported problems</h1>
-      <p className="mb-4 text-muted">Garages and inspectors report signs of fraud. While a serious report waits, buyers see only &ldquo;a business has raised a concern; SAZO is checking&rdquo;. Uphold only what you could confirm. Buyers then see it. The reporting business is never named to buyers.</p>
-      <Notice done={sp.done} error={sp.error} />
-      <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
-        {STATUSES.map(([s, label]) => (
-          <a key={s} href={`/admin/concerns?status=${s}`} aria-current={s === status ? 'true' : undefined}
-            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${s === status ? 'border-primary-container bg-primary-container text-white' : 'border-line bg-white'}`}>{label}</a>
-        ))}
-      </nav>
-      {data === 'forbidden' ? <Forbidden what="reviewing reported problems" /> : data.items.length === 0 ? <p className="text-muted">Nothing here.</p> : (
-        <ul className="space-y-3">
-          {data.items.map((c) => (
-            <li key={c.concernId} className="card p-4">
+  const PATH = '/admin/concerns';
+  const Q = { status: sp.status, item: sp.item };
+  if (sp.person) return <PersonView userId={sp.person} back={withQuery(PATH, Q, {})} backLabel="Back" />;
+  const one = data !== 'forbidden' && sp.item ? data.items.find((c) => c.concernId === sp.item) : undefined;
+  if (one) {
+    const c = one;
+    return (
+      <>
+        <Back href={withQuery(PATH, Q, { item: undefined })} label="All reported problems" />
+        <Notice done={sp.done} error={sp.error} />
+        <section className="card p-4" aria-label="Details">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`chip ${c.severity === 'serious' ? 'border-bad-line bg-bad-fill text-bad-text' : 'border-warn-line bg-warn-fill text-warn-text'}`}>{c.severity}</span>
                 <span className="sazo-id font-bold">{c.plate}</span>
-                {c.vehicleRef ? <a href={`/v/${c.vehicleRef}`} className="link text-sm" target="_blank" rel="noreferrer">report {c.vehicleRef}</a> : <span className="text-sm text-warn-text">Not matched to a car yet</span>}
+                {c.vehicleRef ? <a href={carHref(c.vehicleRef, withQuery(PATH, Q, {}))} className="link text-sm">report {c.vehicleRef}</a> : <span className="text-sm text-warn-text">Not matched to a car yet</span>}
                 <span className="text-sm text-muted">{formatDate(c.createdAt)}</span>
               </div>
-              <h2 className="mt-1 font-display text-lg font-bold">{CONCERNS[c.category].label}</h2>
+              <h1 className="mt-1 font-display text-2xl font-bold">{CONCERNS[c.category].label}</h1>
               <p className="text-sm text-muted">From {c.reporter} · {c.organisation} ({ORG[c.organisationType ?? ''] ?? 'Business'})</p>
               <p className="mt-2 whitespace-pre-line">{c.description}</p>
               {c.evidenceIds.length > 0 && <p className="mt-1 text-sm">Photos: {c.evidenceIds.map((d, i) => <a key={d} className="link mr-2" href={`/admin/files/${d}`} target="_blank" rel="noreferrer">photo {i + 1}</a>)}</p>}
@@ -51,9 +48,25 @@ export default async function Concerns({ searchParams }: { searchParams: SP }) {
                   </div>
                 </form>
               ) : <p className="mt-2 text-sm"><strong>{c.status === 'upheld' ? 'Upheld' : 'Dismissed'}:</strong> {c.decisionReason}</p>}
-            </li>
-          ))}
-        </ul>
+                    </section>
+      </>
+    );
+  }
+  return (
+    <>
+      <h1 className="font-display text-2xl font-bold">Reported problems</h1>
+      <p className="mb-4 text-muted">Garages and inspectors report signs of fraud. While a serious report waits, buyers see only &ldquo;a business has raised a concern; SAZO is checking&rdquo;. Uphold only what you could confirm. Buyers then see it. The reporting business is never named to buyers.</p>
+      <Notice done={sp.done} error={sp.error} />
+      <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
+        {STATUSES.map(([s, label]) => (
+          <a key={s} href={`/admin/concerns?status=${s}`} aria-current={s === status ? 'true' : undefined}
+            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${s === status ? 'border-primary-container bg-primary-container text-white' : 'border-line bg-white'}`}>{label}</a>
+        ))}
+      </nav>
+      {data === 'forbidden' ? <Forbidden what="reviewing reported problems" /> : data.items.length === 0 ? <p className="text-muted">Nothing here.</p> : (
+        <Rows label="Reported problems">
+          {data.items.map((c) => <Row key={c.concernId} href={withQuery(PATH, Q, { item: c.concernId })} title={CONCERNS[c.category].label} meta={`${c.plate ?? c.vehicleRef ?? 'No plate'} · reported ${formatDate(c.createdAt)}`} status={c.status === 'open' ? 'To check' : c.status} tone={c.status === 'open' ? 'warn' : 'muted'} />)}
+        </Rows>
       )}
     </>
   );

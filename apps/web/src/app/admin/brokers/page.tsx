@@ -2,6 +2,7 @@ import { formatDate } from '@sazo/contracts';
 import { adminFetch, requireStaff } from '../guard';
 import { decideBroker } from '../actions';
 import { Forbidden, Notice, type SP } from '../notice';
+import { Back, PersonView, Row, Rows, withQuery } from '../rows';
 
 interface Application {
   applicationId: string; status: string; decisionReason: string | null; createdAt: string; idPhotoEvidenceId: string; nin: string;
@@ -13,16 +14,18 @@ export default async function Brokers({ searchParams }: { searchParams: SP }) {
   await requireStaff('/admin/brokers');
   const sp = await searchParams;
   const data = await adminFetch<{ items: Application[] }>('/admin/brokers/applications?status=pending');
-  return (
-    <>
-      <h1 className="font-display text-2xl font-bold">Brokers</h1>
-      <p className="mb-4 max-w-2xl text-muted">People who want to share dealers&apos; cars as brokers. Check that the ID photo shows the same name and ID number, then approve or reject. The person sees your reason.</p>
-      <Notice done={sp.done} error={sp.error} />
-      {data === 'forbidden' ? <Forbidden what="checking brokers" /> : data.items.length === 0 ? <p className="text-muted">No one is waiting.</p> : (
-        <ul className="space-y-3">
-          {data.items.map((a) => (
-            <li key={a.applicationId} className="card p-4">
-              <h2 className="font-display text-lg font-bold">{a.person.name ?? 'No name given'}</h2>
+  const PATH = '/admin/brokers';
+  const Q = { status: sp.status, item: sp.item };
+  if (sp.person) return <PersonView userId={sp.person} back={withQuery(PATH, Q, {})} backLabel="Back" />;
+  const one = data !== 'forbidden' && sp.item ? data.items.find((a) => a.applicationId === sp.item) : undefined;
+  if (one) {
+    const a = one;
+    return (
+      <>
+        <Back href={withQuery(PATH, Q, { item: undefined })} label="All broker applications" />
+        <Notice done={sp.done} error={sp.error} />
+        <section className="card p-4" aria-label="Details">
+              <h1 className="font-display text-2xl font-bold">{a.person.name ?? 'No name given'}</h1>
               <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
                 <dt className="text-muted">National ID number</dt><dd className="sazo-id font-semibold">{a.nin}</dd>
                 <dt className="text-muted">Phone</dt><dd>{a.person.phone ?? 'Not given'}</dd>
@@ -36,9 +39,19 @@ export default async function Brokers({ searchParams }: { searchParams: SP }) {
                 <button name="decision" value="approve" className="btn btn-primary">Approve</button>
                 <button name="decision" value="reject" className="btn btn-ghost">Reject</button>
               </form>
-            </li>
-          ))}
-        </ul>
+                    </section>
+      </>
+    );
+  }
+  return (
+    <>
+      <h1 className="font-display text-2xl font-bold">Brokers</h1>
+      <p className="mb-4 max-w-2xl text-muted">People who want to share dealers&apos; cars as brokers. Check that the ID photo shows the same name and ID number, then approve or reject. The person sees your reason.</p>
+      <Notice done={sp.done} error={sp.error} />
+      {data === 'forbidden' ? <Forbidden what="checking brokers" /> : data.items.length === 0 ? <p className="text-muted">No one is waiting.</p> : (
+        <Rows label="Broker applications">
+          {data.items.map((a) => <Row key={a.applicationId} href={withQuery(PATH, Q, { item: a.applicationId })} title={a.person.name ?? 'No name given'} meta={`${a.person.phone ?? 'No phone'} · applied ${formatDate(a.createdAt)}`} status={'Waiting for a check'} tone={'warn'} />)}
+        </Rows>
       )}
     </>
   );

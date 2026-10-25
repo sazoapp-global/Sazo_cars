@@ -1,8 +1,8 @@
 import { formatDate } from '@sazo/contracts';
 import { decideIdentity } from '../actions';
-import { PersonPopup } from '../person-popup';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { Back, PersonLink, PersonView, Row, Rows, withQuery } from '../rows';
 
 interface Check {
   checkId: string; userId: string; createdAt: string; idPhotoEvidenceId: string; nin: string;
@@ -18,17 +18,19 @@ export default async function IdentityChecks({ searchParams }: { searchParams: S
   await requireStaff('/admin/identity');
   const sp = await searchParams;
   const data = await adminFetch<{ items: Check[] }>('/admin/identity-checks?status=pending');
-  return (
-    <>
-      <h1 className="font-display text-2xl font-bold">ID checks</h1>
-      <p className="mb-4 max-w-2xl text-muted">Business managers&apos; National IDs, sent by choice (they are optional). Check that the photo shows the same name and ID number, then approve or reject. The person gets an SMS with your reason. A business that is still waiting can also be approved from Businesses, which approves its managers&apos; IDs with it.</p>
-      <Notice done={sp.done} error={sp.error} />
-      {data === 'forbidden' ? <Forbidden what="checking National IDs" /> : data.items.length === 0 ? <p className="text-muted">No one is waiting.</p> : (
-        <ul className="space-y-3">
-          {data.items.map((c) => (
-            <li key={c.checkId} className="card p-4">
-              <h2 className="font-display text-lg font-bold">{c.person.name ?? 'No name given'}</h2>
-              <div className="text-sm"><PersonPopup userId={c.userId} name={c.person.name ?? 'No name given'} label="Open account details" /></div>
+  const PATH = '/admin/identity';
+  const Q = { status: sp.status, item: sp.item };
+  if (sp.person) return <PersonView userId={sp.person} back={withQuery(PATH, Q, {})} backLabel="Back" />;
+  const one = data !== 'forbidden' && sp.item ? data.items.find((c) => c.checkId === sp.item) : undefined;
+  if (one) {
+    const c = one;
+    return (
+      <>
+        <Back href={withQuery(PATH, Q, { item: undefined })} label="All ID checks" />
+        <Notice done={sp.done} error={sp.error} />
+        <section className="card p-4" aria-label="Details">
+              <h1 className="font-display text-2xl font-bold">{c.person.name ?? 'No name given'}</h1>
+              <div className="text-sm"><PersonLink href={withQuery(PATH, Q, { person: c.userId })} name={c.person.name ?? 'No name given'} /></div>
               <dl className="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
                 <dt className="text-muted">National ID number</dt><dd className="sazo-id font-semibold">{c.nin}</dd>
                 <dt className="text-muted">Phone</dt><dd>{c.person.phone ?? 'Not given'}</dd>
@@ -43,9 +45,19 @@ export default async function IdentityChecks({ searchParams }: { searchParams: S
                 <button name="decision" value="approve" className="btn btn-primary">Approve</button>
                 <button name="decision" value="reject" className="btn btn-ghost">Reject</button>
               </form>
-            </li>
-          ))}
-        </ul>
+                    </section>
+      </>
+    );
+  }
+  return (
+    <>
+      <h1 className="font-display text-2xl font-bold">ID checks</h1>
+      <p className="mb-4 max-w-2xl text-muted">Business managers&apos; National IDs, sent by choice (they are optional). Check that the photo shows the same name and ID number, then approve or reject. The person gets an SMS with your reason. A business that is still waiting can also be approved from Businesses, which approves its managers&apos; IDs with it.</p>
+      <Notice done={sp.done} error={sp.error} />
+      {data === 'forbidden' ? <Forbidden what="checking National IDs" /> : data.items.length === 0 ? <p className="text-muted">No one is waiting.</p> : (
+        <Rows label="National IDs waiting">
+          {data.items.map((c) => <Row key={c.checkId} href={withQuery(PATH, Q, { item: c.checkId })} title={c.person.name ?? 'No name given'} meta={`${c.businesses.length ? c.businesses.map((b) => b.name).join(', ') : 'No business yet'} · sent ${formatDate(c.createdAt)}`} status={'Waiting for a check'} tone={'warn'} />)}
+        </Rows>
       )}
     </>
   );

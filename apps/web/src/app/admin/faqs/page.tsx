@@ -2,6 +2,7 @@ import { saveFaq } from '../actions';
 import { AUDIENCES, audienceLabel } from '../audiences';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { Back, Row, Rows, withQuery } from '../rows';
 
 interface Faq { id: string; audience: string; topic: string; question: string; answer: string; status: 'draft' | 'published' | 'hidden'; position: number }
 const STATUS: [Faq['status'], string][] = [['draft', 'Draft'], ['published', 'Published'], ['hidden', 'Hidden']];
@@ -31,6 +32,29 @@ export default async function Faqs({ searchParams }: { searchParams: SP }) {
   await requireStaff('/admin/faqs');
   const sp = await searchParams;
   const data = await adminFetch<{ items: Faq[] }>('/admin/faqs');
+  const PATH = '/admin/faqs';
+  const Q = { item: sp.item };
+  const one = data !== 'forbidden' && sp.item ? data.items.find((f) => f.id === sp.item) : undefined;
+  if (one) {
+    const f = one;
+    return (
+      <>
+        <Back href="/admin/faqs" label="All help answers" />
+        <Notice done={sp.done} error={sp.error} />
+        <section className="card p-4" aria-label="Details">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h1 className="font-display text-xl font-bold">{f.question}</h1>
+                    <span className="text-sm text-muted">{f.topic} · {audienceLabel(f.audience)} · {STATUS.find(([v]) => v === f.status)?.[1]}</span>
+                  </div>
+                  <details className="mt-2" open>
+                    <summary className="cursor-pointer text-sm font-semibold text-primary">Change</summary>
+                    <form action={saveFaq} data-draft={`faq-${f.id}`} className="mt-3 grid gap-3 sm:grid-cols-2"><input type="hidden" name="id" value={f.id} /><Fields f={f} />
+                      <div className="sm:col-span-2"><button className="btn btn-primary">Save</button></div></form>
+                  </details>
+        </section>
+      </>
+    );
+  }
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Help answers</h1>
@@ -43,21 +67,9 @@ export default async function Faqs({ searchParams }: { searchParams: SP }) {
             <form action={saveFaq} data-draft="faq-new" className="mt-3 grid gap-3 sm:grid-cols-2"><Fields /><div className="sm:col-span-2"><button className="btn btn-primary">Add</button></div></form>
           </details>
           {data.items.length === 0 ? <p className="text-muted">No questions yet.</p> : (
-            <ul className="space-y-3" aria-label="Help answers">
-              {data.items.map((f) => (
-                <li key={f.id} className="card p-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="font-semibold">{f.question}</h2>
-                    <span className="text-sm text-muted">{f.topic} · {audienceLabel(f.audience)} · {STATUS.find(([v]) => v === f.status)?.[1]}</span>
-                  </div>
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-sm font-semibold text-primary">Change</summary>
-                    <form action={saveFaq} data-draft={`faq-${f.id}`} className="mt-3 grid gap-3 sm:grid-cols-2"><input type="hidden" name="id" value={f.id} /><Fields f={f} />
-                      <div className="sm:col-span-2"><button className="btn btn-primary">Save</button></div></form>
-                  </details>
-                </li>
-              ))}
-            </ul>
+            <Rows label="Help answers">
+              {data.items.map((f) => <Row key={f.id} href={withQuery(PATH, Q, { item: f.id })} title={f.question} meta={`${f.topic} · ${audienceLabel(f.audience)}`} status={STATUS.find(([v]) => v === f.status)?.[1]} tone={f.status === 'published' ? 'ok' : 'muted'} />)}
+            </Rows>
           )}
         </>
       )}

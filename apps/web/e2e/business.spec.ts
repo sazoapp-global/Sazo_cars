@@ -40,7 +40,8 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   // SAZO looks at the document and asks for more.
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN, { next: '/admin/organisations' });
-  const card = admin.getByRole('listitem').filter({ hasText: NAME });
+  await admin.getByRole('listitem').filter({ hasText: NAME }).getByRole('link').click();
+  const card = admin.getByRole('region', { name: 'Details' });
   const docLink = card.getByRole('link', { name: 'document 1' });
   await expect(docLink).toBeVisible();
   const file = await admin.request.get(await docLink.getAttribute('href') as string);
@@ -55,7 +56,8 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
 
   // Approved.
   await admin.goto('/admin/organisations');
-  const again = admin.getByRole('listitem').filter({ hasText: NAME });
+  await admin.getByRole('listitem').filter({ hasText: NAME }).getByRole('link').click();
+  const again = admin.getByRole('region', { name: 'Details' });
   await expect(again).toContainText('ID sent: check it before approving');
   await expect(again.getByRole('link', { name: 'ID photo' })).toBeVisible();
   await again.getByLabel(/Reason/).fill('Signboard photo matches; licence valid');

@@ -3,6 +3,7 @@ import type { ModerationCase } from '@/lib/types';
 import { decideModeration } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { Back, Row, Rows, withQuery } from '../rows';
 
 export const metadata = { title: 'Reviews and videos' };
 const STATUSES = [['open', 'Waiting'], ['approved', 'Published'], ['rejected', 'Rejected']] as const;
@@ -12,21 +13,16 @@ export default async function Moderation({ searchParams }: { searchParams: SP })
   const sp = await searchParams;
   const status = STATUSES.some(([s]) => s === sp.status) ? sp.status! : 'open';
   const data = await adminFetch<{ items: ModerationCase[] }>(`/admin/moderation?status=${status}`);
-  return (
-    <>
-      <h1 className="font-display text-2xl font-bold">Reviews and videos</h1>
-      <p className="mb-4 text-muted">Publish only what is about the model in general. Reject names, phone numbers, claims about a specific car or person, adverts, and videos that are not about this model (D-063, P-008).</p>
-      <Notice done={sp.done} error={sp.error} />
-      <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
-        {STATUSES.map(([s, label]) => (
-          <a key={s} href={`/admin/moderation?status=${s}`} aria-current={s === status ? 'true' : undefined}
-            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${s === status ? 'border-primary-container bg-primary-container text-white' : 'border-line bg-white'}`}>{label}</a>
-        ))}
-      </nav>
-      {data === 'forbidden' ? <Forbidden what="moderating reviews" /> : data.items.length === 0 ? <p className="text-muted">Nothing here.</p> : (
-        <ul className="space-y-3">
-          {data.items.map((c) => (
-            <li key={c.caseId} className="card p-4">
+  const PATH = '/admin/moderation';
+  const Q = { status: sp.status, item: sp.item };
+  const one = data !== 'forbidden' && sp.item ? data.items.find((c) => c.caseId === sp.item) : undefined;
+  if (one) {
+    const c = one;
+    return (
+      <>
+        <Back href={withQuery(PATH, Q, { item: undefined })} label="All reviews and videos" />
+        <Notice done={sp.done} error={sp.error} />
+        <section className="card p-4" aria-label="Details">
               <p className="text-sm text-muted">{c.type === 'model_review' ? 'Review' : 'Video link'} · {c.model} · by {c.author}{c.verifiedOwner ? ' (verified owner)' : ''} · {formatDate(c.submittedAt)}</p>
               {c.type === 'model_review' ? (
                 <><p className="mt-1 font-semibold">{c.rating} of 5</p><p className="mt-1 whitespace-pre-line">{c.body}</p></>
@@ -44,9 +40,25 @@ export default async function Moderation({ searchParams }: { searchParams: SP })
                   </div>
                 </form>
               ) : c.reason && <p className="mt-2 text-sm text-muted">Reason: {c.reason}</p>}
-            </li>
-          ))}
-        </ul>
+        </section>
+      </>
+    );
+  }
+  return (
+    <>
+      <h1 className="font-display text-2xl font-bold">Reviews and videos</h1>
+      <p className="mb-4 text-muted">Publish only what is about the model in general. Reject names, phone numbers, claims about a specific car or person, adverts, and videos that are not about this model (D-063, P-008).</p>
+      <Notice done={sp.done} error={sp.error} />
+      <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
+        {STATUSES.map(([s, label]) => (
+          <a key={s} href={`/admin/moderation?status=${s}`} aria-current={s === status ? 'true' : undefined}
+            className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${s === status ? 'border-primary-container bg-primary-container text-white' : 'border-line bg-white'}`}>{label}</a>
+        ))}
+      </nav>
+      {data === 'forbidden' ? <Forbidden what="moderating reviews" /> : data.items.length === 0 ? <p className="text-muted">Nothing here.</p> : (
+        <Rows label="Reviews and videos">
+          {data.items.map((c) => <Row key={c.caseId} href={withQuery(PATH, Q, { item: c.caseId })} title={`${c.type === 'model_review' ? 'Review' : 'Video'} of the ${c.model}`} meta={`${(c.body ?? c.title ?? c.url ?? '').slice(0, 90)} · by ${c.author} · ${formatDate(c.submittedAt)}`} status={c.reason ? 'Decided' : 'To check'} tone={c.reason ? 'muted' : 'warn'} />)}
+        </Rows>
       )}
     </>
   );

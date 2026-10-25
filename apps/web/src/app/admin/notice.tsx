@@ -10,4 +10,4 @@ export function Forbidden({ what }: { what: string }) {
   return <p className="rounded-lg border border-line bg-na-fill p-4 text-na-text">Your role doesn&apos;t include {what}. Ask a SAZO administrator.</p>;
 }
 
-export type SP = Promise<{ done?: string; error?: string; status?: string; topic?: string }>;
+export type SP = Promise<{ done?: string; error?: string; status?: string; topic?: string; item?: string; person?: string }>;

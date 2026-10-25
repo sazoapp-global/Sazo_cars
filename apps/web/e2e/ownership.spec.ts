@@ -64,9 +64,10 @@ test('phone match, garage visits, and a logbook claim a reviewer rejects', async
 
   // The reviewer sees the photo and rejects with a reason.
   await admin.goto('/admin/ownership');
-  const claim = admin.getByRole('listitem').filter({ hasText: 'Claimant Brian' });
-  await expect(claim).toBeVisible();
   await a11y(admin);
+  await admin.getByRole('listitem').filter({ hasText: 'Claimant Brian' }).getByRole('link').click();
+  const claim = admin.getByRole('region', { name: 'Details' });
+  await expect(claim).toBeVisible();
   const photo = await admin.request.get(await claim.getByRole('link', { name: 'photo 1' }).getAttribute('href') as string);
   expect(photo.headers()['content-type']).toBe('image/jpeg');
   await claim.getByLabel(/Reason/).fill('The name on the logbook is not yours');
