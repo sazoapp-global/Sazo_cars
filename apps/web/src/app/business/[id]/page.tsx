@@ -67,7 +67,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
 
       {org.role === 'org_manager' && (
         <section id="identity" className="card scroll-mt-24 p-4" aria-labelledby="identity-h">
-          <h2 id="identity-h" className="font-display text-lg font-semibold">Your National ID</h2>
+          <h2 id="identity-h" className="font-display text-lg font-semibold">Your National ID <span className="text-sm font-normal text-muted">(optional)</span></h2>
           {identity?.status === 'approved' ? (
             <p className="mt-1 flex items-center gap-2 font-semibold text-ok-text"><Icon name="verified_user" />Checked by SAZO.</p>
           ) : identity?.status === 'pending' ? (
@@ -76,7 +76,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
             <>
               <p className="text-sm text-muted">
                 {identity?.status === 'rejected' ? <>SAZO could not accept your last ID: “{identity.decisionReason}”. Please send it again. </> : null}
-                Every manager sends their National ID number and a clear photo of their ID. SAZO approves {pending ? 'the business' : 'you'} only after checking it. It is stored securely and used only to confirm who you are.
+                You do not need it to be approved. If you send your National ID number and a clear photo of your ID, SAZO checks it {pending ? 'with your business' : 'soon'} and buyers and partners can trust who you are. It is stored securely and used only to confirm who you are.
               </p>
               <form action={sendIdentity} className="mt-3 grid gap-3 sm:grid-cols-2">
                 <input type="hidden" name="id" value={org.id} />

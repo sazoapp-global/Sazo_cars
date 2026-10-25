@@ -21,7 +21,7 @@ export default async function IdentityChecks({ searchParams }: { searchParams: S
   return (
     <>
       <h1 className="font-display text-2xl font-bold">ID checks</h1>
-      <p className="mb-4 max-w-2xl text-muted">Business managers&apos; National IDs. Check that the photo shows the same name and ID number, then approve or reject. The person gets an SMS with your reason. A business that is still waiting can also be approved from Businesses, which approves its managers&apos; IDs with it.</p>
+      <p className="mb-4 max-w-2xl text-muted">Business managers&apos; National IDs, sent by choice (they are optional). Check that the photo shows the same name and ID number, then approve or reject. The person gets an SMS with your reason. A business that is still waiting can also be approved from Businesses, which approves its managers&apos; IDs with it.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="checking National IDs" /> : data.items.length === 0 ? <p className="text-muted">No one is waiting.</p> : (
         <ul className="space-y-3">

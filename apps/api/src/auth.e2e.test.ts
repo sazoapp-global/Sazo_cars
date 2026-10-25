@@ -1,7 +1,7 @@
 // Sign-in and access control over HTTP, on a brand-new migrated database (no scenario data).
 // Covers phone codes, refresh rotation + reuse detection, 401/403, and X4 (a pending business cannot submit).
 import { execFileSync } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 import { testSignup } from './test-auth.js';
 import { loadConfig } from './config.js';
-import { AuthService, IamService, IdentityService } from './modules/iam/index.js';
+import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
 import { ConsoleSmsSender } from './modules/notify/index.js';
 
@@ -193,10 +193,7 @@ describe.skipIf(!base)('sign-in and access control (e2e)', () => {
 
     const queue = await http.get('/v1/admin/organisations').query({ status: 'pending_verification' }).set(bearer(adminToken)).expect(200);
     expect(queue.body.items.map((o: { id: string }) => o.id)).toContain(org.body.id);
-    // A-05: the business is approved only once its manager has sent a National ID (here made up directly).
-    expect((await http.post(`/v1/admin/organisations/${org.body.id}/decision`).set(bearer(adminToken))
-      .send({ decision: 'approve', reason: 'Trading licence checked' }).expect(422)).body.code).toBe('manager_identity_missing');
-    await app.get(IdentityService).submit(me.body.id, 'CM90000000AUTH', randomUUID());
+    // A National ID is optional (D-141): the business is approved without one.
     const decided = await http.post(`/v1/admin/organisations/${org.body.id}/decision`).set(bearer(adminToken))
       .send({ decision: 'approve', reason: 'Trading licence checked' }).expect(200);
     expect(decided.body.status).toBe('approved');

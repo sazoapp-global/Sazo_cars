@@ -14,7 +14,7 @@ import type { Actor } from './actor.js';
 import { IamRepository } from './iam.repository.js';
 
 export class IdentityError extends Error {
-  constructor(readonly code: 'already_sent' | 'nin_in_use' | 'check_not_found' | 'already_decided' | 'manager_identity_missing', message: string) {
+  constructor(readonly code: 'already_sent' | 'nin_in_use' | 'check_not_found' | 'already_decided', message: string) {
     super(message);
   }
 }
@@ -81,18 +81,14 @@ export class IdentityService {
   }
 
   /**
-   * At business approval: every active manager must have sent their ID; their pending checks are approved in
-   * the same transaction as the business. Throws `manager_identity_missing` naming who has not sent it.
+   * At business approval: a National ID is optional (25 Oct 2026, D-141). Managers who sent one have it approved
+   * in the same transaction as the business; managers who did not are approved with the business all the same.
    */
   async approveManagersInTx(tx: Sql, actor: Actor, organisationId: string, reason: string): Promise<void> {
-    const { rows } = await tx.query<{ user_id: string; name: string }>(
-      `SELECT u.id AS user_id, u.display_name AS name FROM iam.memberships m JOIN iam.users u ON u.id = m.user_id JOIN iam.roles r ON r.id = m.role_id
+    const { rows } = await tx.query<{ user_id: string }>(
+      `SELECT m.user_id FROM iam.memberships m JOIN iam.roles r ON r.id = m.role_id
         WHERE m.organisation_id = $1 AND m.status = 'active' AND r.code = 'org_manager'`, [organisationId]);
     const status = await this.statusOf(rows.map((r) => r.user_id), tx);
-    const missing = rows.filter((r) => status.get(r.user_id) === 'missing');
-    if (missing.length) {
-      throw new IdentityError('manager_identity_missing', `${missing.map((m) => m.name).join(', ')} ${missing.length === 1 ? 'has' : 'have'} not sent a National ID yet. Ask them to send it from the business page, then approve.`);
-    }
     const pending = rows.filter((r) => status.get(r.user_id) === 'pending').map((r) => r.user_id);
     if (!pending.length) return;
     await tx.query(`UPDATE iam.identity_checks SET status = 'approved', decision_reason = $2, decided_by_user_id = $3, decided_at = now()

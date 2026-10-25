@@ -70,12 +70,10 @@ describe.skipIf(!base)('admin identity checks, announcements and FAQs (e2e)', ()
   let orgId: string;
   const as = (t: string) => ({ ...bearer(t), 'X-Organisation-Id': orgId });
 
-  it('A-05: a business is approved only once its manager has sent a National ID, and approving it approves the ID', async () => {
+  it('A-05: a manager may send a National ID (optional, D-141), and approving the business approves the ID', async () => {
     manager = await signIn('+256772620001', 'Sarah Garage Manager');
     orgId = (await http.post('/v1/organisations').set(bearer(manager)).send({ type: 'garage', legalName: 'Ntinda Motors Ltd' }).expect(201)).body.id;
     expect((await http.get(`/v1/admin/organisations/${orgId}/managers`).set(bearer(adminToken)).expect(200)).body.items).toEqual([expect.objectContaining({ identity: 'missing' })]);
-    expect((await http.post(`/v1/admin/organisations/${orgId}/decision`).set(bearer(adminToken)).send({ decision: 'approve', reason: 'Workshop checked' }).expect(422)).body)
-      .toMatchObject({ code: 'manager_identity_missing', detail: expect.stringContaining('has not sent a National ID') });
 
     const nosy = await signIn('+256772620009', 'Nosy Person');
     const theirs = await upload(nosy, 'official_document', 'someone else id');

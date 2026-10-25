@@ -37,12 +37,9 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.goto(listUrl);
   await expect(dealer.getByRole('listitem').filter({ hasText: 'UBR 314W' })).toContainText('Joins SAZO after approval');
   await dealer.getByRole('link', { name: 'Finish the approval steps' }).click();
-  await expect(dealer.getByLabel('National ID number (NIN)')).toBeVisible();
+  // The National ID is optional (D-141): this dealer is approved without sending one.
+  await expect(dealer.getByRole('heading', { name: 'Your National ID (optional)' })).toBeVisible();
   const businessUrl = dealer.url();
-  await dealer.getByLabel('National ID number (NIN)').fill(`CM9000${stamp}A`);
-  await dealer.getByLabel('Photo of your National ID').setInputFiles({ name: 'id.png', mimeType: 'image/png', buffer: testPhoto(`dealer owner id ${stamp}`) });
-  await dealer.getByRole('button', { name: 'Send my ID' }).click();
-  await expect(dealer.getByRole('status')).toContainText('Your National ID was sent');
   /** The "Add a car" panel stays open after a mistake; open it only if it is closed. */
   const openAdd = async () => { if (!(await dealer.getByLabel('Make', { exact: true }).isVisible())) await dealer.getByText('Add a car', { exact: true }).click(); };
   const openMileage = async () => { if (!(await dealer.getByLabel('Mileage now (km)').isVisible())) await dealer.getByText(/Add the mileage now/).click(); };

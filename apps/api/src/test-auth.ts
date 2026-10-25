@@ -28,8 +28,8 @@ export async function signInWithCode(app: INestApplication, http: ReturnType<typ
 }
 
 /**
- * Tests only: a SAZO admin approves a business (A-05). Every active manager first needs an identity check, so
- * any manager who has none gets a made-up National ID here, then the business is approved over HTTP.
+ * Tests only: a SAZO admin approves a business (A-05). A National ID is optional (D-141); managers who have none
+ * still get a made-up one here, so the tests also cover IDs approved with the business.
  */
 export async function approveOrg(app: INestApplication, http: ReturnType<typeof request>, adminToken: string, orgId: string, reason = 'Checked') {
   const iam = app.get(IamService, { strict: false });

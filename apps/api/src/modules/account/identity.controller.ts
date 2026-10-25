@@ -11,7 +11,7 @@ import { EvidenceService } from '../obs/index.js';
 
 const Uuid = z.string().uuid();
 const NIN = z.string().trim().toUpperCase().regex(/^C[MF][A-Z0-9]{12}$/, 'a National ID number has 14 characters and starts with CM or CF');
-const STATUS: Record<IdentityError['code'], number> = { already_sent: 409, nin_in_use: 409, check_not_found: 404, already_decided: 409, manager_identity_missing: 422 };
+const STATUS: Record<IdentityError['code'], number> = { already_sent: 409, nin_in_use: 409, check_not_found: 404, already_decided: 409 };
 
 function problem(err: unknown): never {
   if (err instanceof IdentityError) {

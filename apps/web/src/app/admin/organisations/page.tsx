@@ -9,7 +9,7 @@ import { Forbidden, Notice, type SP } from '../notice';
 const STATUSES = [['pending_verification', 'Waiting'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['suspended', 'Suspended']] as const;
 interface Manager { userId: string; name: string; identity: 'approved' | 'pending' | 'missing'; nin?: string; idPhotoEvidenceId?: string }
 const ID_STATE: Record<Manager['identity'], [string, string]> = {
-  approved: ['ID checked', 'text-ok-text'], pending: ['ID sent: check it before approving', 'text-warn-text'], missing: ['No National ID sent yet', 'text-bad-text'],
+  approved: ['ID checked', 'text-ok-text'], pending: ['ID sent: check it before approving', 'text-warn-text'], missing: ['No National ID sent (optional)', 'text-muted'],
 };
 const TYPE: Record<string, string> = { garage: 'Garage', dealer: 'Dealer', inspector: 'Inspector', inspection_centre: 'Inspection centre', lender: 'Lender', insurer: 'Insurer', auction: 'Auction', rental: 'Rental', importer: 'Importer' };
 
@@ -25,7 +25,7 @@ export default async function Organisations({ searchParams }: { searchParams: SP
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Businesses</h1>
-      <p className="mb-4 text-muted">Check each business (registration, location, contact person) and each manager&apos;s National ID before it can record vehicle history. Approving a business also approves its managers&apos; IDs.</p>
+      <p className="mb-4 text-muted">Check each business (registration, location, contact person) before it can record vehicle history. A manager&apos;s National ID is optional; when one was sent, check it too: approving the business also approves it.</p>
       <Notice done={sp.done} error={sp.error} />
       <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
         {STATUSES.map(([s, label]) => (
