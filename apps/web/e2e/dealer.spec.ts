@@ -60,6 +60,20 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(wish).not.toContainText('Joins SAZO after approval');
   await expect(wish).toContainText('Not yet confirmed');
   await expect(menu.getByRole('link', { name: 'Enquiries', exact: true })).toBeAttached();
+  // The garage app's layout: a compact top bar (no site links, the online badge), no site footer,
+  // and Appearance as one dropdown in Settings inside the page.
+  const top = dealer.getByRole('banner');
+  await expect(top.getByText('Online', { exact: true })).toBeVisible();
+  await expect(top.getByRole('link', { name: 'Compare Cars' })).toHaveCount(0);
+  await expect(dealer.getByRole('contentinfo')).toHaveCount(0);
+  await menu.getByRole('link', { name: 'Settings' }).last().click();
+  await expect(dealer.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await dealer.getByRole('button', { name: 'Appearance: Same as device' }).click();
+  await dealer.getByRole('group', { name: 'Appearance' }).getByRole('button', { name: 'Dark' }).click();
+  await expect(dealer.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await dealer.getByRole('button', { name: 'Appearance: Dark' }).click();
+  await dealer.getByRole('group', { name: 'Appearance' }).getByRole('button', { name: 'Light' }).click();
+  await dealer.getByRole('link', { name: 'Close' }).click();
   await a11y(dealer);
 
   // A known car, by plate. A mileage needs an odometer photo.

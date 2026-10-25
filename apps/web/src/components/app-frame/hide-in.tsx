@@ -8,3 +8,9 @@ export function HideIn({ workspaces, children }: { workspaces: WorkspaceKey[] | 
   const ws = workspaceOf(usePathname() ?? '');
   return ws && (workspaces === 'all' || workspaces.includes(ws.key)) ? null : <>{children}</>;
 }
+
+/** The opposite: only in the given workspaces (e.g. the online badge in the dealer console). */
+export function ShowIn({ workspaces, children }: { workspaces: WorkspaceKey[]; children: React.ReactNode }) {
+  const ws = workspaceOf(usePathname() ?? '');
+  return ws && workspaces.includes(ws.key) ? <>{children}</> : null;
+}

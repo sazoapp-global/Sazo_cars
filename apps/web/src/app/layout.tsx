@@ -16,7 +16,8 @@ import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
 import { AccountPopup } from './account/account-popup';
 import { FrameOffset } from '@/components/app-frame/frame-offset';
-import { HideIn } from '@/components/app-frame/hide-in';
+import { HideIn, ShowIn } from '@/components/app-frame/hide-in';
+import { OnlineStatus } from '@/components/app-frame/online-status';
 import { MySazo } from '@/components/app-frame/my-sazo';
 import { SitePanel } from '@/components/app-frame/site-panel';
 import { TopMeasure } from '@/components/app-frame/top-measure';
@@ -53,16 +54,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <TopMeasure targets={['site-note', 'site-header']} />
         <header id="site-header" className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md print:hidden lg:top-8">
           <div className="relative mx-auto flex h-16 max-w-[1280px] items-center gap-2 px-4 sm:gap-4 md:h-20 md:px-8 lg:px-12">
-            <MobileNav signedIn={!!me} />
+            <HideIn workspaces={['dealer']}><MobileNav signedIn={!!me} /></HideIn>
             <Logo />
             <WorkspaceName />
-            <div className="flex-1 md:ml-8"><MainNav /></div>
+            {/* The dealer console has the garage app's compact top bar: no site links, the online badge instead. */}
+            <div className="flex-1 md:ml-8"><HideIn workspaces={['dealer']}><MainNav /></HideIn></div>
+            <ShowIn workspaces={['dealer']}><OnlineStatus /></ShowIn>
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
               <Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link>
             )}
             {me && <HideIn workspaces="all"><Suspense><MySazo /></Suspense></HideIn>}
             {me && <Suspense><Bell unread={unread} /></Suspense>}
-            <ThemeToggle />
+            <HideIn workspaces={['dealer']}><ThemeToggle /></HideIn>
             {me ? (
               <AccountPopup displayName={me.displayName} initials={me.initials} />
             ) : (
@@ -75,7 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </header>
         <DraftKeeper />
         <main id="main" className="flex-1"><Suspense><SitePanel>{children}</SitePanel></Suspense></main>
-        <HideIn workspaces={['console']}><FrameOffset>
+        <HideIn workspaces={['console', 'dealer']}><FrameOffset>
         <footer className="mt-16 border-t border-line bg-white print:hidden">
           <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr] md:px-8 lg:px-12">
             <div>
