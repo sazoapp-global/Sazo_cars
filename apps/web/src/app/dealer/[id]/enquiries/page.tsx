@@ -31,7 +31,8 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
   const sp = await searchParams;
   if (!(await isSignedIn())) redirect(`/sign-in?next=/dealer/${id}/enquiries`);
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
-  if (!org || org.type !== 'dealer' || org.status !== 'approved') notFound();
+  if (!org || org.type !== 'dealer') notFound();
+  if (org.status !== 'approved') redirect(`/dealer/${id}`);
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const closed = sp.show === 'closed';
   const [data, cars, me] = await Promise.all([

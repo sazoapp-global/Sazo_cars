@@ -8,6 +8,8 @@ export function ThemeToggle() {
   const [mode, setMode] = useState<'light' | 'dark'>();
   useEffect(() => {
     const sync = () => setMode(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
+    // "Same as device": CSS drew the right colours before load; now record the resolved mode on the page.
+    if (!document.documentElement.dataset.theme) document.documentElement.dataset.theme = resolved(currentChoice());
     sync();
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const onSystem = () => { if (currentChoice() === 'system') { document.documentElement.dataset.theme = resolved('system'); sync(); } };

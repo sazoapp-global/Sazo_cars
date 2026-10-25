@@ -41,7 +41,8 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   if (!UUID.test(car)) notFound();
   if (!(await isSignedIn())) redirect(`/sign-in?next=/dealer/${id}/car/${car}`);
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
-  if (!org || org.type !== 'dealer' || org.status !== 'approved') notFound();
+  if (!org || org.type !== 'dealer') notFound();
+  if (org.status !== 'approved') redirect(`/dealer/${id}`);
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const manager = org.role === 'org_manager';
   const c = await api<StockItem>(`/dealer/stock/${car}`, as).catch((err) => { if (err instanceof ApiError && err.status === 404) notFound(); throw err; });

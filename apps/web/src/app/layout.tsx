@@ -6,10 +6,9 @@ import './globals.css';
 import './theme-dark.css';
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
-import Script from 'next/script';
 import { cookies } from 'next/headers';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
-import { THEME_COOKIE, THEME_SCRIPT, parseTheme } from '@/lib/theme';
+import { THEME_COOKIE, parseTheme } from '@/lib/theme';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
@@ -33,9 +32,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [me, theme] = await Promise.all([currentUser(), cookies().then((c) => parseTheme(c.get(THEME_COOKIE)?.value))]);
   const unread = me ? await api<{ unread: number }>('/me/announcements', { auth: true }).then((r) => r.unread).catch(() => 0) : 0;
   return (
-    // An explicit choice is drawn by the server; "same as device" is settled by THEME_SCRIPT before paint.
+    // An explicit choice is drawn by the server; "same as device" is drawn by CSS (prefers-color-scheme).
     <html lang="en-UG" {...(theme !== 'system' ? { 'data-theme': theme } : {})} suppressHydrationWarning>
-      <head><Script id="sazo-theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script></head>
       <body className="flex min-h-screen flex-col">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
         <div role="note" className="bg-ink px-4 py-2 text-center text-xs text-white/90">

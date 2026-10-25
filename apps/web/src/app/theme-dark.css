@@ -1,5 +1,6 @@
-/* Dark mode (D-112: light / dark / same as the device). The page sets <html data-theme="dark">; these rules
-   swap the colour tokens and fix the few places that use a fixed colour. Kept the same in apps/garage. */
+/* Dark mode (D-112: light / dark / same as the device). The page sets <html data-theme="dark"> when dark is chosen; with "same as device" there is no
+   data-theme until the page has loaded, so the same rules also apply under prefers-color-scheme (no
+   script before paint, no flash). These rules swap the colour tokens and fix the few places that use a fixed colour. Kept the same in apps/garage. */
 /* Screens only: printed reports and PDFs always use the light colours. */
 @media screen {
   [data-theme='dark'] {
@@ -53,4 +54,58 @@
   [data-theme='dark'] .skeleton { background: linear-gradient(90deg, #172036 25%, #1d2842 50%, #172036 75%); background-size: 200% 100%; }
   [data-theme='dark'] img { filter: brightness(0.92); }
   [data-theme='dark'] ::placeholder { color: #7d89a3; }
+}
+
+/* Same as device, before the page has loaded: a copy of the dark rules above (src/app/theme-dark.test.ts checks they match). */
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --color-primary: #a9c1ff;
+    --color-primary-container: #8aa8ff;
+    --color-primary-hover: #3d68ec;
+    --color-ink: #e8edf7;
+    --color-on-surface: #dbe3f0;
+    --color-muted: #aab4c6;
+    --color-label: #9aa8c2;
+    --color-surface: #0a1020;
+    --color-card: #111a2e;
+    --color-soft: #152039;
+    --color-soft-2: #1a2747;
+    --color-soft-3: #23325c;
+    --color-line: #26334f;
+    --color-line-strong: #384868;
+    --color-ok-text: #6ee7b7;
+    --color-ok-fill: #0e2b23;
+    --color-ok-line: #1f5c48;
+    --color-warn-text: #fbbf24;
+    --color-warn-fill: #2b2210;
+    --color-warn-line: #5c4715;
+    --color-bad-text: #fca5a5;
+    --color-bad-fill: #351616;
+    --color-bad-line: #6b2626;
+    --color-na-text: #cbd5e1;
+    --color-na-fill: #1a2335;
+    --color-na-line: #3a4760;
+  }
+
+  /* Surfaces that are white in light mode become the card colour. */
+  :root:not([data-theme]) .bg-white { background-color: var(--color-card); }
+  :root:not([data-theme]) [class*='focus:!bg-card']:focus, :root:not([data-theme]) [class*='focus:bg-card']:focus,
+  :root:not([data-theme]) [class*='focus-within:bg-card']:focus-within { background-color: var(--color-card) !important; }
+  :root:not([data-theme]) .bg-white\/90 { background-color: rgb(17 26 46 / 0.9); }
+  :root:not([data-theme]) .bg-white\/70, :root:not([data-theme]) .bg-white\/60 { background-color: rgb(17 26 46 / 0.7); }
+  /* Brand blocks keep their navy; buttons keep a solid blue with white text. */
+  :root:not([data-theme]) .bg-primary { background-color: #0c2160; }
+  :root:not([data-theme]) .bg-primary-container, :root:not([data-theme]) .btn-primary, :root:not([data-theme]) .avatar { background-color: #2a4fc4; color: #fff; }
+  :root:not([data-theme]) .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-hover); }
+  :root:not([data-theme]) .bg-lime\/40 { background-color: rgb(191 241 0 / 0.16); }
+  :root:not([data-theme]) .bg-ink { background-color: #03060d; }
+  :root:not([data-theme]) .border-lime { border-color: #bff100; }
+  /* Lime stays lime, with dark text on it. */
+  :root:not([data-theme]) .bg-lime, :root:not([data-theme]) .bg-lime *, :root:not([data-theme]) .btn-focal, :root:not([data-theme]) .btn-focal * { color: #0b132b; }
+  :root:not([data-theme]) .btn-ghost:hover:not(:disabled) { background: var(--color-soft); }
+  :root:not([data-theme]) .chip-class { color: var(--color-primary); }
+  :root:not([data-theme]) .skeleton { background: linear-gradient(90deg, #172036 25%, #1d2842 50%, #172036 75%); background-size: 200% 100%; }
+  :root:not([data-theme]) img { filter: brightness(0.92); }
+  :root:not([data-theme]) ::placeholder { color: #7d89a3; }
 }

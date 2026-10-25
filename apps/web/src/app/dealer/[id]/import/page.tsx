@@ -28,7 +28,9 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
   const sp = await searchParams;
   if (!(await isSignedIn())) redirect(`/sign-in?next=/dealer/${id}/import`);
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
-  if (!org || org.type !== 'dealer' || org.status !== 'approved' || org.role !== 'org_manager') notFound();
+  if (!org || org.type !== 'dealer') notFound();
+  if (org.status !== 'approved') redirect(`/dealer/${id}`);
+  if (org.role !== 'org_manager') redirect(`/dealer/${id}?error=${encodeURIComponent('Only a manager of this business can open that page.')}`);
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const [me, checked] = await Promise.all([
     api<Me>('/me', { auth: true }).catch(() => undefined),

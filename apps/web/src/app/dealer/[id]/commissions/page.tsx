@@ -22,7 +22,9 @@ export default async function Commissions({ params, searchParams }: { params: Pr
   const sp = await searchParams;
   if (!(await isSignedIn())) redirect(`/sign-in?next=/dealer/${id}/commissions`);
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
-  if (!org || org.type !== 'dealer' || org.status !== 'approved' || org.role !== 'org_manager') notFound();
+  if (!org || org.type !== 'dealer') notFound();
+  if (org.status !== 'approved') redirect(`/dealer/${id}`);
+  if (org.role !== 'org_manager') redirect(`/dealer/${id}?error=${encodeURIComponent('Only a manager of this business can open that page.')}`);
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const [{ items }, me] = await Promise.all([api<{ items: Commission[] }>('/dealer/commissions', as), api<Me>('/me', { auth: true }).catch(() => undefined)]);
   const sum = (st: string[]) => items.filter((c) => st.includes(c.status)).reduce((n, c) => n + c.amountUgx, 0);
