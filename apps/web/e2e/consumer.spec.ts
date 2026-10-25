@@ -85,8 +85,9 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   // A garage's repair cost is never shown to buyers (P-007).
   await expect(page.locator('main')).not.toContainText('Cost recorded');
 
-  await page.goto('/account');
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.goto('/saved');
+  await page.getByRole('button', { name: 'My SAZO' }).click();
+  await page.getByRole('group', { name: 'My SAZO' }).getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('link', { name: 'Log in', exact: true })).toBeVisible();
 });
 

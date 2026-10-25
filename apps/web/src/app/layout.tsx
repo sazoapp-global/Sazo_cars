@@ -16,6 +16,8 @@ import { Icon } from '@/components/icon';
 import { AccountPopup } from './account/account-popup';
 import { FrameOffset } from '@/components/app-frame/frame-offset';
 import { HideIn } from '@/components/app-frame/hide-in';
+import { MySazo } from '@/components/app-frame/my-sazo';
+import { SitePanel } from '@/components/app-frame/site-panel';
 import { TopMeasure } from '@/components/app-frame/top-measure';
 import { Bell } from '@/components/notifications/bell';
 import { WorkspaceName } from '@/components/app-frame/workspace-name';
@@ -57,11 +59,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
               <Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link>
             )}
-            {me && (
-              <Link href="/saved" className="flex items-center gap-1 rounded-lg p-2 text-sm font-semibold text-muted hover:text-primary-container">
-                <Icon name="bookmark" size={20} className="sm:hidden" /><span className="sr-only sm:not-sr-only">Saved</span>
-              </Link>
-            )}
+            {me && <HideIn workspaces="all"><Suspense><MySazo /></Suspense></HideIn>}
             {me && <Suspense><Bell unread={unread} /></Suspense>}
             <ThemeToggle />
             {me ? (
@@ -74,7 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
           </div>
         </header>
-        <main id="main" className="flex-1">{children}</main>
+        <main id="main" className="flex-1"><Suspense><SitePanel>{children}</SitePanel></Suspense></main>
         <HideIn workspaces={['console']}><FrameOffset>
         <footer className="mt-16 border-t border-line bg-white print:hidden">
           <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr] md:px-8 lg:px-12">

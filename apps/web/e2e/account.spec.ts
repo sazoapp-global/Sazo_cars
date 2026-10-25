@@ -26,15 +26,32 @@ test('manage my account and delete it', async ({ page }) => {
   await page.getByRole('button', { name: 'Save names' }).click();
   await expect(page.getByRole('status')).toContainText('Names saved');
   await expect(page.getByRole('heading', { name: 'Akello N. Ruth' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Settings for Akello N. Ruth' })).toContainText('AR');
+  await expect(page.getByRole('button', { name: 'Your details, Akello N. Ruth' })).toContainText('AR');
   // The account opens in a popup over the page, not on a new page.
-  await page.getByRole('button', { name: 'Settings for Akello N. Ruth' }).click();
-  const popup = page.getByRole('dialog', { name: 'Your account' });
+  await page.getByRole('button', { name: 'Your details, Akello N. Ruth' }).click();
+  const popup = page.getByRole('dialog', { name: 'Your details' });
   await expect(popup).toContainText('Akello Ruth Nambi');
-  await expect(popup.getByRole('link', { name: 'Open settings' })).toBeVisible();
+  await expect(popup).toContainText('Phone');
+  await expect(popup.getByRole('link')).toHaveCount(0); // details only: no buttons or links
   await a11y(page);
   await popup.getByRole('button', { name: 'Close' }).click();
   await expect(popup).toBeHidden();
+
+  // Settings open inside the page she is on, from My SAZO; a change keeps her there; Close returns to the page.
+  await page.goto('/saved');
+  await page.getByRole('button', { name: 'My SAZO' }).click();
+  await page.getByRole('group', { name: 'My SAZO' }).getByRole('link', { name: 'Settings' }).click();
+  await expect(page).toHaveURL(/\/saved\?panel=settings/);
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await page.getByLabel('Middle name').fill('Nambi');
+  await page.getByRole('button', { name: 'Save names' }).click();
+  await expect(page.getByRole('status')).toContainText('Names saved');
+  await expect(page).toHaveURL(/\/saved\?.*panel=settings/);
+  await a11y(page);
+  await page.getByRole('link', { name: 'Close' }).click();
+  await expect(page).toHaveURL(/\/saved$/);
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeHidden();
+  await page.goto('/account');
 
   // Add an email (confirmed by link) and a password: 100%, and she can log in with them.
   const email = `ruth${stamp}@example.com`;
@@ -115,11 +132,12 @@ test('create an account with email and password, then log in with it (D-100)', a
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByRole('heading', { name: 'Welcome to SAZO, Mike' })).toBeVisible();
   await a11y(page);
-  await expect(page.getByRole('button', { name: 'Settings for Anguzu J. Mike' })).toContainText('AM');
+  await expect(page.getByRole('button', { name: 'Your details, Anguzu J. Mike' })).toContainText('AM');
   await shot(page, 'signed-up');
 
   await page.goto('/account');
   await page.getByRole('button', { name: 'Sign out here' }).click();
+  await expect(page.getByRole('link', { name: 'Log in', exact: true })).toBeVisible();
   await page.goto('/sign-in?next=/account');
   await a11y(page);
   await shot(page, 'log-in');

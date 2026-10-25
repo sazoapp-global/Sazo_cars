@@ -23,7 +23,7 @@ export async function AppFrame({ workspace, viewer, org, business, person, badge
       </Suspense>
       <div className="min-w-0 lg:pl-64">
         <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 md:px-8 md:py-8">
-          <Suspense>{/* the page; Notifications take its place without leaving it */}<PanelHost>{children}</PanelHost></Suspense>
+          <Suspense>{/* the page; Notifications or Settings take its place without leaving it */}<PanelHost wide>{children}</PanelHost></Suspense>
         </div>
       </div>
     </>

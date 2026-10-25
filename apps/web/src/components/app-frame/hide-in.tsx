@@ -4,7 +4,7 @@
 import { workspaceOf, type WorkspaceKey } from '@sazo/contracts';
 import { usePathname } from 'next/navigation';
 
-export function HideIn({ workspaces, children }: { workspaces: WorkspaceKey[]; children: React.ReactNode }) {
+export function HideIn({ workspaces, children }: { workspaces: WorkspaceKey[] | 'all'; children: React.ReactNode }) {
   const ws = workspaceOf(usePathname() ?? '');
-  return ws && workspaces.includes(ws.key) ? null : <>{children}</>;
+  return ws && (workspaces === 'all' || workspaces.includes(ws.key)) ? null : <>{children}</>;
 }

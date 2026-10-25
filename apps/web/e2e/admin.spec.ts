@@ -38,6 +38,22 @@ test('approve a garage that registered', async ({ page, request }) => {
   await signIn(page, ADMIN);
   await expect(page.getByRole('heading', { name: /Good to see you/ })).toBeVisible();
   await shot(page, 'admin-home');
+  // On a phone the side bar's links, Settings and Sign out are one strip; Settings opens inside the console.
+  const strip = page.getByRole('navigation', { name: 'SAZO console' });
+  await expect(strip.getByRole('button', { name: 'Sign out' })).toBeAttached();
+  await strip.getByRole('link', { name: 'Settings' }).click();
+  await expect(page).toHaveURL(/\/admin\?panel=settings/);
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await page.getByRole('link', { name: 'Close' }).click();
+  await expect(page.getByRole('heading', { name: /Good to see you/ })).toBeVisible();
+  // On a computer they sit at the foot of the fixed side bar.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const rail = page.getByRole('complementary', { name: 'SAZO console menu' });
+  await expect(rail.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await rail.getByRole('link', { name: 'Settings' }).click();
+  await expect(rail.getByRole('link', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('link', { name: 'Close' }).click();
+  await page.setViewportSize({ width: 412, height: 839 });
   await a11y(page);
   await page.getByRole('link', { name: 'Businesses', exact: true }).click();
   const card = page.getByRole('listitem').filter({ hasText: `Bugolobi Car Care ${stamp} Ltd` });

@@ -14,7 +14,9 @@ test('save, compare, share and stop sharing', async ({ page, browser }) => {
     await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible();
   }
 
-  await page.getByRole('link', { name: 'Saved' }).first().click();
+  // My SAZO (top bar): the person's own things, then Settings and Sign out.
+  await page.getByRole('button', { name: 'My SAZO' }).click();
+  await page.getByRole('group', { name: 'My SAZO' }).getByRole('link', { name: 'Saved cars' }).click();
   await expect(page.getByRole('heading', { name: 'Saved cars' })).toBeVisible();
   await a11y(page);
   await page.getByRole('checkbox', { name: /Compare 2016 Toyota Harrier/ }).check();

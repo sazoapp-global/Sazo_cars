@@ -2,12 +2,16 @@
 // The side bar (approved 25 Oct 2026): navy, always full width, fixed in place under the top bar so scrolling
 // the page never moves it. Groups open as dropdowns; Notifications opens inside the page. Phones get the same
 // links as a strip above the page. The links come from the one navigation list (@sazo/contracts).
-import { NOTIFICATIONS_PANEL, activeKey, isGroup, type NavEntry, type NavGroup, type NavLink } from '@sazo/contracts';
+import { NOTIFICATIONS_PANEL, SETTINGS_LINK, SETTINGS_PANEL, activeKey, isGroup, type NavEntry, type NavGroup, type NavLink } from '@sazo/contracts';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { signOut } from '@/app/sign-in/actions';
+import { loadSettings } from '@/app/account/settings-actions';
 import { Icon, type IconName } from '@/components/icon';
 import { NotificationsView } from '@/components/notifications/notifications-view';
+import { ThemeChoice } from '@/components/theme/theme-choice';
 
 export interface RailProps {
   label: string;
@@ -35,7 +39,7 @@ function useHref() {
 function useActive(entries: NavEntry[]) {
   const pathname = usePathname() ?? '';
   const search = useSearchParams();
-  return activeKey(entries, pathname, new URLSearchParams(search?.toString() ?? ''));
+  return activeKey([...entries, SETTINGS_LINK], pathname, new URLSearchParams(search?.toString() ?? ''));
 }
 
 export function Rail({ label, entries, business, person, badges = {} }: RailProps) {
@@ -99,12 +103,13 @@ export function Rail({ label, entries, business, person, badges = {} }: RailProp
           );
         })}
       </nav>
-      {business && person && (
-        <div className="border-t border-white/15 px-5 py-4 text-sm">
-          <p className="font-semibold">{person.name}</p>
-          <p className="text-white/70">{person.role}</p>
-        </div>
-      )}
+      <div className="space-y-1 border-t border-white/15 p-3">
+        {link(SETTINGS_LINK)}
+        <form action={signOut}>
+          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[15px] text-white/85 hover:bg-white/10"><Icon name="logout" size={20} className="text-white/75" />Sign out</button>
+        </form>
+        {business && person && <p className="px-3 pt-2 text-sm text-white/70">{person.name} · {person.role}</p>}
+      </div>
     </aside>
   );
 }
@@ -115,7 +120,7 @@ export function PhoneStrip({ label, entries, business, badges = {} }: Pick<RailP
   const href = useHref();
   const current = useRef<HTMLAnchorElement>(null);
   useEffect(() => { current.current?.scrollIntoView({ block: 'nearest', inline: 'center' }); }, [active]);
-  const links = entries.flatMap((e) => (isGroup(e) ? e.links : [e]));
+  const links = [...entries.flatMap((e) => (isGroup(e) ? e.links : [e])), SETTINGS_LINK];
   return (
     <div className="border-b-4 border-lime bg-primary text-white print:hidden lg:hidden">
       <p className="px-4 pt-3 text-[11px] font-bold uppercase tracking-wider text-white/70">{label}{business ? ` · ${business.name}` : ''}</p>
@@ -127,36 +132,62 @@ export function PhoneStrip({ label, entries, business, badges = {} }: Pick<RailP
             {l.key === 'notifications' && !!badges.notifications && <span className="rounded-full bg-bad-text px-1.5 text-xs font-bold text-white">{badges.notifications}</span>}
           </Link>
         ))}
+        <form action={signOut} className="shrink-0">
+          <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/85"><Icon name="logout" size={18} />Sign out</button>
+        </form>
       </nav>
     </div>
   );
 }
 
-/** The page, or Notifications in its place (?panel=notifications). The page stays loaded underneath. */
-export function PanelHost({ children }: { children: React.ReactNode }) {
+/**
+ * The page, or a panel in its place: Notifications (?panel=notifications) or Settings (?panel=settings).
+ * The page stays loaded underneath and comes back on Close. `enabled` lets the site-wide host stand aside
+ * on pages whose workspace frame has its own.
+ */
+export function PanelHost({ children, enabled = true, wide = false }: { children: ReactNode; enabled?: boolean; wide?: boolean }) {
   const pathname = usePathname() ?? '';
   const search = useSearchParams();
-  const panel = search?.get('panel') === NOTIFICATIONS_PANEL;
+  const which = enabled ? search?.get('panel') : null;
+  const panel = which === NOTIFICATIONS_PANEL || which === SETTINGS_PANEL ? which : null;
   const q = new URLSearchParams(search?.toString() ?? '');
-  q.delete('panel');
+  for (const k of ['panel', 'done', 'error', 'newPhone']) q.delete(k);
   const closeHref = q.toString() ? `${pathname}?${q}` : pathname;
+  const box = wide ? '' : 'mx-auto max-w-3xl px-4 py-8 md:px-8';
   return (
     <>
-      {panel && <NotificationsPanel closeHref={closeHref} />}
-      <div hidden={panel} className="space-y-6">{children}</div>
+      {panel && (
+        <section aria-labelledby="panel-heading" className={`space-y-4 ${box}`}>
+          <div className="flex items-center justify-between gap-3">
+            <h1 id="panel-heading" className="font-display text-2xl font-bold md:text-3xl">{panel === SETTINGS_PANEL ? 'Settings' : 'Notifications'}</h1>
+            <Link href={closeHref} className="inline-flex items-center gap-1.5 font-semibold text-primary-container hover:underline"><Icon name="close" size={20} />Close</Link>
+          </div>
+          {panel === SETTINGS_PANEL ? <SettingsPanel closeHref={closeHref} /> : <NotificationsView />}
+        </section>
+      )}
+      <div hidden={!!panel} className={wide ? 'space-y-6' : undefined}>{children}</div>
     </>
   );
 }
 
-
-function NotificationsPanel({ closeHref }: { closeHref: string }) {
-  return (
-    <section aria-labelledby="notifications-heading" className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 id="notifications-heading" className="font-display text-2xl font-bold md:text-3xl">Notifications</h1>
-        <Link href={closeHref} className="inline-flex items-center gap-1.5 font-semibold text-primary-container hover:underline"><Icon name="close" size={20} />Close</Link>
-      </div>
-      <NotificationsView />
-    </section>
-  );
+/** Settings drawn by the server for this page; changes come back here with their outcome. */
+function SettingsPanel({ closeHref }: { closeHref: string }) {
+  const search = useSearchParams();
+  const [view, setView] = useState<ReactNode>(null);
+  const key = search?.toString() ?? '';
+  useEffect(() => {
+    let live = true;
+    const q = new URLSearchParams(closeHref.split('?')[1] ?? '');
+    q.set('panel', SETTINGS_PANEL);
+    const back = `${closeHref.split('?')[0]}?${q}`;
+    void loadSettings({ back, done: search?.get('done') ?? undefined, error: search?.get('error') ?? undefined, newPhone: search?.get('newPhone') ?? undefined })
+      .then((v) => { if (live) setView(v); });
+    return () => { live = false; };
+  }, [key, closeHref, search]);
+  // The appearance choice runs on the device, so it goes into the slot the server left for it.
+  const box = useRef<HTMLDivElement>(null);
+  const [slot, setSlot] = useState<Element | null>(null);
+  useEffect(() => { setSlot(box.current?.querySelector('[data-slot="appearance"]') ?? null); }, [view]);
+  if (!view) return <div className="skeleton h-64" />;
+  return <div ref={box}>{view}{slot && createPortal(<ThemeChoice />, slot)}</div>;
 }
