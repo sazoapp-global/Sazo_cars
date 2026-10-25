@@ -6,6 +6,7 @@ import './globals.css';
 import './theme-dark.css';
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
+import Script from 'next/script';
 import { cookies } from 'next/headers';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { THEME_COOKIE, THEME_SCRIPT, parseTheme } from '@/lib/theme';
@@ -34,7 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     // An explicit choice is drawn by the server; "same as device" is settled by THEME_SCRIPT before paint.
     <html lang="en-UG" {...(theme !== 'system' ? { 'data-theme': theme } : {})} suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} /></head>
+      <head><Script id="sazo-theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script></head>
       <body className="flex min-h-screen flex-col">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
         <div role="note" className="bg-ink px-4 py-2 text-center text-xs text-white/90">
