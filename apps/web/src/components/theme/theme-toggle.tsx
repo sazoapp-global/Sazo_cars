@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icon';
 import { chooseTheme, currentChoice, resolved } from './theme-client';
 
-/** Header button: switch between light and dark. (Account settings also offer "same as my device".) */
+/** Header button: switch between light and dark. (Account settings also offer "same as device".) */
 export function ThemeToggle() {
   const [mode, setMode] = useState<'light' | 'dark'>();
   useEffect(() => {

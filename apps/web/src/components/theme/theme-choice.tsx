@@ -4,7 +4,7 @@ import { Icon, type IconName } from '@/components/icon';
 import type { ThemeChoice as Choice } from '@/lib/theme';
 import { chooseTheme, currentChoice } from './theme-client';
 
-const OPTIONS: [Choice, string, IconName][] = [['light', 'Light', 'light_mode'], ['dark', 'Dark', 'dark_mode'], ['system', 'Same as my device', 'devices']];
+const OPTIONS: [Choice, string, IconName][] = [['light', 'Light', 'light_mode'], ['dark', 'Dark', 'dark_mode'], ['system', 'Same as device', 'devices']];
 
 /** Settings: light, dark, or follow the phone or computer (D-112). */
 export function ThemeChoice() {
