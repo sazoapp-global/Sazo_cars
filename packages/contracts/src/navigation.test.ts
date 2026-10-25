@@ -14,7 +14,7 @@ describe('navigation (one list of workspaces and modules)', () => {
 
   it('a dealer waiting for approval sees only what stays private: stock, settings and the approval steps', () => {
     const waiting = navFor('dealer', { platformRoles: ['consumer'], orgRole: 'org_manager', approved: false }, 'abc');
-    expect(keys(waiting)).toEqual(['stock', 'notifications', 'settings', 'business']);
+    expect(keys(waiting)).toEqual(['stock', 'notifications', 'business-settings', 'business']);
   });
 
   it('the garage app: managers see Team, mechanics do not; inspectors get the inspection workspace', () => {

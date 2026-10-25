@@ -55,18 +55,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <TopMeasure targets={['site-note', 'site-header']} />
         <header id="site-header" className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md print:hidden lg:top-8">
           <div className="relative mx-auto flex h-16 max-w-[1280px] items-center gap-2 px-4 sm:gap-4 md:h-20 md:px-8 lg:px-12">
-            <HideIn workspaces={['dealer']}><MobileNav signedIn={!!me} /></HideIn>
+            <HideIn workspaces="all"><MobileNav signedIn={!!me} /></HideIn>
             <Logo />
             <WorkspaceName />
-            {/* The dealer console has the garage app's compact top bar: no site links, the online badge instead. */}
-            <div className="flex-1 md:ml-8"><HideIn workspaces={['dealer']}><MainNav /></HideIn></div>
-            <ShowIn workspaces={['dealer']}><OnlineStatus /></ShowIn>
+            {/* Workspaces have the garage app's compact top bar: no site links, the online badge instead. */}
+            <div className="flex-1 md:ml-8"><HideIn workspaces="all"><MainNav /></HideIn></div>
+            <ShowIn workspaces={['console', 'dealer']}><OnlineStatus /></ShowIn>
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
-              <Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link>
+              <HideIn workspaces="all"><Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link></HideIn>
             )}
             {me && <HideIn workspaces="all"><Suspense><MySazo /></Suspense></HideIn>}
             {me && <Suspense><Bell unread={unread} /></Suspense>}
-            <HideIn workspaces={['dealer']}><ThemeToggle /></HideIn>
+            <HideIn workspaces="all"><ThemeToggle /></HideIn>
             {me ? (
               <AccountPopup displayName={me.displayName} initials={me.initials} />
             ) : (

@@ -1,8 +1,8 @@
 // The garage app's frame, the same as the website's workspaces (approved 25 Oct 2026, D-137 and D-138):
-// - a top bar on every screen: the app, the business, online or not, the notification bell and your name
-//   (your name shows your details only);
-// - on tablets and computers a navy side bar, fixed in place, with the modules from the one navigation list
-//   (@sazo/contracts) and Settings and Sign out at its foot;
+// - a top bar: the app, the business, online or not, the notification bell and your name (your name shows
+//   your details only). On computers (option A, 25 Oct 2026) it is a slim bar over the page only;
+// - on tablets and computers a navy side bar running the full height of the screen, with the app at its top,
+//   the modules from the one navigation list (@sazo/contracts), and Settings and Sign out at its foot;
 // - on phones the bottom tabs, with Settings and Sign out under More;
 // - Notifications and Settings open inside the page you are on, and Close brings it back.
 import { NOTIFICATIONS_PANEL, SETTINGS_PANEL, activeKey, isGroup, navFor, type NavLink } from '@sazo/contracts';
@@ -69,7 +69,11 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
       )}
 
       {/* side bar: tablets and computers, fixed under the top bar */}
-      <aside aria-label={`${app} menu`} className="fixed bottom-0 left-0 top-16 z-20 hidden w-64 flex-col overflow-y-auto overscroll-contain border-r-4 border-lime bg-primary text-white print:!hidden lg:flex">
+      <aside aria-label={`${app} menu`} className="fixed bottom-0 left-0 top-0 z-40 hidden w-64 flex-col overflow-y-auto overscroll-contain border-r-4 border-lime bg-primary text-white print:!hidden lg:flex">
+        <button type="button" onClick={() => go({ name: 'home' })} className="flex h-12 shrink-0 items-center gap-2.5 border-b border-white/15 px-5 text-left">
+          <span aria-hidden className="grid size-7 place-items-center rounded-md bg-lime text-primary"><Icon name={inspector ? 'fact_check' : 'garage'} size={18} /></span>
+          <span className="font-display text-lg font-extrabold">{app}</span>
+        </button>
         <div className="shrink-0 border-b border-white/15 px-5 py-4">
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/70">{app}</p>
           <p className="truncate font-display text-lg font-bold leading-snug">{garage.name}</p>
@@ -131,15 +135,16 @@ function RailLink({ l, on, badge, count }: { l: NavLink; on: boolean; badge?: nu
 /** The top bar: the app and business, online or not, the bell, and your name (details only). */
 function TopBar({ app, garage, me, online, unread }: { app: string; garage: Garage; me: Me; online: boolean; unread: number }) {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-card px-4 print:hidden lg:px-6">
-      <button type="button" onClick={() => go({ name: 'home' })} className="flex min-w-0 items-center gap-2 text-left">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-card px-4 print:hidden lg:ml-64 lg:h-12 lg:px-6">
+      <p className="hidden min-w-0 flex-1 truncate text-xs text-muted lg:block">Testing: records are simulated, not real cars.</p>
+      <button type="button" onClick={() => go({ name: 'home' })} className="flex min-w-0 items-center gap-2 text-left lg:hidden">
         <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-md bg-primary text-lime"><Icon name={isInspector(garage) ? 'fact_check' : 'garage'} size={20} /></span>
         <span className="min-w-0">
           <span className="block font-display text-base font-extrabold leading-tight text-primary">{app}</span>
           <span className="block truncate text-xs text-muted lg:hidden">{garage.name}</span>
         </span>
       </button>
-      <span role="status" aria-live="polite" className={`chip ml-auto shrink-0 !border-0 ${online ? 'bg-soft text-ok-text' : 'bg-lime text-ink'}`}>
+      <span role="status" aria-live="polite" className={`chip ml-auto shrink-0 lg:ml-0 !border-0 ${online ? 'bg-soft text-ok-text' : 'bg-lime text-ink'}`}>
         <Icon name={online ? 'cloud_done' : 'wifi_off'} size={14} />{online ? 'Online' : 'Offline'}
       </span>
       <button type="button" onClick={() => openPanel('notifications')} aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}

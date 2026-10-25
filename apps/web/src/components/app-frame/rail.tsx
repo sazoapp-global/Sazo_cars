@@ -1,8 +1,9 @@
 'use client';
-// The side bar (approved 25 Oct 2026): navy, always full width, fixed in place under the top bar so scrolling
-// the page never moves it. Groups open as dropdowns; Notifications opens inside the page. Phones get the same
+// The side bar (approved 25 Oct 2026): navy, always full width, fixed in place from the top of the screen
+// (option A) so scrolling the page never moves it. Groups open as dropdowns; Notifications opens inside the page. Phones get the same
 // links as a strip above the page. The links come from the one navigation list (@sazo/contracts).
 import { NOTIFICATIONS_PANEL, SETTINGS_LINK, SETTINGS_PANEL, activeKey, isGroup, type NavEntry, type NavGroup, type NavLink } from '@sazo/contracts';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -69,8 +70,13 @@ export function Rail({ label, entries, business, person, badges = {} }: RailProp
   };
 
   return (
-    <aside aria-label={`${label} menu`} style={{ top: 'var(--site-top, 113px)' }}
-      className="fixed bottom-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto overscroll-contain border-r-4 border-lime bg-primary text-white print:!hidden lg:flex">
+    <aside aria-label={`${label} menu`}
+      className="fixed bottom-0 left-0 top-0 z-30 hidden w-64 flex-col overflow-y-auto overscroll-contain border-r-4 border-lime bg-primary text-white print:!hidden lg:flex">
+      <Link href="/" aria-label="SAZO home" className="flex h-12 shrink-0 items-center gap-2.5 border-b border-white/15 px-5">
+        <Image src="/images/sazo-logo.webp" alt="" width={26} height={26} className="rounded-md" />
+        <span className="font-display text-lg font-extrabold">SAZO</span>
+        <span className="text-sm text-white/70">{label === 'SAZO console' ? 'Console' : label}</span>
+      </Link>
       <div className="border-b border-white/15 px-5 py-4">
         <p className="text-[11px] font-bold uppercase tracking-wider text-white/70">{label}</p>
         {business ? (

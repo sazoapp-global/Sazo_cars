@@ -161,6 +161,11 @@ test('on a computer the side bar stays in place while the page scrolls', async (
   await page.waitForTimeout(300);
   const after = await rail.boundingBox();
   expect(after?.y).toBe(before?.y);
-  expect(before?.y).toBeGreaterThan(60);
+  // Option A: the side bar runs the full height of the screen; the site's top bars step aside for a slim bar.
+  expect(before?.y).toBe(0);
+  expect(Math.round(before!.height)).toBe(700);
+  await expect(page.locator('#site-header')).toBeHidden();
+  await expect(rail.getByRole('link', { name: 'SAZO home' })).toBeVisible();
+  await expect(page.locator('[data-workspace-frame]').getByText('Testing: records are simulated, not real cars.')).toBeVisible();
   await expect(rail.getByRole('link', { name: /Notifications/ })).toBeVisible();
 });

@@ -136,7 +136,7 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       { key: 'commissions', label: 'Commission', short: 'Commission', icon: 'payments', href: '/dealer/{org}/commissions', rule: MANAGER_APPROVED },
       { key: 'sold', label: 'Sold', short: 'Sold', icon: 'sell', href: '/dealer/{org}?show=sold', rule: APPROVED },
       { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '/dealer/{org}#staff-section', rule: MANAGER_APPROVED },
-      { key: 'settings', label: 'Settings', short: 'Settings', icon: 'edit', href: '/dealer/{org}#settings-section', rule: MANAGER },
+      { key: 'business-settings', label: 'Business settings', short: 'Business', icon: 'checklist', href: '/dealer/{org}#settings-section', rule: MANAGER },
       { key: 'business', label: 'Business details', short: 'Business', icon: 'verified_user', href: '/business/{org}' },
     ],
   },

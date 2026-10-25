@@ -82,3 +82,10 @@
   .card { break-inside: avoid; box-shadow: none; }
   a { text-decoration: none; }
 }
+
+/* Workspaces on computers (option A, 25 Oct 2026): the side bar runs from the top of the screen and the page
+   has its own slim bar, so the site's testing note and top bar step aside. */
+@media (min-width: 1024px) {
+  body:has([data-workspace-frame]) #site-note,
+  body:has([data-workspace-frame]) #site-header { display: none; }
+}
