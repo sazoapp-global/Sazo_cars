@@ -1,7 +1,7 @@
 'use client';
 // A popup over the page (native <dialog>): opened by a button, closed by Close, Escape or a click outside.
 // Used to show an account's details without leaving the page.
-import { useId, useRef, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@/components/icon';
 
 export function Popup({ button, buttonClassName, buttonLabel, title, onOpen, children }: {
@@ -9,7 +9,9 @@ export function Popup({ button, buttonClassName, buttonLabel, title, onOpen, chi
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const open = () => { ref.current?.showModal(); onOpen?.(); };
+  // The content is drawn only once the pop-up has been opened, so nothing loads before it is needed.
+  const [shown, setShown] = useState(false);
+  const open = () => { setShown(true); ref.current?.showModal(); onOpen?.(); };
   const close = () => ref.current?.close();
   return (
     <>
@@ -21,7 +23,7 @@ export function Popup({ button, buttonClassName, buttonLabel, title, onOpen, chi
             <h2 id={titleId} className="font-display text-lg font-bold">{title}</h2>
             <button type="button" onClick={close} className="rounded-lg p-1.5 text-muted hover:bg-soft" aria-label="Close"><Icon name="close" size={20} /></button>
           </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
+          <div className="overflow-y-auto px-5 py-4">{shown && children}</div>
         </div>
       </dialog>
     </>

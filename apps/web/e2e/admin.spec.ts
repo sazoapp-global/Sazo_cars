@@ -85,6 +85,12 @@ test('data sources show which are simulated', async ({ page }) => {
   await expect(page.getByText('Simulated').first()).toBeVisible();
   // The site footer is left out of the console; public pages keep it.
   await expect(page.getByRole('contentinfo')).toHaveCount(0);
+  // Notifications open inside the page; Close brings the page back.
+  await page.getByRole('navigation', { name: 'SAZO console' }).getByRole('link', { name: /Notifications/ }).click();
+  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/sources\?panel=notifications$/);
+  await page.getByRole('link', { name: 'Close' }).click();
+  await expect(page.getByText('Simulated').first()).toBeVisible();
   await a11y(page);
   await page.goto('/');
   await expect(page.getByRole('contentinfo')).toBeVisible();
@@ -113,12 +119,32 @@ test('announcements reach the bell and help answers reach the Help page (A-06, A
 
   const buyer = await (await browser.newContext()).newPage();
   await signInAs(buyer, `+2567060${stamp}`, { name: 'Ruth Buyer' });
-  await expect(buyer.getByRole('link', { name: /Notifications, \d+ new/ })).toBeVisible();
-  await buyer.getByRole('link', { name: /Notifications/ }).click();
-  await expect(buyer.getByRole('list', { name: 'Messages from SAZO' })).toContainText(`Testing week ${stamp}`);
+  // The bell opens notifications over the page, not on a new page.
+  await expect(buyer.getByRole('button', { name: /Notifications, \d+ new/ })).toBeVisible();
+  await buyer.getByRole('button', { name: /Notifications/ }).click();
+  await expect(buyer.getByRole('dialog', { name: 'Notifications' }).getByRole('list', { name: 'Messages from SAZO' })).toContainText(`Testing week ${stamp}`);
+  await buyer.getByRole('dialog').getByRole('button', { name: 'Mark all as read' }).click();
+  await expect(buyer.getByRole('button', { name: 'Notifications', exact: true })).toBeVisible();
+  await buyer.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
   await a11y(buyer);
   await buyer.goto('/help');
   await buyer.getByText(`How do I check a car ${stamp}?`).click();
   await expect(buyer.getByText('Type its number plate or VIN on the home page.')).toBeVisible();
   await a11y(buyer);
+});
+
+test('on a computer the side bar stays in place while the page scrolls', async ({ browser }) => {
+  const page = await (await browser.newContext({ viewport: { width: 1366, height: 700 }, isMobile: false, hasTouch: false })).newPage();
+  const admin2 = `+2567031${stamp}`; // its own number: each number may ask for only a few sign-in codes an hour
+  createAdmin(admin2, 'Grace (SAZO admin)');
+  await signIn(page, admin2);
+  await page.goto('/admin/sources');
+  const rail = page.getByRole('complementary', { name: 'SAZO console menu' });
+  const before = await rail.boundingBox();
+  await page.mouse.wheel(0, 1500);
+  await page.waitForTimeout(300);
+  const after = await rail.boundingBox();
+  expect(after?.y).toBe(before?.y);
+  expect(before?.y).toBeGreaterThan(60);
+  await expect(rail.getByRole('link', { name: /Notifications/ })).toBeVisible();
 });

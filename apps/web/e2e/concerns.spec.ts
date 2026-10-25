@@ -33,7 +33,7 @@ test('being checked, then upheld by a reviewer', async ({ browser }) => {
 
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN, { next: '/admin' });
-  await admin.getByRole('link', { name: /reported problems to check/ }).click();
+  await admin.getByRole('link', { name: /reported problems to check/i }).click();
   const card = admin.getByRole('listitem').filter({ hasText: PLATE });
   await expect(card).toContainText('Mileage has been wound back');
   await expect(card).toContainText(`Najjera Motors ${stamp}`);

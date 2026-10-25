@@ -96,6 +96,22 @@ export class IamService {
     return this.repo.managerPhones(organisationId);
   }
 
+  /**
+   * The console overview's "Recent activity": the last decisions by SAZO staff, in plain words. Only
+   * decisions count; their own account changes and looking at someone's account stay in the audit log only.
+   */
+  async recentStaffActivity(limit = 10): Promise<{ at: string; actor: string; text: string }[]> {
+    const { rows } = await this.pool.query<{ at: Date; actor: string | null; action: string; target_type: string; org: string | null }>(
+      `SELECT a.at, u.display_name AS actor, a.action, a.target_type,
+              CASE WHEN a.target_type = 'organisation' THEN (SELECT COALESCE(o.trading_name, o.legal_name) FROM iam.organisations o WHERE o.id = a.target_id) END AS org
+         FROM iam.audit_entries a JOIN iam.users u ON u.id = a.actor_user_id
+        WHERE a.action ~ $2
+          AND EXISTS (SELECT 1 FROM iam.platform_role_assignments pr JOIN iam.roles r ON r.id = pr.role_id
+                       WHERE pr.user_id = a.actor_user_id AND r.code IN ('sazo_admin','sazo_reviewer'))
+        ORDER BY a.at DESC LIMIT $1`, [limit, STAFF_DECISIONS.source]);
+    return rows.map((r) => ({ at: r.at.toISOString(), actor: r.actor ?? 'Someone', text: activityText(r.action, r.org) }));
+  }
+
   /** The verified phone a user signs in with (used to match the registry's owner record, O-007). */
   async userPhone(userId: string): Promise<string | undefined> {
     return (await this.repo.userById(userId))?.phone ?? undefined;
@@ -219,4 +235,26 @@ export class IamService {
     await this.audit({ actor, action: 'account.delete', targetType: 'user', targetId: actor.userId });
     await this.repo.anonymise(actor.userId);
   }
+}
+
+/** Audit actions that are staff decisions (the console's recent activity). */
+const STAFF_DECISIONS = /^(organisation\.(approve|reject|request_info|suspend)|identity\.(approved|rejected)|concern\.(uphold|dismiss)|moderation\.(approve|reject)|ownership\.(approve|reject)|conflict\..+|source\.updated|trust\.rebuild|user\.platform_role_granted|approve|assign|dismiss|resolve)$/;
+
+/** Plain words for an audit action, for the console overview. Unknown actions fall back to their name. */
+export function activityText(action: string, org: string | null): string {
+  const business = org ?? 'a business';
+  const known: Record<string, string> = {
+    'organisation.approve': `approved ${business}`, 'organisation.reject': `did not approve ${business}`,
+    'organisation.request_info': `asked ${business} for more information`, 'organisation.suspend': `suspended ${business}`,
+    'identity.approved': 'approved a National ID', 'identity.rejected': 'rejected a National ID',
+    'concern.uphold': 'upheld a reported problem', 'concern.dismiss': 'dismissed a reported problem',
+    'moderation.approve': 'published a review or video', 'moderation.reject': 'turned down a review or video',
+    'ownership.approve': 'confirmed a car owner', 'ownership.reject': 'turned down an ownership claim',
+    'source.updated': 'changed a data source', 'trust.rebuild': 'recalculated the scores',
+    'user.platform_role_granted': 'gave someone a SAZO role',
+  };
+  if (known[action]) return known[action]!;
+  if (action.startsWith('conflict.')) return 'settled a conflict between records';
+  if (['approve', 'assign', 'dismiss', 'resolve'].includes(action)) return 'settled a vehicle match';
+  return action.replace(/[._]/g, ' ');
 }

@@ -6,7 +6,7 @@ const keys = (entries: ReturnType<typeof navFor>) => entries.flatMap((e) => (isG
 describe('navigation (one list of workspaces and modules)', () => {
   it('shows a dealer salesperson fewer modules than a manager, with the business filled in', () => {
     const sales = navFor('dealer', { platformRoles: ['consumer'], orgRole: 'org_staff' }, 'abc');
-    expect(keys(sales)).toEqual(['stock', 'enquiries', 'sold', 'business']);
+    expect(keys(sales)).toEqual(['stock', 'notifications', 'enquiries', 'sold', 'business']);
     const manager = navFor('dealer', { platformRoles: ['consumer'], orgRole: 'org_manager' }, 'abc');
     expect(keys(manager)).toContain('commissions');
     expect(manager.find((e) => e.key === 'sold')).toMatchObject({ href: '/dealer/abc?show=sold' });
@@ -26,6 +26,7 @@ describe('navigation (one list of workspaces and modules)', () => {
     expect(activeKey(nav, '/dealer/abc', new URLSearchParams('show=sold'))).toBe('sold');
     expect(activeKey(nav, '/dealer/abc/car/123', new URLSearchParams())).toBe('stock');
     expect(activeKey(nav, '/dealer/abc/enquiries', new URLSearchParams())).toBe('enquiries');
+    expect(activeKey(nav, '/dealer/abc/enquiries', new URLSearchParams('panel=notifications'))).toBe('notifications');
     expect(workspaceOf('/dealer/abc/import')?.label).toBe('Dealer');
     expect(workspaceOf('/admin/faqs')?.label).toBe('SAZO console');
     expect(workspaceOf('/administrator')).toBeUndefined();

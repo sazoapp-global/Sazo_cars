@@ -5,6 +5,7 @@ import '@fontsource/plus-jakarta-sans/800.css';
 import './globals.css';
 import './theme-dark.css';
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
@@ -13,7 +14,10 @@ import { api, isSignedIn } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { Icon } from '@/components/icon';
 import { AccountPopup } from './account/account-popup';
+import { FrameOffset } from '@/components/app-frame/frame-offset';
 import { HideIn } from '@/components/app-frame/hide-in';
+import { TopMeasure } from '@/components/app-frame/top-measure';
+import { Bell } from '@/components/notifications/bell';
 import { WorkspaceName } from '@/components/app-frame/workspace-name';
 import { Logo } from '@/components/logo';
 import { MainNav } from '@/components/main-nav';
@@ -38,11 +42,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en-UG" {...(theme !== 'system' ? { 'data-theme': theme } : {})} suppressHydrationWarning>
       <body className="flex min-h-screen flex-col">
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
-        <div role="note" className="bg-ink px-4 py-2 text-center text-xs text-white/90">
+        {/* On computers the testing note and the top bar both stay put, so the fixed side bar sits right under them. */}
+        <div id="site-note" role="note" className="z-40 bg-ink px-4 py-2 text-center text-xs text-white/90 lg:sticky lg:top-0">
           <Icon name="science" size={14} className="mr-1 inline align-[-2px]" />
           SAZO is in testing. The vehicles and records shown are simulated and do not describe real cars.
         </div>
-        <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md print:hidden">
+        <TopMeasure targets={['site-note', 'site-header']} />
+        <header id="site-header" className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md print:hidden lg:top-8">
           <div className="relative mx-auto flex h-16 max-w-[1280px] items-center gap-2 px-4 sm:gap-4 md:h-20 md:px-8 lg:px-12">
             <MobileNav signedIn={!!me} />
             <Logo />
@@ -56,12 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <Icon name="bookmark" size={20} className="sm:hidden" /><span className="sr-only sm:not-sr-only">Saved</span>
               </Link>
             )}
-            {me && (
-              <Link href="/notifications" className="relative rounded-lg p-2 text-muted hover:text-primary-container" aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}>
-                <Icon name="notifications" size={22} />
-                {unread > 0 && <span className="absolute right-0.5 top-0.5 min-w-[18px] rounded-full bg-bad-text px-1 text-center text-[11px] font-bold leading-[18px] text-white" aria-hidden>{unread > 9 ? '9+' : unread}</span>}
-              </Link>
-            )}
+            {me && <Suspense><Bell unread={unread} /></Suspense>}
             <ThemeToggle />
             {me ? (
               <AccountPopup displayName={me.displayName} initials={me.initials} />
@@ -74,7 +75,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
         <main id="main" className="flex-1">{children}</main>
-        <HideIn workspaces={['console']}>
+        <HideIn workspaces={['console']}><FrameOffset>
         <footer className="mt-16 border-t border-line bg-white print:hidden">
           <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-10 md:grid-cols-[1.4fr_1fr_1fr] md:px-8 lg:px-12">
             <div>
@@ -103,7 +104,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <p className="mx-auto max-w-[1280px] px-4 py-4 text-xs text-label md:px-8 lg:px-12">© {new Date().getFullYear()} SAZO · Kampala, Uganda</p>
           </div>
         </footer>
-        </HideIn>
+        </FrameOffset></HideIn>
       </body>
     </html>
   );

@@ -38,6 +38,10 @@ export interface NavGroup {
 export type NavEntry = NavLink | NavGroup;
 export const isGroup = (e: NavEntry): e is NavGroup => 'links' in e;
 
+/** Opens the person's notifications inside the page they are on (the frame reads ?panel=notifications). */
+export const NOTIFICATIONS_PANEL = 'notifications';
+const NOTIFICATIONS: NavLink = { key: 'notifications', label: 'Notifications', short: 'Alerts', icon: 'notifications', href: `?panel=${NOTIFICATIONS_PANEL}` };
+
 export interface Workspace {
   key: WorkspaceKey;
   /** Shown in the top bar, e.g. "SAZO console" or "Dealer". */
@@ -56,6 +60,7 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
     key: 'console', label: 'SAZO console', paths: ['/admin'],
     entries: [
       { key: 'overview', label: 'Overview', short: 'Overview', icon: 'list_alt', href: '/admin', rule: STAFF },
+      { ...NOTIFICATIONS, rule: STAFF },
       { key: 'accounts', label: 'Accounts', short: 'Accounts', icon: 'group', links: [
         { key: 'businesses', label: 'Businesses', short: 'Businesses', icon: 'garage', href: '/admin/organisations', rule: STAFF },
         { key: 'identity', label: 'ID checks', short: 'IDs', icon: 'badge', href: '/admin/identity', rule: STAFF },
@@ -82,6 +87,7 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
     key: 'dealer', label: 'Dealer', paths: ['/dealer/'],
     entries: [
       { key: 'stock', label: 'Cars for sale', short: 'For sale', icon: 'storefront', href: '/dealer/{org}', alsoActive: ['/dealer/{org}/car/'] },
+      NOTIFICATIONS,
       { key: 'import', label: 'Add many cars', short: 'Add many', icon: 'upload_file', href: '/dealer/{org}/import', rule: MANAGER },
       { key: 'enquiries', label: 'Enquiries', short: 'Enquiries', icon: 'forum', href: '/dealer/{org}/enquiries' },
       { key: 'commissions', label: 'Commission', short: 'Commission', icon: 'payments', href: '/dealer/{org}/commissions', rule: MANAGER },
@@ -124,7 +130,8 @@ export interface QueryReader { get(key: string): string | null }
 export function activeKey(entries: NavEntry[], pathname: string, search: QueryReader): string | undefined {
   let best: { key: string; score: number } | undefined;
   for (const l of entries.flatMap((e) => (isGroup(e) ? e.links : [e]))) {
-    if (l.href.includes('#')) continue;
+    if (l.href.includes('#') || l.href.startsWith('?')) continue;
+    if (search.get('panel') === NOTIFICATIONS_PANEL) return NOTIFICATIONS.key;
     const [path, query] = l.href.split('?');
     const want = (query ?? '').split('&').filter(Boolean).map((kv) => kv.split('=').map(decodeURIComponent) as [string, string]);
     let score = 0;

@@ -770,6 +770,13 @@ paths:
       responses:
         '200': { description: IdentityCheck }
         '409': { description: already_decided }
+  /admin/activity:
+    get:
+      tags: [Admin]
+      operationId: adminRecentActivity
+      summary: "The console overview's recent activity: the last 10 decisions by SAZO staff, in plain words (conflict.review)"
+      responses:
+        '200': { description: "{ items: [{ at, actor, text }] }" }
   /admin/people/{userId}:
     get:
       tags: [Admin]

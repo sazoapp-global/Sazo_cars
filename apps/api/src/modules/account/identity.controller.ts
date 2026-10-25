@@ -70,6 +70,13 @@ export class IdentityController {
     }) };
   }
 
+  /** GET /v1/admin/activity: the last decisions by SAZO staff, in plain words (console overview). */
+  @Get('admin/activity')
+  @RequirePermission('conflict.review')
+  async activity() {
+    return { items: await this.iam.recentStaffActivity(10) };
+  }
+
   /** GET /v1/admin/people/:userId: one person's account for the console popup (businesses, contact, ID check). */
   @Get('admin/people/:userId')
   @RequirePermission('organisation.approve')

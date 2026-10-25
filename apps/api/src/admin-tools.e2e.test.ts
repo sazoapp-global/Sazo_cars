@@ -97,6 +97,11 @@ describe.skipIf(!base)('admin identity checks, announcements and FAQs (e2e)', ()
       businesses: [expect.objectContaining({ organisationId: orgId, role: 'org_manager', organisationStatus: 'approved' })] });
     await http.get(`/v1/admin/people/${managers[0].userId}`).set(bearer(manager)).expect(403);
     await http.get('/v1/admin/people/not-a-uuid').set(bearer(adminToken)).expect(404);
+    // The console overview's recent activity: staff decisions in plain words, not account look-ups.
+    const activity = (await http.get('/v1/admin/activity').set(bearer(adminToken)).expect(200)).body.items;
+    expect(activity[0]).toMatchObject({ actor: expect.any(String), text: expect.stringMatching(/^approved /), at: expect.any(String) });
+    expect(JSON.stringify(activity)).not.toMatch(/person viewed|account /);
+    await http.get('/v1/admin/activity').set(bearer(manager)).expect(403);
     expect((await db.query(`SELECT count(*)::int AS n FROM iam.audit_entries WHERE action = 'person.viewed' AND target_id = $1`, [managers[0].userId])).rows[0].n).toBe(1);
   });
 
