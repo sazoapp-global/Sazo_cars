@@ -71,7 +71,8 @@ The API tests need their own empty test database (they make and delete more data
 docker compose exec postgres createdb -U sazo sazo_test
 ```
 
-Then migrate it and run the tests. Write the address **without quotes**.
+Then migrate it and run the tests. The tests forgive quotes typed around the address; if it still is not a
+database address they stop and say so.
 
 macOS, Linux or Git Bash:
 
