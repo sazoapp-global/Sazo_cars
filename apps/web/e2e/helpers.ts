@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash, createHmac } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import zlib from 'node:zlib';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
@@ -36,11 +38,29 @@ export function totp(key: string, at = Date.now()): string {
   return String((((h[o]! & 127) << 24) | (h[o + 1]! << 16) | (h[o + 2]! << 8) | h[o + 3]!) % 1_000_000).padStart(6, '0');
 }
 
+/** The keys staff set up in these tests, by phone, shared by every test worker (each code works once). */
+const KEYS = path.join(tmpdir(), 'sazo-e2e-authenticator-keys.json');
+type Keys = Record<string, { key: string; step: number }>;
+const readKeys = (): Keys => (existsSync(KEYS) ? JSON.parse(readFileSync(KEYS, 'utf8')) as Keys : {});
+export function rememberKey(phone: string, key: string, step = Math.floor(Date.now() / 30_000)) {
+  writeFileSync(KEYS, JSON.stringify({ ...readKeys(), [phone]: { key, step } }));
+}
+/** A code for this person's app that hasn't been used yet (waits for the next 30 seconds if needed). */
+export async function nextAppCode(phone: string): Promise<string> {
+  const k = readKeys()[phone];
+  if (!k) throw new Error(`No authenticator key remembered for ${phone}`);
+  let step = Math.floor(Date.now() / 30_000);
+  while (step <= k.step) { await new Promise((r) => setTimeout(r, 1000)); step = Math.floor(Date.now() / 30_000); }
+  rememberKey(phone, k.key, step);
+  return totp(k.key, step * 30_000);
+}
+
 /** SAZO staff's first log-in: set up the app from the page, then pass the backup codes page. */
-export async function setUpAuthenticator(page: Page): Promise<string> {
+export async function setUpAuthenticator(page: Page, phone?: string): Promise<string> {
   await page.getByRole('button', { name: 'Show my QR code' }).click();
-  await page.getByText('Can’t scan? Type this key instead').click();
+  await page.getByText(/Can.t scan\? Type this key instead/).click();
   const key = (await page.getByTestId('totp-key').textContent())!.replace(/\s/g, '');
+  if (phone) rememberKey(phone, key);
   await page.getByLabel('6-digit code from the app').fill(totp(key));
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByRole('heading', { name: 'Save your backup codes' })).toBeVisible();
@@ -86,12 +106,16 @@ export async function signIn(page: Page, phone: string, opts: { name?: string; n
     await panel.getByRole('button', { name: 'Log in to SAZO' }).click();
     // A second step on a new device when the account has a confirmed email (D-145); SAZO staff then set up their app.
     await page.waitForURL((u) => !/\/sign-in$/.test(u.pathname));
-    if (new URL(page.url()).pathname === '/sign-in/verify') {
+    if (new URL(page.url()).pathname === '/sign-in/verify' && await page.getByText('Open your authenticator app').isVisible()) {
+      await page.getByLabel('6-digit code').fill(await nextAppCode(phone));
+      await page.getByRole('button', { name: 'Confirm' }).click();
+      await page.waitForURL((u) => u.pathname !== '/sign-in/verify');
+    } else if (new URL(page.url()).pathname === '/sign-in/verify') {
       await typeNextCode(page, before);
       await page.getByRole('button', { name: 'Confirm' }).click();
       await page.waitForURL((u) => u.pathname !== '/sign-in/verify');
     }
-    if (new URL(page.url()).pathname === '/sign-in/authenticator') await setUpAuthenticator(page);
+    if (new URL(page.url()).pathname === '/sign-in/authenticator') await setUpAuthenticator(page, phone);
   }
   await expect(page).not.toHaveURL(/\/sign-(in|up)/);
 }
@@ -108,12 +132,15 @@ export async function apiToken(request: APIRequestContext, phone: string, name?:
   before = codesSoFar();
   const p = name ? personFor(name.replace(/[^\p{L}\s]/gu, ' ')) : undefined;
   let body = await (await request.post(`${API}/auth/otp/verify`, { data: { phone, code: lastCode(), ...(signup && p ? { signup: { ...p, gender: 'female', dateOfBirth: '1990-03-15' } } : {}) } })).json();
-  if (body.status === 'second_step') {
+  if (body.status === 'second_step' && body.channel === 'authenticator') {
+    body = await (await request.post(`${API}/auth/second-step`, { data: { challengeId: body.challengeId, code: await nextAppCode(phone), rememberDevice: false } })).json();
+  } else if (body.status === 'second_step') {
     await expect.poll(codesSoFar).toBeGreaterThan(before);
     body = await (await request.post(`${API}/auth/second-step`, { data: { challengeId: body.challengeId, code: lastCode(), rememberDevice: false } })).json();
   }
   if (body.status === 'setup_authenticator') {
     const { secret } = await (await request.post(`${API}/auth/authenticator/start`, { data: { setupToken: body.setupToken } })).json();
+    rememberKey(phone, secret);
     body = await (await request.post(`${API}/auth/authenticator/confirm`, { data: { setupToken: body.setupToken, code: totp(secret) } })).json();
   }
   expect(body.accessToken).toBeTruthy();
