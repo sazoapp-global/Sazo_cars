@@ -26,6 +26,8 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await owner.getByRole('button', { name: 'Register business' }).click();
   await expect(owner.getByText(`${NAME} is registered`)).toBeVisible();
   await expect(owner.getByText('SAZO is checking')).toBeVisible();
+  await expect(owner).toHaveURL(/\/business\/[0-9a-f-]{36}/);
+  await expect(owner.getByRole('contentinfo')).toHaveCount(0); // a business's own pages have no site footer
 
   await owner.getByLabel('Files').setInputFiles({ name: 'licence.pdf', mimeType: 'application/pdf', buffer: PDF });
   await owner.getByRole('button', { name: 'Send to SAZO' }).click();
