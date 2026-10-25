@@ -56,8 +56,8 @@ async function upload(t: Token, kind: string, bytes: Buffer): Promise<string> {
 async function carPhoto(seed: string, colour: string): Promise<Buffer> {
   const h = createHash('sha256').update(seed).digest();
   const blocks = Array.from({ length: 48 }, (_, i) => {
-    const x = (i % 8) * 120, y = Math.floor(i / 8) * 60, v = 150 + (h[i % 32]! % 90);
-    return `<rect x="${x}" y="${y}" width="120" height="60" fill="rgb(${v},${v + 5 > 255 ? 255 : v + 5},${Math.min(255, v + 25)})"/>`;
+    const x = (i % 8) * 120, y = Math.floor(i / 8) * 72, v = 150 + (h[i % 32]! % 90);
+    return `<rect x="${x}" y="${y}" width="120" height="72" fill="rgb(${v},${v + 5 > 255 ? 255 : v + 5},${Math.min(255, v + 25)})"/>`;
   }).join('');
   const dx = (h[3]! % 120) - 60, scale = 0.9 + (h[5]! % 20) / 100;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720">
