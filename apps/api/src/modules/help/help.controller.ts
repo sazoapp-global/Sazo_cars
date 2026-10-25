@@ -41,7 +41,7 @@ export class HelpController {
   @Get('me/announcements')
   async mine(@CurrentActor() actor: Actor) {
     const items = await this.help.mine(actor);
-    return { unread: items.filter((a) => !a.read).length, items: items.map((a) => ({ id: a.id, title: a.title, body: a.body, createdAt: iso(a.createdAt), read: !!a.read })) };
+    return { unread: items.filter((a) => !a.read).length, items: items.map((a) => ({ id: a.id, audience: a.audience, title: a.title, body: a.body, createdAt: iso(a.createdAt), read: !!a.read })) };
   }
 
   /** POST /v1/me/announcements/read { ids }: mark as read. */

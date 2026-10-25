@@ -135,6 +135,7 @@ describe.skipIf(!base)('admin identity checks, announcements and FAQs (e2e)', ()
     expect(forManager.unread).toBe(2);
     const forBuyer = (await http.get('/v1/me/announcements').set(bearer(buyer)).expect(200)).body;
     expect(forBuyer.items.map((a: { title: string }) => a.title)).toEqual(['SAZO is in testing']);
+    expect(forBuyer.items[0].audience).toBe('everyone'); // the pop-up says who it is for
     // A buyer cannot mark a garage announcement read, but can mark their own.
     await http.post('/v1/me/announcements/read').set(bearer(buyer)).send({ ids: [toGarages.id, forBuyer.items[0].id] }).expect(204);
     expect((await http.get('/v1/me/announcements').set(bearer(buyer)).expect(200)).body.unread).toBe(0);

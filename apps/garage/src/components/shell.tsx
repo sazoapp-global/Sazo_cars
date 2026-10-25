@@ -16,16 +16,18 @@ import { ThemePicker } from './theme-picker';
 export const WEBSITE = import.meta.env.VITE_SAZO_WEB_URL ?? 'http://localhost:3001';
 const ROLE: Record<string, string> = { org_manager: 'Manager', org_staff: 'Staff' };
 
-interface Notice { id: string; title: string; body: string; createdAt: string; read: boolean }
+interface Notice { id: string; audience?: string; title: string; body: string; createdAt: string; read: boolean }
 
-/** Unread messages from SAZO, for the bell and the side bar (refreshed when a panel closes). */
+/** Unread messages from SAZO, for the bell and the side bar (refreshed when a panel closes or one is read). */
 function useUnread(online: boolean, panel: string | undefined) {
   const [unread, setUnread] = useState(0);
   useEffect(() => {
     if (!online) return;
     let live = true;
-    request<{ unread: number }>('/me/announcements').then((r) => { if (live) setUnread(r.unread); }).catch(() => undefined);
-    return () => { live = false; };
+    const load = () => { request<{ unread: number }>('/me/announcements').then((r) => { if (live) setUnread(r.unread); }).catch(() => undefined); };
+    load();
+    window.addEventListener('sazo-notifications-read', load); // opening one lowers the count at once
+    return () => { live = false; window.removeEventListener('sazo-notifications-read', load); };
   }, [online, panel]);
   return unread;
 }
@@ -208,18 +210,21 @@ function Details({ garage, me, online }: { garage: Garage; me: Me; online: boole
   );
 }
 
-/** Messages from SAZO, inside the page. */
+/** Messages from SAZO, inside the page: only the badge and the title; one opens in full in a pop-up over the page. */
 function NotificationsView({ online }: { online: boolean }) {
   const [items, setItems] = useState<Notice[] | null>();
+  const [open, setOpen] = useState<Notice>();
   useEffect(() => {
     if (!online) { setItems(null); return; }
     request<{ items: Notice[] }>('/me/announcements').then((r) => setItems(r.items)).catch(() => setItems(null));
   }, [online]);
   const unread = (items ?? []).filter((i) => !i.read).map((i) => i.id);
-  const markAll = async () => {
-    await request('/me/announcements/read', { method: 'POST', body: { ids: unread } }).catch(() => undefined);
-    setItems((xs) => xs?.map((x) => ({ ...x, read: true })));
+  const markRead = async (ids: string[]) => {
+    await request('/me/announcements/read', { method: 'POST', body: { ids } }).catch(() => undefined);
+    setItems((xs) => xs?.map((x) => (ids.includes(x.id) ? { ...x, read: true } : x)));
+    window.dispatchEvent(new Event('sazo-notifications-read'));
   };
+  const show = (n: Notice) => { setOpen(n); if (!n.read) void markRead([n.id]); };
   if (items === undefined) return <div className="skeleton h-40" />;
   if (items === null) return <p className="text-muted">{online ? 'Could not load your notifications. Try again.' : 'Notifications need the internet.'}</p>;
   if (!items.length) return <p className="text-muted">Nothing from SAZO yet.</p>;
@@ -227,17 +232,51 @@ function NotificationsView({ online }: { online: boolean }) {
     <div className="space-y-3">
       <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card" aria-label="Messages from SAZO">
         {items.map((a) => (
-          <li key={a.id} className={`p-4 ${a.read ? '' : 'bg-soft'}`}>
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="flex items-center gap-2 font-semibold">{!a.read && <span className="chip border-primary-container bg-primary-container text-white">New</span>}{a.title}</p>
-              <span className="text-sm text-muted">{new Date(a.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-            </div>
-            <p className="mt-1 whitespace-pre-line text-sm">{a.body}</p>
+          <li key={a.id}>
+            <button type="button" onClick={() => show(a)} aria-haspopup="dialog"
+              className={`flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left hover:bg-soft-2 ${a.read ? '' : 'bg-soft'}`}>
+              {!a.read && <span className="chip shrink-0 border-primary-container bg-primary-container text-white">New</span>}
+              <span className={`min-w-0 flex-1 truncate ${a.read ? 'font-semibold text-muted' : 'font-bold text-ink'}`}>{a.title}</span>
+              <Icon name="chevron_right" size={20} className="shrink-0 text-label" />
+            </button>
           </li>
         ))}
       </ul>
-      {unread.length > 0 && <button type="button" onClick={() => void markAll()} className="link text-sm font-semibold">Mark all as read</button>}
+      {unread.length > 0 && <button type="button" onClick={() => void markRead(unread)} className="link text-sm font-semibold">Mark all as read</button>}
+      <NoticeDialog notice={open} onClose={() => setOpen(undefined)} />
     </div>
+  );
+}
+
+const AUDIENCE: Record<string, string> = { everyone: 'everyone', buyers: 'buyers', garages: 'garages', dealers: 'dealers', inspectors: 'inspectors', partners: 'data partners', brokers: 'brokers', staff: 'SAZO staff' };
+
+/** One notification in full, over the page. Closed by Close, the cross, Escape or a tap outside. */
+function NoticeDialog({ notice, onClose }: { notice?: Notice; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [wasNew, setWasNew] = useState(false);
+  useEffect(() => {
+    if (notice) { setWasNew(!notice.read); if (!ref.current?.open) ref.current?.showModal(); }
+    else ref.current?.close();
+  }, [notice]);
+  return (
+    <dialog ref={ref} aria-labelledby="notice-title" onClose={onClose} onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
+      className="m-auto w-[min(520px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-y-auto rounded-2xl border border-line bg-card p-0 text-ink shadow-2xl backdrop:bg-ink/50">
+      {notice && (
+        <div className="p-6">
+          <div className="flex items-center justify-between gap-3">
+            {wasNew ? <span className="chip border-primary-container bg-primary-container text-white">New</span> : <span />}
+            <button type="button" onClick={() => ref.current?.close()} aria-label="Close" className="flex h-10 w-10 items-center justify-center rounded-lg border border-line text-muted hover:bg-soft">
+              <Icon name="close" size={18} />
+            </button>
+          </div>
+          <h2 id="notice-title" className="mt-3 font-display text-xl font-bold">{notice.title}</h2>
+          <p className="mt-1 text-sm text-muted">{new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+          <p className="mt-4 whitespace-pre-line leading-relaxed">{notice.body}</p>
+          {notice.audience && <p className="mt-4"><span className="rounded-full bg-soft px-2.5 py-1 text-xs text-muted">For {AUDIENCE[notice.audience] ?? notice.audience}</span></p>}
+          <div className="mt-6 flex justify-end"><button type="button" onClick={() => ref.current?.close()} className="btn btn-primary">Close</button></div>
+        </div>
+      )}
+    </dialog>
   );
 }
 

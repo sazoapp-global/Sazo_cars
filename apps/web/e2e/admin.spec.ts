@@ -139,10 +139,22 @@ test('announcements reach the bell and help answers reach the Help page (A-06, A
   // The bell opens notifications over the page, not on a new page.
   await expect(buyer.getByRole('button', { name: /Notifications, \d+ new/ })).toBeVisible();
   await buyer.getByRole('button', { name: /Notifications/ }).click();
-  await expect(buyer.getByRole('dialog', { name: 'Notifications' }).getByRole('list', { name: 'Messages from SAZO' })).toContainText(`Testing week ${stamp}`);
-  await buyer.getByRole('dialog').getByRole('button', { name: 'Mark all as read' }).click();
+  const list = buyer.getByRole('dialog', { name: 'Notifications' }).getByRole('list', { name: 'Messages from SAZO' });
+  // The list shows only the badge and the title; the message itself opens in a pop-up over the page.
+  await expect(list).toContainText(`Testing week ${stamp}`);
+  await expect(list).not.toContainText('Records on SAZO are simulated this week.');
+  await list.getByRole('button', { name: `New Testing week ${stamp}` }).click();
+  const notice = buyer.getByRole('dialog', { name: `Testing week ${stamp}` });
+  await expect(notice).toContainText('Records on SAZO are simulated this week.');
+  await expect(notice).toContainText('For everyone');
+  await a11y(buyer);
+  await notice.getByRole('button', { name: 'Close' }).last().click();
+  await expect(notice).toBeHidden();
+  await expect(list.getByRole('button', { name: `Testing week ${stamp}`, exact: true })).toBeVisible(); // read: no badge
+  const markAll = buyer.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: 'Mark all as read' });
+  if (await markAll.isVisible()) await markAll.click();
   await expect(buyer.getByRole('button', { name: 'Notifications', exact: true })).toBeVisible();
-  await buyer.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+  await buyer.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: 'Close' }).click();
   await a11y(buyer);
   await buyer.goto('/help');
   await buyer.getByText(`How do I check a car ${stamp}?`).click();

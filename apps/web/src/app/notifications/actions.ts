@@ -1,7 +1,7 @@
 'use server';
 import { api } from '@/lib/api';
 
-export interface Notice { id: string; title: string; body: string; createdAt: string; read: boolean }
+export interface Notice { id: string; audience?: string; title: string; body: string; createdAt: string; read: boolean }
 
 /** The person's notifications (announcements from SAZO for their groups), newest first. */
 export async function loadNotifications(): Promise<{ unread: number; items: Notice[] } | null> {
