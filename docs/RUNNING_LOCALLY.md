@@ -54,6 +54,17 @@ Leave them running. Stop with `Ctrl + C`.
   - SMS codes as `Your SAZO code is 123456` (or `Your SAZO sign-in code is …` for the second step);
   - emails (confirm your email, reset password) as `Email to you@example.com: …` with the link — copy it into the browser.
 - **Admin console:** http://localhost:3001/admin — log in with the admin number from step 4 (phone code). Because admins can change car histories, a second code is asked for on each new browser; tick "Remember this device" to skip it next time.
+- **Demo data (optional):** to see every list filled in, load made-up people, businesses and their work once:
+  ```bash
+  npm run seed:demo -w @sazo/api
+  ```
+  It prints the demo logins at the end (phone, email, and one password for all of them). For example:
+  - SAZO admin: `+256700100001` or `grace.nakato@demo.sazo.test`
+  - Dealer manager (Kisementi Motors): `+256700200001` or `joseph.mukasa@demo.sazo.test`
+  - Garage manager (Kansanga Motors): `+256700400001` or `sarah.nambi@demo.sazo.test`
+  - Buyer: `+256700600001` or `mary.achieng@demo.sazo.test`
+
+  It runs once per database; to start again, recreate the database, run `npm run db:migrate` and load it again.
 - **Sample plates to search:**
   - `UBJ 214K` — clean Toyota Harrier
   - `UAX 123A` — cloned (copied) plate
