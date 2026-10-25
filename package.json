@@ -42,5 +42,9 @@
       "multer": "^2.5.0"
     },
     "serialize-javascript": "^7.1.4"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "@swc/core": true
   }
 }
