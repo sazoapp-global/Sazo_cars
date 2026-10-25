@@ -26,7 +26,7 @@ type FormProps = { next: string; signUp: string; mode: 'phone' | 'email'; setMod
 function PasswordForm({ next, signUp, mode, setMode }: FormProps) {
   const [state, action, pending] = useActionState<PasswordLoginState, FormData>(loginWithPassword, {});
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form action={action} data-draft="sign-in" className="space-y-4" noValidate>
       <input type="hidden" name="next" value={next} />
       <div>
         <div className="mb-1.5 flex items-baseline justify-between"><label htmlFor="email" className="label !mb-0">Email</label><ModeSwitch mode={mode} onChange={setMode} /></div>
@@ -43,7 +43,7 @@ function PasswordForm({ next, signUp, mode, setMode }: FormProps) {
 function PhoneForm({ next, signUp, mode, setMode }: FormProps) {
   const [state, action, pending] = useActionState<PhoneLoginState, FormData>(loginWithPhone, { step: 'phone' });
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form action={action} data-draft="sign-in" className="space-y-4" noValidate>
       <input type="hidden" name="next" value={next} />
       {state.step === 'phone' ? (
         <>

@@ -18,7 +18,7 @@ export default async function Announcements({ searchParams }: { searchParams: SP
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="sending announcements" /> : (
         <>
-          <form action={sendAnnouncement} className="card mb-6 grid gap-3 p-4 sm:grid-cols-2">
+          <form action={sendAnnouncement} data-draft="announcement-new" className="card mb-6 grid gap-3 p-4 sm:grid-cols-2">
             <div><label htmlFor="audience" className="label">Who is it for?</label>
               <select id="audience" name="audience" className="field" defaultValue="everyone">{AUDIENCES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
             <div><label htmlFor="title" className="label">Title</label><input id="title" name="title" required minLength={3} maxLength={120} className="field" /></div>

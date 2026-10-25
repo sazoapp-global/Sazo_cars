@@ -78,7 +78,7 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
 
       <section className="card space-y-3 p-5" aria-labelledby="details">
         <h2 id="details" className="font-display text-lg font-semibold">Your details</h2>
-        <form action={rename} className="space-y-3"><input type="hidden" name="back" value={back} />
+        <form action={rename} data-draft="settings-names" className="space-y-3"><input type="hidden" name="back" value={back} />
           <div className="grid gap-3 sm:grid-cols-3">
             <div><label htmlFor="surname" className="label">Surname</label>
               <input id="surname" name="surname" required maxLength={60} defaultValue={profile.surname ?? ''} className="field" autoComplete="family-name" /></div>
@@ -110,7 +110,7 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
           ) : (
             <details className="mt-2">
               <summary className="cursor-pointer font-semibold text-primary-container">{profile.phone ? 'Change phone number' : 'Add a phone number'}</summary>
-              <form action={sendPhoneCode} className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end"><input type="hidden" name="back" value={back} />
+              <form action={sendPhoneCode} data-draft="settings-phone" className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end"><input type="hidden" name="back" value={back} />
                 <div className="flex-1"><label htmlFor="phone" className="label">{profile.phone ? 'New phone number' : 'Phone number'}</label>
                   <input id="phone" name="phone" type="tel" inputMode="tel" required placeholder="0772 123 456" className="field" autoComplete="tel" /></div>
                 <button className="btn btn-ghost">Send a code</button>
@@ -129,7 +129,7 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
               ? <span className="chip border-ok-line bg-ok-fill text-ok-text">Confirmed</span>
               : <span className="chip border-warn-line bg-warn-fill text-warn-text">Waiting for you to open the link</span>}</p>
         ) : <p className="text-muted">No email yet. Add one so you can log in with a password and reset it if you forget.</p>}
-        <form action={setEmail} className="flex flex-col gap-2 sm:flex-row sm:items-end"><input type="hidden" name="back" value={back} />
+        <form action={setEmail} data-draft="settings-email" className="flex flex-col gap-2 sm:flex-row sm:items-end"><input type="hidden" name="back" value={back} />
           <div className="flex-1"><label htmlFor="email" className="label">{profile.email && profile.emailVerified ? 'New email address' : 'Email address'}</label>
             <input id="email" name="email" type="email" required autoComplete="email" defaultValue={profile.emailVerified ? '' : profile.email ?? ''} className="field" /></div>
           <button className="btn btn-ghost">{profile.email && !profile.emailVerified ? 'Send the link again' : 'Send a confirmation link'}</button>
@@ -186,7 +186,7 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
         </ul>
         <div className="mt-3 flex flex-wrap gap-2">
           {devices.length > 1 && <form action={signOutOthers}><input type="hidden" name="back" value={back} /><button className="btn btn-ghost">Sign out all other devices</button></form>}
-          <form action={signOut}><button type="submit" className="btn btn-ghost"><Icon name="logout" />Sign out here</button></form>
+          <form action={signOut} data-clear-drafts><button type="submit" className="btn btn-ghost"><Icon name="logout" />Sign out here</button></form>
         </div>
       </section>
 

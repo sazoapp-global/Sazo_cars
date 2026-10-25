@@ -105,7 +105,7 @@ export function Rail({ label, entries, business, person, badges = {} }: RailProp
       </nav>
       <div className="space-y-1 border-t border-white/15 p-3">
         {link(SETTINGS_LINK)}
-        <form action={signOut}>
+        <form action={signOut} data-clear-drafts>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[15px] text-white/85 hover:bg-white/10"><Icon name="logout" size={20} className="text-white/75" />Sign out</button>
         </form>
         {business && person && <p className="px-3 pt-2 text-sm text-white/70">{person.name} · {person.role}</p>}
@@ -132,7 +132,7 @@ export function PhoneStrip({ label, entries, business, badges = {} }: Pick<RailP
             {l.key === 'notifications' && !!badges.notifications && <span className="rounded-full bg-bad-text px-1.5 text-xs font-bold text-white">{badges.notifications}</span>}
           </Link>
         ))}
-        <form action={signOut} className="shrink-0">
+        <form action={signOut} data-clear-drafts className="shrink-0">
           <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/85"><Icon name="logout" size={18} />Sign out</button>
         </form>
       </nav>

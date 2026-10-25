@@ -38,7 +38,7 @@ export function EntryForm({ source, domain, types, fields, idempotencyKey, corre
   }
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} data-draft="partner-entry" className="space-y-4">
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="domain" value={domain} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />

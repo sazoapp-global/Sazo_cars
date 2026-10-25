@@ -60,7 +60,7 @@ export default async function ConflictPage({ params, searchParams }: { params: P
       {open && canResolve && (
         <section className="card mt-4 p-4" aria-labelledby="resolve">
           <h2 id="resolve" className="font-display text-lg font-semibold">Resolve</h2>
-          <form action={actOnConflict} className="mt-2 space-y-3">
+          <form action={actOnConflict} data-draft={`conflict-${id}`} className="mt-2 space-y-3">
             <input type="hidden" name="id" value={c.conflictId} />
             <div><label htmlFor="interpretation" className="label">What happened (shown in the audit trail)</label>
               <input id="interpretation" name="interpretation" className="field" placeholder="e.g. The 98,000 km garage reading was a typing mistake" /></div>

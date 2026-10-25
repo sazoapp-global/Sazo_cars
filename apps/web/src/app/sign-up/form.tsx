@@ -27,7 +27,7 @@ function EmailForm({ next, login, mode, setMode }: FormProps) {
   const [state, action, pending] = useActionState<EmailSignUpState, FormData>(signUpWithEmail, {});
   const e = state.errors ?? {};
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form action={action} data-draft="sign-up" className="space-y-4" noValidate>
       <input type="hidden" name="next" value={next} />
       <PersonFields values={state.values} errors={e} idPrefix="em-" />
       <div>
@@ -48,7 +48,7 @@ function EmailForm({ next, login, mode, setMode }: FormProps) {
 function PhoneForm({ next, login, mode, setMode }: FormProps) {
   const [state, action, pending] = useActionState<PhoneSignUpState, FormData>(signUpWithPhone, { step: 'details' });
   return (
-    <form action={action} className="space-y-4" noValidate>
+    <form action={action} data-draft="sign-up" className="space-y-4" noValidate>
       <input type="hidden" name="next" value={next} />
       {state.step === 'details' ? (
         <>

@@ -141,7 +141,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
 
       {live && !c.linked && !c.waitingForReview && (
         <Section id="link" title="Add the plate or chassis number" icon="add_link" note="Once added, the car and its asking price join SAZO, even if SAZO did not know the car before, and buyers and brokers can see it.">
-          <form action={linkCar} className="grid gap-3 sm:grid-cols-2">{hidden}
+          <form action={linkCar} data-draft={`car-link-${car}`} className="grid gap-3 sm:grid-cols-2">{hidden}
             <div><label htmlFor="anchor" className="label">Chassis number or VIN</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>
             <div><label htmlFor="plate" className="label">Number plate</label><input id="plate" name="plate" className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>
             <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" /></div>
@@ -184,7 +184,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
       </Section>
 
       <Section id="details" title="About the car" icon="directions_car">
-        <form action={updateCar} className="grid gap-3 sm:grid-cols-2">{hidden}<input type="hidden" name="at" value="details" />
+        <form action={updateCar} data-draft={`car-details-${car}`} className="grid gap-3 sm:grid-cols-2">{hidden}<input type="hidden" name="at" value="details" />
           <div><label htmlFor="make" className="label">Make</label><input id="make" name="make" defaultValue={d.make ?? ''} className="field" disabled={!live} /></div>
           <div><label htmlFor="model" className="label">Model</label><input id="model" name="model" defaultValue={d.model ?? ''} className="field" disabled={!live} /></div>
           <div><label htmlFor="modelYear" className="label">Year</label><input id="modelYear" name="modelYear" inputMode="numeric" defaultValue={d.modelYear ?? ''} className="field tabular-nums" disabled={!live} /></div>
@@ -202,7 +202,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
       </Section>
 
       <Section id="bond" title="Customs bond" icon="inventory_2" note="Enter the deadline that applies to this car as you were told by customs or your clearing agent. SAZO does not set one for you.">
-        <form action={updateCar} className="grid gap-3 sm:grid-cols-2">{hidden}<input type="hidden" name="at" value="bond" />
+        <form action={updateCar} data-draft={`car-bond-${car}`} className="grid gap-3 sm:grid-cols-2">{hidden}<input type="hidden" name="at" value="bond" />
           <div><label htmlFor="customsStatus" className="label">Customs status</label><select id="customsStatus" name="customsStatus" defaultValue={d.customsStatus ?? ''} className="field" disabled={!live}><option value="">Not given</option>{CUSTOMS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
           <div><label htmlFor="bondArrivedOn" className="label">Arrived at the bond</label><input id="bondArrivedOn" name="bondArrivedOn" type="date" max={today} defaultValue={d.bondArrivedOn ?? ''} className="field" disabled={!live} /></div>
           <div><label htmlFor="customsDeadline" className="label">Bond deadline</label><input id="customsDeadline" name="customsDeadline" type="date" defaultValue={d.customsDeadline ?? ''} className="field" disabled={!live} /></div>
@@ -215,7 +215,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
 
       <Section id="brokers" title="Brokers" icon="handshake" note="Brokers share cars with their buyers. They see the photos, the car and the asking price, never your costs or customers.">
         {manager ? (
-          <form action={setBrokerTerms} className="grid gap-3 sm:grid-cols-2">{hidden}
+          <form action={setBrokerTerms} data-draft={`car-brokers-${car}`} className="grid gap-3 sm:grid-cols-2">{hidden}
             <label className="flex items-center gap-2 font-semibold sm:col-span-2"><input type="checkbox" name="openToBrokers" defaultChecked={d.openToBrokers} className="size-5" disabled={!live} />Open to brokers</label>
             <div><label htmlFor="commissionKind" className="label">Commission</label><select id="commissionKind" name="commissionKind" defaultValue={d.commissionKind ?? ''} className="field" disabled={!live}>
               <option value="">Not set yet</option><option value="fixed">A fixed amount</option><option value="percent">A percentage of the selling price</option></select></div>
@@ -261,7 +261,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
             ? <>Margin on the sale: <strong className="tabular-nums">{formatUgx(c.marginUgx, false)}</strong></>
             : costs.totalUgx > 0 ? <>At the asking price the margin would be <strong className="tabular-nums">{formatUgx(c.askingPriceUgx - costs.totalUgx, false)}</strong></> : 'No costs recorded yet.'}</p>
           {live ? (
-            <form action={addCost} className="mt-3 grid gap-3 rounded-lg bg-soft/50 p-3 sm:grid-cols-2">{hidden}
+            <form action={addCost} data-draft={`car-cost-${car}`} className="mt-3 grid gap-3 rounded-lg bg-soft/50 p-3 sm:grid-cols-2">{hidden}
               <div className="sm:col-span-2"><label htmlFor="category" className="label">What was it for?</label><select id="category" name="category" className="field">{COSTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
               <div className="grid grid-cols-[1fr_6rem] gap-2">
                 <div><label htmlFor="amount" className="label">Amount</label><input id="amount" name="amount" required inputMode="decimal" className="field tabular-nums" /></div>

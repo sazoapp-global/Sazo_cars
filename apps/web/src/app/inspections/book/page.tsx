@@ -22,7 +22,7 @@ export default async function BookInspection({ searchParams }: { searchParams: P
       <p className="mt-1 text-muted">Ask an inspector approved by SAZO to check the car before you buy. They reply with a day and time, or say they cannot do it. You agree the price with them directly: no money goes through SAZO.</p>
       {sp.error && <p role="alert" className="mt-4 rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
       {items.length === 0 ? <p className="card mt-6 p-4">No inspectors are taking bookings on SAZO yet.</p> : (
-        <form action={requestBooking} className="card mt-6 space-y-4 p-4">
+        <form action={requestBooking} data-draft="inspection-booking" className="card mt-6 space-y-4 p-4">
           {sp.ref && <input type="hidden" name="ref" value={sp.ref} />}
           <fieldset>
             <legend className="label">Inspector *</legend>

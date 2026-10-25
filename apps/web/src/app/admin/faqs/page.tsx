@@ -40,7 +40,7 @@ export default async function Faqs({ searchParams }: { searchParams: SP }) {
         <>
           <details className="card mb-6 p-4">
             <summary className="cursor-pointer font-semibold text-primary">Add a question</summary>
-            <form action={saveFaq} className="mt-3 grid gap-3 sm:grid-cols-2"><Fields /><div className="sm:col-span-2"><button className="btn btn-primary">Add</button></div></form>
+            <form action={saveFaq} data-draft="faq-new" className="mt-3 grid gap-3 sm:grid-cols-2"><Fields /><div className="sm:col-span-2"><button className="btn btn-primary">Add</button></div></form>
           </details>
           {data.items.length === 0 ? <p className="text-muted">No questions yet.</p> : (
             <ul className="space-y-3" aria-label="Help answers">
@@ -52,7 +52,7 @@ export default async function Faqs({ searchParams }: { searchParams: SP }) {
                   </div>
                   <details className="mt-2">
                     <summary className="cursor-pointer text-sm font-semibold text-primary">Change</summary>
-                    <form action={saveFaq} className="mt-3 grid gap-3 sm:grid-cols-2"><input type="hidden" name="id" value={f.id} /><Fields f={f} />
+                    <form action={saveFaq} data-draft={`faq-${f.id}`} className="mt-3 grid gap-3 sm:grid-cols-2"><input type="hidden" name="id" value={f.id} /><Fields f={f} />
                       <div className="sm:col-span-2"><button className="btn btn-primary">Save</button></div></form>
                   </details>
                 </li>

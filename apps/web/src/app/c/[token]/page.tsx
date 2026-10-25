@@ -106,7 +106,7 @@ export default async function CarForSale({ params, searchParams }: { params: Pro
       <section className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" aria-labelledby="ask">
         <h2 id="ask" className="font-display text-lg font-bold">Ask about this car</h2>
         <p className="mt-1 text-sm text-muted">Leave your name and number and {sellerName === 'The seller' ? 'the seller' : sellerName} will call or message you.</p>
-        <form action={enquire} className="mt-3 grid gap-3 sm:grid-cols-2">
+        <form action={enquire} data-draft={`enquiry-${token}`} className="mt-3 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="token" value={token} />
           <div><label htmlFor="name" className="label">Your name</label><input id="name" name="name" required minLength={2} autoComplete="name" className="field" /></div>
           <div><label htmlFor="phone" className="label">Phone number</label><input id="phone" name="phone" type="tel" required autoComplete="tel" className="field" placeholder="0772 123 456" /></div>

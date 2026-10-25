@@ -1,3 +1,4 @@
+import { DraftKeeper } from '@/components/draft-keeper';
 import '@fontsource-variable/inter';
 import '@fontsource/plus-jakarta-sans/600.css';
 import '@fontsource/plus-jakarta-sans/700.css';
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             )}
           </div>
         </header>
+        <DraftKeeper />
         <main id="main" className="flex-1"><Suspense><SitePanel>{children}</SitePanel></Suspense></main>
         <HideIn workspaces={['console']}><FrameOffset>
         <footer className="mt-16 border-t border-line bg-white print:hidden">

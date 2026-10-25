@@ -6,7 +6,7 @@ import { addCar, type AddCarState } from '@/app/buyer-actions';
 export function AddCarForm({ plate, vin }: { plate?: string; vin?: string }) {
   const [state, action, pending] = useActionState<AddCarState, FormData>(addCar, {});
   return (
-    <form action={action} className="card mt-6 space-y-3 p-4">
+    <form action={action} data-draft="dealer-add-car" className="card mt-6 space-y-3 p-4">
       <h2 className="font-display text-lg font-semibold">Add this car to SAZO</h2>
       <p className="text-sm text-muted">If you own or are looking at this car, add its details. It will show as <strong>not yet confirmed</strong> until an official record matches it, and records added later will build its history.</p>
       <div className="grid gap-3 sm:grid-cols-3">

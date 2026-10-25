@@ -77,7 +77,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
 
       <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={sp.add === '1'}>
         <summary className="flex cursor-pointer list-none items-center gap-2 font-display text-lg font-bold text-primary-container"><Icon name="add" />Add an enquiry</summary>
-        <form action={addLead} className="mt-3 grid gap-3 sm:grid-cols-2">{hidden}
+        <form action={addLead} data-draft={`lead-new-${id}`} className="mt-3 grid gap-3 sm:grid-cols-2">{hidden}
           <div><label htmlFor="lname" className="label">Customer&apos;s name</label><input id="lname" name="name" required className="field" /></div>
           <div><label htmlFor="lphone" className="label">Phone number</label><input id="lphone" name="phone" type="tel" required className="field" placeholder="0772 123 456" /></div>
           <div><label htmlFor="lcar" className="label">Car</label><select id="lcar" name="id" className="field" defaultValue=""><option value="">Not decided yet</option>
@@ -115,7 +115,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
                 <div className="mt-3 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm">
                   <p className="font-semibold text-warn-text">Two claims on this customer. {l.earlier ? `${l.earlier.by} registered them first, on ${formatDate(l.earlier.at)}.` : ''} Commission is held until a manager decides.</p>
                   {manager && (
-                    <form action={decideLead} className="mt-2 grid gap-2 sm:grid-cols-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                    <form action={decideLead} data-draft={`lead-decide-${l.leadId}`} className="mt-2 grid gap-2 sm:grid-cols-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
                       <div><label htmlFor={`o-${l.leadId}`} className="label">Who brought the customer?</label>
                         <select id={`o-${l.leadId}`} name="outcome" className="field" defaultValue="keep">
                           <option value="keep">{l.broker ?? 'This enquiry'}</option>
@@ -131,7 +131,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
                 </div>
               )}
               {(l.open || l.stage === 'lost') && (
-                <form action={moveLead} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                <form action={moveLead} data-draft={`lead-move-${l.leadId}`} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">{hidden}<input type="hidden" name="lead" value={l.leadId} />
                   <div><label htmlFor={`s-${l.leadId}`} className="label">Move to</label>
                     <select id={`s-${l.leadId}`} name="stage" className="field" defaultValue="">
                       <option value="" disabled>Choose</option>
@@ -150,7 +150,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
                     <ol className="space-y-1 text-sm">
                       {events.map((e, i) => <li key={i} className="text-muted">{formatDate(e.at)}: {e.kind === 'created' ? 'Enquiry received' : e.kind === 'stage' ? `Moved to ${stageLabel(e.toStage ?? '')}` : 'Note'}{e.note ? `. ${e.note}` : ''}{e.by ? ` (${e.by})` : ''}</li>)}
                     </ol>
-                    <form action={noteLead} className="flex gap-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                    <form action={noteLead} data-draft={`lead-note-${l.leadId}`} className="flex gap-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
                       <label htmlFor={`n-${l.leadId}`} className="sr-only">Note</label>
                       <input id={`n-${l.leadId}`} name="note" required minLength={2} maxLength={500} className="field !min-h-10 text-sm" placeholder="Called, coming Saturday" />
                       <button className="btn btn-ghost !min-h-10">Save note</button>

@@ -39,7 +39,7 @@ export default async function Concerns({ searchParams }: { searchParams: SP }) {
               <p className="mt-2 whitespace-pre-line">{c.description}</p>
               {c.evidenceIds.length > 0 && <p className="mt-1 text-sm">Photos: {c.evidenceIds.map((d, i) => <a key={d} className="link mr-2" href={`/admin/files/${d}`} target="_blank" rel="noreferrer">photo {i + 1}</a>)}</p>}
               {c.status === 'open' ? (
-                <form action={decideConcern} className="mt-3 grid gap-2 md:grid-cols-[1fr_12rem_auto] md:items-end">
+                <form action={decideConcern} data-draft={`concern-${c.concernId}`} className="mt-3 grid gap-2 md:grid-cols-[1fr_12rem_auto] md:items-end">
                   <input type="hidden" name="id" value={c.concernId} />
                   <div><label htmlFor={`r-${c.concernId}`} className="label">Reason (kept in the audit log; the business sees it)</label>
                     <input id={`r-${c.concernId}`} name="reason" required minLength={3} className="field" placeholder="e.g. Chassis photo matches the stolen-vehicle record" /></div>

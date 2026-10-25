@@ -101,7 +101,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={(inStock.length === 0 && show === 'in_stock') || sp.add === '1'}>
         <summary className="flex cursor-pointer list-none items-center gap-2 font-display text-lg font-bold text-primary-container"><Icon name="add" />Add a car</summary>
         <p className="mt-1 text-sm text-muted">Start with the basics. You can add import costs and more photos later.{manager && <> Many cars at once? <Link href={`/dealer/${id}/import`} className="link">Add them from an Excel file</Link>.</>}</p>
-        <form action={addStock} className="mt-3 grid gap-3 sm:grid-cols-2">
+        <form action={addStock} data-draft={`stock-new-${id}`} className="mt-3 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="org" value={id} />
           <div className="sm:col-span-2"><label htmlFor="photos" className="label">Photos of the car</label>
             <input id="photos" name="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
@@ -234,7 +234,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       {manager && settings && (
         <section id="settings-section" className="scroll-mt-24 rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="settings">
           <h2 id="settings" className="font-display text-lg font-bold">Settings</h2>
-          <form action={saveSettings} className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <form action={saveSettings} data-draft={`dealer-settings-${id}`} className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <input type="hidden" name="org" value={id} />
             <div><label htmlFor="levels" className="label">Warn me when a car has been in stock for (days)</label>
               <input id="levels" name="levels" defaultValue={settings.stockAgeAlertDays.join(', ')} className="field tabular-nums" />
@@ -255,7 +255,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           <ul className="mt-2 divide-y divide-line">
             {staff.map((m) => <li key={m.userId} className="flex justify-between gap-3 py-2"><span>{m.displayName}</span><span className="text-sm text-muted">{m.role === 'org_manager' ? 'Manager' : 'Sales'}</span></li>)}
           </ul>
-          <form action={addStaff} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
+          <form action={addStaff} data-draft={`dealer-staff-${id}`} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
             <input type="hidden" name="org" value={id} />
             <div><label htmlFor="sname" className="label">Name</label><input id="sname" name="name" required className="field" /></div>
             <div><label htmlFor="sphone" className="label">Phone</label><input id="sphone" name="phone" type="tel" required className="field" placeholder="0772 123 456" /></div>

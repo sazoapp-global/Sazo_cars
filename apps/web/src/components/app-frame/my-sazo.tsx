@@ -41,7 +41,7 @@ export function MySazo() {
           <div className="my-1.5 h-px bg-line" />
           <Link href={`${pathname}?${q}`} className={item}><Icon name={SETTINGS_LINK.icon as IconName} size={20} className="text-label" />{SETTINGS_LINK.label}</Link>
           <div className="my-1.5 h-px bg-line" />
-          <form action={signOut}><button className={`${item} w-full text-left`}><Icon name="logout" size={20} className="text-label" />Sign out</button></form>
+          <form action={signOut} data-clear-drafts><button className={`${item} w-full text-left`}><Icon name="logout" size={20} className="text-label" />Sign out</button></form>
         </div>
       )}
     </div>

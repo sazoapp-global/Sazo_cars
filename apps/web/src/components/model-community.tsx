@@ -50,7 +50,7 @@ export async function ModelCommunity({ vehicleRef, modelId, done, error }: { veh
         {c.myReviewStatus ? (
           <p className="rounded-lg bg-soft p-3 text-sm">{c.myReviewStatus === 'pending' ? 'Your review is waiting for SAZO to check it.' : 'Thank you. Your review is published.'}</p>
         ) : (
-          <form action={postReview} className="space-y-2 rounded-lg bg-soft p-3">
+          <form action={postReview} data-draft={`review-${c.model.modelId}`} className="space-y-2 rounded-lg bg-soft p-3">
             <input type="hidden" name="ref" value={vehicleRef} /><input type="hidden" name="modelId" value={c.model.modelId} />
             <fieldset><legend className="label">Own or drove one? Rate the {c.model.label}</legend>
               <div className="flex flex-wrap gap-2">{[1, 2, 3, 4, 5].map((n) => (
@@ -62,7 +62,7 @@ export async function ModelCommunity({ vehicleRef, modelId, done, error }: { veh
             <button className="btn btn-ghost"><Icon name="forum" />Send review</button>
           </form>
         )}
-        <form action={suggestVideo} className="space-y-2 rounded-lg bg-soft p-3">
+        <form action={suggestVideo} data-draft={`video-${c.model.modelId}`} className="space-y-2 rounded-lg bg-soft p-3">
           <input type="hidden" name="ref" value={vehicleRef} /><input type="hidden" name="modelId" value={c.model.modelId} />
           <label htmlFor="video-url" className="label">Suggest a TikTok, YouTube or Instagram video about this model</label>
           <input id="video-url" name="url" type="url" required placeholder="https://" className="field" />

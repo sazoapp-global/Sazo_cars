@@ -14,7 +14,7 @@ export function WithdrawForm({ source, observationId }: { source: string; observ
     );
   }
   return (
-    <form action={action} className="card space-y-3 p-4">
+    <form action={action} data-draft="partner-withdraw" className="card space-y-3 p-4">
       <input type="hidden" name="source" value={source} />
       <input type="hidden" name="observationId" value={observationId} />
       <p className="font-semibold">Withdraw this record</p>

@@ -14,7 +14,7 @@ export function RegisterForm({ defaultType = 'garage' }: { defaultType?: string 
   const [state, action, pending] = useActionState<RegisterState, FormData>(registerBusiness, {});
   const f = state.fields ?? {};
   return (
-    <form action={action} className="mt-6 space-y-5">
+    <form action={action} data-draft="business-register" className="mt-6 space-y-5">
       <fieldset>
         <legend className="label">What does your business do?</legend>
         <div className="grid gap-2 sm:grid-cols-2">
