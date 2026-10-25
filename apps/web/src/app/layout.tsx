@@ -49,7 +49,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* On computers the testing note and the top bar both stay put, so the fixed side bar sits right under them. */}
         <div id="site-note" role="note" className="z-40 bg-ink px-4 py-2 text-center text-xs text-white/90 lg:sticky lg:top-0">
           <Icon name="science" size={14} className="mr-1 inline align-[-2px]" />
-          SAZO is in testing. The vehicles and records shown are simulated and do not describe real cars.
+          <span className="sm:hidden">Testing: records are simulated, not real cars.</span>
+          <span className="hidden sm:inline">SAZO is in testing. The vehicles and records shown are simulated and do not describe real cars.</span>
         </div>
         <TopMeasure targets={['site-note', 'site-header']} />
         <header id="site-header" className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md print:hidden lg:top-8">

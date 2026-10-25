@@ -73,13 +73,21 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
         </div>
       </div>
       {!approved && (
-        <section aria-labelledby="waiting" className="flex flex-wrap items-start gap-3 rounded-[14px] border-2 border-warn-line bg-warn-fill p-4 shadow-sm">
-          <Icon name="hourglass_empty" size={22} className="mt-0.5 shrink-0 text-warn-text" />
-          <div className="min-w-0 flex-1 space-y-1">
-            <h2 id="waiting" className="font-bold text-warn-text">{sp.new ? 'Business registered. ' : ''}SAZO is checking your business</h2>
-            <p className="text-sm text-on-surface">You can already add your cars, their import costs and photos. They stay private to you. Once SAZO approves your business, each car with a plate or chassis number joins SAZO by itself, and you can send buyers report links, record sales, work with brokers and add your team.</p>
+        <section aria-labelledby="waiting" className="rounded-[14px] border-2 border-warn-line bg-warn-fill p-3 shadow-sm md:p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-2">
+              <Icon name="hourglass_empty" size={20} className="mt-0.5 shrink-0 text-warn-text" />
+              <div className="min-w-0">
+                <h2 id="waiting" className="font-bold text-warn-text">{sp.new ? 'Registered. ' : ''}SAZO is checking your business</h2>
+                <p className="text-sm text-on-surface">Your cars stay private until approval.</p>
+              </div>
+            </div>
+            <Link href={`/business/${id}`} className="btn btn-primary !min-h-10 w-full shrink-0 !px-3 text-sm sm:w-auto">Finish the approval steps<Icon name="arrow_forward" size={16} /></Link>
           </div>
-          <Link href={`/business/${id}`} className="btn btn-primary !min-h-10">Finish the approval steps<Icon name="arrow_forward" size={18} /></Link>
+          <details className="mt-2 text-sm">
+            <summary className="cursor-pointer font-semibold text-primary-container">What can I do meanwhile?</summary>
+            <p className="mt-1 text-on-surface">Add your cars, their import costs and photos. Once SAZO approves your business, each car with a plate or chassis number joins SAZO by itself, and you can send buyers report links, record sales, work with brokers and add your team.</p>
+          </details>
         </section>
       )}
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}

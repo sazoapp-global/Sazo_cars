@@ -21,7 +21,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('button', { name: 'Register business' }).click();
   // A new dealer goes straight into the dealer console and prepares stock while SAZO checks the business.
   await expect(dealer.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
-  await expect(dealer.getByRole('heading', { name: 'Business registered. SAZO is checking your business' })).toBeVisible();
+  await expect(dealer.getByRole('heading', { name: 'Registered. SAZO is checking your business' })).toBeVisible();
   const listUrl = dealer.url().replace(/\?.*$/, '');
   const menu = dealer.getByRole('navigation', { name: 'Dealer' });
   await expect(menu.getByRole('link', { name: /Cars for sale/ })).toBeAttached();
