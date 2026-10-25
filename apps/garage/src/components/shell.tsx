@@ -29,8 +29,8 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
   return (
     <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[248px_minmax(0,1fr)] print:block print:bg-white">
       {/* side menu: tablets and computers */}
-      <aside aria-label={app} className="sticky top-0 hidden print:!hidden h-dvh flex-col border-r-4 border-lime bg-primary text-white lg:flex">
-        <div className="border-b border-white/15 px-5 py-4">
+      <aside aria-label={app} className="sticky top-0 hidden print:!hidden h-dvh flex-col overflow-y-auto overscroll-contain border-r-4 border-lime bg-primary text-white lg:flex">
+        <div className="shrink-0 border-b border-white/15 px-5 py-4">
           <p className="flex items-center gap-2 font-display font-extrabold"><span aria-hidden className="grid size-7 place-items-center rounded-md bg-lime text-primary"><Icon name={inspector ? 'fact_check' : 'garage'} size={18} /></span>{app}</p>
           <p className="mt-3 font-semibold leading-snug">{garage.name}</p>
           <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-[11px] font-bold text-ink"><Icon name="verified_user" size={12} />Approved by SAZO</span>
@@ -53,7 +53,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
             })}
           </ul>
         </nav>
-        <div className="border-t border-white/15 px-5 py-4 text-sm">
+        <div className="shrink-0 border-t border-white/15 px-5 py-4 text-sm">
           <p role="status" aria-live="polite" className={`mb-3 flex items-center gap-1.5 font-semibold ${online ? 'text-white/85' : 'text-lime'}`}>
             <Icon name={online ? 'cloud_done' : 'wifi_off'} size={16} />{online ? 'Online' : 'No signal, saving here'}
           </p>
