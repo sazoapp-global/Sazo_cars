@@ -87,7 +87,7 @@ function Workspace({ garage, me, route, online, onSignOut, onSwitch }: { garage:
   useEffect(() => { if (route.name === 'home' || route.name === 'records' || route.name === 'alerts') void refresh(); }, [route.name, refresh]);
   const narrow = (node: React.ReactNode) => <div className="mx-auto w-full max-w-xl">{node}</div>;
   return (
-    <Shell garage={garage} me={me} route={route} online={online} unsent={jobs.unsent} records={jobs.jobs ? jobs.jobs.length + jobs.drafts.length : undefined} needsAction={jobs.needsAction} onSignOut={onSignOut}>
+    <Shell garage={garage} me={me} route={route} online={online} unsent={jobs.unsent} records={jobs.jobs ? jobs.jobs.length + jobs.drafts.length : undefined} needsAction={jobs.needsAction} onSignOut={onSignOut} onSwitch={onSwitch}>
       <UpdateBanner />
       {route.name === 'job' ? narrow(<JobWizard key={route.jobId} jobId={route.jobId} garage={garage} me={me} />)
         : route.name === 'server-job' ? narrow(<ServerJobView jobId={route.jobId} garage={garage} />)
@@ -95,7 +95,7 @@ function Workspace({ garage, me, route, online, onSignOut, onSwitch }: { garage:
         : route.name === 'server-inspection' ? narrow(<ServerInspectionView id={route.id} workplace={garage} />)
         : route.name === 'staff' ? narrow(<Staff garage={garage} />)
         : route.name === 'concerns' ? narrow(<Concerns workplace={garage} />)
-        : route.name === 'more' ? narrow(<More garage={garage} me={me} onSignOut={onSignOut} onSwitch={onSwitch} />)
+        : route.name === 'more' ? narrow(<More garage={garage} me={me} onSignOut={onSignOut} />)
         : isInspector(garage) ? narrow(<InspectionHome workplace={garage} me={me} onSignOut={onSignOut} />)
         : route.name === 'records' ? <Records garage={garage} jobs={jobs} />
         : route.name === 'alerts' ? <Alerts jobs={jobs} />

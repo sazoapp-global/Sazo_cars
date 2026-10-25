@@ -6,7 +6,7 @@ export type Route = { name: 'home' } | { name: 'records' } | { name: 'alerts' } 
   | { name: 'inspection'; id: string } | { name: 'server-inspection'; id: string } | { name: 'concerns' };
 
 function parse(hash: string): Route {
-  const [, a, b] = hash.replace(/^#/, '').split('/');
+  const [, a, b] = hash.replace(/^#/, '').split('?')[0]!.split('/');
   if (a === 'job' && b) return { name: 'job', jobId: b };
   if (a === 'jobs' && b) return { name: 'server-job', jobId: b };
   if (a === 'staff') return { name: 'staff' };
@@ -48,3 +48,33 @@ export function useOnline(): boolean {
   }, []);
   return online;
 }
+
+// Panels (25 Oct 2026): Notifications and Settings open inside the page you are on ("#/records?panel=settings")
+// and Close brings the page back. Moving to another page closes them.
+export type Panel = 'notifications' | 'settings';
+
+const panelOf = (hash: string): Panel | undefined => {
+  const p = new URLSearchParams(hash.split('?')[1] ?? '').get('panel');
+  return p === 'notifications' || p === 'settings' ? p : undefined;
+};
+
+export function openPanel(panel: Panel): void {
+  location.hash = `${location.hash.split('?')[0] || '#/'}?panel=${panel}`;
+}
+
+export function closePanel(): void {
+  location.hash = location.hash.split('?')[0] || '#/';
+}
+
+export function usePanel(): Panel | undefined {
+  const [panel, setPanel] = useState(() => panelOf(location.hash));
+  useEffect(() => {
+    const on = () => setPanel(panelOf(location.hash));
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  return panel;
+}
+
+/** The address of the page you are on without its panel, as the navigation list writes it ("#/records"). */
+export const pagePath = () => (location.hash.split('?')[0] || '#/').replace(/^#$/, '#/');

@@ -1,9 +1,10 @@
 // The one list of workspaces, their modules and pages, and who may see each (navigation plan, 25 Oct 2026).
-// The website's side bar, its phone menu and the top bar's workspace name all come from here; the garage app
-// will use it too, and the super admin's "Roles and access" screen will switch these modules per role.
+// The website's side bar, its phone menu and the top bar's workspace name all come from here, and so do the garage
+// app's side bar and tabs (its pages are "#/…" addresses); the super admin's "Roles and access" screen will
+// switch these modules per role.
 // Hiding a link is a convenience only: the API checks every action again.
 
-export type WorkspaceKey = 'console' | 'dealer';
+export type WorkspaceKey = 'console' | 'dealer' | 'garage' | 'inspect';
 
 /** Who may see an entry. Every listed condition must hold; an empty rule means everyone in the workspace. */
 export interface NavRule {
@@ -104,6 +105,27 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       ] },
     ],
   },
+  // The garage app (step 3, 25 Oct 2026). Its pages are hash addresses; Alerts are jobs that need the garage.
+  garage: {
+    key: 'garage', label: 'SAZO Garage', paths: [],
+    entries: [
+      { key: 'home', label: 'Home', short: 'Home', icon: 'home', href: '#/' },
+      NOTIFICATIONS,
+      { key: 'records', label: 'Job records', short: 'Records', icon: 'receipt_long', href: '#/records', alsoActive: ['#/job/', '#/jobs/'] },
+      { key: 'alerts', label: 'Alerts', short: 'Alerts', icon: 'warning', href: '#/alerts' },
+      { key: 'concerns', label: 'Report a problem', short: 'Report', icon: 'flag', href: '#/concerns' },
+      { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '#/staff', rule: MANAGER },
+    ],
+  },
+  inspect: {
+    key: 'inspect', label: 'SAZO Inspect', paths: [],
+    entries: [
+      { key: 'home', label: 'Inspections', short: 'Home', icon: 'fact_check', href: '#/', alsoActive: ['#/inspection/', '#/inspections/'] },
+      NOTIFICATIONS,
+      { key: 'concerns', label: 'Report a problem', short: 'Report', icon: 'flag', href: '#/concerns' },
+      { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '#/staff', rule: MANAGER },
+    ],
+  },
   dealer: {
     key: 'dealer', label: 'Dealer', paths: ['/dealer/'],
     entries: [
@@ -144,7 +166,8 @@ export function navFor(key: WorkspaceKey, who: Viewer, org?: string): NavEntry[]
 
 /**
  * The link a page belongs to: the one whose path and query best match (Sold beats Cars for sale on
- * ?show=sold), else one whose other paths contain it. Links to a #section never count.
+ * ?show=sold), else one whose other paths contain it. Links to a #section never count (the garage app's
+ * "#/…" pages do).
  */
 /** A page's query, read by key (URLSearchParams fits). */
 export interface QueryReader { get(key: string): string | null }
@@ -152,7 +175,7 @@ export interface QueryReader { get(key: string): string | null }
 export function activeKey(entries: NavEntry[], pathname: string, search: QueryReader): string | undefined {
   let best: { key: string; score: number } | undefined;
   for (const l of entries.flatMap((e) => (isGroup(e) ? e.links : [e]))) {
-    if (l.href.includes('#') || l.href.startsWith('?')) continue;
+    if ((l.href.includes('#') && !l.href.startsWith('#/')) || l.href.startsWith('?')) continue; // a page's #section, or a panel
     if (search.get('panel') === NOTIFICATIONS_PANEL) return NOTIFICATIONS.key;
     if (search.get('panel') === SETTINGS_PANEL) return SETTINGS_LINK.key;
     const [path, query] = l.href.split('?');

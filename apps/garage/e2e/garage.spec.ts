@@ -107,8 +107,11 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await expect(job).toContainText('by Manager Sarah');
   await shot(page, '6-home');
 
-  // Dark mode from the More tab, kept on this phone (D-112).
+  // Settings open inside the page from More (D-138): dark mode, kept on this phone (D-112).
   await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('navigation', { name: 'More' }).getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/#\/more\?panel=settings$/);
   await page.getByRole('button', { name: 'Appearance: Same as device' }).click();
   await page.getByRole('button', { name: 'Dark' }).click();
   await expect(page.getByRole('button', { name: 'Appearance: Dark' })).toHaveAttribute('aria-expanded', 'false');
@@ -116,9 +119,31 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await shot(page, '8-dark-more');
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeHidden();
   await page.getByRole('button', { name: 'Home' }).click();
   await shot(page, '9-dark-home');
+  // Your name in the top bar shows your details only.
+  await page.getByRole('button', { name: /^Your details, / }).click();
+  const details = page.getByRole('dialog', { name: 'Your details' });
+  await expect(details).toContainText('Phone');
+  await expect(details.getByRole('link')).toHaveCount(0);
+  await details.getByRole('button', { name: 'Close' }).click();
+  // On a computer: the fixed side bar, with Settings and Sign out at its foot.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const rail = page.getByRole('complementary', { name: 'SAZO Garage menu' });
+  await expect(rail.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await rail.getByRole('button', { name: 'Settings' }).click();
+  await expect(rail.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('button', { name: 'Close' }).click();
+  await rail.getByRole('button', { name: /Job records/ }).click();
+  await expect(rail.getByRole('button', { name: /Job records/ })).toHaveAttribute('aria-current', 'page');
+  await page.setViewportSize({ width: 412, height: 839 });
+  // Notifications open inside the page too.
+  await page.getByRole('button', { name: /^Notifications/ }).click();
+  await expect(page.getByRole('heading', { name: 'Notifications', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('navigation', { name: 'More' }).getByRole('button', { name: 'Settings' }).click();
   const dark = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(dark.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
   await page.getByRole('button', { name: 'Appearance: Dark' }).click();

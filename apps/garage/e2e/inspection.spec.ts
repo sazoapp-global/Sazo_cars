@@ -101,7 +101,8 @@ test('inspect a car and send the checklist', async ({ page }) => {
   await expect(page.getByText('SAZO · Inspection summary')).toBeVisible();
   await expect(page.getByText(/found on the day of the inspection only/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Print summary for the customer' })).toBeHidden();
-  await expect(page.getByRole('navigation', { name: 'Workspace' })).toBeHidden();
+  await expect(page.getByRole('navigation', { name: 'SAZO Inspect tabs' })).toBeHidden();
+  await expect(page.getByRole('button', { name: /^Your details/ })).toBeHidden();
   await shot(page, 'i6-print');
   await page.emulateMedia({ media: 'screen' });
 });

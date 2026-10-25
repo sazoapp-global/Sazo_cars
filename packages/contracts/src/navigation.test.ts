@@ -17,6 +17,15 @@ describe('navigation (one list of workspaces and modules)', () => {
     expect(keys(waiting)).toEqual(['stock', 'notifications', 'settings', 'business']);
   });
 
+  it('the garage app: managers see Team, mechanics do not; inspectors get the inspection workspace', () => {
+    expect(keys(navFor('garage', { platformRoles: [], orgRole: 'org_manager' }))).toEqual(['home', 'notifications', 'records', 'alerts', 'concerns', 'team']);
+    expect(keys(navFor('garage', { platformRoles: [], orgRole: 'org_staff' }))).not.toContain('team');
+    const nav = navFor('garage', { platformRoles: [], orgRole: 'org_staff' });
+    expect(activeKey(nav, '#/jobs/123', new URLSearchParams())).toBe('records');
+    expect(activeKey(nav, '#/', new URLSearchParams())).toBe('home');
+    expect(activeKey(navFor('inspect', { platformRoles: [], orgRole: 'org_staff' }), '#/inspection/9', new URLSearchParams())).toBe('home');
+  });
+
   it('hides admin-only modules from reviewers and drops nothing else', () => {
     const reviewer = keys(navFor('console', { platformRoles: ['sazo_reviewer'] }));
     expect(reviewer).not.toContain('people');
