@@ -54,9 +54,16 @@ export async function afterLogin(r: LoginResult, next: string, remember = true):
   }
   await storeTokens(r, remember);
   jar.delete(SECOND_STEP_COOKIE);
-  const me = await api<{ needsDetails: string[] }>('/me', { headers: { Authorization: `Bearer ${r.accessToken}` } }).catch(() => undefined);
+  const auth = { headers: { Authorization: `Bearer ${r.accessToken}` } };
+  const me = await api<{ needsDetails: string[] }>('/me', auth).catch(() => undefined);
   // A brand-new account with nowhere particular to go: ask what brought them (the design's onboarding step).
-  const to = r.created && safeNext(next) === '/' ? '/welcome' : safeNext(next);
+  // A dealer with nowhere particular to go lands in their dealer console (25 Oct 2026).
+  let to = r.created && safeNext(next) === '/' ? '/welcome' : safeNext(next);
+  if (to === '/') {
+    const orgs = await api<{ id: string; type: string; status: string }[]>('/me/organisations', auth).catch(() => []);
+    const dealer = orgs.find((o) => o.type === 'dealer' && (o.status === 'approved' || o.status === 'pending_verification'));
+    if (dealer) to = `/dealer/${dealer.id}`;
+  }
   return me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(to)}` : to;
 }
 

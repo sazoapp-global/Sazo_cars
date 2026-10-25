@@ -173,13 +173,51 @@ export class DealerService {
     if (!hasIds && !details.make) throw new DealerError('make_required', 'Enter the make and model, or the number plate or chassis number');
     if (!hasIds && input.mileageKm !== undefined) throw new DealerError('link_first', 'Add the mileage with the number plate or chassis number');
     await this.checkOdometer(organisationId, input.mileageKm, input.odometerPhotoId);
-    const published = hasIds ? await this.publish(actor, organisationId, input, input.askingPriceUgx, details) : {};
+    // Waiting for approval: the car stays private to the dealer and nothing goes to SAZO until approval (D-055).
+    const approved = (await this.iam.organisation(organisationId))?.status === 'approved';
+    const held = hasIds && !approved ? {
+      identifiers: { ...(input.vehicleRef ? { vehicleRef: input.vehicleRef } : {}), ...(input.vin ? { vin: input.vin } : {}),
+        ...(input.chassisNumber ? { chassisNumber: input.chassisNumber } : {}), ...(input.plate ? { plate: input.plate } : {}) },
+      ...(input.mileageKm !== undefined ? { mileageKm: input.mileageKm, odometerPhotoId: input.odometerPhotoId } : {}),
+    } : undefined;
+    const published = hasIds && approved ? await this.publish(actor, organisationId, input, input.askingPriceUgx, details) : {};
     const row = await this.repo.insert({ organisationId, vehicleId: published.vehicleId ?? null, pendingSubmissionId: published.pending ?? null, askingPriceUgx: input.askingPriceUgx,
-      listedMileageKm: input.mileageKm ?? null, notes: input.notes ?? null, createdBy: actor.userId,
+      listedMileageKm: approved ? input.mileageKm ?? null : null, notes: input.notes ?? null, createdBy: actor.userId, held,
       details: { ...details, receivedOn: details.receivedOn ?? new Date().toISOString().slice(0, 10) } });
     if (!row) throw new DealerError('already_in_stock', 'This car is already in your stock');
-    await this.iam.audit({ actor, organisationId, action: 'dealer.car_added', targetType: 'dealer_stock', targetId: row.id, details: { linked: !!published.vehicleId, waitingForReview: !!published.pending } });
+    await this.iam.audit({ actor, organisationId, action: 'dealer.car_added', targetType: 'dealer_stock', targetId: row.id,
+      details: { linked: !!published.vehicleId, waitingForReview: !!published.pending, ...(held ? { heldUntilApproval: true } : {}) } });
     return row;
+  }
+
+  /**
+   * Cars added while the dealer waited for approval: once SAZO has approved the business, each is sent to SAZO
+   * with the plate, chassis number and mileage the dealer gave, as if added now. A car SAZO cannot take stays in
+   * stock unlinked, and the dealer can add its chassis number again. Runs whenever the dealer looks at their stock.
+   */
+  async releaseHeld(organisationId: string): Promise<void> {
+    if ((await this.iam.organisation(organisationId))?.status !== 'approved') return;
+    if (!(await this.repo.held(organisationId)).length) return;
+    await this.repo.oneSenderAtATime(organisationId, () => this.sendHeld(organisationId));
+  }
+
+  /** Under the dealer's lock: the car stays marked held until it is linked, so a waiting request never sees it half sent. */
+  private async sendHeld(organisationId: string): Promise<void> {
+    for (const r of await this.repo.held(organisationId)) {
+      const input = { ...r.heldIdentifiers!, ...(r.heldMileageKm !== null && r.heldOdometerPhotoId ? { mileageKm: r.heldMileageKm, odometerPhotoId: r.heldOdometerPhotoId } : {}) };
+      const actor = { userId: r.createdBy } as Actor;
+      try {
+        const published = await this.publish(actor, organisationId, input, r.askingPriceUgx, r);
+        if (published.pending) await this.repo.setPending(r.id, published.pending);
+        else if (!(await this.repo.link(r.id, published.vehicleId!, input.mileageKm ?? null))) throw new DealerError('already_in_stock', 'This car is already in your stock');
+        await this.repo.release(r.id);
+        await this.iam.audit({ actor, organisationId, action: 'dealer.car_linked', targetType: 'dealer_stock', targetId: r.id, details: { afterApproval: true, waitingForReview: !!published.pending } });
+      } catch (err) {
+        await this.repo.release(r.id);
+        await this.iam.audit({ actor, organisationId, action: 'dealer.car_not_linked', targetType: 'dealer_stock', targetId: r.id,
+          details: { afterApproval: true, reason: err instanceof DealerError ? err.code : 'error' } });
+      }
+    }
   }
 
   /** Step 2 for a car added without its plate or chassis number: link it to its SAZO vehicle, which publishes the listing. */
@@ -202,6 +240,10 @@ export class DealerService {
 
   async get(organisationId: string, id: string): Promise<StockRow> {
     let r = await this.repo.get(id);
+    if (r?.heldIdentifiers && r.organisationId === organisationId) {
+      await this.releaseHeld(organisationId).catch(() => undefined);
+      r = await this.repo.get(id);
+    }
     if (r?.pendingSubmissionId && r.organisationId === organisationId) {
       await this.syncPending(organisationId).catch(() => undefined);
       r = await this.repo.get(id);
@@ -271,6 +313,7 @@ export class DealerService {
   }
 
   async list(organisationId: string, status?: StockStatus) {
+    await this.releaseHeld(organisationId).catch(() => undefined);
     await this.syncPending(organisationId).catch(() => undefined);
     return this.repo.list(organisationId, status);
   }
@@ -394,11 +437,17 @@ export class DealerService {
     const photos = ctx?.photos ?? (await this.repo.photos([r.id])).get(r.id) ?? [];
     const daysInStock = Math.max(0, daysBetween(r.receivedOn ?? new Date(r.listedAt), r.soldAt ? new Date(r.soldAt) : new Date()));
     const cost = ctx?.costTotalUgx;
+    // A held car SAZO already knew is kept by its reference: show the dealer its plate and chassis number.
+    const held = r.heldIdentifiers?.vehicleRef ? { ...(await this.identifiers({ vehicleRef: r.heldIdentifiers.vehicleRef }).catch(() => ({ ids: {} }))).ids, ...r.heldIdentifiers } as Record<string, string | undefined>
+      : r.heldIdentifiers as Record<string, string | undefined> | null;
     return {
       stockId: r.id,
       vehicleRef: v?.publicRef,
       linked: !!r.vehicleId,
       waitingForReview: !r.vehicleId && !!r.pendingSubmissionId,
+      /** Added while the dealer waited for approval: sent to SAZO once the business is approved. */
+      heldUntilApproval: !!r.heldIdentifiers,
+      ...(held ? { held: { plate: held.plate ?? null, chassisNumber: held.vin ?? held.chassisNumber ?? null, mileageKm: r.heldMileageKm } } : {}),
       status: r.status,
       askingPriceUgx: r.askingPriceUgx,
       listedMileageKm: r.listedMileageKm,

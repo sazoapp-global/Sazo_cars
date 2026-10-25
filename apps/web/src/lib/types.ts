@@ -156,7 +156,9 @@ export interface StockDetails {
   commissionKind: 'fixed' | 'percent' | null; commissionFixedUgx: number | null; commissionPercent: number | null;
 }
 export interface StockItem {
-  stockId: string; vehicleRef?: string; linked: boolean; waitingForReview?: boolean; status: 'in_stock' | 'sold' | 'removed'; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null;
+  stockId: string; vehicleRef?: string; linked: boolean; waitingForReview?: boolean;
+  /** Added while the dealer waited for approval: joins SAZO once approved. */ heldUntilApproval?: boolean; held?: { plate: string | null; chassisNumber: string | null; mileageKm: number | null };
+  status: 'in_stock' | 'sold' | 'removed'; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null;
   listedAt: string; soldAt: string | null; salePriceUgx: number | null; vehicle: VehicleCard | null; questions: QuestionView[]; recordConfidence: RecordConfidence | null;
   details: StockDetails;
   clocks: { daysInStock: number; stockAgeLevel: number; stockAgeAlertDays: number[];

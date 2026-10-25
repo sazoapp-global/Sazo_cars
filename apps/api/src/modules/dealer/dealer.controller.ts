@@ -97,12 +97,18 @@ export class DealerController {
   constructor(@Inject(DealerService) private readonly dealer: DealerService, @Inject(IamService) private readonly iam: IamService,
     @Inject(DealerImportService) private readonly imports: DealerImportService) {}
 
+  /** Private work on the dealer's own stock: open while the business waits for approval too. */
   private org(actor: Actor, orgId: string | undefined, permission: DealerPermission = 'dealer.stock.manage'): Promise<string> {
+    return dealerOrg(this.iam, actor, orgId, permission, { beforeApproval: true });
+  }
+
+  /** Anything that reaches SAZO or buyers (linking a car, a sale, a file of cars): approved dealers only. */
+  private approvedOrg(actor: Actor, orgId: string | undefined, permission: DealerPermission = 'dealer.stock.manage'): Promise<string> {
     return dealerOrg(this.iam, actor, orgId, permission);
   }
 
   private canManage(actor: Actor, orgId: string) {
-    return canForOrg(actor, orgId, 'dealer.costs.manage').ok;
+    return canForOrg(actor, orgId, 'dealer.costs.manage', { beforeApproval: true }).ok;
   }
 
   private id(id: string) {
@@ -138,7 +144,7 @@ export class DealerController {
   /** POST /v1/dealer/imports: check a file of cars (managers; D-131). Nothing is added yet. */
   @Post('imports')
   async checkImport(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Body() body: unknown) {
-    const org = await this.org(actor, orgId, 'dealer.costs.manage');
+    const org = await this.approvedOrg(actor, orgId, 'dealer.costs.manage');
     const b = parse(ImportFile, body);
     return this.imports.check(actor, org, b.fileName, b.rows).catch(problem);
   }
@@ -146,7 +152,7 @@ export class DealerController {
   /** GET /v1/dealer/imports/:id */
   @Get('imports/:id')
   async getImport(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string) {
-    const org = await this.org(actor, orgId, 'dealer.costs.manage');
+    const org = await this.approvedOrg(actor, orgId, 'dealer.costs.manage');
     if (!Uuid.safeParse(id).success) problem(new DealerError('import_not_found', 'No such file'));
     return this.imports.get(org, id).catch(problem);
   }
@@ -155,7 +161,7 @@ export class DealerController {
   @Post('imports/:id/add')
   @HttpCode(200)
   async addImport(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string) {
-    const org = await this.org(actor, orgId, 'dealer.costs.manage');
+    const org = await this.approvedOrg(actor, orgId, 'dealer.costs.manage');
     if (!Uuid.safeParse(id).success) problem(new DealerError('import_not_found', 'No such file'));
     return this.imports.add(actor, org, id).catch(problem);
   }
@@ -182,7 +188,7 @@ export class DealerController {
   @Post('stock/:id/link')
   @HttpCode(200)
   async link(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string, @Body() body: unknown) {
-    const org = await this.org(actor, orgId);
+    const org = await this.approvedOrg(actor, orgId);
     return this.one(actor, org, await this.dealer.link(actor, org, this.id(id), parse(Link, body)).catch(problem));
   }
 
@@ -190,7 +196,7 @@ export class DealerController {
   @Post('stock/:id/sold')
   @HttpCode(200)
   async sold(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string, @Body() body: unknown) {
-    const org = await this.org(actor, orgId);
+    const org = await this.approvedOrg(actor, orgId);
     const today = new Date().toISOString().slice(0, 10);
     const b = z.object({ salePriceUgx: Price, soldOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d <= today, 'cannot be in the future').default(today) }).safeParse(body);
     if (!b.success) throw badRequest('invalid_request', 'salePriceUgx is required; soldOn must be a past date (YYYY-MM-DD)');

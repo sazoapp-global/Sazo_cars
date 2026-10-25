@@ -42,7 +42,8 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   if (!(await isSignedIn())) redirect(`/sign-in?next=/dealer/${id}/car/${car}`);
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
   if (!org || org.type !== 'dealer') notFound();
-  if (org.status !== 'approved') redirect(`/dealer/${id}`);
+  if (org.status === 'rejected' || org.status === 'suspended') redirect(`/dealer/${id}`);
+  const approved = org.status === 'approved';
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const manager = org.role === 'org_manager';
   const c = await api<StockItem>(`/dealer/stock/${car}`, as).catch((err) => { if (err instanceof ApiError && err.status === 404) notFound(); throw err; });
@@ -61,14 +62,15 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const hidden = <><input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} /></>;
 
   return (
-    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
+    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role, approved }} business={{ name: name, approved }}
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
       <p><Link href={`/dealer/${id}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All cars</Link></p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {c.vehicle?.currentPlate && <Plate value={c.vehicle.currentPlate} size="sm" />}
-            {!c.linked && <span className="chip border-line-strong bg-white text-muted">{c.waitingForReview ? 'SAZO is checking' : 'Plate or chassis number needed'}</span>}
+            {!c.vehicle && c.held?.plate && <Plate value={c.held.plate} size="sm" />}
+            {!c.linked && <span className="chip border-line-strong bg-white text-muted">{c.heldUntilApproval ? 'Joins SAZO after approval' : c.waitingForReview ? 'SAZO is checking' : 'Plate or chassis number needed'}</span>}
             {c.vehicle?.status === 'provisional' && <span className="chip border-warn-line bg-warn-fill text-warn-text">Not yet confirmed</span>}
             {c.status !== 'in_stock' && <span className="chip border-line bg-soft text-on-surface">{c.status === 'sold' ? `Sold ${formatDate(c.soldAt)}` : 'Removed'}</span>}
           </div>
@@ -139,7 +141,15 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
         </Section>
       )}
 
-      {live && !c.linked && !c.waitingForReview && (
+      {live && !c.linked && (c.heldUntilApproval || !approved) && (
+        <Section id="link" title="Joins SAZO once your business is approved" icon="hourglass_empty" note="While SAZO checks your business, this car stays private to you: buyers, brokers and the car's history do not see it yet.">
+          {c.heldUntilApproval
+            ? <p className="text-sm">{[c.held?.plate && `Plate ${c.held.plate}`, c.held?.chassisNumber && `chassis number ${c.held.chassisNumber}`, c.held?.mileageKm != null && formatKm(c.held.mileageKm)].filter(Boolean).join(', ')}. Sent to SAZO by itself once your business is approved.</p>
+            : <p className="text-sm text-muted">Add the plate or chassis number once your business is approved. <Link href={`/business/${id}`} className="link">Finish the approval steps</Link>.</p>}
+        </Section>
+      )}
+
+      {live && approved && !c.linked && !c.waitingForReview && !c.heldUntilApproval && (
         <Section id="link" title="Add the plate or chassis number" icon="add_link" note="Once added, the car and its asking price join SAZO, even if SAZO did not know the car before, and buyers and brokers can see it.">
           <form action={linkCar} data-draft={`car-link-${car}`} className="grid gap-3 sm:grid-cols-2">{hidden}
             <div><label htmlFor="anchor" className="label">Chassis number or VIN</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>

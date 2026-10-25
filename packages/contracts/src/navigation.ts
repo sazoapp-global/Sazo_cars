@@ -11,6 +11,8 @@ export interface NavRule {
   platformRoles?: string[];
   /** Any one of these roles in the business whose workspace this is. */
   orgRoles?: string[];
+  /** Only once SAZO has approved the business (a dealer waiting for approval prepares stock privately first). */
+  approvedOnly?: boolean;
 }
 
 export interface NavLink {
@@ -71,6 +73,8 @@ export interface Workspace {
 const STAFF = { platformRoles: ['sazo_admin', 'sazo_reviewer'] };
 const ADMIN = { platformRoles: ['sazo_admin'] };
 const MANAGER = { orgRoles: ['org_manager'] };
+const MANAGER_APPROVED = { orgRoles: ['org_manager'], approvedOnly: true };
+const APPROVED = { approvedOnly: true };
 
 export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
   console: {
@@ -105,22 +109,23 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
     entries: [
       { key: 'stock', label: 'Cars for sale', short: 'For sale', icon: 'storefront', href: '/dealer/{org}', alsoActive: ['/dealer/{org}/car/'] },
       NOTIFICATIONS,
-      { key: 'import', label: 'Add many cars', short: 'Add many', icon: 'upload_file', href: '/dealer/{org}/import', rule: MANAGER },
-      { key: 'enquiries', label: 'Enquiries', short: 'Enquiries', icon: 'forum', href: '/dealer/{org}/enquiries' },
-      { key: 'commissions', label: 'Commission', short: 'Commission', icon: 'payments', href: '/dealer/{org}/commissions', rule: MANAGER },
-      { key: 'sold', label: 'Sold', short: 'Sold', icon: 'sell', href: '/dealer/{org}?show=sold' },
-      { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '/dealer/{org}#staff-section', rule: MANAGER },
+      { key: 'import', label: 'Add many cars', short: 'Add many', icon: 'upload_file', href: '/dealer/{org}/import', rule: MANAGER_APPROVED },
+      { key: 'enquiries', label: 'Enquiries', short: 'Enquiries', icon: 'forum', href: '/dealer/{org}/enquiries', rule: APPROVED },
+      { key: 'commissions', label: 'Commission', short: 'Commission', icon: 'payments', href: '/dealer/{org}/commissions', rule: MANAGER_APPROVED },
+      { key: 'sold', label: 'Sold', short: 'Sold', icon: 'sell', href: '/dealer/{org}?show=sold', rule: APPROVED },
+      { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '/dealer/{org}#staff-section', rule: MANAGER_APPROVED },
       { key: 'settings', label: 'Settings', short: 'Settings', icon: 'edit', href: '/dealer/{org}#settings-section', rule: MANAGER },
       { key: 'business', label: 'Business details', short: 'Business', icon: 'verified_user', href: '/business/{org}' },
     ],
   },
 };
 
-export interface Viewer { platformRoles: string[]; orgRole?: string }
+export interface Viewer { platformRoles: string[]; orgRole?: string; /** The business is approved (assumed when not given). */ approved?: boolean }
 
 const allowed = (rule: NavRule | undefined, who: Viewer) =>
   (!rule?.platformRoles || rule.platformRoles.some((r) => who.platformRoles.includes(r)))
-  && (!rule?.orgRoles || (!!who.orgRole && rule.orgRoles.includes(who.orgRole)));
+  && (!rule?.orgRoles || (!!who.orgRole && rule.orgRoles.includes(who.orgRole)))
+  && (!rule?.approvedOnly || who.approved !== false);
 
 /** The entries this person may see, with "{org}" filled in. Groups left empty are dropped. */
 export function navFor(key: WorkspaceKey, who: Viewer, org?: string): NavEntry[] {

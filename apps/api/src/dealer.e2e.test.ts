@@ -85,7 +85,7 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
   it('a dealer is approved and adds a salesperson; other businesses cannot use the dealer screens', async () => {
     managerToken = await signIn('+256772500001', 'Grace (Dealer manager)');
     orgId = (await http.post('/v1/organisations').set(bearer(managerToken)).send({ type: 'dealer', legalName: 'Ntinda Car Bond Ltd', tradingName: 'Ntinda Car Bond' }).expect(201)).body.id;
-    expect((await http.get('/v1/dealer/stock').set(asOrg(managerToken)).expect(403)).body.code).toBe('organisation_not_approved');
+    expect((await http.get('/v1/dealer/stock/' + '00000000-0000-4000-8000-000000000000').set(asOrg(managerToken)).expect(404)).body.code).toBe('stock_not_found');
     await approveOrg(app, http, adminToken, orgId, 'Yard visited, licence checked');
     await http.post('/v1/garage/staff').set(asOrg(managerToken)).send({ phone: '+256772500002', displayName: 'Sam (Sales)', role: 'org_staff' }).expect(201);
     staffToken = await signIn('+256772500002');
@@ -145,5 +145,25 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     await http.delete(`/v1/dealer/stock/${list[0].stockId}`).set(asStaff()).expect(409);
     // The dealer's source is not offered in the partner console.
     expect(JSON.stringify((await http.get('/v1/ingest/sources').set(bearer(managerToken)).expect(200)).body)).not.toContain('DLR-');
+  });
+  it('a dealer waiting for approval prepares stock privately; its cars join SAZO once approved', async () => {
+    const t = await signIn('+256772500031', 'Okello (New dealer)');
+    const org = (await http.post('/v1/organisations').set(bearer(t)).send({ type: 'dealer', legalName: 'Bweyogerere Autos Ltd' }).expect(201)).body.id;
+    const as = { ...bearer(t), 'X-Organisation-Id': org };
+    // Waiting for approval, the dealer prepares stock privately: nothing reaches SAZO or buyers yet.
+    expect((await http.get('/v1/dealer/stock').set(as).expect(200)).body.items).toEqual([]);
+    const held = (await http.post('/v1/dealer/stock').set(as).send({ plate: 'UBQ 901Z', askingPriceUgx: 52_000_000, details: { make: 'toyota', model: 'wish' } }).expect(201)).body;
+    expect(held).toMatchObject({ linked: false, heldUntilApproval: true, held: { plate: 'UBQ 901Z' }, details: { make: 'Toyota' } });
+    expect((await http.get('/v1/vehicles/search').query({ q: 'UBQ 901Z' }).expect(200)).body.matches).toEqual([]);
+    await http.post(`/v1/dealer/stock/${held.stockId}/costs`).set(as).send({ category: 'purchase', amount: 30_000_000, currency: 'UGX' }).expect(201);
+    for (const [path, body] of [[`/v1/dealer/stock/${held.stockId}/link`, { plate: 'UBQ 901Z' }], [`/v1/dealer/stock/${held.stockId}/sold`, { salePriceUgx: 1_000_000 }],
+      [`/v1/dealer/stock/${held.stockId}/links`, { channel: 'whatsapp' }], ['/v1/dealer/leads', { stockId: held.stockId, buyerName: 'A buyer' }]] as const) {
+      expect((await http.post(path).set(as).send(body).expect(403)).body.code).toBe('organisation_not_approved');
+    }
+    await approveOrg(app, http, adminToken, org, 'Yard visited');
+    // Once approved, the car joins SAZO by itself with the plate the dealer gave.
+    const after = (await http.get('/v1/dealer/stock').set(as).expect(200)).body.items.find((i: { stockId: string }) => i.stockId === held.stockId);
+    expect(after).toMatchObject({ linked: true, heldUntilApproval: false, vehicle: { make: 'Toyota', status: 'provisional' } });
+    expect((await http.get('/v1/vehicles/search').query({ q: 'UBQ 901Z' }).expect(200)).body.matches[0].vehicleRef).toBe(after.vehicleRef);
   });
 });

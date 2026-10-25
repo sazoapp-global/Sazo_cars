@@ -15,7 +15,7 @@ import { BondClock, FUELS, STAGES, StockAge, carName, stageLabel } from '../labe
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
-type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string }>;
+type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string; new?: string }>;
 
 export default async function DealerStock({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -24,14 +24,16 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
   if (!org || org.type !== 'dealer') notFound();
   const name = org.tradingName ?? org.legalName;
-  if (org.status !== 'approved') {
+  if (org.status === 'rejected' || org.status === 'suspended') {
     return (
       <div className="mx-auto max-w-2xl px-4 py-8 md:px-8">
         <h1 className="font-display text-2xl font-bold">{name}</h1>
-        <p className="card mt-4 p-4">You can list cars once SAZO has approved your business. <Link href={`/business/${id}`} className="link">See your approval progress</Link>.</p>
+        <p className="card mt-4 p-4">{org.status === 'rejected' ? 'SAZO did not approve this business.' : 'This business is suspended.'} <Link href={`/business/${id}`} className="link">See the details</Link>.</p>
       </div>
     );
   }
+  // Waiting for approval (25 Oct 2026): the dealer prepares stock privately; nothing reaches SAZO or buyers yet.
+  const approved = org.status === 'approved';
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const show = sp.show === 'sold' ? 'sold' : 'in_stock';
   const onlyFindings = sp.findings === '1';
@@ -40,7 +42,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   const [inStock, soldList, staff, me, settings] = await Promise.all([
     api<{ items: StockItem[] }>('/dealer/stock?status=in_stock', as).then((r) => r.items),
     api<{ items: StockItem[] }>('/dealer/stock?status=sold', as).then((r) => r.items),
-    org.role === 'org_manager' ? api<StaffMember[]>('/garage/staff', as).catch((err) => { if (err instanceof ApiError) return []; throw err; }) : Promise.resolve(undefined),
+    org.role === 'org_manager' && approved ? api<StaffMember[]>('/garage/staff', as).catch((err) => { if (err instanceof ApiError) return []; throw err; }) : Promise.resolve(undefined),
     api<Me>('/me', { auth: true }).catch(() => undefined),
     api<DealerSettings>('/dealer/settings', as).catch(() => undefined),
   ]);
@@ -61,7 +63,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   };
 
   return (
-    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
+    <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role, approved }} business={{ name: name, approved }}
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}
       badges={{ stock: inStock.length, sold: soldList.length, ...(staff ? { team: staff.length } : {}) }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -70,6 +72,16 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           <p className="mt-1 max-w-2xl text-muted">Add your cars, follow their import costs and bond deadlines, and send buyers a link with each car&apos;s SAZO history.</p>
         </div>
       </div>
+      {!approved && (
+        <section aria-labelledby="waiting" className="flex flex-wrap items-start gap-3 rounded-[14px] border-2 border-warn-line bg-warn-fill p-4 shadow-sm">
+          <Icon name="hourglass_empty" size={22} className="mt-0.5 shrink-0 text-warn-text" />
+          <div className="min-w-0 flex-1 space-y-1">
+            <h2 id="waiting" className="font-bold text-warn-text">{sp.new ? 'Business registered. ' : ''}SAZO is checking your business</h2>
+            <p className="text-sm text-on-surface">You can already add your cars, their import costs and photos. They stay private to you. Once SAZO approves your business, each car with a plate or chassis number joins SAZO by itself, and you can send buyers report links, record sales, work with brokers and add your team.</p>
+          </div>
+          <Link href={`/business/${id}`} className="btn btn-primary !min-h-10">Finish the approval steps<Icon name="arrow_forward" size={18} /></Link>
+        </section>
+      )}
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
@@ -100,7 +112,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
 
       <details className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" open={(inStock.length === 0 && show === 'in_stock') || sp.add === '1'}>
         <summary className="flex cursor-pointer list-none items-center gap-2 font-display text-lg font-bold text-primary-container"><Icon name="add" />Add a car</summary>
-        <p className="mt-1 text-sm text-muted">Start with the basics. You can add import costs and more photos later.{manager && <> Many cars at once? <Link href={`/dealer/${id}/import`} className="link">Add them from an Excel file</Link>.</>}</p>
+        <p className="mt-1 text-sm text-muted">Start with the basics. You can add import costs and more photos later.{manager && approved && <> Many cars at once? <Link href={`/dealer/${id}/import`} className="link">Add them from an Excel file</Link>.</>}</p>
         <form action={addStock} data-draft={`stock-new-${id}`} className="mt-3 grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="org" value={id} />
           <div className="sm:col-span-2"><label htmlFor="photos" className="label">Photos of the car</label>
@@ -119,7 +131,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
             <div><label htmlFor="yard" className="label">Bond or yard</label><input id="yard" name="yard" className="field" placeholder="Kyambogo" /></div>
           </div>
           <div><label htmlFor="anchor" className="label">Chassis number or VIN</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" />
-            <p className="mt-1 text-sm text-muted">With the plate or the chassis number the car joins SAZO at once, even if SAZO does not know it yet.</p></div>
+            <p className="mt-1 text-sm text-muted">{approved ? 'With the plate or the chassis number the car joins SAZO at once, even if SAZO does not know it yet.' : 'Kept private for now. With the plate or the chassis number the car joins SAZO by itself once your business is approved.'}</p></div>
           <div><label htmlFor="plate" className="label">Number plate</label><input id="plate" name="plate" className="field sazo-id" autoCapitalize="characters" autoComplete="off" placeholder="UBK 482M" /></div>
           <details className="sm:col-span-2"><summary className="cursor-pointer text-sm font-semibold text-primary">Add the mileage now (needs the plate or chassis number and an odometer photo)</summary>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -169,7 +181,8 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         {v?.currentPlate && <Plate value={v.currentPlate} size="sm" />}
-                        {!c.linked && <span className="chip border-line-strong bg-white text-muted">{c.waitingForReview ? 'SAZO is checking' : 'Plate or chassis number needed'}</span>}
+                        {!v && c.held?.plate && <Plate value={c.held.plate} size="sm" />}
+                        {!c.linked && <span className="chip border-line-strong bg-white text-muted">{c.heldUntilApproval ? 'Joins SAZO after approval' : c.waitingForReview ? 'SAZO is checking' : 'Plate or chassis number needed'}</span>}
                         {v?.status === 'provisional' && <span className="chip border-warn-line bg-warn-fill text-warn-text">Not yet confirmed</span>}
                       </div>
                       <h2 className="mt-1 font-display text-base font-bold"><Link href={carHref} className="hover:underline">{title}</Link></h2>
@@ -177,7 +190,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                       {c.status === 'in_stock' && <div className="mt-1 flex flex-wrap gap-1"><StockAge c={c} /><BondClock c={c} /></div>}
                     </div>
                     <div>
-                      {!c.linked ? <p className="text-sm text-muted">{c.waitingForReview ? 'SAZO is checking which car this is. It joins SAZO by itself once that is done.' : 'Add the plate or chassis number to see what SAZO records show.'}</p> : <>
+                      {!c.linked ? <p className="text-sm text-muted">{c.heldUntilApproval ? 'Private until SAZO approves your business. Then it joins SAZO by itself and you see what its records show.' : c.waitingForReview ? 'SAZO is checking which car this is. It joins SAZO by itself once that is done.' : 'Add the plate or chassis number to see what SAZO records show.'}</p> : <>
                       <p className="text-sm font-semibold">{f.serious + f.attention === 0 ? <span className="text-ok-text">Nothing flagged</span> : <>
                         {f.serious > 0 && <span className="text-bad-text">{f.serious} serious</span>}{f.serious > 0 && f.attention > 0 && ' · '}{f.attention > 0 && <span className="text-warn-text">{f.attention} to check</span>}</>}</p>
                       <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="What the records show">
@@ -209,7 +222,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                           <button className="btn btn-ghost">Save</button>
                         </form>
                       </details>
-                      <details className="open:col-span-2">
+                      {approved && <details className="open:col-span-2">
                         <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Mark as sold</summary>
                         <form action={markSold} className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
                           <input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} />
@@ -219,7 +232,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                             <input id={`d-${c.stockId}`} name="soldOn" type="date" max={today} defaultValue={today} className="field" /></div>
                           <button className="btn btn-primary self-end">Record the sale</button>
                         </form>
-                      </details>
+                      </details>}
                       <form action={removeStock} className="col-span-2 sm:col-span-1"><input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} />
                         <button className="btn btn-ghost w-full bg-white" aria-label={`Remove ${title} without a sale`}><Icon name="delete" />Remove</button></form>
                     </div>

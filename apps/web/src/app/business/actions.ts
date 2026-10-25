@@ -23,7 +23,8 @@ export async function registerBusiness(_prev: RegisterState, form: FormData): Pr
   } catch (err) {
     return { error: err instanceof ApiError && err.status === 401 ? 'Please sign in again.' : 'We could not register the business. Please try again.', fields: f };
   }
-  redirect(`/business/${id}?new=1`);
+  // A dealer goes straight into the dealer console and prepares stock while SAZO checks the business.
+  redirect(f.type === 'dealer' ? `/dealer/${id}?new=1` : `/business/${id}?new=1`);
 }
 
 const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];

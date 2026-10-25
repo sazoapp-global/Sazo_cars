@@ -19,7 +19,25 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Registered business name *').fill(`${NAME} Ltd`);
   await dealer.getByLabel('Name customers know you by').fill(NAME);
   await dealer.getByRole('button', { name: 'Register business' }).click();
-  await expect(dealer.getByText(`${NAME} is registered`)).toBeVisible();
+  // A new dealer goes straight into the dealer console and prepares stock while SAZO checks the business.
+  await expect(dealer.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
+  await expect(dealer.getByRole('heading', { name: 'Business registered. SAZO is checking your business' })).toBeVisible();
+  const listUrl = dealer.url().replace(/\?.*$/, '');
+  const menu = dealer.getByRole('navigation', { name: 'Dealer' });
+  await expect(menu.getByRole('link', { name: /Cars for sale/ })).toBeAttached();
+  for (const later of ['Enquiries', 'Sold', 'Commission', 'Add many cars', 'Team']) await expect(menu.getByRole('link', { name: later, exact: true })).toHaveCount(0);
+  await a11y(dealer);
+  await dealer.getByLabel('Make', { exact: true }).fill('Toyota');
+  await dealer.getByLabel('Model', { exact: true }).fill('Wish');
+  await dealer.getByLabel('Number plate').fill('UBR 314W');
+  await dealer.getByLabel('Asking price (UGX) *').fill('41,000,000');
+  await dealer.getByRole('button', { name: 'Add the car' }).click();
+  await expect(dealer.getByRole('region', { name: 'Joins SAZO once your business is approved' })).toContainText('Plate UBR 314W');
+  await expect(dealer.getByText('Joins SAZO after approval')).toBeVisible();
+  await dealer.goto(listUrl);
+  await expect(dealer.getByRole('listitem').filter({ hasText: 'UBR 314W' })).toContainText('Joins SAZO after approval');
+  await dealer.getByRole('link', { name: 'Finish the approval steps' }).click();
+  await expect(dealer.getByLabel('National ID number (NIN)')).toBeVisible();
   const businessUrl = dealer.url();
   await dealer.getByLabel('National ID number (NIN)').fill(`CM9000${stamp}A`);
   await dealer.getByLabel('Photo of your National ID').setInputFiles({ name: 'id.png', mimeType: 'image/png', buffer: testPhoto(`dealer owner id ${stamp}`) });
@@ -39,7 +57,12 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.goto(businessUrl);
   await dealer.getByRole('link', { name: 'Open your stock' }).click();
   await expect(dealer.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
-  const listUrl = dealer.url();
+  // Approved: the car added while waiting has joined SAZO by itself, and the rest of the console is open.
+  await expect(dealer.getByRole('heading', { name: /SAZO is checking your business/ })).toHaveCount(0);
+  const wish = dealer.getByRole('listitem').filter({ hasText: 'UBR 314W' });
+  await expect(wish).not.toContainText('Joins SAZO after approval');
+  await expect(wish).toContainText('Not yet confirmed');
+  await expect(menu.getByRole('link', { name: 'Enquiries', exact: true })).toBeAttached();
   await a11y(dealer);
 
   // A known car, by plate. A mileage needs an odometer photo.
@@ -210,4 +233,10 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await rows.getByRole('link', { name: 'Added: open' }).click();
   await expect(dealer.getByRole('heading', { name: /Toyota Premio/ })).toBeVisible();
   await expect(dealer.getByRole('region', { name: 'Costs' })).toContainText('22,940,000');
+
+  // Signing in again with nowhere particular to go lands the dealer in their console.
+  const again = await (await browser.newContext()).newPage();
+  await signIn(again, OWNER);
+  await expect(again).toHaveURL(new RegExp(`${listUrl.replace(/^https?:\/\/[^/]+/, '')}$`));
+  await expect(again.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
 });

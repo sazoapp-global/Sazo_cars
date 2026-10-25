@@ -20,14 +20,16 @@ export type OrgAccess =
 
 /**
  * Can the actor do `permission` on behalf of `organisationId`? SAZO admins can (platform permission);
- * otherwise an ACTIVE membership in an APPROVED organisation whose role grants it (D-055, D-056).
+ * otherwise an ACTIVE membership in an APPROVED organisation whose role grants it (D-055, D-056). `beforeApproval`
+ * also lets in a business still waiting for approval, for work that stays private to it (a dealer preparing stock).
  */
-export function canForOrg(actor: Actor | undefined, organisationId: string, permission: string): OrgAccess {
+export function canForOrg(actor: Actor | undefined, organisationId: string, permission: string, opts: { beforeApproval?: boolean } = {}): OrgAccess {
   if (!actor) return { ok: false, code: 'forbidden' };
   if (actor.permissions.has(permission)) return { ok: true, membership: null };
   const m = actor.memberships.find((x) => x.organisationId === organisationId && x.status === 'active');
   if (!m) return { ok: false, code: 'not_a_member' };
-  if (m.organisationStatus !== 'approved') return { ok: false, code: 'organisation_not_approved' };
+  const waiting = opts.beforeApproval && m.organisationStatus === 'pending_verification';
+  if (m.organisationStatus !== 'approved' && !waiting) return { ok: false, code: 'organisation_not_approved' };
   if (!m.permissions.includes(permission)) return { ok: false, code: 'forbidden' };
   return { ok: true, membership: m };
 }

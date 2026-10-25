@@ -23,6 +23,10 @@ export interface StockRow extends StockDetails {
   notes: string | null; createdBy: string; listedAt: Date; soldAt: Date | null; salePriceUgx: number | null;
   /** Set while SAZO's reviewer checks which car this is (D-130); cleared when it is matched or turned down. */
   pendingSubmissionId: string | null;
+  /** Kept while the dealer waits for SAZO's approval: what to send to SAZO once approved. */
+  heldIdentifiers: { plate?: string; vin?: string; chassisNumber?: string; vehicleRef?: string } | null;
+  heldMileageKm: number | null;
+  heldOdometerPhotoId: string | null;
 }
 export interface CostRow {
   id: string; category: CostCategory; amount: number; currency: string; rateToUgx: number; amountUgx: number; note: string | null; shareRule: string | null;
@@ -38,7 +42,8 @@ const COLS = `id, organisation_id AS "organisationId", vehicle_id AS "vehicleId"
   ${DATE('received_on', 'receivedOn')}, ${DATE('bond_arrived_on', 'bondArrivedOn')}, customs_status AS "customsStatus",
   ${DATE('customs_deadline', 'customsDeadline')}, ${DATE('customs_extension_until', 'customsExtensionUntil')}, customs_value_ugx::float8 AS "customsValueUgx",
   tiktok_url AS "tiktokUrl", open_to_brokers AS "openToBrokers", commission_kind AS "commissionKind", commission_fixed_ugx::float8 AS "commissionFixedUgx",
-  commission_percent::float8 AS "commissionPercent", pending_submission_id AS "pendingSubmissionId"`;
+  commission_percent::float8 AS "commissionPercent", pending_submission_id AS "pendingSubmissionId",
+  held_identifiers AS "heldIdentifiers", held_mileage_km AS "heldMileageKm", held_odometer_photo_id AS "heldOdometerPhotoId"`;
 
 /** Column for each detail field (whitelist: only these can be set by updateDetails). */
 const DETAIL_COLUMNS: Record<keyof StockDetails, string> = {
@@ -74,10 +79,13 @@ export class DealerRepository {
   }
 
   /** Returns undefined if the car is already in this dealer's stock (unique live index). */
-  async insert(r: { organisationId: string; vehicleId: string | null; pendingSubmissionId?: string | null; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null; createdBy: string; details: Partial<StockDetails> }): Promise<StockRow | undefined> {
+  async insert(r: { organisationId: string; vehicleId: string | null; pendingSubmissionId?: string | null; askingPriceUgx: number; listedMileageKm: number | null; notes: string | null; createdBy: string; details: Partial<StockDetails>;
+    held?: { identifiers: NonNullable<StockRow['heldIdentifiers']>; mileageKm?: number; odometerPhotoId?: string } }): Promise<StockRow | undefined> {
     const keys = (Object.keys(r.details) as (keyof StockDetails)[]).filter((k) => DETAIL_COLUMNS[k] && r.details[k] !== undefined);
-    const cols = ['organisation_id', 'vehicle_id', 'pending_submission_id', 'asking_price_ugx', 'listed_mileage_km', 'notes', 'created_by_user_id', ...keys.map((k) => DETAIL_COLUMNS[k])];
-    const vals = [r.organisationId, r.vehicleId, r.pendingSubmissionId ?? null, r.askingPriceUgx, r.listedMileageKm, r.notes, r.createdBy, ...keys.map((k) => r.details[k])];
+    const cols = ['organisation_id', 'vehicle_id', 'pending_submission_id', 'asking_price_ugx', 'listed_mileage_km', 'notes', 'created_by_user_id',
+      'held_identifiers', 'held_mileage_km', 'held_odometer_photo_id', ...keys.map((k) => DETAIL_COLUMNS[k])];
+    const vals = [r.organisationId, r.vehicleId, r.pendingSubmissionId ?? null, r.askingPriceUgx, r.listedMileageKm, r.notes, r.createdBy,
+      r.held ? JSON.stringify(r.held.identifiers) : null, r.held?.mileageKm ?? null, r.held?.odometerPhotoId ?? null, ...keys.map((k) => r.details[k])];
     try {
       return (await this.pool.query<StockRow>(
         `INSERT INTO dealer.stock_items (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING ${COLS}`, vals)).rows[0];
@@ -120,6 +128,37 @@ export class DealerRepository {
   /** Mark a car as waiting for SAZO's reviewer (or clear it with null). */
   async setPending(id: string, submissionId: string | null): Promise<void> {
     await this.pool.query(`UPDATE dealer.stock_items SET pending_submission_id = $2 WHERE id = $1 AND vehicle_id IS NULL`, [id, submissionId]);
+  }
+
+  /**
+   * One sender at a time per dealer: a page asks for several lists at once, and each would otherwise show the
+   * cars half sent. The others wait, then find nothing left to send. (A session lock: the work spans requests to
+   * other modules, each with its own transaction.)
+   */
+  async oneSenderAtATime<T>(organisationId: string, fn: () => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query(`SELECT pg_advisory_lock(hashtext('dealer.release_held'), hashtext($1))`, [organisationId]);
+      try {
+        return await fn();
+      } finally {
+        await client.query(`SELECT pg_advisory_unlock(hashtext('dealer.release_held'), hashtext($1))`, [organisationId]);
+      }
+    } finally {
+      client.release();
+    }
+  }
+
+  /** This dealer's cars added while it waited for approval, still to be sent to SAZO. */
+  async held(organisationId: string): Promise<StockRow[]> {
+    return (await this.pool.query<StockRow>(
+      `SELECT ${COLS} FROM dealer.stock_items WHERE organisation_id = $1 AND held_identifiers IS NOT NULL AND status = 'in_stock' ORDER BY listed_at`, [organisationId])).rows;
+  }
+
+  /** The car has been sent to SAZO (or could not be): it is no longer held. Returns false if another request got there first. */
+  async release(id: string): Promise<boolean> {
+    return ((await this.pool.query(
+      `UPDATE dealer.stock_items SET held_identifiers = NULL, held_mileage_km = NULL, held_odometer_photo_id = NULL WHERE id = $1 AND held_identifiers IS NOT NULL`, [id])).rowCount ?? 0) > 0;
   }
 
   /** This dealer's cars still waiting for SAZO's reviewer. */

@@ -12,6 +12,11 @@ describe('navigation (one list of workspaces and modules)', () => {
     expect(manager.find((e) => e.key === 'sold')).toMatchObject({ href: '/dealer/abc?show=sold' });
   });
 
+  it('a dealer waiting for approval sees only what stays private: stock, settings and the approval steps', () => {
+    const waiting = navFor('dealer', { platformRoles: ['consumer'], orgRole: 'org_manager', approved: false }, 'abc');
+    expect(keys(waiting)).toEqual(['stock', 'notifications', 'settings', 'business']);
+  });
+
   it('hides admin-only modules from reviewers and drops nothing else', () => {
     const reviewer = keys(navFor('console', { platformRoles: ['sazo_reviewer'] }));
     expect(reviewer).not.toContain('people');
