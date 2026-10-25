@@ -64,8 +64,44 @@ Leave them running. Stop with `Ctrl + C`.
 
 ## 7. Run the tests (optional)
 
+The API tests need their own empty test database (they make and delete more databases next to it), and
+`TEST_DATABASE_URL` must point at it. Without it they are skipped. Make the test database once:
+
 ```bash
-npm test          # unit and API tests (API tests need TEST_DATABASE_URL — see README)
+docker compose exec postgres createdb -U sazo sazo_test
+```
+
+Then migrate it and run the tests. Write the address **without quotes**.
+
+macOS, Linux or Git Bash:
+
+```bash
+DATABASE_URL=postgres://sazo:sazo@127.0.0.1:5432/sazo_test npm run db:migrate
+TEST_DATABASE_URL=postgres://sazo:sazo@127.0.0.1:5432/sazo_test npm test
+```
+
+Windows Command Prompt (in Command Prompt, quotes would become part of the address and the tests stop with "Invalid URL"):
+
+```bat
+set DATABASE_URL=postgres://sazo:sazo@127.0.0.1:5432/sazo_test
+npm run db:migrate
+set TEST_DATABASE_URL=postgres://sazo:sazo@127.0.0.1:5432/sazo_test
+npm test
+set DATABASE_URL=
+```
+
+Windows PowerShell:
+
+```powershell
+$env:DATABASE_URL="postgres://sazo:sazo@127.0.0.1:5432/sazo_test"; npm run db:migrate
+$env:TEST_DATABASE_URL="postgres://sazo:sazo@127.0.0.1:5432/sazo_test"; npm test
+Remove-Item Env:DATABASE_URL
+```
+
+The last line of each Windows block points the window back at your normal database, so the apps you
+start from it keep using it. Other checks:
+
+```bash
 npm run db:test   # database tests
 npm run lint
 ```
