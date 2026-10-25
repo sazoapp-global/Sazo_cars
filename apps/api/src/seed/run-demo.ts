@@ -8,7 +8,6 @@
 import 'reflect-metadata';
 import { createHash, randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import sharp from 'sharp';
 import request from 'supertest';
 import { PersonDetails } from '@sazo/contracts';
 import { createApp } from '../app.js';
@@ -17,7 +16,11 @@ import { AuthService, IamService } from '../modules/iam/index.js';
 import { ConsoleEmailSender } from '../modules/notify/index.js';
 import { signInWithCode } from '../test-auth.js';
 import { testPhoto } from '../test-photos.js';
+import { VIEWS, bodyOf, demoCarPhoto } from './demo-photos.js';
 import { seedScenarios } from './scenario-seed.js';
+
+/** A demo picture of a car (see demo-photos.ts): angle by position, so a car's photos read like a listing. */
+const carPhoto = (seed: string, colour: string, model = '', i = 0) => demoCarPhoto(seed, colour, bodyOf(model), VIEWS[i % VIEWS.length]!);
 
 const PASSWORD = 'sazo-demo-2026';
 const config = loadConfig();
@@ -50,27 +53,6 @@ async function upload(t: Token, kind: string, bytes: Buffer): Promise<string> {
     .send({ kind, mimeType: 'image/jpeg', sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }));
   await call(http.put(new URL(slot.body.uploadUrl).pathname).set(bearer(t)).set('Content-Type', 'image/jpeg').send(bytes));
   return (await call(http.post(`/v1/evidence/${slot.body.evidenceId}/complete`).set(bearer(t)))).body.evidenceId;
-}
-
-/** A simple drawn car on a patterned background: a different picture for every seed, so photo checks pass. */
-async function carPhoto(seed: string, colour: string): Promise<Buffer> {
-  const h = createHash('sha256').update(seed).digest();
-  const blocks = Array.from({ length: 48 }, (_, i) => {
-    const x = (i % 8) * 120, y = Math.floor(i / 8) * 72, v = 150 + (h[i % 32]! % 90);
-    return `<rect x="${x}" y="${y}" width="120" height="72" fill="rgb(${v},${v + 5 > 255 ? 255 : v + 5},${Math.min(255, v + 25)})"/>`;
-  }).join('');
-  const dx = (h[3]! % 120) - 60, scale = 0.9 + (h[5]! % 20) / 100;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720">
-    ${blocks}<rect y="430" width="960" height="290" fill="rgb(${120 + (h[7]! % 40)},${115 + (h[8]! % 30)},${105 + (h[9]! % 30)})"/>
-    <g transform="translate(${480 + dx} 420) scale(${scale}) translate(-480 -420)">
-      <path d="M180 470 L240 360 Q260 330 300 325 L620 320 Q670 320 700 350 L790 420 L830 430 Q860 440 860 470 L860 520 L160 520 L160 480 Z" fill="${colour}" stroke="#1f2937" stroke-width="6"/>
-      <path d="M270 365 L300 335 L470 332 L470 410 L250 410 Z" fill="#cbd5e1" stroke="#1f2937" stroke-width="4"/>
-      <path d="M490 332 L620 332 Q650 332 670 352 L735 410 L490 410 Z" fill="#cbd5e1" stroke="#1f2937" stroke-width="4"/>
-      <circle cx="300" cy="520" r="62" fill="#111827"/><circle cx="300" cy="520" r="28" fill="#9ca3af"/>
-      <circle cx="720" cy="520" r="62" fill="#111827"/><circle cx="720" cy="520" r="28" fill="#9ca3af"/>
-      <rect x="820" y="455" width="34" height="18" rx="4" fill="#fde68a"/>
-    </g></svg>`;
-  return sharp(Buffer.from(svg)).jpeg({ quality: 82 }).toBuffer();
 }
 
 interface Person { phone: string; name: string; email: string; token: Token }
@@ -197,7 +179,7 @@ for (const c of cars) {
   const added = (await call(http.post('/v1/dealer/stock').set(D()).send({ ...c.ids, askingPriceUgx: c.price, details }))).body;
   stock[`${c.make} ${c.model}`] = added.stockId;
   for (let i = 0; i < c.photos; i++) {
-    const photo = await upload(dealerSales.token, 'vehicle_photo', await carPhoto(`${c.model} ${c.year} ${i}`, COLOURS[c.colour] ?? '#64748b'));
+    const photo = await upload(dealerSales.token, 'vehicle_photo', await carPhoto(`${c.model} ${c.year} ${i}`, COLOURS[c.colour] ?? '#64748b', c.model, i));
     await call(http.post(`/v1/dealer/stock/${added.stockId}/photos`).set(D(dealerSales.token)).send({ evidenceId: photo }));
   }
   for (const [category, amount, currency, rateToUgx] of c.costs ?? []) {
@@ -236,7 +218,7 @@ const newDealer = await person('Dealer waiting for approval', '+256700200003', '
 const bwe = await business(newDealer.token, 'dealer', 'Bweyogerere Autos Ltd', 'Bweyogerere Autos', 'Wakiso');
 for (const [ids, make, model, price] of [[{ plate: 'UBT 112C' }, 'mazda', 'demio', 21_000_000], [{ chassisNumber: 'NHP10-0456789' }, 'toyota', 'aqua', 34_000_000]] as const) {
   const added = (await call(http.post('/v1/dealer/stock').set(asOrg(newDealer.token, bwe)).send({ ...ids, askingPriceUgx: price, details: { make, model, stage: 'at_yard' } }))).body;
-  await call(http.post(`/v1/dealer/stock/${added.stockId}/photos`).set(asOrg(newDealer.token, bwe)).send({ evidenceId: await upload(newDealer.token, 'vehicle_photo', await carPhoto(`${model} bwe`, '#0f766e')) }));
+  await call(http.post(`/v1/dealer/stock/${added.stockId}/photos`).set(asOrg(newDealer.token, bwe)).send({ evidenceId: await upload(newDealer.token, 'vehicle_photo', await carPhoto(`${model} bwe`, '#0f766e', model)) }));
 }
 await call(http.post('/v1/me/identity').set(bearer(newDealer.token)).send({ nin: 'CM91002345SSAL', idPhotoEvidenceId: await upload(newDealer.token, 'official_document', await testPhoto('brian ssali id')) }));
 
@@ -273,7 +255,7 @@ await call(http.put(`/v1/garage/jobs/${randomUUID()}`).set(G(mechanic.token)).se
 const tamperedRef = await ref('UBC 718P');
 await call(http.post('/v1/concerns').set(G()).send({ plate: 'UBC 718P', ...(tamperedRef ? { vehicleRef: tamperedRef } : {}), category: 'odometer_tampered',
   description: 'Dashboard screws scratched and the pedals are worn far beyond the mileage shown',
-  evidenceIds: [await upload(garageMgr.token, 'vehicle_photo', await carPhoto('fielder pedals', '#6b7280'))] }));
+  evidenceIds: [await upload(garageMgr.token, 'vehicle_photo', await carPhoto('fielder pedals', '#6b7280', 'fielder', 4))] }));
 const pendingGarageMgr = await person('Garage waiting for approval', '+256700400003', 'Tom Ochieng');
 await business(pendingGarageMgr.token, 'garage', 'Bugolobi Car Care Ltd', 'Bugolobi Car Care', 'Kampala');
 
@@ -293,7 +275,7 @@ if (axio) {
     structure: { damageFound: false }, tyres: { minTreadPercent: 55 }, battery: { ok: true },
     defects: [{ item: 'Wiper blades worn', severity: 'minor' }],
     result: { passed: true, summary: 'Good condition for its age; replace wiper blades' },
-    photoIds: [await upload(inspector.token, 'vehicle_photo', await carPhoto('axio front', '#cbd5e1')), await upload(inspector.token, 'vehicle_photo', await carPhoto('axio back', '#cbd5e1'))] } }));
+    photoIds: [await upload(inspector.token, 'vehicle_photo', await carPhoto('axio front', '#cbd5e1', 'axio', 1)), await upload(inspector.token, 'vehicle_photo', await carPhoto('axio back', '#cbd5e1', 'axio', 2))] } }));
   await submit(`/v1/inspections/${id}/submit`, I);
 }
 
