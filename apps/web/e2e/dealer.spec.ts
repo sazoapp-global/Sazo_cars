@@ -200,15 +200,54 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await buyer.goto(link!);
   await expect(buyer.getByText('UBA 905T').first()).toBeVisible();
 
-  // Sold: the sale price stays private.
+  // Sold on instalments (D-146): the sale price stays private; the plan and payments open beside the side bar.
   await dealer.goBack();
-  await car.getByText('Mark as sold').click();
-  await car.getByLabel(/Sold for/).fill('23,000,000');
-  await car.getByRole('button', { name: 'Record the sale' }).click();
+  await car.getByRole('button', { name: 'Mark as sold' }).click();
+  const sale = dealer.getByRole('dialog', { name: 'Mark as sold' });
+  await sale.getByLabel(/Sold for/).fill('23,000,000');
+  await sale.getByLabel("Buyer's name").fill('sarah kemigisha');
+  await sale.getByLabel("Buyer's phone").fill(`0774${stamp.slice(-6)}`);
+  await sale.getByText('Instalments', { exact: true }).click();
+  await sale.getByLabel('Deposit (UGX)').fill('5,000,000');
+  await sale.getByLabel('Number of months').fill('6');
+  await expect(sale).toContainText('6 monthly payments of UGX 3,000,000');
+  await sale.getByText('MTN MoMo').click();
+  await a11y(dealer);
+  await shot(dealer, 'dealer-sell');
+  await sale.getByRole('button', { name: 'Save the sale' }).click();
   await expect(dealer.getByRole('status')).toContainText('Sale recorded');
+  await expect(dealer.getByRole('heading', { name: /UBA 905T/ })).toBeVisible();
+  await expect(dealer.getByRole('main')).toContainText('Sold to Sarah Kemigisha');
+  await expect(dealer.getByRole('main')).toContainText('UGX 18M still owed');
+  await a11y(dealer);
+  await shot(dealer, 'dealer-payments-car');
+  // A payment, with its receipt.
+  await dealer.getByRole('button', { name: 'Record a payment' }).click();
+  const pay = dealer.getByRole('dialog', { name: 'Record a payment' });
+  await expect(pay.getByLabel('Amount (UGX)')).toHaveValue('3000000');
+  await pay.getByLabel('How was it paid?').selectOption('cash');
+  await pay.getByRole('button', { name: 'Save and send receipt' }).click();
+  await expect(dealer.getByRole('status')).toContainText('Receipt R-0002 was sent to the buyer by SMS');
+  await expect(dealer.getByRole('main')).toContainText('UGX 15M still owed');
+  await dealer.getByRole('link', { name: 'Receipt' }).first().click();
+  await expect(dealer.getByRole('heading', { name: 'R-0002' })).toBeVisible();
+  await expect(dealer.getByRole('main')).toContainText('UGX 3,000,000');
+  // The dashboard: cards that open each part, and sales by month.
+  await dealer.goto(`${listUrl}/dashboard`);
+  await expect(dealer.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
+  await expect(dealer.getByRole('link', { name: /Still owed to you UGX 15M/ })).toBeVisible();
+  await expect(dealer.getByRole('img', { name: /Sales value in UGX by month/ })).toBeVisible();
+  await a11y(dealer);
+  await shot(dealer, 'dealer-dashboard');
+  await dealer.getByRole('link', { name: /Still owed to you/ }).click();
+  await expect(dealer.getByRole('heading', { name: 'Payments', level: 1 })).toBeVisible();
+  await expect(dealer.getByRole('list', { name: 'Sales' })).toContainText('Sarah Kemigisha');
+  await a11y(dealer);
+  await dealer.goto(`${listUrl}?show=sold`);
   const sold = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });
   await expect(sold).toContainText('Sold');
   await expect(sold).toContainText('UGX 23M');
+  await dealer.goto(listUrl);
 
   // A salesperson.
   await dealer.getByLabel('Name', { exact: true }).fill('Sam Sales');
@@ -252,9 +291,9 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('heading', { name: /Toyota Premio/ })).toBeVisible();
   await expect(dealer.getByRole('region', { name: 'Costs', exact: true })).toContainText('22,940,000');
 
-  // Signing in again with nowhere particular to go lands the dealer in their console.
+  // Signing in again with nowhere particular to go lands the approved dealer on their dashboard (D-146).
   const again = await (await browser.newContext()).newPage();
   await signIn(again, OWNER);
-  await expect(again).toHaveURL(new RegExp(`${listUrl.replace(/^https?:\/\/[^/]+/, '')}$`));
-  await expect(again.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
+  await expect(again).toHaveURL(new RegExp(`${listUrl.replace(/^https?:\/\/[^/]+/, '')}/dashboard$`));
+  await expect(again.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
 });

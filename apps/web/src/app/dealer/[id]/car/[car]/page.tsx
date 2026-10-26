@@ -8,10 +8,13 @@ import { Plate } from '@/components/plate';
 import { statusIcon } from '@/components/status';
 import { ShareButtons } from '@/components/share-buttons';
 import { AppFrame } from '@/components/app-frame/app-frame';
+import { Popup } from '@/components/popup';
 import { ApiError, api, isSignedIn } from '@/lib/api';
+import { localPhone } from '@/lib/phone';
 import type { CostEntry, Me, MyOrganisation, StockItem } from '@/lib/types';
 import { shareReport } from '../../../../buyer-actions';
-import { addCost, addPhotos, changePrice, createLink, linkCar, markSold, removePhoto, removeStock, revokeLink, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
+import { addCost, addPhotos, changePrice, createLink, linkCar, removePhoto, removeStock, revokeLink, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
+import { SaleForm, type BuyerChoice } from '../../../sale-form';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
@@ -47,11 +50,16 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const manager = org.role === 'org_manager';
   const c = await api<StockItem>(`/dealer/stock/${car}`, as).catch((err) => { if (err instanceof ApiError && err.status === 404) notFound(); throw err; });
-  const [costs, me, links] = await Promise.all([
+  const [costs, me, links, leads] = await Promise.all([
     manager ? api<{ totalUgx: number; entries: CostEntry[] }>(`/dealer/stock/${car}/costs`, as).catch(() => undefined) : Promise.resolve(undefined),
     api<Me>('/me', { auth: true }).catch(() => undefined),
     c.linked && c.status === 'in_stock' ? api<{ items: CarLink[] }>(`/dealer/stock/${car}/links`, as).then((r) => r.items).catch(() => []) : Promise.resolve([] as CarLink[]),
+    manager && approved && c.status === 'in_stock'
+      ? api<{ items: { leadId: string; stockId: string | null; stage: string; customer: { name: string | null; phone: string | null } }[] }>('/dealer/leads?stage=open', as).then((r) => r.items).catch(() => [])
+      : Promise.resolve([]),
   ]);
+  // The buyer is usually someone who asked about this car (D-146).
+  const buyers: BuyerChoice[] = leads.filter((l) => l.stockId === car).map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null }));
   const name = org.tradingName ?? org.legalName;
   const h = await headers();
   const newLink = sp.link && /^[A-Za-z0-9_-]{20,40}$/.test(sp.link) ? `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host')}/c/${sp.link}` : undefined;
@@ -152,14 +160,10 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
             </form>
           </details>
           {approved && (
-            <details className="w-full sm:w-auto">
-              <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Mark as sold</summary>
-              <form action={markSold} className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_auto]">{hidden}<input type="hidden" name="from" value="car" />
-                <div><label htmlFor="soldfor" className="label">Sold for (UGX), private</label><input id="soldfor" name="price" required inputMode="numeric" className="field tabular-nums" /></div>
-                <div><label htmlFor="soldon" className="label">Date</label><input id="soldon" name="soldOn" type="date" max={today} defaultValue={today} className="field" /></div>
-                <button className="btn btn-primary self-end">Record the sale</button>
-              </form>
-            </details>
+            <Popup title="Mark as sold" button="Mark as sold" buttonClassName="btn btn-ghost w-full bg-white sm:w-auto">
+              <p className="mb-3 text-sm text-muted">{title} · asking {formatUgx(c.askingPriceUgx, false)}</p>
+              <SaleForm org={id} carId={c.stockId} askingPriceUgx={c.askingPriceUgx} today={today} manager={manager} buyers={buyers} mode="sell" />
+            </Popup>
           )}
           <form action={removeStock}>{hidden}<button className="btn btn-ghost w-full bg-white" aria-label={`Remove ${title} without a sale`}><Icon name="delete" />Remove</button></form>
         </div>

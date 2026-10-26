@@ -6,9 +6,11 @@ const keys = (entries: ReturnType<typeof navFor>) => entries.flatMap((e) => (isG
 describe('navigation (one list of workspaces and modules)', () => {
   it('shows a dealer salesperson fewer modules than a manager, with the business filled in', () => {
     const sales = navFor('dealer', { platformRoles: ['consumer'], orgRole: 'org_staff' }, 'abc');
-    expect(keys(sales)).toEqual(['stock', 'notifications', 'enquiries', 'sold', 'business']);
+    expect(keys(sales)).toEqual(['dashboard', 'stock', 'notifications', 'enquiries', 'sold', 'business']);
     const manager = navFor('dealer', { platformRoles: ['consumer'], orgRole: 'org_manager' }, 'abc');
     expect(keys(manager)).toContain('commissions');
+    expect(keys(manager)).toContain('payments'); // money: managers only (D-146)
+    expect(keys(sales)).not.toContain('payments');
     expect(manager.find((e) => e.key === 'sold')).toMatchObject({ href: '/dealer/abc?show=sold' });
   });
 

@@ -17,6 +17,7 @@ export const lastCode = () => codes().at(-1)![1]!;
 export const shot = async (page: Page, name: string) => { if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/${name}.png`, fullPage: true }); };
 
 export async function a11y(page: Page) {
+  await expect(page).toHaveTitle(/\S/); // after a client-side move the title is set a moment later
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
 }

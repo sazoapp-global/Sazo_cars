@@ -129,10 +129,12 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
   dealer: {
     key: 'dealer', label: 'Dealer', paths: ['/dealer/'],
     entries: [
+      { key: 'dashboard', label: 'Dashboard', short: 'Dashboard', icon: 'analytics', href: '/dealer/{org}/dashboard', rule: APPROVED },
       { key: 'stock', label: 'Cars for sale', short: 'For sale', icon: 'storefront', href: '/dealer/{org}', alsoActive: ['/dealer/{org}/car/'] },
       NOTIFICATIONS,
       { key: 'import', label: 'Add many cars', short: 'Add many', icon: 'upload_file', href: '/dealer/{org}/import', rule: MANAGER_APPROVED },
       { key: 'enquiries', label: 'Enquiries', short: 'Enquiries', icon: 'forum', href: '/dealer/{org}/enquiries', rule: APPROVED },
+      { key: 'payments', label: 'Payments', short: 'Payments', icon: 'savings', href: '/dealer/{org}/payments', rule: MANAGER_APPROVED },
       { key: 'commissions', label: 'Commission', short: 'Commission', icon: 'payments', href: '/dealer/{org}/commissions', rule: MANAGER_APPROVED },
       { key: 'sold', label: 'Sold', short: 'Sold', icon: 'sell', href: '/dealer/{org}?show=sold', rule: APPROVED },
       { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '/dealer/{org}#staff-section', rule: MANAGER_APPROVED },

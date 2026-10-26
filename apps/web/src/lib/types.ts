@@ -34,6 +34,8 @@ export interface RecordConfidence { level: 'high' | 'medium' | 'low' | 'insuffic
 export type VehicleNotice = { kind: 'under_review' } | { kind: 'upheld'; category: import('@sazo/contracts').ConcernCategory };
 export interface Summary {
   notices?: VehicleNotice[];
+  /** D-123: whether a dealer is still owed money on this car (status only). */
+  statuses?: { dealerBalance?: 'owed' | 'paid' | null };
   vehicle: VehicleCard;
   questions: QuestionView[];
   recordConfidence: RecordConfidence;
@@ -51,6 +53,8 @@ export interface FullReport {
   openConflicts: { topic: string; headlineKey: string }[];
   latestInspection?: LatestInspection | null;
   notices?: VehicleNotice[];
+  /** D-123: whether a dealer is still owed money on this car (status only). */
+  statuses?: { dealerBalance?: 'owed' | 'paid' | null };
   model?: { modelId: string; label: string } | null;
   asOf: string;
   ruleSetVersion: string;

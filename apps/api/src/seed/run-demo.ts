@@ -19,6 +19,7 @@ import { DB_POOL } from '../platform/tokens.js';
 import { ConsoleEmailSender } from '../modules/notify/index.js';
 import { signInWithCode } from '../test-auth.js';
 import { testPhoto } from '../test-photos.js';
+import { DEMO_SALES } from './demo-payments.js';
 import { VIEWS, bodyOf, demoCarPhoto } from './demo-photos.js';
 import { seedScenarios } from './scenario-seed.js';
 
@@ -222,6 +223,40 @@ const noahLead = (await call(http.get('/v1/dealer/leads?stage=open').set(D()))).
 await call(http.patch(`/v1/dealer/leads/${noahLead.leadId}`).set(D()).send({ stage: 'completed', salePriceUgx: 43_000_000 }));
 const waitingBroker = await person('Broker (waiting)', '+256700300002', 'Grace Atim');
 await call(http.post('/v1/broker/application').set(bearer(waitingBroker.token)).send({ nin: 'CF90004321ATIM', idPhotoEvidenceId: await upload(waitingBroker.token, 'official_document', await testPhoto('grace atim id')) }));
+
+log('Past sales and payments: cash and instalments over the last 12 months…');
+// D-146: the dashboard's monthly graph and the Payments pages. See demo-payments.ts for the sample sales.
+const planOf = async (stockId: string, body: object) => (await call(http.post(`/v1/dealer/stock/${stockId}/payment-plan`).set(D()).send(body))).body as {
+  planId: string; schedule: { seq: number; dueOn: string; amountUgx: number; owingUgx: number }[];
+};
+const methods = ['mtn_momo', 'cash', 'bank', 'airtel_money'] as const;
+for (const s of DEMO_SALES) {
+  const added = (await call(http.post('/v1/dealer/stock').set(D()).send({ plate: s.plate, chassisNumber: s.chassis, askingPriceUgx: s.asking,
+    details: { make: s.make, model: s.model, modelYear: s.year, colour: s.colour, stage: 'at_yard', yard: 'Kisementi yard', receivedOn: day(-s.soldDaysAgo - 35), openToBrokers: false } }))).body;
+  const photo = await upload(dealerSales.token, 'vehicle_photo', await carPhoto(`${s.model} ${s.year} sold`, COLOURS[s.colour] ?? '#64748b', s.model, 0));
+  await call(http.post(`/v1/dealer/stock/${added.stockId}/photos`).set(D(dealerSales.token)).send({ evidenceId: photo }));
+  await call(http.post(`/v1/dealer/stock/${added.stockId}/sold`).set(D()).send({ salePriceUgx: s.price, soldOn: day(-s.soldDaysAgo) }));
+  const p = s.plan;
+  if (p.kind === 'cash') {
+    await planOf(added.stockId, { buyer: s.buyer, kind: 'cash', paidAtSale: { method: p.method, reference: p.method === 'bank' ? `Stanbic ${s.chassis.slice(-4)}` : undefined } });
+    continue;
+  }
+  const plan = await planOf(added.stockId, { buyer: s.buyer, kind: 'instalments', depositUgx: p.deposit, months: p.months, firstDueOn: day(-s.soldDaysAgo + p.firstDueAfterDays),
+    reminders: p.reminders ?? true, paidAtSale: { method: p.depositMethod } });
+  const monthly = plan.schedule.filter((x) => x.seq > 0);
+  for (const [k, due] of monthly.slice(0, p.paid).entries()) {
+    await call(http.post(`/v1/dealer/payments/${plan.planId}/payments`).set(D()).send({ amountUgx: due.amountUgx, method: methods[k % methods.length], paidOn: due.dueOn }));
+  }
+  const nextDue = monthly[p.paid];
+  if (p.part && nextDue) {
+    const on = new Date(Date.parse(`${nextDue.dueOn}T00:00:00Z`) + p.part.daysAfterDue * 86_400_000).toISOString().slice(0, 10);
+    await call(http.post(`/v1/dealer/payments/${plan.planId}/payments`).set(D()).send({ amountUgx: p.part.amount, method: p.part.method, paidOn: on, reference: 'MoMo 58213904' }));
+  }
+}
+// The Noah sold through the broker today: a deposit and 10 months, from the enquiry.
+await planOf(stock['toyota noah']!, { buyer: { leadId: noahLead.leadId }, kind: 'instalments', depositUgx: 13_000_000, months: 10, firstDueOn: day(30), paidAtSale: { method: 'mtn_momo', reference: 'MP-77120' } });
+// The Forester sold three days ago: cash, paid at the sale.
+await planOf(stock['subaru forester']!, { buyer: { name: 'Allan Mubiru', phone: '+256752100116' }, kind: 'cash', paidAtSale: { method: 'cash' } });
 
 log('A dealer waiting for approval, with cars kept private…');
 const newDealer = await person('Dealer waiting for approval', '+256700200003', 'Brian Ssali');

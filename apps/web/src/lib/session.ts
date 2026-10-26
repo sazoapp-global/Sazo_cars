@@ -77,7 +77,7 @@ export async function afterLogin(r: LoginResult, next: string, remember = true):
   if (to === '/') {
     const orgs = await api<{ id: string; type: string; status: string }[]>('/me/organisations', auth).catch(() => []);
     const dealer = orgs.find((o) => o.type === 'dealer' && (o.status === 'approved' || o.status === 'pending_verification'));
-    if (dealer) to = `/dealer/${dealer.id}`;
+    if (dealer) to = `/dealer/${dealer.id}${dealer.status === 'approved' ? '/dashboard' : ''}`; // the dashboard once approved (D-146)
   }
   const then = me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(to)}` : to;
   if (r.backupCodes?.length) {

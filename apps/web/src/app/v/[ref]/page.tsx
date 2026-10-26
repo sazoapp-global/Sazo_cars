@@ -1,7 +1,7 @@
 import { CONFIDENCE_LABELS, QUESTION_ORDER, QUESTION_TITLES, factValue, statusLabel, summaryLine } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ConcernNotices } from '@/components/concern-notices';
+import { ConcernNotices, DealerBalanceNote } from '@/components/concern-notices';
 import { Icon } from '@/components/icon';
 import { ModelCommunity } from '@/components/model-community';
 import { Plate } from '@/components/plate';
@@ -114,6 +114,7 @@ function PublicSummary({ s, vref }: { s: Summary; vref: string }) {
         <div className="space-y-3 bg-soft/50 p-4 md:p-6">
           {s.vehicle.banner && <Banner banner={s.vehicle.banner} />}
           <ConcernNotices notices={s.notices} />
+          <DealerBalanceNote statuses={s.statuses} />
           {QUESTION_ORDER.filter((id) => by.has(id)).map((id, i) => {
             const q = by.get(id)!;
             const warm = q.status === 'attention' || q.status === 'serious';

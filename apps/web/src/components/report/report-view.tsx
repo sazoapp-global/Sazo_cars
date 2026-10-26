@@ -9,7 +9,7 @@ import {
   damageRecords, factMap, garageVisits, identityRows, kmPerYear, kmText, legalStatus, mainGarage, mileageReadings, origin,
   type IdentityRow, type ReportExtras,
 } from '@/lib/report-data';
-import { ConcernNotices } from '../concern-notices';
+import { ConcernNotices, DealerBalanceNote } from '../concern-notices';
 import { Confidence } from '../confidence';
 import { HealthDial } from '../health-dial';
 import { Icon, type IconName } from '../icon';
@@ -213,6 +213,7 @@ export function ReportSections({ r, x }: { r: FullReport; x: ReportExtras }) {
   return (
     <div className="space-y-6">
       <ConcernNotices notices={r.notices} />
+      <DealerBalanceNote statuses={r.statuses} />
       {r.openConflicts.length > 0 && (
         <div role="alert" className="rounded-xl border border-bad-line bg-bad-fill p-4 text-bad-text">
           <p className="flex items-center gap-2 font-semibold"><Icon name="warning" size={18} />Some records disagree</p>

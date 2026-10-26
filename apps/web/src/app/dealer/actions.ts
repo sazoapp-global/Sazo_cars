@@ -361,3 +361,99 @@ export async function addCarsFromFile(form: FormData) {
   } catch (err) { toImport(org, { file, error: reason(err, 'SAZO could not add the cars. Please try again.') }); }
   toImport(org, { file, done: added === 1 ? '1 car added.' : `${added} cars added.` });
 }
+
+// Payments (D-146, managers) ----------------------------------------------------------------------------------
+
+const toPayments = (org: string, q: Record<string, string>): never => redirect(`/dealer/${org}/payments?${new URLSearchParams(q)}`);
+const PAY_METHODS = ['cash', 'mtn_momo', 'airtel_money', 'bank'];
+
+/** The payment part of the sale form: buyer, cash or instalments, what was paid at the sale. */
+function planFrom(form: FormData, fail: (msg: string) => never): Record<string, unknown> {
+  const leadId = text(form, 'leadId');
+  const name = text(form, 'buyerName');
+  const phone = toE164(text(form, 'buyerPhone'));
+  if (!UUID.test(leadId) && (name.length < 2 || !phone)) fail('Choose the buyer from the enquiries, or give their name and a phone number like 0772 123 456.');
+  const kind = text(form, 'kind') === 'instalments' ? 'instalments' : 'cash';
+  const method = PAY_METHODS.includes(text(form, 'method')) ? text(form, 'method') : 'cash';
+  const plan: Record<string, unknown> = {
+    buyer: UUID.test(leadId) ? { leadId } : { name, phone },
+    kind,
+    reminders: form.get('reminders') === 'on',
+    paidAtSale: { method, ...(text(form, 'reference') ? { reference: text(form, 'reference') } : {}) },
+  };
+  if (kind === 'instalments') {
+    const months = digits(text(form, 'months'));
+    if (!months || months > 120) fail('Enter the number of monthly payments (1 to 120).');
+    if (!text(form, 'firstDueOn')) fail('Enter when the first monthly payment is due.');
+    plan.depositUgx = digits(text(form, 'deposit'));
+    plan.months = months;
+    plan.firstDueOn = text(form, 'firstDueOn');
+    if (!plan.depositUgx) delete plan.paidAtSale;
+  }
+  return plan;
+}
+
+/** Sell a car: the sale, then (managers) how it is paid for. Opens the payments of the car afterwards. */
+export async function sellCar(form: FormData) {
+  const { org, car } = ids(form);
+  const price = digits(text(form, 'price'));
+  const fail = (error: string): never => toCar(org, car, { error });
+  if (!price) fail('Enter the price it sold for. Buyers never see it.');
+  const withPlan = form.has('kind');
+  const plan = withPlan ? planFrom(form, fail) : undefined;
+  try {
+    await api(`/dealer/stock/${car}/sold`, { method: 'POST', ...asDealer(org), body: { salePriceUgx: price, ...(text(form, 'soldOn') ? { soldOn: text(form, 'soldOn') } : {}) } });
+  } catch (err) { fail(reason(err, 'Could not record the sale.')); }
+  if (!plan) toList(org, { done: 'Sale recorded.', show: 'sold' });
+  let planId = '';
+  try {
+    planId = (await api<{ planId: string }>(`/dealer/stock/${car}/payment-plan`, { method: 'POST', ...asDealer(org), body: plan })).planId;
+  } catch (err) {
+    toPayments(org, { error: `The sale is recorded, but not how it is paid: ${reason(err, 'please try again')}. Add it below.` });
+  }
+  toPayments(org, { plan: planId, done: 'Sale recorded. The buyer gets an SMS receipt for what they paid.' });
+}
+
+/** How an already sold car is paid for (a sale recorded before, or by sales staff). */
+export async function addPaymentPlan(form: FormData) {
+  const { org, car } = ids(form);
+  const fail = (error: string): never => toPayments(org, { error, add: car });
+  const plan = planFrom(form, fail);
+  let planId = '';
+  try {
+    planId = (await api<{ planId: string }>(`/dealer/stock/${car}/payment-plan`, { method: 'POST', ...asDealer(org), body: plan })).planId;
+  } catch (err) { fail(reason(err, 'Could not save how the car is paid for.')); }
+  toPayments(org, { plan: planId, done: 'Payment record saved.' });
+}
+
+/** A payment received: saved for good, with an SMS receipt to the buyer. */
+export async function recordPayment(form: FormData) {
+  const org = text(form, 'org');
+  const plan = text(form, 'plan');
+  if (!UUID.test(org) || !UUID.test(plan)) redirect('/business');
+  const fail = (error: string): never => toPayments(org, { plan, error });
+  const amount = digits(text(form, 'amount'));
+  if (!amount) fail('Enter the amount received.');
+  const method = PAY_METHODS.includes(text(form, 'method')) ? text(form, 'method') : '';
+  if (!method) fail('Choose how it was paid.');
+  let receipt = '';
+  try {
+    receipt = (await api<{ receiptNo: string }>(`/dealer/payments/${plan}/payments`, { method: 'POST', ...asDealer(org), body: {
+      amountUgx: amount, method, paidOn: text(form, 'paidOn'), ...(text(form, 'reference') ? { reference: text(form, 'reference') } : {}),
+    } })).receiptNo;
+  } catch (err) { fail(reason(err, 'Could not save the payment.')); }
+  toPayments(org, { plan, done: `Payment saved. Receipt ${receipt} was sent to the buyer by SMS.` });
+}
+
+/** A mistaken payment is corrected (both stay on record), never edited. */
+export async function correctPayment(form: FormData) {
+  const org = text(form, 'org');
+  const plan = text(form, 'plan');
+  const payment = text(form, 'payment');
+  if (!UUID.test(org) || !UUID.test(plan) || !UUID.test(payment)) redirect('/business');
+  if (text(form, 'reason').length < 3) toPayments(org, { plan, error: 'Say why the payment is being corrected.' });
+  try {
+    await api(`/dealer/payments/${plan}/payments/${payment}/correct`, { method: 'POST', ...asDealer(org), body: { reason: text(form, 'reason') } });
+  } catch (err) { toPayments(org, { plan, error: reason(err, 'Could not correct the payment.') }); }
+  toPayments(org, { plan, done: 'Payment corrected. Both stay on record.' });
+}

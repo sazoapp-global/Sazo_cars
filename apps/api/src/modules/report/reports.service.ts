@@ -33,6 +33,18 @@ export class ReportsService {
     @Inject(ConcernService) private readonly concerns: ConcernService,
   ) {}
 
+  /** Other modules add statuses to the report without the report depending on them (the dealer balance, D-123). */
+  private readonly statusSources: ((vehicleIds: string[]) => Promise<Record<string, unknown>>)[] = [];
+  addStatusSource(fn: (vehicleIds: string[]) => Promise<Record<string, unknown>>): void {
+    this.statusSources.push(fn);
+  }
+
+  private async statuses(id: string): Promise<Record<string, unknown>> {
+    const family = await this.registry.mergeFamily(id);
+    const parts = await Promise.all(this.statusSources.map((fn) => fn(family).catch(() => ({}))));
+    return Object.assign({}, ...parts);
+  }
+
   private async load(ref: string): Promise<{ id: string; card: VehicleCard & Record<string, unknown>; snap: TrustSnapshot }> {
     const id = await this.registry.idForRef(ref);
     if (!id) throw new ReportNotFound(ref);
@@ -63,6 +75,7 @@ export class ReportsService {
     return {
       vehicle: card,
       notices: await this.notices(id),
+      statuses: await this.statuses(id),
       questions: snap.questions.map((q) => ({ question: q.question, status: q.status, headlineKey: q.headlineKey })),
       recordConfidence: snap.recordConfidence,
       asOf: snap.asOf,
@@ -95,6 +108,7 @@ export class ReportsService {
       openConflicts: snap.openConflicts.map((c) => ({ topic: c.topic, headlineKey: `conflict.${c.topic}.open` })),
       latestInspection: await this.latestInspection(id, snap),
       notices: await this.notices(id),
+      statuses: await this.statuses(id),
       model: await this.reference.findModel(fact('make') as string, fact('model') as string, fact('year') as number)
         .then((m) => (m ? { modelId: m.modelId, label: modelLabel(m) } : null)),
       asOf: snap.asOf,
