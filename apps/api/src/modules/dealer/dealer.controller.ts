@@ -9,6 +9,7 @@ import { COST_CATEGORIES, CUSTOMS_STATUSES, IMPORT_STAGES } from './dealer.repos
 import { dealerOrg, type DealerPermission } from './dealer-access.js';
 import { DealerError, DealerService } from './dealer.service.js';
 import { DealerImportService } from './import.service.js';
+import { kampalaToday } from './payments.service.js';
 
 const Uuid = z.string().uuid();
 const Price = z.number().int().positive().max(100_000_000_000);
@@ -197,7 +198,7 @@ export class DealerController {
   @HttpCode(200)
   async sold(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Param('id') id: string, @Body() body: unknown) {
     const org = await this.approvedOrg(actor, orgId);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = kampalaToday(); // dealers work in Kampala time: a sale just after midnight is today's
     const b = z.object({ salePriceUgx: Price, soldOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => d <= today, 'cannot be in the future').default(today) }).safeParse(body);
     if (!b.success) throw badRequest('invalid_request', 'salePriceUgx is required; soldOn must be a past date (YYYY-MM-DD)');
     return this.one(actor, org, await this.dealer.markSold(actor, org, this.id(id), b.data.salePriceUgx, b.data.soldOn).catch(problem));

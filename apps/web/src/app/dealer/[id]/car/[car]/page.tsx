@@ -66,7 +66,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const title = carName(c);
   const d = c.details;
   const live = c.status === 'in_stock';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10); // Kampala
   const hidden = <><input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} /></>;
 
   return (
