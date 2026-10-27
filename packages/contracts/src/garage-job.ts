@@ -59,7 +59,8 @@ export type JobForm = z.infer<typeof JobForm>;
 export const DraftInput = z.object({
   plateEntered: z.string().trim().min(2).max(15),
   vehicleRef: z.string().regex(/^SZV-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/).optional(),
-  workTypes: z.array(z.enum(WORK_TYPES)).min(1).max(WORK_TYPES.length),
+  // A draft may be saved before the work is chosen (the phone saves as soon as the car is found); sending needs one.
+  workTypes: z.array(z.enum(WORK_TYPES)).max(WORK_TYPES.length),
   clientCreatedAt: z.string().datetime({ offset: true }),
   form: JobForm,
   version: z.number().int().positive().optional(),
@@ -74,6 +75,7 @@ export function completenessErrors(workTypes: readonly WorkType[], f: JobForm): 
   const need = (cond: unknown, path: string, message: string, code = 'required') => {
     if (!cond) e.push({ path, code, message });
   };
+  need(workTypes.length, 'workTypes', 'Choose the work done');
   need(f.mileage, 'form.mileage', 'Enter the mileage shown on the dashboard');
   need(f.mileage?.odometerPhotoId, 'form.mileage.odometerPhotoId', 'Take a photo of the odometer', 'evidence_required');
   if (workTypes.includes('service')) need(f.service?.items.length, 'form.service.items', 'What was done in the service?');

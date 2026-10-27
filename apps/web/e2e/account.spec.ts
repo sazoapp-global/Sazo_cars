@@ -111,6 +111,33 @@ test('manage my account and delete it', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Log in', exact: true })).toBeVisible();
 });
 
+test('an email sign-up confirms the mobile number in the same go, so the next log-in is not stopped', async ({ page }) => {
+  const email = `rita${stamp}@example.com`;
+  await page.goto('/sign-up');
+  const panel = page.getByRole('main');
+  await panel.getByLabel('Surname').fill('Achan');
+  await panel.getByLabel('Given name').fill('Rita');
+  await panel.getByLabel('Female', { exact: true }).check();
+  await panel.getByLabel('Date of birth').fill('1994-02-11');
+  await panel.getByLabel('Email', { exact: true }).fill(email);
+  await panel.getByLabel('Password', { exact: true }).fill('mango-tree-41');
+  await panel.getByLabel('Password again').fill('mango-tree-41');
+  await panel.getByRole('button', { name: 'Create Free Account' }).click();
+  await expect(panel.getByText('Enter your mobile number')).toBeVisible();
+  await panel.getByLabel('Mobile number').fill(`0776${stamp}`);
+  await panel.getByLabel('Password', { exact: true }).fill('mango-tree-41'); // passwords are never kept after a problem
+  await panel.getByLabel('Password again').fill('mango-tree-41');
+  const before = codesSoFar();
+  await panel.getByRole('button', { name: 'Create Free Account' }).click();
+  await expect(page.getByLabel('6-digit code')).toBeVisible();
+  await expect.poll(codesSoFar).toBeGreaterThan(before);
+  await page.getByLabel('6-digit code').fill(lastCode());
+  await page.getByRole('button', { name: 'Confirm and carry on' }).click();
+  await expect(page).toHaveURL(/\/welcome$/);
+  await page.goto('/account');
+  await expect(page.getByRole('progressbar', { name: 'Your profile' })).toHaveAttribute('aria-valuenow', '75');
+});
+
 test('create an account with email and password, then log in with it (D-100)', async ({ page }) => {
   const email = `mike${stamp}@example.com`;
   await page.goto('/sign-up');
@@ -124,6 +151,7 @@ test('create an account with email and password, then log in with it (D-100)', a
   // Under 18: refused with a clear reason.
   await panel.getByLabel('Date of birth').fill(`${new Date().getFullYear() - 16}-01-10`);
   await panel.getByLabel('Email', { exact: true }).fill(email);
+  await panel.getByLabel('Mobile number').fill(`0774${stamp}`);
   await panel.getByLabel('Password', { exact: true }).fill('river-stone-7');
   await panel.getByLabel('Password again').fill('river-stone-7');
   await panel.getByRole('button', { name: 'Create Free Account' }).click();
@@ -132,6 +160,12 @@ test('create an account with email and password, then log in with it (D-100)', a
   await panel.getByLabel('Password', { exact: true }).fill('river-stone-7');
   await panel.getByLabel('Password again').fill('river-stone-7');
   await panel.getByRole('button', { name: 'Create Free Account' }).click();
+  // The account is made; the phone is confirmed straight away (27 Oct 2026). Mike leaves it for later, so his next
+  // log-in asks for it (below).
+  await expect(page.getByRole('heading', { name: 'Confirm your mobile number' })).toBeVisible();
+  await expect(page.getByLabel('6-digit code')).toBeVisible();
+  await a11y(page);
+  await page.getByRole('button', { name: 'Do it later' }).click();
   await expect(page).toHaveURL(/\/welcome$/);
   await expect(page.getByRole('heading', { name: 'Welcome to SAZO, Mike' })).toBeVisible();
   await a11y(page);

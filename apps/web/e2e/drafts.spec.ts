@@ -23,6 +23,7 @@ test('sign-up keeps what was typed through a switch, a refresh and a failed send
   const email = `grace.${stamp}@example.com`;
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Password', { exact: true }).fill('river-stone-7a');
+  await page.getByLabel('Mobile number').fill(`0775${stamp}`);
 
   // A refresh keeps everything except the password.
   await page.reload();
@@ -42,6 +43,8 @@ test('sign-up keeps what was typed through a switch, a refresh and a failed send
   await page.getByLabel('Password', { exact: true }).fill('river-stone-7a');
   await page.getByLabel('Password again').fill('river-stone-7a');
   await page.getByRole('button', { name: /Create Free Account/ }).click();
+  await expect(page.getByLabel('6-digit code')).toBeVisible();
+  await page.getByRole('button', { name: 'Do it later' }).click();
   await expect(page).toHaveURL(/\/welcome/);
   expect(await page.evaluate(() => Object.keys(sessionStorage).filter((k) => k.startsWith('sazo-draft:')))).toEqual([]);
 });

@@ -1,4 +1,4 @@
-import { formatUgx } from '@sazo/contracts';
+import { formatUgx, kindLabel } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: 'Add many cars', robots: { index: fal
 
 interface Row {
   line: number; problems: string[];
-  row: { make?: string; model?: string; modelYear?: number; chassisNumber?: string; vin?: string; plate?: string; askingPriceUgx?: number; stage: string; costs: unknown[] };
+  row: { make?: string; model?: string; modelYear?: number; kind?: string; chassisNumber?: string; vin?: string; plate?: string; askingPriceUgx?: number; stage: string; costs: unknown[] };
 }
 interface Checked {
   importId: string; fileName: string; status: 'checked' | 'adding' | 'added'; ready: number; withProblems: number; rows: Row[];
@@ -92,7 +92,7 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
                   <div>
                     <p className="font-semibold"><span className="text-muted">Row {l.line}.</span> {name(l.row)}</p>
                     <p className="text-muted">
-                      {[l.row.askingPriceUgx ? formatUgx(l.row.askingPriceUgx, false) : null, stageLabel(l.row.stage as ImportStage), l.row.plate, l.row.vin ?? l.row.chassisNumber,
+                      {[kindLabel(l.row.kind) ?? null, l.row.askingPriceUgx ? formatUgx(l.row.askingPriceUgx, false) : null, stageLabel(l.row.stage as ImportStage), l.row.plate, l.row.vin ?? l.row.chassisNumber,
                         l.row.costs.length ? `${l.row.costs.length} ${l.row.costs.length === 1 ? 'cost' : 'costs'}` : null].filter(Boolean).join(' · ')}
                     </p>
                     {l.problems.length > 0 && <ul className="mt-1 list-disc pl-5 text-bad-text">{l.problems.map((p) => <li key={p}>{p}</li>)}</ul>}

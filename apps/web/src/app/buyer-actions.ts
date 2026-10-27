@@ -22,6 +22,9 @@ export async function shareReport(form: FormData) {
   } catch (err) {
     redirect(`/v/${ref(form)}?error=${encodeURIComponent(err instanceof ApiError ? 'Could not make a link right now.' : 'Something went wrong.')}`);
   }
+  // From a dealer's car page the link is shown there, so the dealer stays in their console.
+  const back = String(form.get('back') ?? '');
+  if (/^\/dealer\/[0-9a-f-]{36}\/car\/[0-9a-f-]{36}$/.test(back)) redirect(`${back}?report=${token}#report-link`);
   redirect(`/shares?new=${token}`);
 }
 

@@ -47,7 +47,7 @@ export default async function Moderation({ searchParams }: { searchParams: SP })
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Reviews and videos</h1>
-      <p className="mb-4 text-muted">Publish only what is about the model in general. Reject names, phone numbers, claims about a specific car or person, adverts, and videos that are not about this model (D-063, P-008).</p>
+      <p className="mb-4 text-muted">Publish only what is about the model in general. Reject names, phone numbers, claims about a specific car or person, adverts, and videos that are not about this model.</p>
       <Notice done={sp.done} error={sp.error} />
       <nav aria-label="Filter" className="mb-4 flex flex-wrap gap-2">
         {STATUSES.map(([s, label]) => (

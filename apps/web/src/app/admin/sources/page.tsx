@@ -50,7 +50,7 @@ export default async function Sources({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <h1 className="font-display text-2xl font-bold">Data sources</h1>
-      <p className="mb-4 text-muted">Where records come from. While SAZO is in testing most are <strong>simulated</strong>. When a real partner connects, retire the simulated source and say which real one replaces it: its records stop counting but are kept (D-011).</p>
+      <p className="mb-4 text-muted">Where records come from. While SAZO is in testing most are <strong>simulated</strong>. When a real partner connects, retire the simulated source and say which real one replaces it: its records stop counting but are kept.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="managing data sources" /> : (
         <Rows label="Data sources">

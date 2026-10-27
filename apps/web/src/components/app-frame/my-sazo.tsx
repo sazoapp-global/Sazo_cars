@@ -9,7 +9,12 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { signOut } from '@/app/sign-in/actions';
 import { Icon, type IconName } from '@/components/icon';
 
-export function MySazo() {
+export interface MyBusiness { id: string; name: string; type: string; status: string }
+
+/** Where a business's own work is done: a dealer's console, otherwise its page (with the way into the phone app). */
+const businessHref = (b: MyBusiness) => b.type === 'dealer' ? `/dealer/${b.id}${b.status === 'approved' ? '/dashboard' : ''}` : `/business/${b.id}`;
+
+export function MySazo({ businesses = [] }: { businesses?: MyBusiness[] }) {
   const pathname = usePathname() ?? '';
   const search = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -38,6 +43,18 @@ export function MySazo() {
       {open && (
         <div id={id} role="group" aria-label="My SAZO" className="absolute right-0 top-full z-50 mt-2 w-64 rounded-[14px] border border-line bg-card p-2 shadow-xl">
           {MY_SAZO.map((l) => <Link key={l.key} href={l.href} className={item}><Icon name={l.icon as IconName} size={20} className="text-label" />{l.label}</Link>)}
+          {businesses.length > 0 && (
+            <>
+              <div className="my-1.5 h-px bg-line" />
+              <p className="px-3 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wider text-label">Your businesses</p>
+              {businesses.map((b) => (
+                <Link key={b.id} href={businessHref(b)} className={item}>
+                  <Icon name={b.type === 'dealer' ? 'storefront' : b.type === 'garage' ? 'build' : 'fact_check'} size={20} className="text-label" />
+                  <span className="min-w-0 truncate">{b.name}</span>
+                </Link>
+              ))}
+            </>
+          )}
           <div className="my-1.5 h-px bg-line" />
           <Link href={`${pathname}?${q}`} className={item}><Icon name={SETTINGS_LINK.icon as IconName} size={20} className="text-label" />{SETTINGS_LINK.label}</Link>
           <div className="my-1.5 h-px bg-line" />

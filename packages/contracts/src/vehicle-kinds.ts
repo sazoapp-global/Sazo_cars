@@ -54,8 +54,11 @@ export function kindFromText(text: string | null | undefined): VehicleKind | und
 export function chassisCode(chassis: string | null | undefined): string | undefined {
   const v = String(chassis ?? '').toUpperCase().replace(/\s+/g, '');
   if (!v || /^[A-HJ-NPR-Z0-9]{17}$/.test(v)) return undefined;
-  const m = /^([A-Z]{1,4}\d{1,3}[A-Z]{0,2})(?:-|\d{5,})/.exec(v);
-  return m?.[1];
+  const dashed = /^([A-Z]{1,4}\d{1,3}[A-Z]{0,2})-/.exec(v);
+  if (dashed) return dashed[1];
+  // Stored without the dash ("ZSU600123456"): the serial is the last 7 digits, or 6 on some older cars.
+  const plain = /^([A-Z]{1,4}\d{1,3}[A-Z]{0,2})\d{7}$/.exec(v) ?? /^([A-Z]{1,4}\d{1,3}[A-Z]{0,2})\d{6}$/.exec(v);
+  return plain?.[1];
 }
 
 /** The optional details a dealer can give for one car (D-148); a missing one is taken from SAZO's model list. */

@@ -143,11 +143,12 @@ function TopBar({ app, garage, me, online, unread, onSignOut }: { app: string; g
         <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-md bg-primary text-lime"><Icon name={isInspector(garage) ? 'fact_check' : 'garage'} size={20} /></span>
         <span className="min-w-0">
           <span className="block font-display text-base font-extrabold leading-tight text-primary">{app}</span>
-          <span className="block truncate text-xs text-muted lg:hidden">{garage.name}</span>
+          <span className="line-clamp-2 block break-words text-xs leading-tight text-muted lg:hidden">{garage.name}</span>
         </span>
       </button>
       <span role="status" aria-live="polite" className={`chip ml-auto shrink-0 lg:ml-0 !border-0 ${online ? 'bg-soft text-ok-text' : 'bg-lime text-ink'}`}>
-        <Icon name={online ? 'cloud_done' : 'wifi_off'} size={14} />{online ? 'Online' : 'Offline'}
+        {/* On a phone the word is left to screen readers when online, so the business name has room (27 Oct 2026). */}
+        <Icon name={online ? 'cloud_done' : 'wifi_off'} size={14} /><span className={online ? 'sr-only sm:not-sr-only' : ''}>{online ? 'Online' : 'Offline'}</span>
       </span>
       <button type="button" onClick={() => openPanel('notifications')} aria-label={unread ? `Notifications, ${unread} new` : 'Notifications'}
         className="relative grid size-11 shrink-0 place-items-center rounded-full text-ink hover:bg-soft">

@@ -11,6 +11,7 @@ import { addStaff, addStock, saveSettings } from '../actions';
 import { FUELS, STAGES, carName, stageLabel } from '../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../car-kind-fields';
+import { SubmitOnChange } from '@/components/submit-on-change';
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
@@ -164,10 +165,10 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           {show === 'sold' && <input type="hidden" name="show" value="sold" />}
           {onlyFindings && <input type="hidden" name="findings" value="1" />}
           <label htmlFor="stock-kind" className="sr-only">Kind of car</label>
-          <select id="stock-kind" name="kind" defaultValue={kindFilter ?? ''} className="field !min-h-10 !w-auto text-sm">
+          <SubmitOnChange id="stock-kind" name="kind" defaultValue={kindFilter ?? ''} className="field !min-h-10 !w-auto min-w-44 text-sm">
             <option value="">All kinds</option>
             {VEHICLE_KINDS.filter((k) => base.some((c) => kindOf(c) === k) || k === kindFilter).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
-          </select>
+          </SubmitOnChange>
           <label htmlFor="stock-q" className="sr-only">Search plate, make or model</label>
           <input id="stock-q" name="q" defaultValue={sp.q} placeholder="Search plate, make, model" className="field !min-h-10 text-sm" />
           <button className="btn btn-ghost !min-h-10 !px-3" aria-label="Search"><Icon name="search" size={18} /></button>
@@ -198,7 +199,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                     <span className="min-w-0 flex-[1.6]">
                       {plate && <Plate value={plate} size="sm" />}
                       <span className="mt-1 block font-display font-bold">{carName(c)}</span>
-                      <span className="block truncate text-xs text-muted">{stageLabel(c.details.stage)}{c.details.yard ? `, ${c.details.yard}` : ''}</span>
+                      <span className="block truncate text-xs text-muted">{kindOf(c) ? `${KIND_LABELS[kindOf(c)!]} · ` : ''}{stageLabel(c.details.stage)}{c.details.yard ? `, ${c.details.yard}` : ''}</span>
                       <span className={`mt-0.5 block text-xs font-semibold md:hidden ${status[1]}`}>{status[0]}</span>
                     </span>
                     <span className={`hidden flex-1 text-sm font-semibold md:block ${status[1]}`}>{status[0]}</span>

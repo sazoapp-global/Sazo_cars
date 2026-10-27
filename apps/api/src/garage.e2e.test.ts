@@ -359,4 +359,13 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     // Cleared, the photo counts again: the reading's confidence goes up.
     expect((await ledger()).confidence).toBeGreaterThan(before.confidence);
   });
+
+  it('a draft is saved before the work is chosen; it cannot be sent without the work', async () => {
+    // The phone saves as soon as the car is found, before the work is chosen; sending still needs the work.
+    const early = randomUUID();
+    const saved = await http.put(`/v1/garage/jobs/${early}`).set(asGarage(mechanicToken)).send({ plateEntered: 'UAZ 431Q', workTypes: [], clientCreatedAt: new Date().toISOString(), form: {} });
+    expect(saved.body).toMatchObject({ status: 'draft', workTypes: [] });
+    const unsent = await http.post(`/v1/garage/jobs/${early}/submit`).set(asGarage(mechanicToken)).set('Idempotency-Key', randomUUID()).send({}).expect(400);
+    expect(unsent.body.errors.map((e: { path: string }) => e.path)).toContain('workTypes');
+  });
 });

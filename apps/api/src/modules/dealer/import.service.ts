@@ -4,10 +4,11 @@
 // what happened to each row. The same file cannot be added twice.
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { DEALER_IMPORT_MAX_ROWS, normalizeIdentifier, parseDealerImportRow, tidyName, tidySentence, type DealerImportRow } from '@sazo/contracts';
+import { DEALER_IMPORT_MAX_ROWS, KIND_LABELS, normalizeIdentifier, parseDealerImportRow, tidyName, tidySentence, type DealerImportRow } from '@sazo/contracts';
 import pg from 'pg';
 import { DB_POOL } from '../../platform/tokens.js';
 import type { Actor } from '../iam/index.js';
+import { ReferenceService } from '../ref/index.js';
 import { VehicleRegistry } from '../vehicle/index.js';
 import { DealerRepository, type ImportStage } from './dealer.repository.js';
 import { DAILY_LISTINGS, DealerError, DealerService } from './dealer.service.js';
@@ -28,6 +29,7 @@ export class DealerImportService {
     @Inject(DealerService) private readonly dealer: DealerService,
     @Inject(DealerRepository) private readonly repo: DealerRepository,
     @Inject(VehicleRegistry) private readonly registry: VehicleRegistry,
+    @Inject(ReferenceService) private readonly reference: ReferenceService,
   ) {}
 
   /** Read and check every row; nothing is added. `cells` is one object per row, keyed by column key. */
@@ -39,6 +41,17 @@ export class DealerImportService {
     if (done.rowCount) throw new DealerError('import_already_added', 'These cars were already added from this file.');
 
     const lines: ImportLine[] = cells.map((raw, i) => ({ line: i + 2, ...parseDealerImportRow(raw, true) }));
+    // The kind of car (D-148), as on the add-a-car form: filled in when SAZO can tell from the chassis code or the
+    // model, and needed when the make is given and SAZO cannot tell. A row with only a plate or chassis number takes
+    // the kind from SAZO's records.
+    for (const l of lines) {
+      if (l.row.kind || !l.row.make) continue;
+      const found = this.reference.identify({ make: l.row.make, model: l.row.model, chassis: l.row.chassisNumber ?? l.row.vin });
+      if (found.kind) { l.row.kind = found.kind; continue; }
+      l.problems.push(found.reason === 'mixed_model' && found.kinds?.length
+        ? `Add the kind of car: this model comes as ${found.kinds.map((k) => KIND_LABELS[k]).join(' or ')}`
+        : 'Add the kind of car (SAZO does not know this model)');
+    }
     // The same car twice in one file.
     const seen = new Map<string, number>();
     for (const l of lines) {

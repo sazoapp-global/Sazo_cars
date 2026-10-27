@@ -14,6 +14,9 @@ export function KindField({ kind, chassis, disabled }: { kind?: VehicleKind | nu
   const [value, setValue] = useState<string>(kind ?? '');
   const [note, setNote] = useState<{ text: string; tone: 'ok' | 'ask' } | undefined>();
   const touched = useRef(!!kind);
+  const saved = !!kind; // editing a car whose kind is already recorded
+  const valueRef = useRef(value);
+  valueRef.current = value;
   useEffect(() => {
     if (disabled) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -26,11 +29,19 @@ export function KindField({ kind, chassis, disabled }: { kind?: VehicleKind | nu
       identifyCar(q).then((r: Identified | null) => {
         if (!r) return;
         window.dispatchEvent(new CustomEvent(EVENT, { detail: r }));
+        // Engine size: the model's figure is shown as a hint, not typed in, so it is never saved as the dealer's record.
+        const cc = document.getElementById('engineCc') as HTMLInputElement | null;
+        if (cc) cc.placeholder = r.spec?.engineCc ? `${r.spec.engineCc.toLocaleString('en-GB')} (maker's figure${r.spec.basis === 'simulated' ? ', test data' : ''})` : '2000';
         if (r.kind) {
-          if (!touched.current) setValue(r.kind);
-          setNote({ tone: 'ok', text: r.via === 'chassis_code'
-            ? `Filled in from the chassis number (${r.code ?? 'its model code'} is a ${r.spec?.model ?? kindLabel(r.kind)}). Change it if it is wrong.`
-            : `Filled in from the model. Change it if it is wrong.` });
+          if (saved) {
+            // A kind is already recorded for this car: say only if SAZO's list disagrees with it.
+            setNote(r.kind !== valueRef.current && valueRef.current ? { tone: 'ask', text: `SAZO's list says a ${r.spec?.model ?? 'car like this'} is a ${kindLabel(r.kind)}. Change it if that is right.` } : undefined);
+          } else {
+            if (!touched.current) setValue(r.kind);
+            setNote({ tone: 'ok', text: r.via === 'chassis_code'
+              ? `Filled in from the chassis number (${r.code ?? 'its model code'} is a ${r.spec?.model ?? kindLabel(r.kind)}). Change it if it is wrong.`
+              : `Filled in from the model. Change it if it is wrong.` });
+          }
         } else if (r.reason === 'mixed_model' && r.kinds?.length) {
           setNote({ tone: 'ask', text: `This model comes as ${r.kinds.map((k) => KIND_LABELS[k]).join(' or ')}. Choose the kind, or add the chassis number.` });
         } else setNote(undefined);

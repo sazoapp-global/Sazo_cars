@@ -82,6 +82,7 @@ export function DraftKeeper() {
     const seen = new WeakSet<HTMLFormElement>();
     const sent = new WeakSet<HTMLFormElement>();
     const live = new Map<HTMLFormElement, string>();
+    const pending = new Set<string>();
     const keyOf = (f: HTMLFormElement) => f.dataset.draft;
 
     const adopt = (form: HTMLFormElement) => {
@@ -89,6 +90,11 @@ export function DraftKeeper() {
       if (!key || seen.has(form)) return;
       seen.add(form);
       live.set(form, key);
+      if (pending.delete(key)) {
+        // Sent and back again: fill it in only when the page came back with a problem.
+        setTimeout(() => { const saved = store.get(key); if (problem() && saved) restore(form, saved.v); else store.drop(key); }, 300);
+        return;
+      }
       const saved = store.get(key);
       if (saved) restore(form, saved.v);
     };
@@ -118,11 +124,17 @@ export function DraftKeeper() {
     };
 
     // Forms come and go as people move around; a sent form that has gone means the page moved on: forget it.
+    // A form sent back with a problem (the page shows ?error=…) keeps what was typed, so it is filled in again.
+    // The decision waits a moment, since the address may change just after the form goes.
+    const problem = () => new URLSearchParams(location.search).has('error');
     const watch = new MutationObserver(() => {
       for (const [form, key] of live) {
         if (form.isConnected) continue;
         live.delete(form);
-        if (sent.has(form)) store.drop(key);
+        if (sent.has(form)) {
+          pending.add(key);
+          setTimeout(() => { if (pending.delete(key) && !problem()) store.drop(key); }, 300);
+        }
       }
       scan();
     });
@@ -141,5 +153,11 @@ export function DraftKeeper() {
       document.removeEventListener('reset', onReset, true);
     };
   }, []);
+  return null;
+}
+
+/** Forget a form's draft when this renders: for a page that is only reached once that form has done its job. */
+export function ForgetDraft({ name }: { name: string }) {
+  useEffect(() => { store.drop(name); }, [name]);
   return null;
 }

@@ -35,6 +35,12 @@ function EmailForm({ next, login, mode, setMode }: FormProps) {
         <input id="su-email" name="email" type="email" autoComplete="email" required defaultValue={state.values?.email} className="field !bg-soft focus:!bg-card" aria-invalid={!!e.email} />
         {e.email && <p className="mt-1 text-sm font-semibold text-bad-text">{e.email}</p>}
       </div>
+      <div>
+        <label htmlFor="su-em-phone" className="label">Mobile number</label>
+        <PhoneInput id="su-em-phone" defaultValue={state.values?.phone} describedBy="su-em-phone-help" />
+        <p id="su-em-phone-help" className="mt-1 text-sm text-muted">We&apos;ll send a 6-digit code to confirm it. SAZO uses it to check it&apos;s you on a new device and to reset a forgotten password.</p>
+        {e.phone && <p className="mt-1 text-sm font-semibold text-bad-text">{e.phone}</p>}
+      </div>
       <PasswordField id="su-password" name="password" label="Password" autoComplete="new-password" minLength={8} error={e.password} describedBy="pw-help" />
       <PasswordField id="su-confirm" name="confirm" label="Password again" autoComplete="new-password" error={e.confirm} />
       <p id="pw-help" className="-mt-2 text-sm text-muted">At least 8 characters. A short sentence is easy to remember and hard to guess.</p>

@@ -83,15 +83,19 @@ describe.skipIf(!base)('dealer file import (e2e)', () => {
       row({ make: 'mazda', model: 'demio' }),
       row({ make: 'toyota', chassis: 'ZSU60 0123456', price: '1' }),
       row({ make: 'subaru', price: '30000000', costCurrency: 'JPY', cost_purchase: '900000' }),
+      row({ make: 'toyota', model: 'land cruiser', price: '210000000', stage: 'Shipping' }),
     ] }).expect(201);
     importId = res.body.importId;
-    expect(res.body).toMatchObject({ status: 'checked', ready: 2, withProblems: 3, results: null });
+    expect(res.body).toMatchObject({ status: 'checked', ready: 2, withProblems: 4, results: null });
     const problems = Object.fromEntries(res.body.rows.map((l: { line: number; problems: string[] }) => [l.line, l.problems]));
     expect(problems[2]).toEqual([]);
     expect(problems[3]).toEqual([]);
     expect(problems[4]).toContain('Asking price is missing');
     expect(problems[5]).toContain('The same car as row 2');
     expect(problems[6]).toContain('Rate to UGX is needed for costs in JPY');
+    // The kind of car (D-148): filled in when SAZO can tell, asked for when the model comes as two kinds.
+    expect(res.body.rows[0].row.kind).toBe('suv');
+    expect(problems[7].join(' ')).toMatch(/^Add the kind of car: this model comes as (SUV or Pickup|Pickup or SUV)$/);
     expect((await http.get('/v1/dealer/stock').set(as(manager)).expect(200)).body.items).toHaveLength(0);
     expect((await http.get(`/v1/dealer/imports/${importId}`).set(as(staff)).expect(403)).body.code).toBe('forbidden');
   });
@@ -126,6 +130,7 @@ describe.skipIf(!base)('dealer file import (e2e)', () => {
       row({ make: 'mazda', model: 'demio' }),
       row({ make: 'toyota', chassis: 'ZSU60 0123456', price: '1' }),
       row({ make: 'subaru', price: '30000000', costCurrency: 'JPY', cost_purchase: '900000' }),
+      row({ make: 'toyota', model: 'land cruiser', price: '210000000', stage: 'Shipping' }),
     ];
     expect(sameFile.fileName).toBe('October shipment.xlsx');
     expect((await http.post('/v1/dealer/imports').set(as(manager)).send({ fileName: 'copy.xlsx', rows: cells }).expect(409)).body.code).toBe('import_already_added');

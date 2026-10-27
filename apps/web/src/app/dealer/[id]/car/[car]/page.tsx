@@ -35,7 +35,7 @@ function Section({ id, title, icon, children, note }: { id: string; title: strin
   );
 }
 
-type SP = Promise<{ done?: string; error?: string; link?: string; ch?: string }>;
+type SP = Promise<{ done?: string; error?: string; link?: string; ch?: string; report?: string }>;
 interface CarLink { linkId: string; channel: string; showDealerName: boolean; createdAt: string }
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const channelLabel = (c: string) => CHANNELS.find(([k]) => k === c)?.[1] ?? c;
@@ -64,7 +64,8 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const buyers: BuyerChoice[] = leads.filter((l) => l.stockId === car).map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null }));
   const name = org.tradingName ?? org.legalName;
   const h = await headers();
-  const newLink = sp.link && /^[A-Za-z0-9_-]{20,40}$/.test(sp.link) ? `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host')}/c/${sp.link}` : undefined;
+  const siteOrigin = `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host')}`;
+  const newLink = sp.link && /^[A-Za-z0-9_-]{20,40}$/.test(sp.link) ? `${siteOrigin}/c/${sp.link}` : undefined;
   const title = carName(c);
   const d = c.details;
   const live = c.status === 'in_stock';
@@ -94,6 +95,15 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
         </div>
       </div>
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.report && /^[A-Za-z0-9_-]{22,64}$/.test(sp.report) && (
+        <section id="report-link" className="scroll-mt-24 rounded-[14px] border border-ok-line bg-ok-fill p-4 md:p-5" aria-labelledby="report-link-h">
+          <h2 id="report-link-h" className="font-display text-lg font-bold">Your link is ready</h2>
+          <p className="mt-1 text-sm">Anyone with this link can see this car&apos;s SAZO report for 30 days, without signing in. It is a copy frozen today. Owners&apos; names and garage costs are never included.</p>
+          <p className="sazo-id mt-3 break-all rounded-lg bg-card p-3 text-sm normal-case tracking-normal">{`${siteOrigin}/shared/${sp.report}`}</p>
+          <div className="mt-3"><ShareButtons url={`${siteOrigin}/shared/${sp.report}`} title="SAZO vehicle report" /></div>
+          <p className="mt-2 text-sm"><Link href="/shares" className="link">All links you have shared</Link></p>
+        </section>
+      )}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
       {/* All the car's details beside the side bar (approved 25 Oct 2026): photos first, then what the records show and the actions. */}
@@ -151,7 +161,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
 
       {live && (
         <div className="flex flex-wrap gap-2">
-          {c.vehicleRef && <form action={shareReport}><input type="hidden" name="ref" value={c.vehicleRef} />
+          {c.vehicleRef && <form action={shareReport}><input type="hidden" name="ref" value={c.vehicleRef} /><input type="hidden" name="back" value={`/dealer/${id}/car/${car}`} />
             <button className="btn btn-primary"><Icon name="share" />Report link for a buyer</button></form>}
           <details className="w-full sm:w-auto">
             <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Change price</summary>

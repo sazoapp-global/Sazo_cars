@@ -70,3 +70,14 @@ describe('observation catalogue', () => {
     expect(requiredEvidenceFor('service_performed', { items: ['oil'] })).toEqual([]);
   });
 });
+
+describe('the chassis model code (D-148)', () => {
+  it('reads the model code with or without the dash, and none from a 17-character VIN', async () => {
+    const { chassisCode } = await import('./vehicle-kinds.js');
+    expect(chassisCode('ZRR80-0123456')).toBe('ZRR80');
+    expect(chassisCode('ZSU600123456')).toBe('ZSU60');
+    expect(chassisCode('KDH2230005270')).toBe('KDH223');
+    expect(chassisCode('NZE161 7011111')).toBe('NZE161');
+    expect(chassisCode('JTDKB20U093123456')).toBeUndefined();
+  });
+});
