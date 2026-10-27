@@ -48,7 +48,7 @@ describe.skipIf(!base)('car details and the kind of car (e2e)', () => {
   const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
   const signIn = (phone: string, name?: string) => signInWithCode(app, http, phone, name);
   const refOf = async (plate: string) => (await http.get('/v1/vehicles/search').query({ q: plate }).expect(200)).body.matches[0].vehicleRef as string;
-  const at = (d: string) => ({ at: `${d}T00:00:00Z`, precision: 'day' });
+  const at = (d: string) => ({ at: `${d}T00:00:00Z`, precision: 'day' as const });
 
   beforeAll(async () => {
     await admin.connect();
