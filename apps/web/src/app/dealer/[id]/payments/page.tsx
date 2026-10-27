@@ -17,13 +17,13 @@ export const metadata: Metadata = { title: 'Payments', robots: { index: false } 
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type Car = { stockId: string; name: string; plate: string | null };
-type Next = { seq: number; dueOn: string; owingUgx: number; status: string } | null;
+type Next = { seq: number; dueOn: string; owingUgx: number; status: string; daysUntil: number } | null;
 interface Item {
   planId: string; kind: 'cash' | 'instalments'; priceUgx: number; depositUgx: number; months: number | null; soldOn: string; paidUgx: number; balanceUgx: number;
-  lateUgx: number; daysLate: number; next: Next; state: 'paid' | 'late' | 'owing'; car: Car; buyer: { name: string | null };
+  lateUgx: number; daysLate: number; next: Next; state: 'paid' | 'late' | 'owing'; car: Car; buyer: { name: string | null; phone?: string | null };
 }
 interface List {
-  summary: { owedUgx: number; owingSales: number; receivedThisMonthUgx: number; receivedThisMonthCount: number; lateUgx: number; lateBuyers: number };
+  summary: { owedUgx: number; owingSales: number; receivedThisMonthUgx: number; receivedThisMonthCount: number; lateUgx: number; lateBuyers: number; dueSoonUgx: number; dueSoonBuyers: number };
   items: Item[]; unplanned: { car: Car; soldOn: string; salePriceUgx: number }[];
 }
 interface Payment { id: string; amountUgx: number; method: string; paidOn: string; reference: string | null; receiptNo: string; note: string | null; corrected: boolean; correctsPaymentId: string | null }
@@ -38,11 +38,21 @@ interface Receipt {
 }
 interface Lead { leadId: string; stockId: string | null; customer: { name: string | null; phone: string | null }; open: boolean; stage: string }
 
-type SP = Promise<{ show?: string; plan?: string; add?: string; receipt?: string; done?: string; error?: string }>;
+type SP = Promise<{ show?: string; sort?: string; within?: string; plan?: string; add?: string; receipt?: string; done?: string; error?: string }>;
 const full = (n: number) => formatUgx(n, false);
 const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
 const carTitle = (c: Car) => `${c.name}${c.plate ? ` · ${c.plate}` : ''}`;
-const FILTERS: [string, string][] = [['owing', 'Owing'], ['late', 'Late'], ['paid', 'Paid in full'], ['all', 'All']];
+const FILTERS: [string, string][] = [['owing', 'Owing'], ['due', 'Due soon'], ['late', 'Late'], ['paid', 'Paid in full'], ['all', 'All']];
+const SORTS: [string, string][] = [['due', 'Next due date'], ['late', 'Days late'], ['balance', 'Balance left'], ['sold', 'Date sold']];
+const WITHIN = ['7', '14', '30'];
+const defaultSort = (show: string) => (show === 'paid' || show === 'all' ? 'sold' : 'due');
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+/** "In 4 days", "Due today", "16 days late" */
+function whenText(i: Item): string {
+  if (!i.next) return '';
+  if (i.state === 'late') return `${plural(i.daysLate, 'day')} late`;
+  return i.next.daysUntil === 0 ? 'Due today' : `In ${plural(i.next.daysUntil, 'day')}`;
+}
 
 /** Payments for cars sold (D-146): records only; managers only. A sale opens with its plan beside the side bar. */
 export default async function DealerPayments({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
@@ -55,8 +65,19 @@ export default async function DealerPayments({ params, searchParams }: { params:
   if (org.role !== 'org_manager') redirect(`/dealer/${id}/dashboard?error=${encodeURIComponent('Only a manager of this business can open Payments.')}`);
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const show = FILTERS.some(([k]) => k === sp.show) ? sp.show! : 'owing';
+  const sort = SORTS.some(([k]) => k === sp.sort) ? sp.sort! : defaultSort(show);
+  const within = WITHIN.includes(sp.within ?? '') ? sp.within! : '7';
+  // The page keeps the chosen order and window as you move between filters.
+  const query = (o: { show?: string; sort?: string; within?: string }) => {
+    const q = new URLSearchParams({ show: o.show ?? show });
+    const so = o.sort ?? (sp.sort ? sort : undefined);
+    if (so && so !== defaultSort(o.show ?? show)) q.set('sort', so);
+    const w = o.within ?? (sp.within ? within : undefined);
+    if ((o.show ?? show) === 'due' && w && w !== '7') q.set('within', w);
+    return `${base}?${q}`;
+  };
   const plan = sp.plan && UUID.test(sp.plan) ? sp.plan : undefined;
-  const [list, me] = await Promise.all([api<List>(`/dealer/payments?show=${plan ? 'all' : show}`, as), api<Me>('/me', { auth: true }).catch(() => undefined)]);
+  const [list, me] = await Promise.all([api<List>(plan ? '/dealer/payments?show=all' : `/dealer/payments?show=${show}&sort=${sort}${show === 'due' ? `&within=${within}` : ''}`, as), api<Me>('/me', { auth: true }).catch(() => undefined)]);
   const base = `/dealer/${id}/payments`;
   const notices = (
     <>
@@ -246,40 +267,76 @@ export default async function DealerPayments({ params, searchParams }: { params:
       {notices}
       <section aria-label="Summary" className="grid gap-3 sm:grid-cols-3">
         <DashCard href={`${base}?show=owing`} icon="savings" label="Still owed to you" value={formatUgx(s.owedUgx)} sub={`${s.owingSales} ${s.owingSales === 1 ? 'sale' : 'sales'}`} />
-        <DashCard href={`${base}?show=all`} icon="receipt_long" label="Received this month" value={formatUgx(s.receivedThisMonthUgx)} sub={`${s.receivedThisMonthCount} ${s.receivedThisMonthCount === 1 ? 'payment' : 'payments'}`} tone="lime" />
+        <DashCard href={`${base}?show=due`} icon="calendar_month" label="Due in the next 7 days" value={formatUgx(s.dueSoonUgx)} sub={plural(s.dueSoonBuyers, 'buyer')} tone="lime" />
         <DashCard href={`${base}?show=late`} icon="warning" label="Late" value={formatUgx(s.lateUgx)} sub={`${s.lateBuyers} ${s.lateBuyers === 1 ? 'buyer' : 'buyers'}`} tone={s.lateBuyers ? 'bad' : undefined} />
       </section>
 
       <section aria-labelledby="sales-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="sales-h" className="font-display text-lg font-bold">Sales with payments</h2>
-          <nav aria-label="Show" className="flex flex-wrap rounded-lg bg-soft p-1 text-sm font-semibold">
-            {FILTERS.map(([k, label]) => (
-              <Link key={k} href={`${base}?show=${k}`} aria-current={show === k ? 'true' : undefined}
-                className={`rounded-md px-3 py-1 ${show === k ? 'bg-card text-primary-container shadow-sm' : 'text-muted'}`}>{label}</Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <nav aria-label="Show" className="flex flex-wrap rounded-lg bg-soft p-1 text-sm font-semibold">
+              {FILTERS.map(([k, label]) => (
+                <Link key={k} href={query({ show: k })} aria-current={show === k ? 'true' : undefined}
+                  className={`rounded-md px-3 py-1 ${show === k ? 'bg-card text-primary-container shadow-sm' : 'text-muted'}`}>{label}</Link>
+              ))}
+            </nav>
+            <details className="relative">
+              <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1 rounded-lg border border-line bg-card px-3 text-sm font-semibold">
+                Sort by: {SORTS.find(([k]) => k === sort)![1]}<Icon name="keyboard_arrow_down" size={16} />
+              </summary>
+              <nav aria-label="Sort by" className="absolute right-0 z-20 mt-1 w-52 rounded-lg border border-line bg-card p-1 shadow-xl">
+                {SORTS.map(([k, label]) => (
+                  <Link key={k} href={query({ sort: k })} aria-current={sort === k ? 'true' : undefined}
+                    className={`flex items-center justify-between rounded-md px-3 py-2 text-sm font-semibold ${sort === k ? 'bg-soft text-primary-container' : 'text-ink hover:bg-soft'}`}>
+                    {label}{sort === k && <Icon name="check" size={16} />}
+                  </Link>
+                ))}
+              </nav>
+            </details>
+          </div>
+        </div>
+        {show === 'due' && (
+          <nav aria-label="Due within" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-semibold text-muted">Due within</span>
+            {WITHIN.map((w) => (
+              <Link key={w} href={query({ within: w })} aria-current={within === w ? 'true' : undefined}
+                className={`rounded-full border-2 px-3 py-1 font-semibold ${within === w ? 'border-primary-container bg-soft text-primary-container' : 'border-line text-ink'}`}>{w} days</Link>
             ))}
           </nav>
-        </div>
-        {list.items.length === 0 ? <p className="mt-3 text-sm text-muted">Nothing here.</p> : (
-          <ul aria-label="Sales" className="mt-2 divide-y divide-line">
-            {list.items.map((i) => (
-              <li key={i.planId}>
-                <Link href={`${base}?plan=${i.planId}`} className="flex items-center gap-3 py-3 hover:bg-soft sm:px-2">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">{carTitle(i.car)}</span>
-                    <span className="block truncate text-xs text-muted">{i.buyer.name ?? 'Buyer'} · {i.kind === 'cash' ? 'Cash' : `${i.months} months`} · {formatUgx(i.paidUgx)} paid of {formatUgx(i.priceUgx)}</span>
-                  </span>
-                  <span className="shrink-0 text-right">
-                    <span className="block font-bold tabular-nums">{i.balanceUgx ? formatUgx(i.balanceUgx) : 'Paid'}</span>
-                    {i.state === 'paid' ? <Pill state="paid" text="Paid in full" />
-                      : i.state === 'late' ? <Pill state="late" text={`Late since ${shortDate(i.next!.dueOn)}`} />
-                      : i.next ? <Pill state={i.next.status === 'due_soon' ? 'due_soon' : 'owing'} text={`Next ${shortDate(i.next.dueOn)}`} /> : null}
-                  </span>
-                  <Icon name="chevron_right" size={20} className="shrink-0 text-label" />
-                </Link>
-              </li>
-            ))}
-          </ul>
+        )}
+        {list.items.length === 0 ? <p className="mt-3 text-sm text-muted">{show === 'due' ? `Nothing due in the next ${within} days.` : 'Nothing here.'}</p> : (
+          <>
+            <div aria-hidden className="mt-3 hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_10rem_8rem_1.25rem] gap-3 border-b border-line px-2 pb-2 text-[11px] font-bold uppercase tracking-wider text-label md:grid">
+              <span>Car and buyer</span><span>Next due</span><span className="text-right">Amount due</span><span>Status</span><span className="text-right">Balance</span><span />
+            </div>
+            <ul aria-label="Sales" className="divide-y divide-line">
+              {list.items.map((i) => (
+                <li key={i.planId}>
+                  <Link href={`${base}?plan=${i.planId}`}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3 hover:bg-soft md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_10rem_8rem_1.25rem] md:px-2">
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{carTitle(i.car)}</span>
+                      <span className="block truncate text-xs text-muted">{i.buyer.name ?? 'Buyer'}{i.buyer.phone ? ` · ${localPhone(i.buyer.phone)}` : ''}</span>
+                    </span>
+                    <span className="hidden min-w-0 text-sm md:block">
+                      {i.next ? <>{longDate(i.next.dueOn)}<span className="block text-xs text-muted">{i.next.seq === 0 ? (i.kind === 'cash' ? 'full price' : 'deposit') : `payment ${i.next.seq} of ${i.months}`}</span></> : <span className="text-muted">Nothing more due</span>}
+                    </span>
+                    <span className="hidden text-right font-bold tabular-nums md:block">
+                      {i.next ? i.next.owingUgx.toLocaleString('en-US') : ''}
+                    </span>
+                    <span className="col-start-2 row-start-1 text-right md:col-auto md:row-auto md:text-left">
+                      {i.state === 'paid' ? <Pill state="paid" text="Paid in full" />
+                        : <Pill state={i.state === 'late' ? 'late' : i.next && i.next.daysUntil <= 7 ? 'due_soon' : 'coming'} text={whenText(i)} />}
+                      <span className="block text-xs text-muted md:hidden">{i.next ? `${formatUgx(i.next.owingUgx)} due ${shortDate(i.next.dueOn)}` : ''}</span>
+                    </span>
+                    <span className="hidden text-right tabular-nums md:block">{i.balanceUgx ? i.balanceUgx.toLocaleString('en-US') : 'Paid'}</span>
+                    <Icon name="chevron_right" size={20} className="hidden shrink-0 text-label md:block" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
 

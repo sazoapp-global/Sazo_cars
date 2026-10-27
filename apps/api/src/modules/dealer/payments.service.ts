@@ -90,6 +90,24 @@ export function allocate(instalments: InstalmentRow[], paidTotal: number, today:
   });
 }
 
+export type PaymentsShow = 'owing' | 'due' | 'late' | 'paid' | 'all';
+export type PaymentsSort = 'due' | 'late' | 'balance' | 'sold';
+type Listed = { state: 'paid' | 'late' | 'owing'; next: { dueOn: string; owingUgx: number; daysUntil: number } | null; daysLate: number; balanceUgx: number; soldOn: string };
+/** Not late, and the next payment falls due within `days` (today counts). */
+const dueWithin = (x: Listed, days: number) => x.state === 'owing' && !!x.next && x.next.daysUntil >= 0 && x.next.daysUntil <= days;
+/** Owing, due soon and late are read by what is due next; paid and all by the newest sale. */
+export const defaultSort = (show: PaymentsShow): PaymentsSort => (show === 'paid' || show === 'all' ? 'sold' : 'due');
+function sortItems<T extends Listed>(items: T[], sort: PaymentsSort): T[] {
+  const due = (x: T) => x.next?.dueOn ?? '9999-12-31'; // nothing more due: last
+  const by: Record<PaymentsSort, (a: T, b: T) => number> = {
+    due: (a, b) => due(a).localeCompare(due(b)) || b.balanceUgx - a.balanceUgx,
+    late: (a, b) => b.daysLate - a.daysLate || due(a).localeCompare(due(b)),
+    balance: (a, b) => b.balanceUgx - a.balanceUgx || due(a).localeCompare(due(b)),
+    sold: (a, b) => b.soldOn.localeCompare(a.soldOn),
+  };
+  return [...items].sort(by[sort]);
+}
+
 const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
 
 @Injectable()
@@ -168,14 +186,14 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
       planId: p.id, kind: p.kind, priceUgx: p.priceUgx, depositUgx: p.depositUgx, months: p.months, soldOn: p.soldOn,
       paidUgx: paid, balanceUgx: Math.max(0, p.priceUgx - paid),
       lateUgx: late.reduce((n, r) => n + r.owingUgx, 0), daysLate: late.length ? Math.max(...late.map((r) => r.daysLate)) : 0,
-      next: next ? { seq: next.seq, dueOn: next.dueOn, owingUgx: next.owingUgx, status: next.status } : null,
+      next: next ? { seq: next.seq, dueOn: next.dueOn, owingUgx: next.owingUgx, status: next.status, daysUntil: daysBetween(today, next.dueOn) } : null,
       state: paid >= p.priceUgx ? 'paid' as const : late.length ? 'late' as const : 'owing' as const,
       instalmentsCount: inst.length,
     };
   }
 
   /** Managers' list: every sale with a payment record, the sold cars without one, and the totals for the cards. */
-  async list(organisationId: string, filter: 'owing' | 'late' | 'paid' | 'all' = 'all', today = kampalaToday()) {
+  async list(organisationId: string, filter: PaymentsShow = 'all', today = kampalaToday(), o: { within?: number; sort?: PaymentsSort } = {}) {
     const { rows: plans } = await this.pool.query<PlanRow>(
       `SELECT ${PLAN_COLS} FROM dealer.payment_plans p JOIN dealer.stock_items s ON s.id = p.stock_item_id
         WHERE p.organisation_id = $1 ORDER BY s.sold_at DESC`, [organisationId]);
@@ -183,7 +201,7 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
     const [inst, pays] = await Promise.all([this.instalments(ids), this.payments(ids)]);
     const all = await Promise.all(plans.map(async (p) => {
       const person = await this.parties.reveal(p.partyId);
-      return { ...this.summarise(p, inst.get(p.id) ?? [], pays.get(p.id) ?? [], today), car: await this.car(organisationId, p.stockItemId), buyer: { name: person?.name ?? null } };
+      return { ...this.summarise(p, inst.get(p.id) ?? [], pays.get(p.id) ?? [], today), car: await this.car(organisationId, p.stockItemId), buyer: { name: person?.name ?? null, phone: person?.phone ?? null } };
     }));
     const month = today.slice(0, 7);
     const received = [...pays.values()].flat().filter((x) => x.paidOn.startsWith(month));
@@ -199,8 +217,11 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
         receivedThisMonthCount: received.filter((x) => x.amountUgx > 0).length,
         lateUgx: all.reduce((n, x) => n + x.lateUgx, 0),
         lateBuyers: all.filter((x) => x.state === 'late').length,
+        dueSoonUgx: all.filter((x) => dueWithin(x, DUE_SOON_DAYS)).reduce((n, x) => n + x.next!.owingUgx, 0),
+        dueSoonBuyers: all.filter((x) => dueWithin(x, DUE_SOON_DAYS)).length,
       },
-      items: all.filter((x) => filter === 'all' || (filter === 'paid' ? x.state === 'paid' : filter === 'late' ? x.state === 'late' : x.state !== 'paid')),
+      items: sortItems(all.filter((x) => filter === 'all' || (filter === 'paid' ? x.state === 'paid' : filter === 'late' ? x.state === 'late'
+        : filter === 'due' ? dueWithin(x, o.within ?? DUE_SOON_DAYS) : x.state !== 'paid')), o.sort ?? defaultSort(filter)),
       unplanned: await Promise.all(unplanned.map(async (u) => ({ car: await this.car(organisationId, u.id), soldOn: u.soldOn, salePriceUgx: u.salePriceUgx }))),
     };
   }

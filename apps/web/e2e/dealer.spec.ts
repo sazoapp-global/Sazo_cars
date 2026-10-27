@@ -210,6 +210,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await sale.getByText('Instalments', { exact: true }).click();
   await sale.getByLabel('Deposit (UGX)').fill('5,000,000');
   await sale.getByLabel('Number of months').fill('6');
+  await sale.getByLabel('First due date').fill(new Date(Date.now() + 3 * 3600_000 + 10 * 86_400_000).toISOString().slice(0, 10)); // in 10 days
   await expect(sale).toContainText('6 monthly payments of UGX 3,000,000');
   await sale.getByText('MTN MoMo').click();
   await a11y(dealer);
@@ -225,23 +226,35 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('button', { name: 'Record a payment' }).click();
   const pay = dealer.getByRole('dialog', { name: 'Record a payment' });
   await expect(pay.getByLabel('Amount (UGX)')).toHaveValue('3000000');
+  await pay.getByLabel('Amount (UGX)').fill('1,000,000'); // paying in bits is fine
   await pay.getByLabel('How was it paid?').selectOption('cash');
   await pay.getByRole('button', { name: 'Save and send receipt' }).click();
   await expect(dealer.getByRole('status')).toContainText('Receipt R-0002 was sent to the buyer by SMS');
-  await expect(dealer.getByRole('main')).toContainText('UGX 15M still owed');
+  await expect(dealer.getByRole('main')).toContainText('UGX 17M still owed');
   await dealer.getByRole('link', { name: 'Receipt' }).first().click();
   await expect(dealer.getByRole('heading', { name: 'R-0002' })).toBeVisible();
-  await expect(dealer.getByRole('main')).toContainText('UGX 3,000,000');
+  await expect(dealer.getByRole('main')).toContainText('UGX 1,000,000');
   // The dashboard: cards that open each part, and sales by month.
   await dealer.goto(`${listUrl}/dashboard`);
   await expect(dealer.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
-  await expect(dealer.getByRole('link', { name: /Still owed to you UGX 15M/ })).toBeVisible();
+  await expect(dealer.getByRole('link', { name: /Still owed to you UGX 17M/ })).toBeVisible();
   await expect(dealer.getByRole('img', { name: /Sales value in UGX by month/ })).toBeVisible();
   await a11y(dealer);
   await shot(dealer, 'dealer-dashboard');
   await dealer.getByRole('link', { name: /Still owed to you/ }).click();
   await expect(dealer.getByRole('heading', { name: 'Payments', level: 1 })).toBeVisible();
   await expect(dealer.getByRole('list', { name: 'Sales' })).toContainText('Sarah Kemigisha');
+  await expect(dealer.getByRole('list', { name: 'Sales' })).toContainText('payment 1 of 6');
+  await a11y(dealer);
+  // Due soon: her first monthly payment is due in 10 days, so not within 7 days, but within 14.
+  await dealer.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: 'Due soon' }).click();
+  await expect(dealer.getByText('Nothing due in the next 7 days.')).toBeVisible();
+  await dealer.getByRole('navigation', { name: 'Due within' }).getByRole('link', { name: '14 days' }).click();
+  await expect(dealer.getByRole('list', { name: 'Sales' })).toContainText('Sarah Kemigisha');
+  await dealer.getByText(/^Sort by:/).click();
+  await dealer.getByRole('navigation', { name: 'Sort by' }).getByRole('link', { name: 'Balance left' }).click();
+  await expect(dealer).toHaveURL(/show=due&sort=balance&within=14/);
+  await expect(dealer.getByText('Sort by: Balance left')).toBeVisible();
   await a11y(dealer);
   await dealer.goto(`${listUrl}?show=sold`);
   const sold = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });

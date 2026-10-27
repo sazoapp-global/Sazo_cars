@@ -186,4 +186,25 @@ describe.skipIf(!base)('dealer dashboard and payments (e2e)', () => {
     expect(list.unplanned.map((u: { car: { name: string } }) => u.car.name)).toEqual(['Subaru Forester']);
     expect((await http.get('/v1/dealer/payments?show=late').set(as(manager)).expect(200)).body.items).toHaveLength(1);
   });
+
+  it('payments due soon, and sorting by next due date, days late, balance or date sold', async () => {
+    // The Forester is paid in instalments: deposit today, the first monthly payment due in 5 days.
+    await http.post(`/v1/dealer/stock/${cars.forester}/payment-plan`).set(as(manager))
+      .send({ buyer: { name: 'David Okello', phone: '+256772810104' }, kind: 'instalments', depositUgx: 11_500_000, months: 6, firstDueOn: addDays(today, 5), paidAtSale: { method: 'airtel_money' } }).expect(201);
+    const names = (b: { items: { car: { name: string } }[] }) => b.items.map((i) => i.car.name);
+    const due = (await http.get('/v1/dealer/payments?show=due').set(as(manager)).expect(200)).body;
+    expect(names(due)).toEqual(['Subaru Forester']); // the late Premio is under Late, not Due soon
+    expect(due.items[0].next).toMatchObject({ seq: 1, dueOn: addDays(today, 5), owingUgx: 3_000_000, daysUntil: 5 });
+    expect(due.items[0].buyer).toEqual({ name: 'David Okello', phone: '+256772810104' });
+    expect(due.summary).toMatchObject({ dueSoonUgx: 3_000_000, dueSoonBuyers: 1 });
+    expect((await http.get('/v1/dealer/payments?show=due&within=3').set(as(manager)).expect(200)).body.items).toEqual([]);
+    // Owing, by next due date: the late Premio (due long ago) comes first.
+    expect(names((await http.get('/v1/dealer/payments?show=owing').set(as(manager)).expect(200)).body)).toEqual(['Toyota Premio', 'Subaru Forester']);
+    expect(names((await http.get('/v1/dealer/payments?show=owing&sort=balance').set(as(manager)).expect(200)).body)).toEqual(['Toyota Premio', 'Subaru Forester']);
+    const bySold = names((await http.get('/v1/dealer/payments?show=all&sort=sold').set(as(manager)).expect(200)).body);
+    expect(bySold[2]).toBe('Toyota Premio'); // sold 95 days ago; the other two were sold today
+    expect(bySold.slice(0, 2).sort()).toEqual(['Subaru Forester', 'Toyota Wish']);
+    expect(names((await http.get('/v1/dealer/payments?show=all&sort=late').set(as(manager)).expect(200)).body)[0]).toBe('Toyota Premio');
+    await http.get('/v1/dealer/payments?sort=cheapest').set(as(manager)).expect(400);
+  });
 });

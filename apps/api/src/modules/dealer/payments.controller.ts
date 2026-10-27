@@ -84,13 +84,20 @@ export class DealerPaymentsController {
     return this.dashboards.summary(org, actor.userId, manager);
   }
 
-  /** GET /v1/dealer/payments?show=owing|late|paid|all */
+  /**
+   * GET /v1/dealer/payments?show=owing|due|late|paid|all&within=7|14|30&sort=due|late|balance|sold. `due` = not late and
+   * the next payment falls due within `within` days (7 by default). Sorted by next due date unless asked otherwise.
+   */
   @Get('payments')
-  async list(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Query('show') show?: string) {
+  async list(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Query() query: Record<string, string>) {
     const org = await this.manager(actor, orgId);
-    const s = z.enum(['owing', 'late', 'paid', 'all']).safeParse(show ?? 'all');
-    if (!s.success) throw badRequest('invalid_query', 'show is owing, late, paid or all');
-    return this.payments.list(org, s.data);
+    const q = z.object({
+      show: z.enum(['owing', 'due', 'late', 'paid', 'all']).default('all'),
+      within: z.coerce.number().int().min(1).max(90).optional(),
+      sort: z.enum(['due', 'late', 'balance', 'sold']).optional(),
+    }).safeParse(query);
+    if (!q.success) throw badRequest('invalid_query', 'show is owing, due, late, paid or all; sort is due, late, balance or sold; within is a number of days');
+    return this.payments.list(org, q.data.show, kampalaToday(), { within: q.data.within, sort: q.data.sort });
   }
 
   /** POST /v1/dealer/stock/:id/payment-plan: how a sold car is paid for (cash, or deposit and monthly instalments). */
