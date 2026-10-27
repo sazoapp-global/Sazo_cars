@@ -1,4 +1,4 @@
-import { formatDate, formatUgx } from '@sazo/contracts';
+import { KIND_LABELS, VEHICLE_KINDS, formatDate, formatUgx, isVehicleKind } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -10,10 +10,11 @@ import { AppFrame } from '@/components/app-frame/app-frame';
 import { addStaff, addStock, saveSettings } from '../actions';
 import { FUELS, STAGES, carName, stageLabel } from '../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
+import { KindField, MoreDetails } from '../car-kind-fields';
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
-type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string; new?: string }>;
+type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string; new?: string; kind?: string }>;
 
 export default async function DealerStock({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -48,10 +49,13 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   const flagged = inStock.filter((c) => findings(c).serious > 0);
   const bondUrgent = inStock.filter((c) => c.clocks.bond.level === 'soon' || c.clocks.bond.level === 'overdue');
   const base = show === 'sold' ? soldList : inStock;
-  const items = base.filter((c) => (!onlyFindings || findings(c).serious + findings(c).attention > 0)
+  // D-148: the kind of car the dealer recorded, or the one SAZO's report shows.
+  const kindOf = (c: StockItem) => c.details.kind ?? c.vehicle?.kind;
+  const kindFilter = isVehicleKind(sp.kind) ? sp.kind : undefined;
+  const items = base.filter((c) => (!onlyFindings || findings(c).serious + findings(c).attention > 0) && (!kindFilter || kindOf(c) === kindFilter)
     && (!q || (c.vehicle?.currentPlate ?? '').replace(/\s/g, '').toUpperCase().includes(q) || carName(c).replace(/\s/g, '').toUpperCase().includes(q)));
   const href = (o: Record<string, string | undefined>) => {
-    const p = new URLSearchParams(Object.entries({ show: show === 'sold' ? 'sold' : undefined, findings: onlyFindings ? '1' : undefined, q: sp.q || undefined, ...o }).filter(([, v]) => v) as [string, string][]);
+    const p = new URLSearchParams(Object.entries({ show: show === 'sold' ? 'sold' : undefined, findings: onlyFindings ? '1' : undefined, q: sp.q || undefined, kind: kindFilter, ...o }).filter(([, v]) => v) as [string, string][]);
     return `/dealer/${id}${p.size ? `?${p}` : ''}`;
   };
 
@@ -118,6 +122,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
               <div><label htmlFor="make" className="label">Make</label><input id="make" name="make" className="field" placeholder="Toyota" autoComplete="off" /></div>
               <div><label htmlFor="model" className="label">Model</label><input id="model" name="model" className="field" placeholder="Harrier" autoComplete="off" /></div>
               <div><label htmlFor="modelYear" className="label">Year</label><input id="modelYear" name="modelYear" inputMode="numeric" maxLength={4} className="field tabular-nums" placeholder="2018" /></div>
+              <KindField />
               <div className="grid grid-cols-2 gap-2">
                 <div><label htmlFor="engineCc" className="label">Engine (cc)</label><input id="engineCc" name="engineCc" inputMode="numeric" className="field tabular-nums" placeholder="2000" /></div>
                 <div><label htmlFor="fuel" className="label">Fuel</label><select id="fuel" name="fuel" className="field" defaultValue=""><option value="">Choose</option>{FUELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
@@ -138,6 +143,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                     <input id="odometer" name="odometer" type="file" accept={PICTURE_ACCEPT} capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
                 </div>
               </details>
+              <MoreDetails />
               <div className="sm:col-span-2"><label htmlFor="notes" className="label">Notes for your team (not shown to buyers)</label><input id="notes" name="notes" maxLength={500} className="field" />
                 <p className="mt-1 text-xs text-muted"><Icon name="lock" size={12} className="mr-1 inline align-[-1px]" />Private</p></div>
               <div className="sm:col-span-2"><button className="btn btn-primary"><Icon name="add" />Add the car</button></div>
@@ -157,13 +163,18 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
         <form action={`/dealer/${id}`} method="get" role="search" className="ml-auto flex min-w-60 flex-1 gap-2 sm:flex-none">
           {show === 'sold' && <input type="hidden" name="show" value="sold" />}
           {onlyFindings && <input type="hidden" name="findings" value="1" />}
+          <label htmlFor="stock-kind" className="sr-only">Kind of car</label>
+          <select id="stock-kind" name="kind" defaultValue={kindFilter ?? ''} className="field !min-h-10 !w-auto text-sm">
+            <option value="">All kinds</option>
+            {VEHICLE_KINDS.filter((k) => base.some((c) => kindOf(c) === k) || k === kindFilter).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
+          </select>
           <label htmlFor="stock-q" className="sr-only">Search plate, make or model</label>
           <input id="stock-q" name="q" defaultValue={sp.q} placeholder="Search plate, make, model" className="field !min-h-10 text-sm" />
           <button className="btn btn-ghost !min-h-10 !px-3" aria-label="Search"><Icon name="search" size={18} /></button>
         </form>
       </div>
 
-      {items.length === 0 ? <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">{q || onlyFindings ? 'No cars match.' : show === 'sold' ? 'No sales recorded yet.' : <>No cars for sale yet. <Link href={`/dealer/${id}?add=1`} className="link">Add a car</Link>.</>}</p> : (
+      {items.length === 0 ? <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">{q || onlyFindings || kindFilter ? 'No cars match.' : show === 'sold' ? 'No sales recorded yet.' : <>No cars for sale yet. <Link href={`/dealer/${id}?add=1`} className="link">Add a car</Link>.</>}</p> : (
         <div>
           <div aria-hidden className="hidden items-center gap-4 px-4 pb-2 text-[11px] font-bold uppercase tracking-wider text-label md:flex">
             <span className="w-24" /><span className="flex-[1.6]">Car</span><span className="flex-1">What SAZO records show</span><span className="flex-[0.8] text-right">{show === 'sold' ? 'Sold for' : 'Asking price'}</span><span className="w-5" />

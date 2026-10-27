@@ -157,3 +157,15 @@ export async function saveFaq(form: FormData) {
   } catch (err) { back('/admin/faqs', failure(err), false); }
   back('/admin/faqs', id ? 'Saved. The change is kept in its history.' : 'Added.');
 }
+
+/** D-148: a SAZO admin sets the kind of car, with a reason. */
+export async function decideKind(form: FormData) {
+  const ref = text(form, 'ref');
+  const to = text(form, 'back').startsWith('/admin/kinds') ? text(form, 'back') : '/admin/kinds';
+  const reason = text(form, 'reason');
+  if (reason.length < 3) back(`/admin/kinds?item=${encodeURIComponent(ref)}`, 'Write a reason (at least 3 characters).', false);
+  try {
+    await api(`/admin/vehicles/${ref}/kind`, { method: 'POST', auth: true, body: { kind: text(form, 'kind'), reason } });
+  } catch (err) { back(`/admin/kinds?item=${encodeURIComponent(ref)}`, failure(err), false); }
+  back(to, 'Kind of car set. The report shows it now.');
+}

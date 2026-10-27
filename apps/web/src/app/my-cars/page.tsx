@@ -49,6 +49,7 @@ export default async function MyCars({ searchParams }: { searchParams: SP }) {
                 {c.status === 'rejected' && <p className="text-sm">SAZO could not confirm you own this car{c.reason ? `: ${c.reason}` : '.'} You can send a clearer logbook photo from the car&apos;s report.</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {c.status === 'verified' && <Link href={`/my-cars/${c.vehicleRef}`} className="btn btn-primary"><Icon name="build" />Garage visits</Link>}
+                  {c.status === 'verified' && <Link href={`/my-cars/${c.vehicleRef}/fuel`} className="btn btn-ghost"><Icon name="local_gas_station" />Fuel log</Link>}
                   <Link href={`/v/${c.vehicleRef}`} className="btn btn-ghost"><Icon name="description" />Report</Link>
                   {c.status !== 'rejected' && (
                     <form action={removeCar}><input type="hidden" name="ref" value={c.vehicleRef} />

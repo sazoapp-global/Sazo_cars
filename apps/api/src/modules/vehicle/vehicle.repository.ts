@@ -204,6 +204,18 @@ export class VehicleRepository {
   }
 
   /** Every vehicle that is not merged away (for full rebuilds). */
+  /** D-148: the latest kind a SAZO admin set for each of these vehicles. */
+  async kindDecisions(vehicleIds: string[]): Promise<Map<string, { kind: string; reason: string; decidedAt: string }>> {
+    const { rows } = await this.pool.query<{ vehicleId: string; kind: string; reason: string; decidedAt: Date }>(
+      `SELECT DISTINCT ON (vehicle_id) vehicle_id AS "vehicleId", kind, reason, decided_at AS "decidedAt"
+         FROM vehicle.kind_decisions WHERE vehicle_id = ANY($1::uuid[]) ORDER BY vehicle_id, decided_at DESC`, [vehicleIds]);
+    return new Map(rows.map((r) => [r.vehicleId, { kind: r.kind, reason: r.reason, decidedAt: r.decidedAt.toISOString() }]));
+  }
+
+  async addKindDecision(vehicleId: string, kind: string, reason: string, userId: string): Promise<void> {
+    await this.pool.query(`INSERT INTO vehicle.kind_decisions (vehicle_id, kind, reason, decided_by_user_id) VALUES ($1,$2,$3,$4)`, [vehicleId, kind, reason, userId]);
+  }
+
   async liveVehicleIds(): Promise<string[]> {
     const { rows } = await this.pool.query<{ id: string }>(`SELECT id FROM vehicle.vehicles WHERE merged_into_id IS NULL ORDER BY created_at, id`);
     return rows.map((r) => r.id);

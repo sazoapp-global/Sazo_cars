@@ -1,12 +1,13 @@
 'use server';
 // Dealer workspace (P-005, D-120): every change goes through the API, which checks the person works for this
 // dealer (and is a manager for costs, commission and settings).
-import { normalizeIdentifier } from '@sazo/contracts';
+import { isVehicleKind, normalizeIdentifier } from '@sazo/contracts';
 import { redirect } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
 import type { SearchResult } from '@/lib/types';
 import { readCarsFile } from '@/lib/dealer-import';
+import { identifyCar } from './identify-action';
 import { UnreadablePicture, filesFrom, isPicture, uploadEvidence } from '@/lib/upload';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -72,6 +73,34 @@ function details(form: FormData, keys: string[]) {
   return d;
 }
 
+/**
+ * D-148: the kind of car and the "More details" the dealer gave. A detail equal to SAZO's figure for the model is left
+ * out, so the report keeps calling it the maker's figure; only what the dealer changed is the dealer's own record.
+ */
+async function kindAndSpecs(form: FormData, car: { make?: unknown; model?: unknown; chassis?: string }) {
+  const out: Record<string, unknown> = {};
+  const kind = text(form, 'kind');
+  if (form.has('kind')) out.kind = isVehicleKind(kind) ? kind : null;
+  if (![...form.keys()].some((k) => k.startsWith('spec_'))) return out;
+  const found = await identifyCar({ make: String(car.make ?? ''), model: String(car.model ?? ''), chassis: car.chassis ?? '' });
+  const model = found?.spec as Record<string, unknown> | undefined;
+  const specs: Record<string, unknown> = {};
+  for (const k of ['seats', 'doors', 'cylinders', 'powerHp', 'axles']) {
+    const v = text(form, `spec_${k}`).replace(/[,\s]/g, '');
+    if (/^\d+$/.test(v) && Number(v) !== model?.[k]) specs[k] = Number(v);
+  }
+  for (const k of ['fuelKmPerL', 'loadTonnes', 'gvwTonnes']) {
+    const v = text(form, `spec_${k}`).replace(/[,\s]/g, '');
+    if (/^\d+(\.\d+)?$/.test(v) && Number(v) !== model?.[k]) specs[k] = Number(v);
+  }
+  for (const k of ['drive', 'steering']) {
+    const v = text(form, `spec_${k}`);
+    if (v && v !== model?.[k]) specs[k] = v;
+  }
+  out.specs = specs;
+  return out;
+}
+
 /** Add a car (step 1). With the chassis number or a known plate it joins SAZO history now; otherwise when linked later. */
 export async function addStock(form: FormData) {
   const { org } = ids(form);
@@ -81,7 +110,16 @@ export async function addStock(form: FormData) {
   const price = digits(text(form, 'price'));
   const km = text(form, 'mileage') ? digits(text(form, 'mileage')) : undefined;
   const d = details(form, ['make', 'model', 'modelYear', 'engineCc', 'fuel', 'yard', 'stage']);
+  Object.assign(d, await kindAndSpecs(form, { make: d.make, model: d.model, chassis: anchor }));
   if (!price) fail('Enter the asking price in UGX.');
+  // The kind is filled in on the form as the dealer types; if the form was sent before that finished, SAZO fills it
+  // in here the same way. A car added by plate or chassis alone takes its kind from SAZO's records (or the admins' list).
+  if (!d.kind && (d.make || anchor)) {
+    const found = await identifyCar({ make: String(d.make ?? ''), model: String(d.model ?? ''), chassis: anchor ?? '' });
+    if (found?.kind) d.kind = found.kind;
+  }
+  if (!d.kind && d.make) fail('Choose the kind of car.');
+  if (!d.kind) delete d.kind;
   if (!plate && !anchor && !d.make) fail('Enter the make and model, or the number plate or chassis number.');
   if (km !== undefined && !anchor && !plate) fail('Add the mileage with the number plate or chassis number.');
   const idents = await identifiers(plate, anchor);
@@ -119,6 +157,7 @@ export async function updateCar(form: FormData) {
   const at = text(form, 'at') || 'details';
   const d = details(form, ['make', 'model', 'modelYear', 'engineCc', 'fuel', 'transmission', 'colour', 'yard', 'stage', 'receivedOn', 'tiktokUrl',
     'bondArrivedOn', 'customsStatus', 'customsDeadline', 'customsExtensionUntil', 'customsValue']);
+  Object.assign(d, await kindAndSpecs(form, { make: d.make, model: d.model, chassis: text(form, 'chassis') }));
   try { await api(`/dealer/stock/${car}`, { method: 'PATCH', ...asDealer(org), body: { details: d } }); }
   catch (err) { toCar(org, car, { error: reason(err, 'Could not save. Check the fields and try again.'), at }); }
   toCar(org, car, { done: 'Saved.', at });

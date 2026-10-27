@@ -3,6 +3,7 @@
 // person saw on the car on one day: identity, mileage, paint thickness, structure, tyres, battery, defects.
 import { z } from 'zod';
 import { tidySentence } from './people.js';
+import { VEHICLE_KINDS } from './vehicle-kinds.js';
 
 /** Steel panels a paint-thickness gauge can read (bumpers are plastic and are left out). */
 export const PANELS = [
@@ -40,6 +41,8 @@ export const InspectionForm = z.object({
     chassisPhotoId: Uuid.optional(),
     colourSeen: text(40).optional(),
     engineNumberSeen: text(40).optional(),
+    /** D-148: the kind of car on the day. */
+    kindSeen: z.enum(VEHICLE_KINDS).optional(),
   }).optional(),
   paint: z.object({
     readings: z.array(z.object({ panel: z.enum(PANELS), microns: z.number().int().min(0).max(3000) })).max(PANELS.length),

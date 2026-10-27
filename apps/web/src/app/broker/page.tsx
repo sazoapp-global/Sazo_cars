@@ -1,4 +1,4 @@
-import { QUESTION_ORDER, QUESTION_TITLES, formatDate, formatKm, formatUgx } from '@sazo/contracts';
+import { KIND_LABELS, QUESTION_ORDER, QUESTION_TITLES, VEHICLE_KINDS, formatDate, formatKm, formatUgx, isVehicleKind, type VehicleKind } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import { PICTURE_ACCEPT } from '@/lib/upload-types';
 export const metadata: Metadata = { title: 'Brokers', robots: { index: false } };
 
 interface BrokerCar {
-  stockId: string; vehicleRef: string; vehicle: VehicleCard | null; specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null };
+  stockId: string; vehicleRef: string; vehicle: VehicleCard | null; specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; kind?: VehicleKind | null };
   askingPriceUgx: number; listedMileageKm: number | null; photos: string[]; commission: { kind: 'fixed'; amountUgx: number } | { kind: 'percent'; percent: number };
   dealer: { name: string; district: string | null }; questions: QuestionView[]; listedAt: string;
 }
@@ -29,7 +29,7 @@ const TABS = [['cars', 'Cars to share', 'storefront'], ['links', 'My links', 'ad
 const name = (s: BrokerCar['specs']) => [s.year, s.make, s.model].filter(Boolean).join(' ') || 'Car';
 const commissionText = (c: BrokerCar['commission']) => (c.kind === 'fixed' ? `${formatUgx(c.amountUgx, false)} commission` : `${c.percent}% of the selling price`);
 
-type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string }>;
+type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string; kind?: string }>;
 
 export default async function Broker({ searchParams }: { searchParams: SP }) {
   if (!(await isSignedIn())) redirect('/sign-in?next=/broker');
@@ -102,7 +102,7 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
           </div>
         </div>
       )}
-      {tab === 'cars' && <Cars />}
+      {tab === 'cars' && <Cars kind={isVehicleKind(sp.kind) ? sp.kind : undefined} />}
       {tab === 'links' && <Links />}
       {tab === 'enquiries' && <Enquiries />}
       {tab === 'commissions' && <Commissions />}
@@ -110,10 +110,22 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
   );
 }
 
-async function Cars() {
-  const { items } = await api<{ items: BrokerCar[] }>('/broker/cars', { auth: true });
-  if (!items.length) return <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">No cars are open to brokers right now.</p>;
+async function Cars({ kind }: { kind?: VehicleKind }) {
+  const { items: all } = await api<{ items: BrokerCar[] }>('/broker/cars', { auth: true });
+  if (!all.length) return <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">No cars are open to brokers right now.</p>;
+  // D-148: filter by the kind of car.
+  const kinds = VEHICLE_KINDS.filter((k) => all.some((c) => c.specs.kind === k));
+  const items = kind ? all.filter((c) => c.specs.kind === kind) : all;
+  const chip = (on: boolean) => `rounded-full border px-3 py-1.5 text-sm font-semibold ${on ? 'border-ink bg-ink text-white' : 'border-line-strong bg-white'}`;
   return (
+    <>
+    {kinds.length > 1 && (
+      <nav aria-label="Kind of car" className="flex flex-wrap gap-2">
+        <Link href="/broker?tab=cars" aria-current={!kind ? 'page' : undefined} className={chip(!kind)}>All kinds</Link>
+        {kinds.map((k) => <Link key={k} href={`/broker?tab=cars&kind=${k}`} aria-current={kind === k ? 'page' : undefined} className={chip(kind === k)}>{KIND_LABELS[k]}</Link>)}
+      </nav>
+    )}
+    {!items.length && <p className="text-muted">No cars of this kind right now.</p>}
     <ul className="grid gap-4 sm:grid-cols-2" aria-label="Cars to share">
       {items.map((c) => {
         const qs = QUESTION_ORDER.map((k) => c.questions.find((q) => q.question === k)).filter((q): q is QuestionView => !!q);
@@ -123,6 +135,7 @@ async function Cars() {
               : <div className="flex aspect-[4/3] items-center justify-center bg-soft text-muted"><Icon name="directions_car" size={40} /></div>}
             <div className="space-y-2 p-4">
               <h2 className="font-display text-lg font-bold">{name(c.specs)}</h2>
+              {c.specs.kind && <p className="text-sm font-semibold text-primary-container">{KIND_LABELS[c.specs.kind]}</p>}
               <p className="font-display text-xl font-extrabold tabular-nums">{formatUgx(c.askingPriceUgx, false)}</p>
               <p className="text-sm text-muted">{c.dealer.name}{c.dealer.district ? `, ${c.dealer.district}` : ''}{c.listedMileageKm !== null ? `. ${formatKm(c.listedMileageKm)}` : ''}</p>
               <p className="chip w-fit border-lime bg-lime/30 text-ink"><Icon name="payments" size={14} />{commissionText(c.commission)}</p>
@@ -140,6 +153,7 @@ async function Cars() {
         );
       })}
     </ul>
+    </>
   );
 }
 

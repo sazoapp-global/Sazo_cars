@@ -9,3 +9,4 @@ export * from './concerns.js';
 export * from './people.js';
 export * from './dealer-import.js';
 export * from './navigation.js';
+export * from './vehicle-kinds.js';

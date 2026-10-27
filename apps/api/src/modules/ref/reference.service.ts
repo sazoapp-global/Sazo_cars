@@ -1,18 +1,86 @@
 // Reference & Intelligence — module 9 (minimal for the first slice): vehicle models, market comparables
 // (for valuation status) and stored Vehicle Health results. Owns the `ref` schema.
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
+import { chassisCode, type Drive, type VehicleKind } from '@sazo/contracts';
 import type { HealthResult } from '@sazo/trust-engine';
 import pg from 'pg';
 import type { Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
+import { MIXED_KIND_MODELS, MODEL_SPECS } from './model-specs.js';
 
 export interface ModelRef { modelId: string; make: string; model: string; generation: string; yearFrom: number; yearTo: number | null }
 /** "Toyota Harrier" or "Toyota Harrier XU60 (2013–2020)". */
 export const modelLabel = (m: Pick<ModelRef, 'make' | 'model' | 'generation'>) => [m.make, m.model, m.generation === 'all' ? '' : m.generation].filter(Boolean).join(' ');
 
+/** A model's kind and maker's figures (D-148). `basis` 'simulated' = test data until real maker specifications are loaded. */
+export interface ModelSpecRow {
+  modelId: string; make: string; model: string; kind: VehicleKind | null; codes: string[]; yearFrom: number; yearTo: number | null;
+  engineCc: number | null; seats: number | null; doors: number | null; cylinders: number | null; powerHp: number | null; fuelKmPerL: number | null;
+  loadTonnes: number | null; gvwTonnes: number | null; axles: number | null; drive: Drive | null; basis: 'simulated' | 'maker';
+}
+
+/** What SAZO could tell about a car's kind from its chassis code or model (D-148). */
+export type Identification =
+  | { kind: VehicleKind; via: 'chassis_code' | 'model'; spec?: ModelSpecRow; code?: string }
+  | { kind?: undefined; reason: 'mixed_model' | 'unknown_model' | 'no_model'; kinds?: VehicleKind[]; spec?: ModelSpecRow };
+
+const norm = (s: string | null | undefined) => String(s ?? '').toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+
 @Injectable()
-export class ReferenceService {
+export class ReferenceService implements OnModuleInit {
   constructor(@Inject(DB_POOL) private readonly pool: pg.Pool) {}
+
+  private specs: ModelSpecRow[] = [];
+
+  /** Load SAZO's model list (kind and maker's figures) into the database and memory. Safe to run every start. */
+  async onModuleInit(): Promise<void> {
+    for (const m of MODEL_SPECS) {
+      await this.pool.query(
+        `INSERT INTO ref.vehicle_models (make, model, generation, year_from, model_codes, kind, engine_cc, seats, doors, cylinders, power_hp,
+                fuel_km_per_l, load_tonnes, gvw_tonnes, axles, drive, spec_basis)
+         VALUES ($1,$2,'all',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'simulated')
+         ON CONFLICT (make, model, generation) DO UPDATE SET model_codes = EXCLUDED.model_codes, kind = EXCLUDED.kind, engine_cc = EXCLUDED.engine_cc,
+           seats = EXCLUDED.seats, doors = EXCLUDED.doors, cylinders = EXCLUDED.cylinders, power_hp = EXCLUDED.power_hp, fuel_km_per_l = EXCLUDED.fuel_km_per_l,
+           load_tonnes = EXCLUDED.load_tonnes, gvw_tonnes = EXCLUDED.gvw_tonnes, axles = EXCLUDED.axles, drive = EXCLUDED.drive
+         WHERE ref.vehicle_models.spec_basis = 'simulated'`,
+        [m.make, m.model, m.yearFrom, m.codes, m.kind, m.engineCc ?? null, m.seats ?? null, m.doors ?? null, m.cylinders ?? null, m.powerHp ?? null,
+          m.fuelKmPerL ?? null, m.loadTonnes ?? null, m.gvwTonnes ?? null, m.axles ?? null, m.drive ?? null]);
+    }
+    await this.loadSpecs();
+  }
+
+  async loadSpecs(): Promise<void> {
+    const { rows } = await this.pool.query<ModelSpecRow>(
+      `SELECT id AS "modelId", make, model, kind, model_codes AS codes, year_from AS "yearFrom", year_to AS "yearTo", engine_cc AS "engineCc", seats, doors,
+              cylinders, power_hp AS "powerHp", fuel_km_per_l::float8 AS "fuelKmPerL", load_tonnes::float8 AS "loadTonnes", gvw_tonnes::float8 AS "gvwTonnes",
+              axles, drive, spec_basis AS basis
+         FROM ref.vehicle_models WHERE kind IS NOT NULL`);
+    this.specs = rows;
+  }
+
+  /**
+   * The kind of a car from its chassis code, then its make and model (D-148). A code shared by two kinds, or a model
+   * name that covers several (Corolla, Land Cruiser, Hiace), gives no kind: a person decides.
+   */
+  identify(car: { make?: string | null; model?: string | null; chassis?: string | null }): Identification {
+    const make = norm(car.make), model = norm(car.model);
+    const code = chassisCode(car.chassis);
+    const sameName = (r: ModelSpecRow) => norm(r.model) === model || norm(r.model) === `corolla ${model}` || `corolla ${norm(r.model)}` === model;
+    const named = model ? this.specs.filter((r) => (!make || norm(r.make) === make) && sameName(r)) : [];
+    const mixed = model ? MIXED_KIND_MODELS.find((m) => (!make || norm(m.make) === make) && norm(m.model) === model) : undefined;
+    if (code) {
+      let byCode = this.specs.filter((r) => r.codes.includes(code) && (!make || norm(r.make) === make));
+      const both = byCode.filter((r) => named.includes(r));
+      if (both.length) byCode = both;
+      const kinds = [...new Set(byCode.map((r) => r.kind!))];
+      if (kinds.length === 1) return { kind: kinds[0]!, via: 'chassis_code', spec: named.find((r) => byCode.includes(r)) ?? byCode[0], code };
+    }
+    if (mixed) return { reason: 'mixed_model', kinds: mixed.kinds, ...(named[0] ? { spec: named[0] } : {}) };
+    const kinds = [...new Set(named.map((r) => r.kind!))];
+    if (kinds.length === 1) return { kind: kinds[0]!, via: 'model', spec: named[0] };
+    if (kinds.length > 1) return { reason: 'mixed_model', kinds };
+    return { reason: model ? 'unknown_model' : 'no_model' };
+  }
 
   async ensureModel(make: string, model: string, generation: string, yearFrom: number, yearTo?: number, modelCodes: string[] = []): Promise<string> {
     const { rows } = await this.pool.query<{ id: string }>(

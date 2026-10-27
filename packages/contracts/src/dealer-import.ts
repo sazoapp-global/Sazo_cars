@@ -1,6 +1,7 @@
 // A dealer adds many cars at once from an Excel or CSV file (D-131). These are the file's columns and the rules
 // for reading each cell. The website reads the file; the API checks every row again with the same rules.
 import { normalizeIdentifier } from './identifiers.js';
+import { KIND_LABELS, kindFromText, type VehicleKind } from './vehicle-kinds.js';
 
 /** Most cars one file can carry (equal to a dealer's daily limit). */
 export const DEALER_IMPORT_MAX_ROWS = 200;
@@ -19,6 +20,8 @@ export const DEALER_IMPORT_COLUMNS: DealerImportColumn[] = [
   { key: 'make', label: 'Make', example: 'Toyota' },
   { key: 'model', label: 'Model', example: 'Harrier' },
   { key: 'year', label: 'Year', example: '2018', aliases: ['model year'] },
+  // D-148: left empty, SAZO fills it in from the chassis code or the model when it can tell.
+  { key: 'kind', label: 'Kind of car', example: 'SUV', aliases: ['kind', 'body', 'body type', 'type', 'vehicle type'] },
   { key: 'engineCc', label: 'Engine (cc)', example: '2000', aliases: ['engine', 'cc', 'engine cc'] },
   { key: 'fuel', label: 'Fuel', example: 'Petrol' },
   { key: 'gearbox', label: 'Gearbox', example: 'Automatic', aliases: ['transmission'] },
@@ -46,7 +49,7 @@ export function importHeaderKey(header: string): string | undefined {
 }
 
 export interface DealerImportRow {
-  make?: string; model?: string; modelYear?: number; engineCc?: number; fuel?: string; transmission?: string; colour?: string;
+  make?: string; model?: string; modelYear?: number; kind?: VehicleKind; engineCc?: number; fuel?: string; transmission?: string; colour?: string;
   chassisNumber?: string; vin?: string; plate?: string; askingPriceUgx?: number; stage: string; yard?: string;
   receivedOn?: string; bondArrivedOn?: string; notes?: string;
   costs: { category: ImportCostCategory; amount: number; currency: string; rateToUgx?: number }[];
@@ -104,6 +107,10 @@ export function parseDealerImportRow(raw: Record<string, string>, withCosts: boo
   if (year !== undefined) {
     if (!Number.isInteger(year) || year < 1950 || year > thisYear + 1) problems.push(`Year should be between 1950 and ${thisYear + 1}`);
     else row.modelYear = year;
+  }
+  if (v('kind')) {
+    const k = kindFromText(v('kind'));
+    if (k) row.kind = k; else problems.push(`Kind of car should be one of: ${Object.values(KIND_LABELS).join(', ')}`);
   }
   const cc = number(v('engineCc'));
   if (cc !== undefined) {

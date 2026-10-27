@@ -158,6 +158,8 @@ interface CarSpec {
   ids: Record<string, string>; price: number; make: string; model: string; year: number; colour: string; stage: string; yard?: string;
   received: number; photos: number; costs?: [string, number, string, number?][]; brokers?: 'fixed' | 'percent'; bond?: { arrived: number; deadline: number };
   sold?: number;
+  /** D-148: the kind the dealer typed (left out, SAZO fills it in from the chassis code or model when it can). */
+  kind?: string;
 }
 const cars: CarSpec[] = [
   { ids: { plate: 'UBJ 214K' }, price: 78_000_000, make: 'toyota', model: 'harrier', year: 2015, colour: 'pearl white', stage: 'at_yard', yard: 'Kisementi yard', received: -21, photos: 5,
@@ -180,11 +182,17 @@ const cars: CarSpec[] = [
     costs: [['purchase', 26_000_000, 'UGX']], sold: 31_500_000 },
   { ids: { plate: 'UBN 330F' }, price: 44_000_000, make: 'toyota', model: 'noah', year: 2015, colour: 'white', stage: 'at_yard', yard: 'Kisementi yard', received: -25, photos: 4,
     costs: [['purchase', 35_000_000, 'UGX']], brokers: 'fixed' },
+  // D-148: a Land Cruiser comes as an SUV or a pickup and has no chassis number here, so a SAZO admin sets the kind.
+  { ids: { plate: 'UBH 551C' }, price: 96_000_000, make: 'toyota', model: 'land cruiser', year: 2014, colour: 'white', stage: 'at_yard', yard: 'Kisementi yard', received: -15, photos: 2,
+    costs: [['purchase', 81_000_000, 'UGX']] },
+  // D-148: the dealer typed SUV for a Hilux; the inspector later records a pickup, so the records disagree.
+  { ids: { plate: 'UBF 300T' }, price: 72_000_000, make: 'toyota', model: 'hilux', year: 2016, colour: 'silver', stage: 'at_yard', yard: 'Kisementi yard', received: -18, photos: 2,
+    costs: [['purchase', 60_000_000, 'UGX']], kind: 'suv' },
 ];
 const COLOURS: Record<string, string> = { 'pearl white': '#f8fafc', silver: '#cbd5e1', grey: '#6b7280', blue: '#1d4ed8', black: '#111827', red: '#b91c1c', orange: '#ea580c', green: '#15803d', white: '#f1f5f9' };
 const stock: Record<string, string> = {};
 for (const c of cars) {
-  const details = { make: c.make, model: c.model, modelYear: c.year, colour: c.colour, stage: c.stage, ...(c.yard ? { yard: c.yard } : {}), receivedOn: day(c.received),
+  const details = { make: c.make, model: c.model, modelYear: c.year, colour: c.colour, stage: c.stage, ...(c.kind ? { kind: c.kind } : {}), ...(c.yard ? { yard: c.yard } : {}), receivedOn: day(c.received),
     ...(c.bond ? { bondArrivedOn: day(c.bond.arrived), customsStatus: 'in_bond', customsDeadline: day(c.bond.deadline) } : {}),
     ...(c.brokers === 'fixed' ? { openToBrokers: true, commissionKind: 'fixed', commissionFixedUgx: 500_000 } : c.brokers === 'percent' ? { openToBrokers: true, commissionKind: 'percent', commissionPercent: 1.5 } : { openToBrokers: false }) };
   const added = (await call(http.post('/v1/dealer/stock').set(D()).send({ ...c.ids, askingPriceUgx: c.price, details }))).body;
@@ -330,10 +338,24 @@ if (axio) {
   await call(http.put(`/v1/inspections/${id}`).set(I).send({ plateEntered: 'UBK 703A', vehicleRef: axio.vehicleRef, clientCreatedAt: new Date(Date.now() - 3600_000).toISOString(), form: {
     mileage: { value: (axio.lastMileage?.km ?? 120_000) + 4_300, unit: 'km', odometerPhotoId: await upload(inspector.token, 'odometer_photo', await testPhoto('axio odometer')) },
     paint: { readings: [{ panel: 'bonnet', microns: 115 }, { panel: 'roof', microns: 108 }, { panel: 'front_left_door', microns: 121 }] },
+    identity: { kindSeen: 'saloon' },
     structure: { damageFound: false }, tyres: { minTreadPercent: 55 }, battery: { ok: true },
     defects: [{ item: 'Wiper blades worn', severity: 'minor' }],
     result: { passed: true, summary: 'Good condition for its age; replace wiper blades' },
     photoIds: [await upload(inspector.token, 'vehicle_photo', await carPhoto('axio front', '#cbd5e1', 'axio', 1)), await upload(inspector.token, 'vehicle_photo', await carPhoto('axio back', '#cbd5e1', 'axio', 2))] } }));
+  await submit(`/v1/inspections/${id}/submit`, I);
+}
+
+// D-148: the Hilux the dealer called an SUV: the inspector records a pickup (the records now disagree).
+const hilux = (await call(http.get('/v1/inspections/vehicles/lookup').query({ plate: 'UBF 300T' }).set(I))).body.candidates[0];
+if (hilux) {
+  const id = randomUUID();
+  await call(http.put(`/v1/inspections/${id}`).set(I).send({ plateEntered: 'UBF 300T', vehicleRef: hilux.vehicleRef, clientCreatedAt: new Date(Date.now() - 1800_000).toISOString(), form: {
+    mileage: { value: 88_200, unit: 'km', odometerPhotoId: await upload(inspector.token, 'odometer_photo', await testPhoto('hilux odometer')) },
+    identity: { kindSeen: 'pickup' },
+    structure: { damageFound: false }, tyres: { minTreadPercent: 70 }, battery: { ok: true },
+    result: { passed: true, summary: 'Double cab pickup in good order' },
+    photoIds: [await upload(inspector.token, 'vehicle_photo', await carPhoto('hilux front', '#cbd5e1', 'hilux', 1)), await upload(inspector.token, 'vehicle_photo', await carPhoto('hilux back', '#cbd5e1', 'hilux', 2))] } }));
   await submit(`/v1/inspections/${id}/submit`, I);
 }
 
@@ -365,6 +387,22 @@ if (axioRef) {
     await call(http.post(`/v1/models/${modelId}/reviews`).set(bearer(buyer.token)).send({ rating: 4, body: 'Cheap to run in Kampala traffic and parts are everywhere. The suspension bushes wear on bad roads.' }));
     await call(http.post(`/v1/models/${modelId}/reviews`).set(bearer(secondBuyer.token)).send({ rating: 3, body: 'Comfortable and easy to fix, but the CVT gearbox needs its fluid changed on time.' }));
     await call(http.post(`/v1/models/${modelId}/creator-links`).set(bearer(secondBuyer.token)).send({ url: 'https://www.youtube.com/watch?v=demo-premio-review', title: 'Toyota Premio after five years in Uganda' }));
+  }
+}
+
+// D-148: James bought the Wish the dealer sold a month ago; SAZO confirmed his logbook and he logs his fill-ups.
+const wishRef = await ref('UBJ 771K');
+if (wishRef) {
+  const claim = await http.post(`/v1/vehicles/${wishRef}/ownership-claims`).set(bearer(secondBuyer.token)).send({});
+  if (claim.status === 422) {
+    await call(http.post(`/v1/vehicles/${wishRef}/ownership-claims`).set(bearer(secondBuyer.token)).send({ logbookEvidenceId: await upload(secondBuyer.token, 'official_document', await testPhoto('james logbook')) }));
+    const pending = (await call(http.get('/v1/admin/ownership-claims').set(bearer(admin.token)))).body.items as { claimId: string; vehicleRef: string }[];
+    const mine = pending.find((c) => c.vehicleRef === wishRef);
+    if (mine) await call(http.post(`/v1/admin/ownership-claims/${mine.claimId}/decision`).set(bearer(admin.token)).send({ decision: 'approve', reason: 'Logbook names him; sale recorded by the dealer' }));
+  }
+  const fills: [number, number, number, boolean][] = [[-28, 40, 140_100, true], [-21, 38.5, 140_560, true], [-14, 20, 140_900, false], [-9, 22, 141_210, true], [-2, 36, 141_640, true]];
+  for (const [d, litres, odometerKm, fullTank] of fills) {
+    await call(http.post(`/v1/me/cars/${wishRef}/fuel`).set(bearer(secondBuyer.token)).send({ filledOn: day(d), litres, odometerKm, fullTank }));
   }
 }
 

@@ -17,6 +17,7 @@ import { addCost, addPhotos, changePrice, createLink, linkCar, removePhoto, remo
 import { SaleForm, type BuyerChoice } from '../../../sale-form';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
+import { KindField, MoreDetails } from '../../../car-kind-fields';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
 
@@ -236,6 +237,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           <div><label htmlFor="make" className="label">Make</label><input id="make" name="make" defaultValue={d.make ?? ''} className="field" disabled={!live} /></div>
           <div><label htmlFor="model" className="label">Model</label><input id="model" name="model" defaultValue={d.model ?? ''} className="field" disabled={!live} /></div>
           <div><label htmlFor="modelYear" className="label">Year</label><input id="modelYear" name="modelYear" inputMode="numeric" defaultValue={d.modelYear ?? ''} className="field tabular-nums" disabled={!live} /></div>
+          <KindField kind={d.kind ?? null} chassis={c.held?.chassisNumber ?? undefined} disabled={!live} />
           <div><label htmlFor="engineCc" className="label">Engine (cc)</label><input id="engineCc" name="engineCc" inputMode="numeric" defaultValue={d.engineCc ?? ''} className="field tabular-nums" disabled={!live} /></div>
           <div><label htmlFor="fuel" className="label">Fuel</label><select id="fuel" name="fuel" defaultValue={d.fuel ?? ''} className="field" disabled={!live}><option value="">Not given</option>{FUELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
           <div><label htmlFor="transmission" className="label">Gearbox</label><select id="transmission" name="transmission" defaultValue={d.transmission ?? ''} className="field" disabled={!live}><option value="">Not given</option>{GEARS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
@@ -244,6 +246,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           <div><label htmlFor="yard" className="label">Bond or yard</label><input id="yard" name="yard" defaultValue={d.yard ?? ''} className="field" disabled={!live} /></div>
           <div><label htmlFor="receivedOn" className="label">Date you took the car on</label><input id="receivedOn" name="receivedOn" type="date" max={today} defaultValue={d.receivedOn ?? ''} className="field" disabled={!live} />
             <p className="mt-1 text-xs text-muted">Days in stock count from this date.</p></div>
+          <MoreDetails specs={d.specs} disabled={!live} />
           <div className="sm:col-span-2"><label htmlFor="tiktokUrl" className="label">TikTok video link</label><input id="tiktokUrl" name="tiktokUrl" type="url" defaultValue={d.tiktokUrl ?? ''} placeholder="https://www.tiktok.com/@yourbond/video/..." className="field" disabled={!live} /></div>
           {live && <div className="sm:col-span-2"><button className="btn btn-ghost">Save</button></div>}
         </form>

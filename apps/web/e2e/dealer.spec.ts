@@ -103,6 +103,9 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Make', { exact: true }).fill('toyota');
   await dealer.getByLabel('Model', { exact: true }).fill('harrier');
   await dealer.getByLabel('Year', { exact: true }).fill('2018');
+  // SAZO fills the kind of car in from the model (D-148).
+  await expect(dealer.getByLabel('Kind of car *')).toHaveValue('suv');
+  await expect(dealer.getByText('Filled in from the model. Change it if it is wrong.')).toBeVisible();
   await dealer.getByLabel('Asking price (UGX) *').fill('75000000');
   await dealer.getByLabel('Where is it now?').selectOption('shipping');
   await dealer.getByLabel('Photos of the car').setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: testPhoto(`harrier front ${stamp}`) });

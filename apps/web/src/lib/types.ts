@@ -1,4 +1,5 @@
 // Shapes returned by the SAZO API (docs/api/sazo-api-v1.yaml). Kept narrow: only what the screens read.
+import type { CarDetail, CarSpecs, VehicleKind } from '@sazo/contracts';
 export type Status = 'verified' | 'attention' | 'serious' | 'not_available';
 
 export interface VehicleCard {
@@ -9,6 +10,9 @@ export interface VehicleCard {
   make?: string;
   model?: string;
   year?: number;
+  /** D-148: the kind of car and the engine size, on every card. */
+  kind?: VehicleKind;
+  engineCc?: number;
   banner?: { severity: 'serious' | 'attention'; headlineKey: string };
 }
 
@@ -56,6 +60,8 @@ export interface FullReport {
   /** D-123: whether a dealer is still owed money on this car (status only). */
   statuses?: { dealerBalance?: 'owed' | 'paid' | null };
   model?: { modelId: string; label: string } | null;
+  /** D-148: About this car: the kind and the other details, each with where it came from. */
+  about?: { details: CarDetail[] };
   asOf: string;
   ruleSetVersion: string;
 }
@@ -158,6 +164,7 @@ export interface StockDetails {
   yard: string | null; stage: ImportStage; receivedOn: string | null; bondArrivedOn: string | null; customsStatus: string | null; customsDeadline: string | null;
   customsExtensionUntil: string | null; customsValueUgx?: number | null; tiktokUrl: string | null; openToBrokers: boolean;
   commissionKind: 'fixed' | 'percent' | null; commissionFixedUgx: number | null; commissionPercent: number | null;
+  kind?: VehicleKind | null; specs?: CarSpecs;
 }
 export interface StockItem {
   stockId: string; vehicleRef?: string; linked: boolean; waitingForReview?: boolean;

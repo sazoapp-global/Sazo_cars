@@ -1,4 +1,4 @@
-import { CONFIDENCE_LABELS, QUESTION_ORDER, QUESTION_TITLES, factValue, statusLabel, summaryLine } from '@sazo/contracts';
+import { CONFIDENCE_LABELS, QUESTION_ORDER, QUESTION_TITLES, factValue, kindLabel, statusLabel, summaryLine } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ConcernNotices, DealerBalanceNote } from '@/components/concern-notices';
@@ -101,6 +101,12 @@ function PublicSummary({ s, vref }: { s: Summary; vref: string }) {
                 {s.vehicle.status === 'provisional' && <span className="chip border-white/30 bg-white/10 text-white">Not yet confirmed by an official record</span>}
               </div>
               <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight md:text-4xl">{vehicleName(s.vehicle)}</h1>
+              {/* D-148: the kind of car, the year and the engine size, open to everyone. */}
+              {(s.vehicle.kind || s.vehicle.year || s.vehicle.engineCc) && (
+                <p className="mt-1 text-sm font-semibold text-white/90" aria-label="Kind, year and engine size">
+                  {[kindLabel(s.vehicle.kind), s.vehicle.year, s.vehicle.engineCc ? `${s.vehicle.engineCc.toLocaleString('en-GB')} cc` : undefined].filter(Boolean).join(' · ')}
+                </p>
+              )}
               <p className="mt-1 font-display text-lg font-bold text-lime">Before you buy, know the facts.</p>
               <p className="mt-1 max-w-xl text-sm text-white/80">The seven questions every buyer needs answered, from the records SAZO holds. Log in (free) for the figures and the records behind each answer.</p>
             </div>

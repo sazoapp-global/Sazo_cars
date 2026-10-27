@@ -57,3 +57,25 @@ export async function answerVisit(form: FormData) {
   }
   go(`/my-cars/${ref}`, { done: response === 'confirmed' ? 'Thank you. Visit confirmed.' : 'Thank you. SAZO will mark this visit as disputed by the owner.' });
 }
+
+/** The fuel log (D-148): a fill-up from the confirmed owner. */
+export async function addFillup(form: FormData) {
+  const ref = text(form, 'ref');
+  const back = (q: Record<string, string>): never => go(`/my-cars/${ref}/fuel`, q);
+  const litres = Number(text(form, 'litres').replace(/[,\s]/g, ''));
+  const odometerKm = Number(text(form, 'odometerKm').replace(/[,\s]/g, ''));
+  if (!(litres > 0 && litres <= 1000)) back({ error: 'Enter the litres, for example 38.5.' });
+  if (!Number.isInteger(odometerKm) || odometerKm < 0) back({ error: 'Enter the mileage in km, for example 132410.' });
+  try {
+    await api(`/me/cars/${ref}/fuel`, { method: 'POST', auth: true, body: { filledOn: text(form, 'filledOn'), litres: Math.round(litres * 100) / 100, odometerKm, fullTank: text(form, 'fullTank') !== 'no' } });
+  } catch (err) {
+    back({ error: err instanceof ApiError && err.detail ? err.detail : 'Could not save the fill-up. Please try again.' });
+  }
+  back({ done: 'Fill-up saved.' });
+}
+
+export async function removeFillup(form: FormData) {
+  const ref = text(form, 'ref');
+  await api(`/me/cars/${ref}/fuel/${text(form, 'id')}`, { method: 'DELETE', auth: true }).catch(() => undefined);
+  go(`/my-cars/${ref}/fuel`, { done: 'Fill-up removed.' });
+}

@@ -29,6 +29,7 @@ export function inspectionRecords(f: InspectionForm, at: string, reportId: strin
       structuralFindings: f.structure!.damageFound,
       ...(f.identity?.colourSeen ? { observedColour: f.identity.colourSeen } : {}),
       ...(f.identity?.engineNumberSeen ? { observedEngineNumber: f.identity.engineNumberSeen } : {}),
+      ...(f.identity?.kindSeen ? { observedKind: f.identity.kindSeen } : {}),
       ...(f.tyres ? { tyresPercent: f.tyres.minTreadPercent } : {}),
       ...(f.battery ? { batteryOk: f.battery.ok } : {}),
       ...(defects.length ? { defects } : {}),

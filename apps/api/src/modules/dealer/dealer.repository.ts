@@ -1,5 +1,6 @@
 // Data access for the Dealer workspace. Owns the `dealer` schema.
 import { Inject, Injectable } from '@nestjs/common';
+import type { CarSpecs, VehicleKind } from '@sazo/contracts';
 import pg from 'pg';
 import type { Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
@@ -17,6 +18,8 @@ export interface StockDetails {
   colour: string | null; yard: string | null; stage: ImportStage; receivedOn: string | null; bondArrivedOn: string | null; customsStatus: string | null;
   customsDeadline: string | null; customsExtensionUntil: string | null; customsValueUgx: number | null; tiktokUrl: string | null;
   openToBrokers: boolean; commissionKind: 'fixed' | 'percent' | null; commissionFixedUgx: number | null; commissionPercent: number | null;
+  /** D-148: the kind of car (filled in from the chassis code or model when SAZO can tell), and the optional details. */
+  kind: VehicleKind | null; specs: CarSpecs;
 }
 export interface StockRow extends StockDetails {
   id: string; organisationId: string; vehicleId: string | null; status: StockStatus; askingPriceUgx: number; listedMileageKm: number | null;
@@ -42,7 +45,7 @@ const COLS = `id, organisation_id AS "organisationId", vehicle_id AS "vehicleId"
   ${DATE('received_on', 'receivedOn')}, ${DATE('bond_arrived_on', 'bondArrivedOn')}, customs_status AS "customsStatus",
   ${DATE('customs_deadline', 'customsDeadline')}, ${DATE('customs_extension_until', 'customsExtensionUntil')}, customs_value_ugx::float8 AS "customsValueUgx",
   tiktok_url AS "tiktokUrl", open_to_brokers AS "openToBrokers", commission_kind AS "commissionKind", commission_fixed_ugx::float8 AS "commissionFixedUgx",
-  commission_percent::float8 AS "commissionPercent", pending_submission_id AS "pendingSubmissionId",
+  commission_percent::float8 AS "commissionPercent", kind, specs, pending_submission_id AS "pendingSubmissionId",
   held_identifiers AS "heldIdentifiers", held_mileage_km AS "heldMileageKm", held_odometer_photo_id AS "heldOdometerPhotoId"`;
 
 /** Column for each detail field (whitelist: only these can be set by updateDetails). */
@@ -50,7 +53,7 @@ const DETAIL_COLUMNS: Record<keyof StockDetails, string> = {
   make: 'make', model: 'model', modelYear: 'model_year', engineCc: 'engine_cc', fuel: 'fuel', transmission: 'transmission', colour: 'colour', yard: 'yard',
   stage: 'stage', receivedOn: 'received_on', bondArrivedOn: 'bond_arrived_on', customsStatus: 'customs_status', customsDeadline: 'customs_deadline',
   customsExtensionUntil: 'customs_extension_until', customsValueUgx: 'customs_value_ugx', tiktokUrl: 'tiktok_url', openToBrokers: 'open_to_brokers',
-  commissionKind: 'commission_kind', commissionFixedUgx: 'commission_fixed_ugx', commissionPercent: 'commission_percent',
+  commissionKind: 'commission_kind', commissionFixedUgx: 'commission_fixed_ugx', commissionPercent: 'commission_percent', kind: 'kind', specs: 'specs',
 };
 
 @Injectable()

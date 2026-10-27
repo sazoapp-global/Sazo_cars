@@ -2,7 +2,7 @@
 // defects, photos, result. Every change is saved on the phone at once and sent to SAZO when there's
 // signal (offline-first). Sending needs signal.
 import {
-  PANELS, PANEL_LABELS, REPAINT_MICRONS, STRUCTURE_AREAS, STRUCTURE_LABELS, formatDate, formatKm, inspectionErrors,
+  KIND_LABELS, PANELS, PANEL_LABELS, REPAINT_MICRONS, STRUCTURE_AREAS, STRUCTURE_LABELS, VEHICLE_KINDS, formatDate, formatKm, inspectionErrors,
   type InspectionForm, type Panel,
 } from '@sazo/contracts';
 import { useCallback, useRef, useState, useEffect } from 'react';
@@ -223,6 +223,12 @@ function IdentityStep({ i, update, setForm }: StepProps) {
         <PhotoButton jobId={i.id} kind="vehicle_photo" photoId={i.photos.chassis} label="Chassis number photo" required
           onChange={(p) => update((x) => ({ ...x, photos: { ...x.photos, chassis: p } }))} />
       )}
+      <div><label htmlFor="kind" className="label">Kind of car</label>
+        <select id="kind" className="field" value={id.kindSeen ?? ''} onChange={(e) => set({ kindSeen: (e.target.value || undefined) as typeof id.kindSeen })}>
+          <option value="">Choose</option>
+          {VEHICLE_KINDS.map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
+        </select>
+        <p className="mt-1 text-sm text-muted">What you see on the day. It is checked against the papers.</p></div>
       <div><label htmlFor="colour" className="label">Colour</label>
         <input id="colour" className="field" autoComplete="off" value={id.colourSeen ?? ''} onChange={(e) => set({ colourSeen: e.target.value || undefined })} /></div>
       <div><label htmlFor="engine" className="label">Engine number</label>

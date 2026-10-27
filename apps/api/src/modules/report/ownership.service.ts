@@ -110,6 +110,11 @@ export class OwnershipService {
     if (id) await this.pool.query(`UPDATE report.ownership_claims SET status = 'withdrawn', ended_at = now() WHERE user_id = $1 AND vehicle_id = $2 AND status IN ('pending','verified')`, [userId, id]);
   }
 
+  /** The car, if this person is its confirmed owner (for the fuel log, D-148). */
+  ownedCar(userId: string, ref: string) {
+    return this.requireOwner(userId, ref);
+  }
+
   private async requireOwner(userId: string, ref: string) {
     const { id, family } = await this.vehicle(ref);
     const c = await this.live(userId, id);

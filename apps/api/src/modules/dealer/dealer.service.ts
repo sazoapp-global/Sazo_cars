@@ -9,6 +9,7 @@ import { PARAMS } from '@sazo/trust-engine';
 import { IamService, type Actor } from '../iam/index.js';
 import { IngestionError, IngestionService } from '../ingest/index.js';
 import { EvidenceService } from '../obs/index.js';
+import { ReferenceService } from '../ref/index.js';
 import { ReportsService } from '../report/index.js';
 import { VehicleRegistry } from '../vehicle/index.js';
 import { DealerRepository, type CostCategory, type CostRow, type DealerSettings, type StockDetails, type StockRow, type StockStatus } from './dealer.repository.js';
@@ -65,6 +66,7 @@ export class DealerService {
     @Inject(ReportsService) private readonly reports: ReportsService,
     @Inject(IamService) private readonly iam: IamService,
     @Inject(EvidenceService) private readonly evidence: EvidenceService,
+    @Inject(ReferenceService) private readonly reference: ReferenceService,
   ) {}
 
   private async ensureSource(organisationId: string): Promise<string> {
@@ -135,14 +137,22 @@ export class DealerService {
     return { vehicleId: item.vehicleId };
   }
 
-  /** The make, model and year the dealer typed, for a car SAZO has no make for yet. */
+  /**
+   * What the dealer declared about the car, as a dealer's record (lowest weight): the make, model and year only for a
+   * car SAZO has no make for yet; the kind of car and the other details (D-148) whenever the dealer gave them.
+   */
   private async declareSpec(userId: string, organisationId: string, vehicleId: string, ids: Record<string, string>, details: Partial<StockDetails>) {
-    if (!details.make) return;
     const v = await this.registry.getVehicle(vehicleId);
-    const summary = v ? await this.reports.publicSummary(v.publicRef).catch(() => undefined) : undefined;
-    if (summary?.vehicle?.make) return;
-    const spec = { make: details.make, ...(details.model ? { model: details.model } : {}), ...(details.modelYear ? { year: details.modelYear } : {}),
-      ...(details.engineCc ? { engineCc: details.engineCc } : {}), ...(details.fuel ? { fuel: details.fuel } : {}), ...(details.transmission ? { transmission: details.transmission } : {}) };
+    const summary = details.make && v ? await this.reports.publicSummary(v.publicRef).catch(() => undefined) : undefined;
+    const basics = details.make && !summary?.vehicle?.make ? {
+      make: details.make, ...(details.model ? { model: details.model } : {}), ...(details.modelYear ? { year: details.modelYear } : {}),
+      ...(details.engineCc ? { engineCc: details.engineCc } : {}), ...(details.fuel ? { fuel: details.fuel } : {}), ...(details.transmission ? { transmission: details.transmission } : {}),
+    } : {};
+    // A kind SAZO identified itself (the form fills it in) is not the dealer's own record; only a different one is.
+    const found = details.kind ? this.reference.identify({ make: details.make ?? (summary?.vehicle?.make as string | undefined), model: details.model ?? (summary?.vehicle?.model as string | undefined), chassis: ids.chassisNumber ?? ids.vin }) : undefined;
+    const kind = details.kind && details.kind !== found?.kind ? { kind: details.kind } : {};
+    const spec = { ...basics, ...kind, ...(details.specs ?? {}) };
+    if (!Object.keys(spec).length) return;
     const sendIds = v ? (await this.identifiers({ vehicleRef: v.publicRef })).ids : ids;
     await this.send(userId, organisationId, sendIds, [{ type: 'spec_declared', attributes: spec }]).catch(() => undefined);
   }
@@ -169,7 +179,12 @@ export class DealerService {
 
   async add(actor: Actor, organisationId: string, input: AddStock): Promise<StockRow> {
     if ((await this.repo.listedToday(organisationId)) >= DAILY_LISTINGS) throw new DealerError('too_many_listings', `A dealer can add up to ${DAILY_LISTINGS} cars a day. Call SAZO if you need more.`);
-    const details = input.details ?? {};
+    const details = { ...(input.details ?? {}) };
+    // D-148: the kind of car is filled in from the chassis code or the model when SAZO can tell; the dealer can change it.
+    if (!details.kind) {
+      const found = this.reference.identify({ make: details.make, model: details.model, chassis: input.chassisNumber ?? input.vin });
+      if (found.kind) details.kind = found.kind;
+    }
     const hasIds = !!(input.vehicleRef || input.vin || input.chassisNumber || input.plate);
     if (!hasIds && !details.make) throw new DealerError('make_required', 'Enter the make and model, or the number plate or chassis number');
     if (!hasIds && input.mileageKm !== undefined) throw new DealerError('link_first', 'Add the mileage with the number plate or chassis number');
@@ -286,6 +301,11 @@ export class DealerService {
     for (const k of Object.keys(p) as (keyof StockDetails)[]) before[k] = r[k];
     if (!(await this.repo.updateDetails(id, p))) throw new DealerError('not_in_stock', 'This car is no longer in your stock');
     await this.iam.audit({ actor, organisationId, action: 'dealer.car_updated', targetType: 'dealer_stock', targetId: id, details: { before, after: p } });
+    // D-148: a changed kind or detail on a car linked to SAZO is sent as the dealer's record.
+    if (r.vehicleId && (p.kind || (p.specs && Object.keys(p.specs).length))) {
+      const { ids } = await this.identifiersOf(r);
+      await this.declareSpec(actor.userId, organisationId, r.vehicleId, ids, { ...(p.kind ? { kind: p.kind } : {}), ...(p.specs ? { specs: p.specs } : {}) });
+    }
     return this.get(organisationId, id);
   }
 
@@ -460,7 +480,7 @@ export class DealerService {
         make: r.make, model: r.model, modelYear: r.modelYear, engineCc: r.engineCc, fuel: r.fuel, transmission: r.transmission, colour: r.colour, yard: r.yard,
         stage: r.stage, receivedOn: r.receivedOn, bondArrivedOn: r.bondArrivedOn, customsStatus: r.customsStatus, customsDeadline: r.customsDeadline,
         customsExtensionUntil: r.customsExtensionUntil, tiktokUrl: r.tiktokUrl, openToBrokers: r.openToBrokers,
-        commissionKind: r.commissionKind, commissionFixedUgx: r.commissionFixedUgx, commissionPercent: r.commissionPercent,
+        commissionKind: r.commissionKind, commissionFixedUgx: r.commissionFixedUgx, commissionPercent: r.commissionPercent, kind: r.kind, specs: r.specs ?? {},
         ...(cost !== undefined ? { customsValueUgx: r.customsValueUgx } : {}),
       },
       clocks: {

@@ -1,9 +1,10 @@
-import { CONFIDENCE_LABELS, HEALTH_FACTORS, QUESTION_ORDER, QUESTION_TITLES, factValue, formatUgx, headline, statusLabel } from '@sazo/contracts';
+import { CAR_DETAIL_KEYS, CONFIDENCE_LABELS, DETAIL_SOURCE_LABELS, HEALTH_FACTORS, QUESTION_ORDER, QUESTION_TITLES, factValue, formatUgx, headline, statusLabel } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { Plate } from '@/components/plate';
+import { DETAIL_LABELS, detailValue } from '@/components/report/about-car';
 import { StatusChip } from '@/components/status';
 import { vehicleName } from '@/components/vehicle-card';
 import { ApiError, api, isSignedIn } from '@/lib/api';
@@ -139,6 +140,39 @@ export default async function Compare({ searchParams }: { searchParams: Promise<
             </table>
           </div>
         </section>
+
+        {/* D-148: the kind of car and the other details, side by side. */}
+        {(() => {
+          const keys = CAR_DETAIL_KEYS.filter((k) => c.vehicles.some((v) => v.about?.details.some((d) => d.key === k)));
+          if (!keys.length) return null;
+          return (
+            <section aria-labelledby="about-cars">
+              <h2 id="about-cars" className="font-display text-2xl font-extrabold text-primary-container md:text-3xl">About these cars</h2>
+              <p className="mt-1 text-muted">A maker&apos;s figure is published for the model, not measured on the car.</p>
+              <div tabIndex={0} role="region" aria-label="Car details, side by side (scrolls sideways on small screens)" className="mt-5 overflow-x-auto rounded-[14px] border border-line bg-white focus-visible:outline-2 focus-visible:outline-primary-container">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <caption className="sr-only">Car details compared across {c.vehicles.length} cars</caption>
+                  <thead className="bg-soft"><tr>
+                    <th scope="col" className="w-60 p-4 text-[11px] font-bold uppercase tracking-wider text-label">Detail</th>
+                    {c.vehicles.map((v) => <th key={v.vehicle.vehicleRef} scope="col" className="p-4 font-display text-base font-bold text-ink">{vehicleName(v.vehicle)}</th>)}
+                  </tr></thead>
+                  <tbody className="divide-y divide-line">
+                    {keys.map((k) => (
+                      <tr key={k}>
+                        <th scope="row" className="p-4 align-top font-display font-bold">{DETAIL_LABELS[k]}</th>
+                        {c.vehicles.map((v) => {
+                          const d = v.about?.details.find((x) => x.key === k);
+                          return <td key={v.vehicle.vehicleRef} className="p-4 align-top">{d ? <><span className="font-semibold">{detailValue(k, d.value)}</span>
+                            <span className="block text-xs text-muted">{DETAIL_SOURCE_LABELS[d.source]}</span></> : <span className="text-muted">Not recorded</span>}</td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          );
+        })()}
 
         {communities.length > 0 && (
           <section aria-labelledby="owners">

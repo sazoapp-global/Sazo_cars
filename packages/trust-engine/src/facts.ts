@@ -1,5 +1,5 @@
 // Canonical facts (Rule Set §6).
-import { normalizeIdentifier } from '@sazo/contracts';
+import { kindFromText, normalizeIdentifier } from '@sazo/contracts';
 import { colourTimeline } from './checks.js';
 import { currentMileage, type MileageSeries } from './mileage.js';
 import { ms } from './time.js';
@@ -35,6 +35,19 @@ export function deriveFacts({ ws, series, qualifying, confidence }: FactInputs):
     const o = best(of('spec_declared').filter((x) => x.attributes[field] !== undefined));
     if (o) set(field, o.attributes[field], [o]);
   }
+
+  // D-148: the other car details a registry, dealer or owner declared (registry first, as for make and model).
+  const DETAILS = [['engineCc', 'engine_cc'], ['seats', 'seats'], ['doors', 'doors'], ['cylinders', 'cylinders'], ['powerHp', 'power_hp'],
+    ['fuelKmPerL', 'fuel_km_per_l'], ['loadTonnes', 'load_tonnes'], ['gvwTonnes', 'gvw_tonnes'], ['axles', 'axles'], ['drive', 'drive'], ['steering', 'steering']] as const;
+  for (const [field, key] of DETAILS) {
+    const o = best(of('spec_declared').filter((x) => x.attributes[field] !== undefined));
+    if (o) set(key, o.attributes[field], [o]);
+  }
+  // The kind of car: declared (or free text a registry sent as the body) or seen by an inspector; the strongest wins.
+  const kindOf = (o: EngineObservation) => (o.type === 'inspection_result' ? o.attributes.observedKind : o.attributes.kind ?? kindFromText(o.attributes.body as string | undefined)) as string | undefined;
+  const kindObs = [...of('spec_declared'), ...of('inspection_result')].filter((o) => kindOf(o));
+  const kindBest = best(kindObs);
+  if (kindBest) set('kind', kindOf(kindBest), [kindBest]);
 
   // Colour (G8).
   const officialSpec = of('spec_declared').filter((o) => o.attributes.colour && ws.source(o).evidenceClass === 'official');

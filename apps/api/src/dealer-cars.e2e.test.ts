@@ -93,6 +93,7 @@ describe.skipIf(!base)('dealer cars, costs and clocks (e2e)', () => {
     expect(res.body).toMatchObject({ linked: false, status: 'in_stock', askingPriceUgx: 75_000_000,
       details: { make: 'Toyota', model: 'Harrier', modelYear: 2018, stage: 'shipping', yard: 'Kyambogo Yard', openToBrokers: true, commissionKind: null },
       clocks: { daysInStock: 0, stockAgeLevel: 0, stockAgeAlertDays: [90, 180, 240] } });
+    expect(res.body.details.kind).toBe('suv'); // SAZO fills the kind of car in from the model (D-148)
     expect(res.body.vehicleRef).toBeUndefined();
     expect(res.body.costTotalUgx).toBeUndefined(); // sales staff never see costs
     const buyer = await signIn('+256772600050', 'A buyer');

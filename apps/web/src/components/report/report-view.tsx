@@ -1,7 +1,7 @@
 // The full car check report, laid out like the original design: a header with the car and its two scores,
 // a question bar, then one section per buyer question with the records behind it. Only real records are
 // shown; where SAZO has none, the section says so.
-import { PANELS, PANEL_LABELS, QUESTION_ORDER, QUESTION_TITLES, formatDate, formatKm, formatUgx, headline, statusLabel, type Panel } from '@sazo/contracts';
+import { PANELS, PANEL_LABELS, QUESTION_ORDER, QUESTION_TITLES, formatDate, formatKm, formatUgx, headline, kindLabel, statusLabel, type Panel } from '@sazo/contracts';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { FullReport, LatestInspection, QuestionView } from '@/lib/types';
@@ -16,6 +16,7 @@ import { Icon, type IconName } from '../icon';
 import { Plate } from '../plate';
 import { StatusChip } from '../status';
 import { Banner, vehicleName } from '../vehicle-card';
+import { AboutCar } from './about-car';
 import { MileageChart } from './mileage-chart';
 
 type Tone = 'ok' | 'warn' | 'bad' | 'na';
@@ -58,7 +59,10 @@ export function ReportHero({ r, x, actions, photoHref }: { r: FullReport; x: Rep
                 : <span className="chip border-soft-3 bg-soft text-primary-container"><Icon name="verified_user" size={14} />Official record found</span>}
               {f.text('first_registration_date') && <span className="text-sm text-muted">First registered {f.text('first_registration_date')}</span>}
             </div>
-            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-primary-container md:text-4xl">{vehicleName(r.vehicle)}</h1>
+            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-primary-container md:text-4xl">
+              {vehicleName(r.vehicle)}
+              {r.vehicle.kind && <span className="chip ml-2 border-soft-3 bg-soft align-middle text-sm text-primary-container">{kindLabel(r.vehicle.kind)}</span>}
+            </h1>
             <p className="mt-1 text-sm text-muted">
               {[f.text('current_colour'), f.text('transmission')].filter(Boolean).join(' · ')}{f.text('current_colour') || f.text('transmission') ? ' · ' : ''}
               SAZO reference <span className="sazo-id">{r.vehicle.vehicleRef}</span>
@@ -84,6 +88,7 @@ export function ReportHero({ r, x, actions, photoHref }: { r: FullReport; x: Rep
             <InspectionMini x={r.latestInspection ?? null} />
           </div>
         </div>
+        {r.about && <AboutCar details={r.about.details} />}
       </div>
     </section>
   );

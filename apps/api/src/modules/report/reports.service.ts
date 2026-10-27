@@ -8,6 +8,7 @@ import { ObservationsService, type StoredObservation } from '../obs/index.js';
 import { ReferenceService, modelLabel } from '../ref/index.js';
 import { TrustService, type TrustSnapshot } from '../trust/index.js';
 import { VehicleRegistry, type VehicleCard } from '../vehicle/index.js';
+import { CarDetailsService, type CarDetails } from './car-details.service.js';
 
 export type Audience = 'public' | 'consumer';
 
@@ -31,6 +32,7 @@ export class ReportsService {
     @Inject(IngestionService) private readonly ingestion: IngestionService,
     @Inject(ReferenceService) private readonly reference: ReferenceService,
     @Inject(ConcernService) private readonly concerns: ConcernService,
+    @Inject(CarDetailsService) private readonly carDetails: CarDetailsService,
   ) {}
 
   /** Other modules add statuses to the report without the report depending on them (the dealer balance, D-123). */
@@ -45,7 +47,7 @@ export class ReportsService {
     return Object.assign({}, ...parts);
   }
 
-  private async load(ref: string): Promise<{ id: string; card: VehicleCard & Record<string, unknown>; snap: TrustSnapshot }> {
+  private async load(ref: string): Promise<{ id: string; card: VehicleCard & Record<string, unknown>; snap: TrustSnapshot; about?: CarDetails }> {
     const id = await this.registry.idForRef(ref);
     if (!id) throw new ReportNotFound(ref);
     const card = await this.registry.card(id);
@@ -53,9 +55,14 @@ export class ReportsService {
     if (!card || !snap) throw new ReportNotFound(ref);
     const enriched: VehicleCard & Record<string, unknown> = { ...card };
     for (const k of PUBLIC_CARD_FACTS) if (snap.facts[k]) enriched[k] = snap.facts[k]!.value;
+    // D-148: the kind of car and the engine size are on every card, the public summary included.
+    const about = await this.carDetails.forVehicle(id).catch(() => undefined);
+    if (about?.kind) enriched.kind = about.kind.value;
+    const cc = about?.details.find((d) => d.key === 'engineCc');
+    if (cc) enriched.engineCc = cc.value;
     const banner = snap.questions.find((q) => q.status === 'serious' && ['identity', 'legal_financial'].includes(q.question));
     if (banner) enriched.banner = { severity: 'serious', headlineKey: banner.headlineKey };
-    return { id, card: enriched, snap };
+    return { id, card: enriched, snap, ...(about ? { about } : {}) };
   }
 
   /** Search results with make/model/year added from the current trust snapshot (no other details). */
@@ -84,7 +91,7 @@ export class ReportsService {
   }
 
   async fullReport(ref: string) {
-    const { id, card, snap } = await this.load(ref);
+    const { id, card, snap, about } = await this.load(ref);
     const facts = Object.entries(snap.facts)
       .filter(([k]) => CONSUMER_FACTS.has(k))
       .map(([key, f]) => ({ key, value: f.value, confidence: f.confidence, estimated: f.estimated }));
@@ -105,6 +112,8 @@ export class ReportsService {
         ...(range && valuationStatus !== 'not_available' ? { range } : {}),
       },
       facts,
+      // D-148: "About this car": the kind and the other details, each with where it came from.
+      about: about ? { details: about.details } : { details: [] },
       openConflicts: snap.openConflicts.map((c) => ({ topic: c.topic, headlineKey: `conflict.${c.topic}.open` })),
       latestInspection: await this.latestInspection(id, snap),
       notices: await this.notices(id),

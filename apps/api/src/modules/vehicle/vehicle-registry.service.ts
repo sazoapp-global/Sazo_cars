@@ -61,6 +61,22 @@ const TYPES: Record<Exclude<IdentifierKind, 'unknown'>, string[]> = {
 export class VehicleRegistry {
   constructor(@Inject(VehicleRepository) private readonly repo: VehicleRepository) {}
 
+  // ------------------------------------------------------------------ kind of car (D-148)
+
+  /** The latest kind a SAZO admin set, for one vehicle or its whole merge family (the newest wins). */
+  async kindDecision(vehicleIds: string[]): Promise<{ kind: string; reason: string; decidedAt: string } | undefined> {
+    const all = [...(await this.repo.kindDecisions(vehicleIds)).values()];
+    return all.sort((a, b) => b.decidedAt.localeCompare(a.decidedAt))[0];
+  }
+
+  kindDecisions(vehicleIds: string[]) {
+    return this.repo.kindDecisions(vehicleIds);
+  }
+
+  decideKind(vehicleId: string, kind: string, reason: string, userId: string): Promise<void> {
+    return this.repo.addKindDecision(vehicleId, kind, reason, userId);
+  }
+
   // ------------------------------------------------------------------ search
 
   /**

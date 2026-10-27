@@ -482,6 +482,93 @@ paths:
       responses:
         '204': { description: Removed }
 
+  /me/cars/{vehicleRef}/fuel:
+    get:
+      tags: [My cars]
+      operationId: listMyFuelLog
+      summary: My fuel log for a car I own, newest first, with my own average (D-148)
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      responses:
+        '200': { description: '{ items: [{ id, filledOn, litres, odometerKm, fullTank, kmPerL }], average, measuredTanks }. kmPerL is set on the second of two full tanks.' }
+        '403': { description: not_owner }
+    post:
+      tags: [My cars]
+      operationId: addFuelFillup
+      summary: Log a fill-up (confirmed owners only). The report shows the owners' average, never who logged it, once there are 3 or more measured tanks.
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filledOn, litres, odometerKm, fullTank]
+              additionalProperties: false
+              properties:
+                filledOn: { type: string, format: date, description: Not in the future }
+                litres: { type: number, exclusiveMinimum: 0, maximum: 1000 }
+                odometerKm: { type: integer, minimum: 0 }
+                fullTank: { type: boolean }
+      responses:
+        '201': { description: '{ id } and the log as in GET' }
+        '400': { description: 'invalid_request, mileage_lower (lower than an earlier fill-up)' }
+        '403': { description: not_owner }
+
+  /me/cars/{vehicleRef}/fuel/{fillupId}:
+    delete:
+      tags: [My cars]
+      operationId: removeFuelFillup
+      summary: Take back a fill-up typed by mistake (kept, marked removed)
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+        - { name: fillupId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Removed }
+        '404': { description: fillup_not_found }
+
+  /reference/identify:
+    get:
+      tags: [Reference]
+      operationId: identifyCar
+      summary: The kind of car from the chassis code, else the model, and the maker's figures for the model (test data until real maker specifications are loaded) (D-148)
+      parameters:
+        - { name: make, in: query, schema: { type: string, maxLength: 60 } }
+        - { name: model, in: query, schema: { type: string, maxLength: 60 } }
+        - { name: chassis, in: query, schema: { type: string, maxLength: 30 } }
+      responses:
+        '200': { description: "{ kind, via: chassis_code|model, code? } or { reason: mixed_model|unknown_model|no_model, kinds? }, with spec: { make, model, engineCc, seats, doors, cylinders, powerHp, fuelKmPerL, loadTonnes, gvwTonnes, axles, drive, basis: simulated|maker } when known" }
+
+  /admin/vehicle-kinds:
+    get:
+      tags: [Admin]
+      operationId: listVehicleKindQueue
+      summary: "Cars SAZO could not give a kind, and cars whose records name different kinds (permission vehicle.kind.decide) (D-148)"
+      responses:
+        '200': { description: '{ needed: [{ vehicleRef, plate, make, model, year, reason, kinds? }], disagree: [{ vehicleRef, plate, make, model, year, current, candidates: [{ kind, source, at }] }] }' }
+
+  /admin/vehicles/{vehicleRef}/kind:
+    post:
+      tags: [Admin]
+      operationId: decideVehicleKind
+      summary: A SAZO admin sets the kind of car with a reason; kept, never edited, audited (D-148)
+      parameters:
+        - $ref: '#/components/parameters/VehicleRef'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, reason]
+              additionalProperties: false
+              properties:
+                kind: { $ref: '#/components/schemas/VehicleKind' }
+                reason: { type: string, minLength: 3, maxLength: 300 }
+      responses:
+        '201': { description: The car's details with the kind now set by the admin }
+
   /me/cars/{vehicleRef}/visits:
     get:
       tags: [My cars]
@@ -2720,6 +2807,34 @@ components:
         commissionKind: { type: [string, 'null'], enum: [fixed, percent, null] }
         commissionFixedUgx: { type: [integer, 'null'] }
         commissionPercent: { type: [number, 'null'], maximum: 20 }
+        kind: { oneOf: [{ $ref: '#/components/schemas/VehicleKind' }, { type: 'null' }], description: 'Kind of car (D-148). Filled in from the chassis code or model when not sent.' }
+        specs:
+          type: [object, 'null']
+          description: "The dealer's own figures where they differ from the model's (D-148)"
+          properties:
+            seats: { type: integer }
+            doors: { type: integer }
+            cylinders: { type: integer }
+            powerHp: { type: integer }
+            fuelKmPerL: { type: number }
+            loadTonnes: { type: number }
+            gvwTonnes: { type: number }
+            axles: { type: integer }
+            drive: { type: string, enum: ['2wd', '4wd', awd] }
+            steering: { type: string, enum: [right, left] }
+    VehicleKind:
+      type: string
+      description: 'Saloon, Hatchback, Station wagon, SUV, Pickup, Van, Minibus (taxi), Bus, Truck (lorry), Coupe or convertible, Other (D-148)'
+      enum: [saloon, hatchback, station_wagon, suv, pickup, van, minibus, bus, truck, coupe_convertible, other]
+    CarDetail:
+      type: object
+      description: "One line of About this car in the full report's about.details (D-148): a record first, else the maker's figure for the model"
+      required: [key, value, source]
+      properties:
+        key: { type: string, enum: [kind, engineCc, powerHp, cylinders, drive, fuelKmPerL, actualKmPerL, seats, doors, steering, year, firstRegisteredYear, importedFrom, loadTonnes, gvwTonnes, axles] }
+        value: { type: [string, number] }
+        source: { type: string, description: 'registry, inspector, garage, dealer, owner, record, admin, chassis_code, model, maker, maker_test (test data) or owners (fuel log)' }
+        note: { type: string }
     # ---------- primitives & enums
     VehicleRef:
       type: string

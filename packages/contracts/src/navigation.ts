@@ -92,6 +92,7 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       ] },
       { key: 'cars', label: 'Cars and records', short: 'Cars', icon: 'directions_car', links: [
         { key: 'matches', label: 'Vehicle matches', short: 'Matches', icon: 'directions_car', href: '/admin/matches', rule: STAFF },
+        { key: 'kinds', label: 'Kind of car', short: 'Kinds', icon: 'local_shipping', href: '/admin/kinds', rule: ADMIN },
         { key: 'conflicts', label: 'Conflicts', short: 'Conflicts', icon: 'warning', href: '/admin/conflicts', rule: STAFF },
         { key: 'concerns', label: 'Reported problems', short: 'Problems', icon: 'report', href: '/admin/concerns', rule: STAFF },
         { key: 'sources', label: 'Data sources', short: 'Sources', icon: 'account_balance', href: '/admin/sources', rule: STAFF },

@@ -1,7 +1,7 @@
 // Dealer workspace API. Every call acts for one dealer: X-Organisation-Id header. Costs, margins, commission
 // terms and dealer settings need dealer.costs.manage (managers); sales staff manage cars and prices.
 import { Body, Controller, Delete, Get, Header, Headers, HttpCode, Inject, Param, Patch, Post, Put, Query, StreamableFile } from '@nestjs/common';
-import { tidyName, tidySentence } from '@sazo/contracts';
+import { DRIVES, STEERING_SIDES, VEHICLE_KINDS, isVehicleKind, tidyName, tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import { canForOrg, CurrentActor, IamService, type Actor } from '../iam/index.js';
@@ -36,6 +36,12 @@ const Details = z.object({
   commissionKind: z.enum(['fixed', 'percent']).nullable(),
   commissionFixedUgx: Price.nullable(),
   commissionPercent: z.number().positive().max(20).multipleOf(0.01).nullable(),
+  kind: z.enum(VEHICLE_KINDS).nullable(),
+  specs: z.object({
+    seats: z.number().int().min(1).max(120), doors: z.number().int().min(0).max(8), cylinders: z.number().int().min(1).max(16),
+    powerHp: z.number().int().min(10).max(2000), fuelKmPerL: z.number().min(0.5).max(60), loadTonnes: z.number().min(0).max(100),
+    gvwTonnes: z.number().min(0.5).max(150), axles: z.number().int().min(2).max(10), drive: z.enum(DRIVES), steering: z.enum(STEERING_SIDES),
+  }).partial().strict(),
 }).partial().strict();
 const Add = z.object({
   vehicleRef: z.string().regex(/^SZV-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/).optional(),
@@ -123,11 +129,13 @@ export class DealerController {
 
   /** GET /v1/dealer/stock?status= */
   @Get('stock')
-  async list(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Query('status') status?: string) {
+  async list(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId: string | undefined, @Query('status') status?: string, @Query('kind') kind?: string) {
     const org = await this.org(actor, orgId);
     const s = status === undefined ? undefined : z.enum(['in_stock', 'sold', 'removed']).safeParse(status);
     if (s && !s.success) throw badRequest('invalid_query', 'Unknown status');
-    return { items: await this.dealer.views(await this.dealer.list(org, s?.data), org, this.canManage(actor, org)) };
+    if (kind !== undefined && !isVehicleKind(kind)) throw badRequest('invalid_query', 'Unknown kind of car');
+    const rows = (await this.dealer.list(org, s?.data)).filter((r) => !kind || r.kind === kind); // D-148: filter by the kind of car
+    return { items: await this.dealer.views(rows, org, this.canManage(actor, org)) };
   }
 
   /**

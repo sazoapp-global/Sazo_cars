@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import type { EvidenceKind, Sensitivity, SourceDomain } from './enums.js';
 import { USAGE_TYPES } from './enums.js';
+import { DRIVES, STEERING_SIDES, VEHICLE_KINDS } from './vehicle-kinds.js';
 
 const km = z.number().int().nonnegative();
 const money = z.object({ amount: z.number().int().nonnegative(), currency: z.literal('UGX') });
@@ -49,6 +50,18 @@ export const OBSERVATION_TYPES = {
     transmission: z.enum(['manual', 'automatic', 'cvt', 'other']).optional(),
     colour: colour.optional(),
     engineNumber: z.string().optional(),
+    // D-148: the kind of car and the other details (all optional; registries may send `body` as free text instead).
+    kind: z.enum(VEHICLE_KINDS).optional(),
+    seats: z.number().int().min(1).max(120).optional(),
+    doors: z.number().int().min(0).max(8).optional(),
+    cylinders: z.number().int().min(1).max(16).optional(),
+    powerHp: z.number().int().min(10).max(2000).optional(),
+    fuelKmPerL: z.number().min(0.5).max(60).optional(),
+    loadTonnes: z.number().min(0).max(100).optional(),
+    gvwTonnes: z.number().min(0.5).max(150).optional(),
+    axles: z.number().int().min(2).max(10).optional(),
+    drive: z.enum(DRIVES).optional(),
+    steering: z.enum(STEERING_SIDES).optional(),
   })),
 
   // Import & registration
@@ -153,6 +166,8 @@ export const OBSERVATION_TYPES = {
     passed: z.boolean(),
     observedColour: colour.optional(),
     observedEngineNumber: z.string().optional(),
+    /** D-148: the kind of car the inspector saw. */
+    observedKind: z.enum(VEHICLE_KINDS).optional(),
     structuralFindings: z.boolean().optional(),
     tyresPercent: z.number().min(0).max(100).optional(),
     batteryOk: z.boolean().optional(),

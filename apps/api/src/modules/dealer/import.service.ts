@@ -98,7 +98,7 @@ export class DealerImportService {
           ...(row.vin ? { vin: row.vin } : row.chassisNumber ? { chassisNumber: row.chassisNumber } : {}), ...(row.plate ? { plate: row.plate } : {}),
           askingPriceUgx: row.askingPriceUgx!, ...(row.notes ? { notes: tidySentence(row.notes) } : {}),
           details: {
-            ...(row.make ? { make: tidyName(row.make) } : {}), ...(row.model ? { model: tidyName(row.model) } : {}), ...(row.modelYear ? { modelYear: row.modelYear } : {}),
+            ...(row.make ? { make: tidyName(row.make) } : {}), ...(row.model ? { model: tidyName(row.model) } : {}), ...(row.modelYear ? { modelYear: row.modelYear } : {}), ...(row.kind ? { kind: row.kind } : {}),
             ...(row.engineCc ? { engineCc: row.engineCc } : {}), ...(row.fuel ? { fuel: row.fuel } : {}), ...(row.transmission ? { transmission: row.transmission } : {}),
             ...(row.colour ? { colour: tidyName(row.colour) } : {}), ...(row.yard ? { yard: tidyName(row.yard) } : {}), stage: row.stage as ImportStage,
             ...(row.receivedOn ? { receivedOn: row.receivedOn } : {}), ...(row.bondArrivedOn ? { bondArrivedOn: row.bondArrivedOn } : {}),

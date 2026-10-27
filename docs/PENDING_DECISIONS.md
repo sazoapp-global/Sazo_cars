@@ -218,3 +218,14 @@
 | Older accounts | Asked to finish their details (surname, gender, date of birth) at next log-in, on the website and in the garage app. |
 | Mechanics | Still added by name and phone by their manager (invites come in part 3); they finish their details at first log-in in the app. |
 | Garage app | Log-in only (phone code or email and password); no sign-up and no Google there yet. |
+
+## Kind of car and car details (D-148, 27 Oct 2026, easy to change)
+
+| Item | Choice made |
+|---|---|
+| Maker's figures | SAZO's model list (about 50 common models in Uganda) holds test figures, marked "test data" on every report, until real maker specifications are loaded (`spec_basis` = `maker`). |
+| Models sold as two kinds | Corolla, Land Cruiser and Hiace: SAZO decides by the chassis code; with no known code the car goes to the admins' Kind of car list. |
+| Required kind | Needed on the dealer's form when the make is typed (SAZO fills it in as the dealer types, and again when the form is sent). A car added by plate or chassis alone takes its kind from SAZO's records. The API itself accepts a car with no kind. |
+| Dealer's figures | Only the figures the dealer changes from the model's are sent as the dealer's record, so the report does not show the maker's numbers as "Dealer". |
+| Fuel log | Confirmed owners only; measured between two full tanks; the report shows the owners' average from 3 or more measured tanks, never who logged them. A fill-up typed by mistake is marked removed, not deleted. |
+| Excel import | Has a "Kind of car" column only; the other details are added on the car's page. |

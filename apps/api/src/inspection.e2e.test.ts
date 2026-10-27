@@ -157,7 +157,7 @@ describe.skipIf(!base)('inspector workspace (e2e)', () => {
       sourceLabel: 'Inspection · KVI Bugolobi', passed: false, structuralFindings: true, tyresPercent: 35, batteryOk: true,
       defects: [{ item: 'Front brake pads worn', severity: 'major' }], panelsMeasured: 2, repaintedPanels: ['bonnet'], photos: 2,
     });
-    expect(r.ruleSetVersion).toBe('rs-2026.10-v1.1');
+    expect(r.ruleSetVersion).toBe('rs-2026.10-v1.2');
     // The ledger shows the inspection with its report; inspectors' sources never appear in the partner console.
     const ledger = (await http.get(`/v1/vehicles/${vehicleRef}/evidence`).set(bearer(buyer)).expect(200)).body.items;
     const result = ledger.find((i: { type: string }) => i.type === 'inspection_result');
