@@ -126,11 +126,12 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeHidden();
   await page.getByRole('button', { name: 'Home' }).click();
   await shot(page, '9-dark-home');
-  // Your name in the top bar shows your details only.
+  // Your name in the top bar shows your details and Sign out.
   await page.getByRole('button', { name: /^Your details, / }).click();
   const details = page.getByRole('dialog', { name: 'Your details' });
   await expect(details).toContainText('Phone');
   await expect(details.getByRole('link')).toHaveCount(0);
+  await expect(details.getByRole('button', { name: 'Sign out' })).toBeVisible();
   await details.getByRole('button', { name: 'Close' }).click();
   // On a computer: the fixed side bar, with Settings and Sign out at its foot.
   await page.setViewportSize({ width: 1280, height: 800 });

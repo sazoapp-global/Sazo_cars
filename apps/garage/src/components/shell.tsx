@@ -62,7 +62,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
 
   return (
     <div className="min-h-dvh bg-surface print:bg-white">
-      <TopBar app={app} garage={garage} me={me} online={online} unread={unread} />
+      <TopBar app={app} garage={garage} me={me} online={online} unread={unread} onSignOut={onSignOut} />
       {!online && (
         <div className="bg-ink px-4 py-2.5 text-sm text-white print:hidden lg:pl-[17rem]">
           <p className="font-bold">You’re offline</p>
@@ -135,7 +135,7 @@ function RailLink({ l, on, badge, count }: { l: NavLink; on: boolean; badge?: nu
 }
 
 /** The top bar: the app and business, online or not, the bell, and your name (details only). */
-function TopBar({ app, garage, me, online, unread }: { app: string; garage: Garage; me: Me; online: boolean; unread: number }) {
+function TopBar({ app, garage, me, online, unread, onSignOut }: { app: string; garage: Garage; me: Me; online: boolean; unread: number; onSignOut: () => void }) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-card px-4 print:hidden lg:ml-64 lg:h-12 lg:px-6">
       <p className="hidden min-w-0 flex-1 truncate text-xs text-muted lg:block">Testing: records are simulated, not real cars.</p>
@@ -154,15 +154,15 @@ function TopBar({ app, garage, me, online, unread }: { app: string; garage: Gara
         <Icon name="notifications" size={24} />
         {unread > 0 && <span aria-hidden className="absolute right-1 top-1 min-w-5 rounded-full bg-bad-text px-1 text-center text-[11px] font-bold leading-5 text-white">{unread > 99 ? '99+' : unread}</span>}
       </button>
-      <Details garage={garage} me={me} online={online} />
+      <Details garage={garage} me={me} online={online} onSignOut={onSignOut} />
     </header>
   );
 }
 
 interface Profile { phone: string | null; email: string | null; surname: string | null; firstName: string | null; middleName: string | null }
 
-/** Your name in the top bar: your details in a pop-up, nothing to change here (that is Settings). */
-function Details({ garage, me, online }: { garage: Garage; me: Me; online: boolean }) {
+/** Your name in the top bar: your details in a pop-up and Sign out; nothing to change here (that is Settings). */
+function Details({ garage, me, online, onSignOut }: { garage: Garage; me: Me; online: boolean; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>();
   const dialog = useRef<HTMLDivElement>(null);
@@ -203,6 +203,9 @@ function Details({ garage, me, online }: { garage: Garage; me: Me; online: boole
             <dl className="mt-3 divide-y divide-line text-sm">
               {rows.map(([k, v]) => <div key={k} className="flex justify-between gap-3 py-2"><dt className="text-muted">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>)}
             </dl>
+            <div className="mt-3 border-t border-line pt-4">
+              <button type="button" onClick={onSignOut} className="btn btn-ghost w-full justify-center text-bad-text"><Icon name="logout" />Sign out</button>
+            </div>
           </div>
         </div>
       )}

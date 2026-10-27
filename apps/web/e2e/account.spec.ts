@@ -32,7 +32,8 @@ test('manage my account and delete it', async ({ page }) => {
   const popup = page.getByRole('dialog', { name: 'Your details' });
   await expect(popup).toContainText('Akello Ruth Nambi');
   await expect(popup).toContainText('Phone');
-  await expect(popup.getByRole('link')).toHaveCount(0); // details only: no buttons or links
+  await expect(popup.getByRole('link')).toHaveCount(0); // details and Sign out only: no links
+  await expect(popup.getByRole('button', { name: 'Sign out' })).toBeVisible();
   await a11y(page);
   await popup.getByRole('button', { name: 'Close' }).click();
   await expect(popup).toBeHidden();

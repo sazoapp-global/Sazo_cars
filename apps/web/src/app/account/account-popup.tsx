@@ -1,7 +1,9 @@
 'use client';
 // Your details in a pop-up from your name in the top bar (25 Oct 2026): who you are, how you sign in and
-// your businesses. Details only: Settings and Sign out live in the side bar or the My SAZO menu.
+// your businesses, then Sign out (27 Oct 2026). Settings live in the side bar or the My SAZO menu.
 import { useState, useTransition } from 'react';
+import { signOut } from '@/app/sign-in/actions';
+import { Icon } from '@/components/icon';
 import { Facts, Popup } from '@/components/popup';
 import { myAccount, type MyAccount } from './popup-actions';
 
@@ -29,6 +31,9 @@ export function AccountPopup({ displayName, initials }: { displayName: string; i
             ...(a.hasGoogle ? [['Google', 'Linked'] as [string, string]] : []),
             ['Businesses', a.businesses.length ? a.businesses.map((b) => `${b.name} (${ROLE[b.yourRole] ?? b.yourRole}, ${ORG_STATUS[b.status] ?? b.status})`).join('; ') : 'None'],
           ]} />
+          <form action={signOut} data-clear-drafts className="border-t border-line pt-4">
+            <button className="btn btn-ghost w-full justify-center text-bad-text"><Icon name="logout" />Sign out</button>
+          </form>
         </div>
       )}
     </Popup>
