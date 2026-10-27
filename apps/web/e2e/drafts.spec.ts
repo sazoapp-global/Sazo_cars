@@ -11,7 +11,9 @@ test('sign-up keeps what was typed through a switch, a refresh and a failed send
   await page.getByText('Female', { exact: true }).click();
   await page.getByLabel('Date of birth').fill('1992-03-14');
 
-  // Switching to email keeps the details.
+  // Email is the first way; switching to phone and back keeps the details.
+  await page.getByRole('button', { name: 'Use phone number' }).click();
+  await expect(page.getByLabel('Mobile number')).toBeVisible();
   await page.getByRole('button', { name: 'Use email instead' }).click();
   await expect(page.getByLabel('Surname')).toHaveValue('Nakato');
   await expect(page.getByLabel('Given name')).toHaveValue('Grace');
@@ -24,7 +26,6 @@ test('sign-up keeps what was typed through a switch, a refresh and a failed send
 
   // A refresh keeps everything except the password.
   await page.reload();
-  await page.getByRole('button', { name: 'Use email instead' }).click();
   await expect(page.getByLabel('Surname')).toHaveValue('Nakato');
   await expect(page.getByLabel('Email', { exact: true })).toHaveValue(email);
   await expect(page.getByLabel('Password', { exact: true })).toHaveValue('');

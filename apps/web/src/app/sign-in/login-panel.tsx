@@ -6,9 +6,9 @@ import { PasswordField } from '@/components/auth/password-field';
 import { Icon } from '@/components/icon';
 import { loginWithPassword, loginWithPhone, type PasswordLoginState, type PhoneLoginState } from './actions';
 
-/** Sign In (D-100): mobile number + code, or email + password; Google when it is switched on. */
+/** Sign In (D-100): email + password (first), or mobile number + code; Google when it is switched on. */
 export function LoginPanel({ next, google }: { next: string; google: boolean }) {
-  const [mode, setMode] = useState<'phone' | 'email'>('phone');
+  const [mode, setMode] = useState<'phone' | 'email'>('email'); // email first, phone as the other way (27 Oct 2026)
   const signUp = `/sign-up${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`;
   return (
     <>

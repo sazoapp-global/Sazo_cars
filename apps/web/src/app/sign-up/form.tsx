@@ -6,9 +6,9 @@ import { Icon } from '@/components/icon';
 import { PersonFields } from '@/components/person-fields';
 import { signUpWithEmail, signUpWithPhone, type EmailSignUpState, type PhoneSignUpState } from './actions';
 
-/** Create Account (D-100, D-101): mobile number + code or email + password, with names, gender and date of birth (18+). */
+/** Create Account (D-100, D-101): email + password (first) or mobile number + code, with names, gender and date of birth (18+). */
 export function SignUpPanel({ next, google }: { next: string; google: boolean }) {
-  const [mode, setMode] = useState<'phone' | 'email'>('phone');
+  const [mode, setMode] = useState<'phone' | 'email'>('email'); // email first, phone as the other way (27 Oct 2026)
   const login = `/sign-in${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`;
   return (
     <>

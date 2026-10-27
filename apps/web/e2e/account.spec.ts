@@ -113,7 +113,6 @@ test('create an account with email and password, then log in with it (D-100)', a
   await a11y(page);
   await shot(page, 'sign-up');
   const panel = page.getByRole('main');
-  await panel.getByRole('button', { name: 'Use email instead' }).click();
   await panel.getByLabel('Surname').fill('anguzu');
   await panel.getByLabel('Given name').fill('MIKE');
   await panel.getByLabel('Middle name').fill('james');
@@ -142,7 +141,6 @@ test('create an account with email and password, then log in with it (D-100)', a
   await a11y(page);
   await shot(page, 'log-in');
   const login = page.getByRole('main');
-  await login.getByRole('button', { name: 'Use email instead' }).click();
   await login.getByLabel('Email', { exact: true }).fill('nobody@example.com');
   await login.getByLabel('Password', { exact: true }).fill('whatever-1234');
   await login.getByRole('button', { name: 'Log in to SAZO' }).click();

@@ -89,6 +89,7 @@ export async function signIn(page: Page, phone: string, opts: { name?: string; n
     await panel.getByLabel('Given name').fill(p.firstName);
     await panel.getByLabel('Female').check();
     await panel.getByLabel('Date of birth').fill('1990-03-15');
+    await panel.getByRole('button', { name: 'Use phone number' }).click(); // email comes first
     await panel.getByLabel('Mobile number').fill(`0${phone.slice(4)}`);
     const before = codesSoFar();
     await panel.getByRole('button', { name: 'Send code' }).click();
@@ -98,6 +99,7 @@ export async function signIn(page: Page, phone: string, opts: { name?: string; n
   } else {
     await page.goto(`/sign-in?next=${next}`);
     const panel = page.getByRole('main');
+    await panel.getByRole('button', { name: 'Use phone number' }).click(); // email comes first
     await panel.getByLabel('Mobile number').fill(`0${phone.slice(4)}`);
     let before = codesSoFar();
     await panel.getByRole('button', { name: 'Send code' }).click();

@@ -46,7 +46,9 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   const phone = `07${String(Date.now()).slice(-8)}`;
   await page.goto('/check?q=UBJ214K');
   await page.getByRole('link', { name: 'Log in to see details' }).click();
-  // No account yet: the log-in page says so and points to sign-up (D-100).
+  // Email comes first; phone is the other way in. No account yet: the log-in page says so and points to sign-up (D-100).
+  await expect(page.getByRole('main').getByLabel('Email', { exact: true })).toBeVisible();
+  await page.getByRole('main').getByRole('button', { name: 'Use phone number' }).click();
   await page.getByRole('main').getByLabel('Mobile number').fill(phone);
   await page.getByRole('main').getByRole('button', { name: 'Send code' }).click();
   await expect(page.getByText('No SAZO account uses this number.')).toBeVisible();
@@ -57,6 +59,7 @@ test('sign in with a phone code, then read the full report, timeline and evidenc
   await panel.getByLabel('Given name').fill('Test');
   await panel.getByLabel('Male', { exact: true }).check();
   await panel.getByLabel('Date of birth').fill('1988-08-08');
+  await panel.getByRole('button', { name: 'Use phone number' }).click();
   await panel.getByLabel('Mobile number').fill(phone);
   await panel.getByRole('button', { name: 'Send code' }).click();
   await expect(panel.getByLabel('6-digit code')).toBeVisible();
