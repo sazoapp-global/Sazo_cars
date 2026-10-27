@@ -9,6 +9,7 @@ import type { DealerSettings, Me, MyOrganisation, StaffMember, StockItem } from 
 import { AppFrame } from '@/components/app-frame/app-frame';
 import { addStaff, addStock, saveSettings } from '../actions';
 import { FUELS, STAGES, carName, stageLabel } from '../labels';
+import { PICTURE_ACCEPT } from '@/lib/upload-types';
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
@@ -113,7 +114,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
             <form action={addStock} data-draft={`stock-new-${id}`} className="mt-3 grid gap-3 sm:grid-cols-2">
               <input type="hidden" name="org" value={id} />
               <div className="sm:col-span-2"><label htmlFor="photos" className="label">Photos of the car</label>
-                <input id="photos" name="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+                <input id="photos" name="photos" type="file" multiple accept={PICTURE_ACCEPT} className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
               <div><label htmlFor="make" className="label">Make</label><input id="make" name="make" className="field" placeholder="Toyota" autoComplete="off" /></div>
               <div><label htmlFor="model" className="label">Model</label><input id="model" name="model" className="field" placeholder="Harrier" autoComplete="off" /></div>
               <div><label htmlFor="modelYear" className="label">Year</label><input id="modelYear" name="modelYear" inputMode="numeric" maxLength={4} className="field tabular-nums" placeholder="2018" /></div>
@@ -134,7 +135,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
                 <div className="mt-2 grid gap-3 sm:grid-cols-2">
                   <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" /></div>
                   <div><label htmlFor="odometer" className="label">Odometer photo</label>
-                    <input id="odometer" name="odometer" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+                    <input id="odometer" name="odometer" type="file" accept={PICTURE_ACCEPT} capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
                 </div>
               </details>
               <div className="sm:col-span-2"><label htmlFor="notes" className="label">Notes for your team (not shown to buyers)</label><input id="notes" name="notes" maxLength={500} className="field" />

@@ -119,7 +119,7 @@ export class AccountController {
     return { signedOut: await this.iam.signOutOthers(actor.userId, actor.sessionId) };
   }
 
-  /** GET /v1/me/export — download my data (JSON). */
+  /** GET /v1/me/export — my data, for the Your data page and its PDF and Excel downloads (D-147). */
   @Get('export')
   export(@CurrentActor() actor: Actor) {
     return this.account.export(actor);

@@ -1,38 +1,16 @@
 // "Download my data", readable: everything SAZO holds about the signed-in person, including the businesses
-// they belong to, as a page they can read or save as a PDF file (the only download offered).
+// they belong to. Downloads are a PDF or an Excel file (D-147); there is no JSON download.
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Icon } from '@/components/icon';
-import { PrintButton } from '@/components/share-buttons';
 import { api, isSignedIn } from '@/lib/api';
+import { BUSINESS_STATUS as STATUS, BUSINESS_TYPE as TYPE, CLAIM, type DataExport as Export, MODERATION, ROLE } from '@/lib/data-export';
 import { deviceName, localPhone } from '@/lib/phone';
 
 export const metadata: Metadata = { title: 'Your data', robots: { index: false } };
-
-interface Business {
-  name: string; legalName: string; tradingName: string | null; type: string; yourRole: string; status: string;
-  registrationNumber: string | null; district: string | null; registeredAt: string | null; documentsSent: number;
-}
-interface Export {
-  exportedAt: string; about: string;
-  profile: { displayName?: string; phone?: string | null; email?: string | null; businesses: Business[] };
-  preferences: { visitConfirmationTexts: boolean };
-  devices: { device: string | null; signedInAt: string; lastUsedAt: string; current: boolean }[];
-  savedCars: { vehicleRef: string; savedAt: string }[];
-  sharedReports: { snapshotRef: string; vehicleRef: string; plate: string | null; createdAt: string; expiresAt: string | null; revoked: boolean }[];
-  myCars: { vehicleRef: string; status: string; method: string; claimedAt: string }[];
-  reviews: { modelId: string; rating: number; body: string; status: string; createdAt: string }[];
-  videoSuggestions: { modelId: string; url: string; title: string | null; status: string; createdAt: string }[];
-}
-
-const TYPE: Record<string, string> = { garage: 'Garage', dealer: 'Car dealer', inspector: 'Inspector', inspection_centre: 'Inspection centre', lender: 'Lender', insurer: 'Insurer', auction: 'Auction', rental: 'Rental company', importer: 'Importer' };
-const ROLE: Record<string, string> = { org_manager: 'Manager', org_staff: 'Staff', partner_operator: 'Data entry' };
-const STATUS: Record<string, string> = { pending_verification: 'Waiting for SAZO approval', approved: 'Approved', rejected: 'Not approved', suspended: 'Suspended' };
-const CLAIM: Record<string, string> = { verified: 'Confirmed owner', pending: 'Waiting for SAZO', rejected: 'Not confirmed' };
-const MODERATION: Record<string, string> = { pending: 'Waiting for review', published: 'Published', rejected: 'Not published', removed: 'Removed' };
 
 function Section({ id, title, empty, children }: { id: string; title: string; empty?: boolean; children: ReactNode }) {
   return (
@@ -63,7 +41,8 @@ export default async function YourData() {
         <p className="mt-1 text-muted">Prepared {formatDate(d.exportedAt)}. Records about cars (services, inspections, registrations) belong to each car&apos;s history and are not included.</p>
       </div>
       <div className="flex flex-wrap gap-2 print:hidden">
-        <PrintButton primary />
+        <a href="/account/data/download?format=pdf" className="btn btn-primary"><Icon name="download" />Download PDF</a>
+        <a href="/account/data/download?format=xlsx" className="btn btn-ghost"><Icon name="download" />Download Excel</a>
       </div>
 
       <Section id="you" title="Your details">

@@ -7,6 +7,7 @@ import { api, isSignedIn } from '@/lib/api';
 import type { Summary } from '@/lib/types';
 import { Notice, type SP } from '../../../admin/notice';
 import { sendLogbook } from '../../../my-cars/actions';
+import { PICTURE_ACCEPT } from '@/lib/upload-types';
 
 export const metadata: Metadata = { title: 'Show this is your car', robots: { index: false } };
 
@@ -26,7 +27,8 @@ export default async function Claim({ params, searchParams }: { params: Promise<
           <input type="hidden" name="ref" value={ref} />
           <div>
             <label htmlFor="logbook" className="label">Photo of the logbook page with the owner&apos;s name and the number plate</label>
-            <input id="logbook" name="logbook" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" required className="field" />
+            <input id="logbook" name="logbook" type="file" accept={`${PICTURE_ACCEPT},application/pdf`} capture="environment" required className="field" aria-describedby="logbook-types" />
+            <p id="logbook-types" className="mt-1 text-sm text-muted">JPEG, PNG or PDF, up to 8 MB.</p>
             <p className="mt-1 text-sm text-muted">Take it in good light so the writing is readable. Only SAZO staff see it, never buyers.</p>
           </div>
           <button className="btn btn-primary w-full sm:w-auto"><Icon name="upload_file" />Send to SAZO</button>

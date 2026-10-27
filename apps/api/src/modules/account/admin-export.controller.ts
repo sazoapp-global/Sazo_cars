@@ -1,5 +1,5 @@
-// GET /v1/admin/users/export?phone=+256…: a person's data as a JSON file, for SAZO administrators only.
-// People see their own data on the website (Your data held by SAZO) and save it as PDF.
+// GET /v1/admin/users/export?phone=+256…: a person's data, for SAZO administrators only. The console offers it as a
+// PDF or Excel file (D-147); there is no JSON download. People download their own from Your account.
 import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { z } from 'zod';
 import { badRequest, notFound } from '../../platform/problem.js';

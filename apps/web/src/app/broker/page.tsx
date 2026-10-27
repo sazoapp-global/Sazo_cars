@@ -9,6 +9,7 @@ import { statusIcon } from '@/components/status';
 import { api, isSignedIn } from '@/lib/api';
 import type { QuestionView, VehicleCard } from '@/lib/types';
 import { applyBroker, brokerLink, stopBrokerLink } from './actions';
+import { PICTURE_ACCEPT } from '@/lib/upload-types';
 
 export const metadata: Metadata = { title: 'Brokers', robots: { index: false } };
 
@@ -64,7 +65,7 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
             <form action={applyBroker} className="mt-3 grid gap-3">
               <div><label htmlFor="nin" className="label">National ID number (NIN)</label><input id="nin" name="nin" required className="field sazo-id" autoCapitalize="characters" autoComplete="off" placeholder="CM12345678ABCD" /></div>
               <div><label htmlFor="idPhoto" className="label">Photo of your National ID</label>
-                <input id="idPhoto" name="idPhoto" type="file" required accept="image/jpeg,image/png,image/webp" capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+                <input id="idPhoto" name="idPhoto" type="file" required accept={PICTURE_ACCEPT} capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
               <div><button className="btn btn-primary"><Icon name="badge" />Send for checking</button></div>
             </form>
           </section>

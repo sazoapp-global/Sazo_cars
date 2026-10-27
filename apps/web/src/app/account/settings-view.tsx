@@ -205,7 +205,7 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
 
       <section className="card p-5" aria-labelledby="data">
         <h2 id="data" className="font-display text-lg font-semibold">Your data</h2>
-        <p className="mt-1 text-muted">See what SAZO holds about you: your details, your businesses, saved cars, shared reports, cars you own, reviews and devices. Print it, save it as a PDF, or download it as a file.</p>
+        <p className="mt-1 text-muted">See what SAZO holds about you: your details, your businesses, saved cars, shared reports, cars you own, reviews and devices. Download it as a PDF or an Excel file.</p>
         <a href="/account/data" className="btn btn-ghost mt-3"><Icon name="description" />Download my data</a>
 
         <details className="mt-5 rounded-lg border border-bad-line p-3">

@@ -10,7 +10,8 @@ import { EvidenceError, EvidenceService } from './evidence.service.js';
 
 const Start = z.object({
   kind: z.enum(EVIDENCE_KINDS),
-  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']),
+  // Pictures are JPEG or PNG; documents may also be PDF (D-147). Other picture types are turned into JPEG before upload.
+  mimeType: z.enum(['image/jpeg', 'image/png', 'application/pdf']),
   sizeBytes: z.number().int().min(1).max(15_000_000),
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
   capturedAt: z.string().datetime({ offset: true }).optional(),

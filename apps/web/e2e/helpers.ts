@@ -6,6 +6,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import sharp from 'sharp';
 import { API_LOG } from '../playwright.config';
 
 export const API = 'http://localhost:3100/v1';
@@ -154,6 +155,11 @@ export function createAdmin(phone: string, name: string) {
   const p = personFor(name.replace(/[^\p{L}\s]/gu, ' '));
   execFileSync('npx', ['tsx', 'src/scripts/create-admin.ts', '--phone', phone, '--surname', p.surname, '--first', p.firstName, '--gender', 'female', '--dob', '1985-06-01'],
     { cwd: '../api', env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL }, stdio: 'pipe' });
+}
+
+/** The same test photo as a WebP picture (D-147: the website turns it into a JPEG before sending). */
+export function testWebp(seed: string): Promise<Buffer> {
+  return sharp(testPhoto(seed)).webp().toBuffer();
 }
 
 /**

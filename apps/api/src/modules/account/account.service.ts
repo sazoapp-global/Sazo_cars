@@ -36,13 +36,12 @@ export class AccountService {
     return this.preferences(actor.userId);
   }
 
-  /** Everything SAZO holds that is about this person, in one file. */
-  /** Everything SAZO holds about the signed-in person (shown to them as a page they can save as PDF). */
+  /** Everything SAZO holds about the signed-in person. The website shows it as a page and offers it as PDF or Excel (D-147). */
   export(actor: Actor) {
     return this.exportFor(actor.userId, actor, 'account.export');
   }
 
-  /** The same, as a JSON file for a SAZO administrator (for example a formal data request). Audited. */
+  /** The same for a SAZO administrator (for example a formal data request), downloaded as PDF or Excel. Audited. */
   async exportByAdmin(admin: Actor, phone: string) {
     const userId = await this.iam.userIdByPhone(phone);
     return userId ? this.exportFor(userId, admin, 'account.export_by_admin') : undefined;

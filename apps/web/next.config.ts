@@ -3,6 +3,8 @@ import type { NextConfig } from 'next';
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // PDF files (pdfkit reads its font files at run time) and picture conversion (sharp) run as plain Node packages.
+  serverExternalPackages: ['pdfkit', 'sharp'],
   // Businesses upload verification documents (up to 8 MB) through a server action.
   experimental: { serverActions: { bodySizeLimit: '9mb' } },
   async headers() {

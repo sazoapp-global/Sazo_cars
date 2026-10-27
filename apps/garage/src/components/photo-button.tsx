@@ -4,7 +4,8 @@ import { quickCheck, sha256, shrink } from '../lib/photos';
 import { uuidv7 } from '../lib/uuid';
 import { Icon } from './icon';
 
-const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
+// Photos are sent as JPEG (shrink turns every picture into one) or PNG only (D-147).
+const ACCEPTED = ['image/jpeg', 'image/png'];
 
 /** Take a photo with the back camera. It is shrunk, fingerprinted and kept on the phone until there's signal. */
 export function PhotoButton({ jobId, kind, photoId, label, hint, required, onChange }: {

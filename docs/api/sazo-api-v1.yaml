@@ -8,7 +8,7 @@ info:
 
     **Conventions**
     - All paths are versioned under `/v1`. Breaking changes ship as `/v2`.
-    - JSON everywhere (`application/json`), except file upload (S3 pre-signed PUT) and PDF download.
+    - JSON everywhere (`application/json`), except file upload (S3 pre-signed PUT). Files people download are CSV, Excel or PDF only (D-147); the website makes them from these JSON answers.
     - Errors use RFC 9457 `application/problem+json` with a stable `code`.
     - Lists use cursor pagination: `?cursor=&limit=` → `{ items, nextCursor }`.
     - **Idempotency**: every request that creates a submission, job submit, provisional vehicle or snapshot
@@ -1620,9 +1620,9 @@ paths:
     get:
       tags: [Account]
       operationId: exportMyData
-      summary: Download my data (JSON)
+      summary: My data, for the Your data page and its PDF and Excel downloads (D-147)
       responses:
-        '200': { description: Everything SAZO holds about the person }
+        '200': { description: Everything SAZO holds about the person. The website offers it as a page, a PDF file and an Excel file; never as a JSON file. }
 
   /admin/photos/needs-checking:
     get:
@@ -1969,7 +1969,7 @@ paths:
               required: [kind, mimeType, sizeBytes, sha256]
               properties:
                 kind: { $ref: '#/components/schemas/EvidenceKind' }
-                mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, application/pdf] }
+                mimeType: { type: string, enum: [image/jpeg, image/png, application/pdf], description: 'Pictures are JPEG or PNG; documents may also be PDF (D-147). Other picture types are turned into JPEG before upload.' }
                 sizeBytes: { type: integer, minimum: 1, maximum: 15000000 }
                 sha256: { type: string, pattern: '^[0-9a-f]{64}$' }
                 capturedAt: { type: string, format: date-time }

@@ -1,5 +1,6 @@
 // SAZO staff work their queues in the browser: approve a garage, settle a cloned plate, see the sources.
 // Expects a freshly seeded database (CI makes one), because settling the plate changes data.
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { API, a11y, apiToken, createAdmin, shot, signIn as signInAs, sendIdentity } from './helpers';
 
@@ -15,17 +16,22 @@ test('people who are not SAZO staff cannot open the console', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'SAZO staff only' })).toBeVisible();
 });
 
-test("only an administrator downloads a person's data as a JSON file", async ({ page }) => {
+test("only an administrator downloads a person's data, as a PDF or an Excel file", async ({ page }) => {
   await signIn(page, ADMIN);
   await page.getByRole('link', { name: "People's data" }).click();
   await expect(page.getByRole('heading', { name: "People's data" })).toBeVisible();
   await a11y(page);
   await page.getByLabel('Their mobile number').fill('0700 000 000');
-  await page.getByRole('button', { name: 'Download JSON file' }).click();
+  await expect(page.getByText(/JSON/)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Download PDF' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'No SAZO account uses this number.' })).toBeVisible();
   await page.getByLabel('Their mobile number').fill(`0${ADMIN.slice(4)}`);
-  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download JSON file' }).click()]);
-  expect(download.suggestedFilename()).toMatch(/^sazo-person-data-\d{4}-\d{4}-\d{2}-\d{2}\.json$/);
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download PDF' }).click()]);
+  expect(pdf.suggestedFilename()).toMatch(/^sazo-person-data-\d{4}-\d{4}-\d{2}-\d{2}\.pdf$/);
+  expect(readFileSync(await pdf.path()).subarray(0, 5).toString()).toBe('%PDF-');
+  const [xlsx] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download Excel' }).click()]);
+  expect(xlsx.suggestedFilename()).toMatch(/^sazo-person-data-\d{4}-\d{4}-\d{2}-\d{2}\.xlsx$/);
+  expect(readFileSync(await xlsx.path()).subarray(0, 2).toString()).toBe('PK'); // an Excel file is a zip
 });
 
 test('approve a garage that registered', async ({ page, request }) => {

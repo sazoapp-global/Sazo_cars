@@ -1,12 +1,11 @@
 'use server';
 // "My cars" (O-007): prove a car is yours by phone match, or by a logbook photo a SAZO reviewer checks.
-import { createHash } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
+import { UnreadablePicture, isPictureOrPdf, uploadEvidence } from '@/lib/upload';
 
 const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const go = (path: string, q: Record<string, string>): never => redirect(`${path}?${new URLSearchParams(q)}`);
-const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
 /** "This is my car": try the phone match first; if the phone isn't on the registry record, ask for the logbook. */
 export async function claimCar(form: FormData) {
@@ -21,25 +20,23 @@ export async function claimCar(form: FormData) {
   go('/my-cars', { done: result?.status === 'verified' ? 'Your phone number matches the registry record. This car is now in My cars.' : 'Sent to SAZO.' });
 }
 
-/** Logbook photo → hash → reserve → bytes → complete → claim. The sign-in never leaves this server. */
+/** Logbook photo (JPEG, PNG or PDF; other pictures become JPEG) → evidence → claim. The sign-in never leaves this server. */
 export async function sendLogbook(form: FormData) {
   const ref = text(form, 'ref');
   const back = (error: string) => go(`/v/${ref}/claim`, { error });
   const file = form.get('logbook');
   if (!(file instanceof File) || file.size === 0) back('Choose a photo of the logbook.');
   const f = file as File;
-  if (!ACCEPTED.includes(f.type)) back('Use a photo (JPEG, PNG) or a PDF.');
+  if (!isPictureOrPdf(f)) back('Use a JPEG or PNG photo, or a PDF.');
   if (f.size > 8_000_000) back('The file must be under 8 MB.');
+  let problem: string | undefined;
   try {
-    const bytes = new Uint8Array(await f.arrayBuffer());
-    const slot = await api<{ evidenceId: string }>('/evidence/uploads', { method: 'POST', auth: true, body: {
-      kind: 'official_document', mimeType: f.type, sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } });
-    await api(`/evidence/uploads/${slot.evidenceId}/content`, { method: 'PUT', auth: true, raw: { bytes, contentType: f.type } });
-    await api(`/evidence/${slot.evidenceId}/complete`, { method: 'POST', auth: true });
-    await api(`/vehicles/${ref}/ownership-claims`, { method: 'POST', auth: true, body: { logbookEvidenceId: slot.evidenceId } });
-  } catch {
-    back('The photo could not be sent. Please try again.');
+    const { id } = await uploadEvidence(f, 'official_document');
+    await api(`/vehicles/${ref}/ownership-claims`, { method: 'POST', auth: true, body: { logbookEvidenceId: id } });
+  } catch (err) {
+    problem = err instanceof UnreadablePicture ? err.message : 'The photo could not be sent. Please try again.';
   }
+  if (problem) back(problem);
   go('/my-cars', { done: 'Logbook sent. SAZO will check it and text you, usually within 2 working days.' });
 }
 

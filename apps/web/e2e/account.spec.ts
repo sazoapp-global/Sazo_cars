@@ -88,11 +88,14 @@ test('manage my account and delete it', async ({ page }) => {
   await a11y(page);
   await shot(page, 'account');
 
-  // Your data held by SAZO: a page to read or save as PDF; there is no JSON download any more.
+  // Your data held by SAZO: a page to read, downloaded as PDF or Excel; never as JSON (D-147).
   await page.goto('/account/data');
   await expect(page.getByRole('heading', { name: 'Your data held by SAZO' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
   await expect(page.getByText(/JSON/)).toHaveCount(0);
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: 'Download PDF' }).click()]);
+  expect(pdf.suggestedFilename()).toMatch(/^sazo-my-data-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const [xlsx] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: 'Download Excel' }).click()]);
+  expect(xlsx.suggestedFilename()).toMatch(/^sazo-my-data-\d{4}-\d{2}-\d{2}\.xlsx$/);
   expect((await page.request.get('/account/export')).status()).toBe(404);
   await page.goto('/account');
 

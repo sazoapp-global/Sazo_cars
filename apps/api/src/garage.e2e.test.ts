@@ -129,6 +129,10 @@ describe.skipIf(!base)('garage workspace (e2e)', () => {
     expect(bad.body.code).toBe('hash_mismatch');
     // Someone else's upload slot is invisible.
     await http.post(`/v1/evidence/${slot.body.evidenceId}/complete`).set(bearer(managerToken)).expect(404);
+    // Pictures are JPEG or PNG only (D-147): WebP is refused; the apps turn it into JPEG first.
+    const webp = await http.post('/v1/evidence/uploads').set(bearer(mechanicToken))
+      .send({ kind: 'odometer_photo', mimeType: 'image/webp', sizeBytes: bytes.length, sha256: 'a'.repeat(64) }).expect(400);
+    expect(webp.body.errors.map((e: { path: string }) => e.path)).toContain('mimeType');
   });
 
   const jobId = randomUUID();

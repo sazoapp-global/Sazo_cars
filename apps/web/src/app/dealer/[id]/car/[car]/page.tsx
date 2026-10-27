@@ -16,6 +16,7 @@ import { shareReport } from '../../../../buyer-actions';
 import { addCost, addPhotos, changePrice, createLink, linkCar, removePhoto, removeStock, revokeLink, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
 import { SaleForm, type BuyerChoice } from '../../../sale-form';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
+import { PICTURE_ACCEPT } from '@/lib/upload-types';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
 
@@ -116,7 +117,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           ) : <div className="grid aspect-[4/3] place-items-center rounded-lg bg-soft text-label"><Icon name="directions_car" size={56} /></div>}
           {live && c.photos.length < 12 && (
             <form action={addPhotos} className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border-2 border-dashed border-line-strong p-3">{hidden}
-              <div className="min-w-0 flex-1"><label htmlFor="newphotos" className="label">Add photos</label><input id="newphotos" name="photos" type="file" multiple accept="image/jpeg,image/png,image/webp" className={fileInput} /></div>
+              <div className="min-w-0 flex-1"><label htmlFor="newphotos" className="label">Add photos</label><input id="newphotos" name="photos" type="file" multiple accept={PICTURE_ACCEPT} className={fileInput} /></div>
               <button className="btn btn-ghost"><Icon name="photo_camera" />Add</button>
             </form>
           )}
@@ -222,7 +223,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
             <div><label htmlFor="anchor" className="label">Chassis number or VIN</label><input id="anchor" name="anchor" className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>
             <div><label htmlFor="plate" className="label">Number plate</label><input id="plate" name="plate" className="field sazo-id" autoCapitalize="characters" autoComplete="off" /></div>
             <div><label htmlFor="mileage" className="label">Mileage now (km)</label><input id="mileage" name="mileage" inputMode="numeric" className="field tabular-nums" /></div>
-            <div><label htmlFor="odometer" className="label">Odometer photo (needed with a mileage)</label><input id="odometer" name="odometer" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className={fileInput} /></div>
+            <div><label htmlFor="odometer" className="label">Odometer photo (needed with a mileage)</label><input id="odometer" name="odometer" type="file" accept={PICTURE_ACCEPT} capture="environment" className={fileInput} /></div>
             <div className="sm:col-span-2"><button className="btn btn-primary"><Icon name="add_link" />Link to SAZO</button></div>
           </form>
         </Section>

@@ -1,6 +1,6 @@
 // A garage owner registers on the website, sends a document, answers SAZO's question, and is approved.
 import { expect, test } from '@playwright/test';
-import { a11y, createAdmin, shot, signIn, testPhoto } from './helpers';
+import { a11y, createAdmin, shot, signIn, testWebp } from './helpers';
 
 const stamp = String(Date.now()).slice(-7);
 const OWNER = `+2567060${stamp}`;
@@ -34,7 +34,8 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await expect(owner.getByRole('status')).toContainText('1 document sent to SAZO');
   // A-05: the manager's National ID, checked by SAZO together with the business.
   await owner.getByLabel('National ID number (NIN)').fill('cm 9000 1234 abcd'.replace('abcd', String(stamp).slice(-4).padStart(4, '0')));
-  await owner.getByLabel('Photo of your National ID').setInputFiles({ name: 'id.png', mimeType: 'image/png', buffer: testPhoto(`owner id ${stamp}`) });
+  // A WebP photo is accepted: the website turns it into a JPEG, the only picture types SAZO keeps besides PNG (D-147).
+  await owner.getByLabel('Photo of your National ID').setInputFiles({ name: 'id.webp', mimeType: 'image/webp', buffer: await testWebp(`owner id ${stamp}`) });
   await owner.getByRole('button', { name: 'Send my ID' }).click();
   await expect(owner.getByRole('status')).toContainText('Your National ID was sent');
   await shot(owner, 'business-status');
@@ -91,7 +92,8 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await expect(biz).toContainText('Approved');
   await expect(biz).toContainText('Manager');
   await expect(biz).toContainText('Kampala');
-  await expect(later.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
+  await expect(later.getByRole('link', { name: 'Download PDF' })).toBeVisible();
+  await expect(later.getByRole('link', { name: 'Download Excel' })).toBeVisible();
   await a11y(later);
   await shot(later, 'my-data');
 });

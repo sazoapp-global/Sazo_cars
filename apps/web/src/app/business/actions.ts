@@ -1,9 +1,8 @@
 'use server';
-import { createHash } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
-import { IMAGE_TYPES, filesFrom, uploadEvidence } from '@/lib/upload';
+import { UnreadablePicture, filesFrom, isPicture, isPictureOrPdf, uploadEvidence } from '@/lib/upload';
 
 export type RegisterState = { error?: string; fields?: Record<string, string> };
 const TYPES = ['garage', 'dealer', 'inspector', 'inspection_centre'];
@@ -27,7 +26,6 @@ export async function registerBusiness(_prev: RegisterState, form: FormData): Pr
   redirect(f.type === 'dealer' ? `/dealer/${id}?new=1` : `/business/${id}?new=1`);
 }
 
-const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
 /** Documents go through this server so the sign-in never leaves it: hash → reserve → bytes → complete → attach. */
 export async function sendDocuments(form: FormData): Promise<void> {
@@ -35,21 +33,14 @@ export async function sendDocuments(form: FormData): Promise<void> {
   const back = (q: string) => redirect(`/business/${id}?${q}`);
   const files = form.getAll('documents').filter((f): f is File => f instanceof File && f.size > 0);
   if (!files.length) back('error=Choose at least one file.');
-  if (files.some((f) => !ACCEPTED.includes(f.type))) back('error=Use photos (JPEG, PNG) or PDF files.');
+  if (files.some((f) => !isPictureOrPdf(f))) back('error=Use JPEG or PNG photos, or PDF files.');
   if (files.some((f) => f.size > 8_000_000)) back('error=Each file must be under 8 MB.');
   const ids: string[] = [];
   try {
-    for (const file of files) {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const slot = await api<{ evidenceId: string }>('/evidence/uploads', { method: 'POST', auth: true, body: {
-        kind: 'org_verification_document', mimeType: file.type, sizeBytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } });
-      await api(`/evidence/uploads/${slot.evidenceId}/content`, { method: 'PUT', auth: true, raw: { bytes, contentType: file.type } });
-      await api(`/evidence/${slot.evidenceId}/complete`, { method: 'POST', auth: true });
-      ids.push(slot.evidenceId);
-    }
+    for (const file of files) ids.push((await uploadEvidence(file, 'org_verification_document')).id);
     await api(`/organisations/${id}/verification-documents`, { method: 'POST', auth: true, body: { evidenceIds: ids } });
-  } catch {
-    back('error=The documents could not be sent. Please try again.');
+  } catch (err) {
+    back('error=' + encodeURIComponent(err instanceof UnreadablePicture ? err.message : 'The documents could not be sent. Please try again.'));
   }
   back(`done=${encodeURIComponent(`${ids.length} ${ids.length === 1 ? 'document' : 'documents'} sent to SAZO.`)}`);
 }
@@ -63,12 +54,12 @@ export async function sendIdentity(form: FormData): Promise<void> {
   if (!/^C[MF][A-Z0-9]{12}$/.test(nin)) back('error=' + encodeURIComponent('Enter your National ID number: 14 letters and numbers starting with CM or CF.'));
   const [photo] = filesFrom(form, 'idPhoto');
   if (!photo) back('error=' + encodeURIComponent('Add a photo of your National ID.'));
-  if (!IMAGE_TYPES.includes(photo!.type)) back('error=' + encodeURIComponent('The ID photo must be a JPEG, PNG or WebP image.'));
+  if (!isPicture(photo!)) back('error=' + encodeURIComponent('The ID photo must be a JPEG or PNG picture.'));
   try {
     const up = await uploadEvidence(photo!, 'official_document');
     await api('/me/identity', { method: 'POST', auth: true, body: { nin, idPhotoEvidenceId: up.id } });
   } catch (err) {
-    back('error=' + encodeURIComponent(err instanceof ApiError && err.detail ? err.detail : 'Your ID could not be sent. Please try again.'));
+    back('error=' + encodeURIComponent(err instanceof UnreadablePicture ? err.message : err instanceof ApiError && err.detail ? err.detail : 'Your ID could not be sent. Please try again.'));
   }
   back('done=' + encodeURIComponent('Your National ID was sent. SAZO checks it with your business.'));
 }

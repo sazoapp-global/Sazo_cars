@@ -7,14 +7,14 @@ import { ApiError, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
 import type { SearchResult } from '@/lib/types';
 import { readCarsFile } from '@/lib/dealer-import';
-import { IMAGE_TYPES, filesFrom, uploadEvidence } from '@/lib/upload';
+import { UnreadablePicture, filesFrom, isPicture, uploadEvidence } from '@/lib/upload';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const digits = (s: string) => Number(s.replace(/[^\d]/g, ''));
 const decimal = (s: string) => Number(s.replace(/,/g, '').replace(/[^\d.]/g, ''));
 const orNull = (s: string) => (s ? s : null);
-const reason = (err: unknown, fallback: string) => (err instanceof ApiError && err.detail ? err.detail : fallback);
+const reason = (err: unknown, fallback: string) => (err instanceof UnreadablePicture ? err.message : err instanceof ApiError && err.detail ? err.detail : fallback);
 const asDealer = (org: string) => ({ auth: true, headers: { 'X-Organisation-Id': org } });
 
 /** The dealer and car ids from the form, checked so they can only ever name one API path. */
@@ -32,9 +32,9 @@ async function odometerFor(form: FormData, km: number | undefined, fail: (msg: s
   if (km === undefined) return undefined;
   const [photo] = filesFrom(form, 'odometer');
   if (!photo) fail('Add a photo of the odometer with the mileage.');
-  if (!IMAGE_TYPES.includes(photo!.type)) fail('The odometer photo must be a JPEG, PNG or WebP image.');
+  if (!isPicture(photo!)) fail('The odometer photo must be a JPEG or PNG picture.');
   let res: { id: string; problem?: string } | undefined;
-  try { res = await uploadEvidence(photo!, 'odometer_photo'); } catch { fail('The odometer photo could not be sent. Please try again.'); }
+  try { res = await uploadEvidence(photo!, 'odometer_photo'); } catch (err) { fail(reason(err, 'The odometer photo could not be sent. Please try again.')); }
   if (res!.problem) fail(`${res!.problem}. Please take a clear, new photo of the odometer.`);
   return res!.id;
 }
@@ -165,7 +165,7 @@ export async function reverseCost(form: FormData) {
 async function sendPhotos(org: string, car: string, files: File[]): Promise<string | undefined> {
   let problem: string | undefined;
   for (const f of files.slice(0, 6)) {
-    if (!IMAGE_TYPES.includes(f.type)) { problem = 'Photos must be JPEG, PNG or WebP images.'; continue; }
+    if (!isPicture(f)) { problem = 'Photos must be JPEG or PNG pictures.'; continue; }
     try {
       const up = await uploadEvidence(f, 'vehicle_photo');
       if (up.problem) { problem = `${up.problem}. That photo was not added.`; continue; }

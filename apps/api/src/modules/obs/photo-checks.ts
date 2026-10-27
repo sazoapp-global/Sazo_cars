@@ -36,7 +36,7 @@ export const PHOTO_RULES = {
   futureToleranceMinutes: 10,
 } as const;
 
-const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png']);
 
 /** Decode the picture and work out its fingerprint and brightness; undefined if it is not a readable image. */
 export async function photoFacts(bytes: Buffer, mime: string): Promise<PhotoFacts | undefined> {

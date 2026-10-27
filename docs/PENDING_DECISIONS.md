@@ -179,7 +179,7 @@
 | Changing phone number | A code goes to the NEW number (sign-in codes don't work for this). On success: the account signs in with the new number, other devices are signed out, the old number gets a warning text. The old number becomes free (signing in with it starts a new account). Another account's number can't be taken. Car ownership confirmed by phone match must be confirmed again. |
 | Texts | One setting: "Ask me to confirm garage visits". Off wins over any consent a garage records at the counter. Sign-in codes and texts about the person's own requests are always sent. |
 | Devices | Each signed-in browser or phone, named from its browser ("Chrome on Android"); sign out one, or all others. |
-| Download my data | A JSON file: details, businesses, preferences, devices, saved cars, shared reports, cars owned, reviews and video suggestions. Car histories are not personal data of the user and are not included. |
+| Download my data | A PDF or an Excel file (D-147; no JSON): details, businesses, preferences, devices, saved cars, shared reports, cars owned, reviews and video suggestions. Car histories are not personal data of the user and are not included. |
 | Delete my account | Typed confirmation ("DELETE"). Refused while the person is the only manager of a business that has other staff. Removed: name, phone, sign-ins, saved cars, share links (they stop working), car claims, reviews and video suggestions; the encrypted personal record for their phone (name/number given by garages) is erased. Kept without the name: records they entered for a business (append-only history), and the audit log. |
 
 
@@ -203,7 +203,7 @@
 | Topic | What the code does |
 |---|---|
 | Already registered? | The "For businesses" page has a sign-in section under "Register your business". Signed in, it links to "Your businesses" instead. Mechanics and inspectors are pointed to the Garage app. |
-| Download my data | Opens a readable page of everything SAZO holds about the person, including each business they belong to (names, type, registration number, district, status, their role, date registered, documents sent). "Save as PDF" prints it; the JSON file is still offered for a machine-readable copy (DPPA 2019). |
+| Download my data | Opens a readable page of everything SAZO holds about the person, including each business they belong to (names, type, registration number, district, status, their role, date registered, documents sent). "Download PDF" and "Download Excel" give it as a file; Excel (one sheet per part) is the machine-readable copy (DPPA 2019). No JSON file (D-147). |
 
 ## Accounts — behaviour choices made while building (11 Oct 2026, easy to change)
 

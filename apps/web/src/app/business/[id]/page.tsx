@@ -5,6 +5,7 @@ import { Icon, type IconName } from '@/components/icon';
 import { api, isSignedIn } from '@/lib/api';
 import type { MyOrganisation } from '@/lib/types';
 import { sendDocuments, sendIdentity } from '../actions';
+import { PICTURE_ACCEPT } from '@/lib/upload-types';
 
 export const metadata: Metadata = { title: 'Your business' };
 
@@ -55,11 +56,11 @@ export default async function BusinessStatus({ params, searchParams }: { params:
       {pending && org.role === 'org_manager' && (
         <section className="card p-4" aria-labelledby="docs">
           <h2 id="docs" className="font-display text-lg font-semibold">Send documents</h2>
-          <p className="text-sm text-muted">Your trading licence or URSB certificate, and a photo of your premises with its signboard. Photos or PDFs, up to 8 MB each. {org.documents > 0 ? `You have sent ${org.documents} so far.` : ''}</p>
+          <p className="text-sm text-muted">Your trading licence or URSB certificate, and a photo of your premises with its signboard. JPEG, PNG or PDF, up to 8 MB each. Other picture types are turned into JPEG before they are sent. {org.documents > 0 ? `You have sent ${org.documents} so far.` : ''}</p>
           <form action={sendDocuments} className="mt-3 space-y-3">
             <input type="hidden" name="id" value={org.id} />
             <label htmlFor="documents" className="label">Files</label>
-            <input id="documents" name="documents" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" />
+            <input id="documents" name="documents" type="file" multiple accept={`${PICTURE_ACCEPT},application/pdf`} className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" />
             <button className="btn btn-primary">Send to SAZO</button>
           </form>
         </section>
@@ -83,7 +84,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
                 <div><label htmlFor="nin" className="label">National ID number (NIN)</label>
                   <input id="nin" name="nin" required className="field sazo-id" autoCapitalize="characters" autoComplete="off" maxLength={20} placeholder="CM90001234ABCD" /></div>
                 <div><label htmlFor="idPhoto" className="label">Photo of your National ID</label>
-                  <input id="idPhoto" name="idPhoto" type="file" required accept="image/jpeg,image/png,image/webp" capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
+                  <input id="idPhoto" name="idPhoto" type="file" required accept={PICTURE_ACCEPT} capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
                 <div className="sm:col-span-2"><button className="btn btn-primary"><Icon name="badge" />Send my ID</button></div>
               </form>
             </>
