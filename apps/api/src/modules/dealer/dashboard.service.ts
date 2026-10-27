@@ -46,9 +46,13 @@ export class DealerDashboardService {
                 count(*) FILTER (WHERE stage = 'viewing')::int AS viewings
            FROM dealer.leads WHERE organisation_id = $1`, [organisationId]),
       q<{ year: number; month: number }>(
-        `SELECT count(*) FILTER (WHERE closed_at AT TIME ZONE 'Africa/Kampala' >= date_trunc('year', $3::date))::int AS year,
-                count(*) FILTER (WHERE to_char(closed_at AT TIME ZONE 'Africa/Kampala', 'YYYY-MM') = $4)::int AS month
-           FROM dealer.leads WHERE organisation_id = $1 AND created_by_user_id = $2 AND stage = 'completed'`, [organisationId, userId, today, thisMonth]),
+        // A salesperson's sales: cars they marked as sold, and cars sold from enquiries they brought in (each car once).
+        `SELECT count(*) FILTER (WHERE sold_at AT TIME ZONE 'Africa/Kampala' >= date_trunc('year', $3::date))::int AS year,
+                count(*) FILTER (WHERE to_char(sold_at AT TIME ZONE 'Africa/Kampala', 'YYYY-MM') = $4)::int AS month
+           FROM dealer.stock_items s
+          WHERE s.organisation_id = $1 AND s.status = 'sold'
+            AND (s.sold_by_user_id = $2 OR EXISTS (SELECT 1 FROM dealer.leads l WHERE l.stock_item_id = s.id AND l.created_by_user_id = $2 AND l.stage = 'completed'))`,
+        [organisationId, userId, today, thisMonth]),
       q<{ n: number }>(`SELECT count(*)::int AS n FROM dealer.car_links WHERE organisation_id = $1 AND revoked_at IS NULL`, [organisationId]),
     ]);
     const byMonth = new Map(sold.map((r) => [r.month, r]));

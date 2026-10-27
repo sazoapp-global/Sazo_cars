@@ -93,7 +93,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
         </div>
       </aside>
 
-      <main className={`min-w-0 lg:pl-64 ${inWizard ? '' : 'pb-24 lg:pb-0'}`}>
+      <main className={`min-w-0 lg:pl-64 ${inWizard ? '' : 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
         {panel ? (
           <section aria-labelledby="panel-heading" className="mx-auto w-full max-w-xl space-y-4 p-4 lg:max-w-3xl lg:p-8">
             <div className="flex items-center justify-between gap-3">

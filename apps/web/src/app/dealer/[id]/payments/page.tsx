@@ -62,7 +62,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
   if (!org || org.type !== 'dealer') notFound();
   if (org.status !== 'approved') redirect(`/dealer/${id}`);
-  if (org.role !== 'org_manager') redirect(`/dealer/${id}/dashboard?error=${encodeURIComponent('Only a manager of this business can open Payments.')}`);
+  if (org.role !== 'org_manager') redirect(`/dealer/${id}/dashboard?error=managers_only`);
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const show = FILTERS.some(([k]) => k === sp.show) ? sp.show! : 'owing';
   const sort = SORTS.some(([k]) => k === sp.sort) ? sp.sort! : defaultSort(show);

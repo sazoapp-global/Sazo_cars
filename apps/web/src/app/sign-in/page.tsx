@@ -21,7 +21,8 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   if (await isSignedIn()) redirect(next);
   const notice = (sp.done === 'idle' && <p role="alert" className="mt-5 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">You were logged out after 4 hours without activity. Log in again to carry on.</p>)
     || (sp.done && DONE[sp.done] && <p role="status" className="mt-5 rounded-lg border border-ok-line bg-ok-fill p-3 text-sm font-semibold text-ok-text">{DONE[sp.done]}</p>)
-    || (sp.google && GOOGLE[sp.google] && <p role="alert" className="mt-5 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">{GOOGLE[sp.google]}</p>) || null;
+    || (sp.google && GOOGLE[sp.google] && <p role="alert" className="mt-5 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">{GOOGLE[sp.google]}</p>)
+    || (next.startsWith('/compare') && <p role="status" className="mt-5 rounded-lg border border-line bg-surface-low p-3 text-sm font-semibold">Comparing cars needs an account. Log in or create one, and you will go straight to the comparison.</p>) || null;
   return (
     <AuthPage notice={notice}>
       <LoginPanel next={next} google={await googleEnabled()} />

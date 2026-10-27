@@ -169,14 +169,15 @@ describe.skipIf(!base)('dealer dashboard and payments (e2e)', () => {
   });
 
   it('the dashboard: money for managers, counts for sales staff; the payments list and its cards', async () => {
-    await http.post(`/v1/dealer/stock/${cars.forester}/sold`).set(as(manager)).send({ salePriceUgx: 29_500_000, soldOn: today }).expect(200);
+    // Sales staff record this sale themselves: it counts as theirs on their dashboard.
+    await http.post(`/v1/dealer/stock/${cars.forester}/sold`).set(as(staff)).send({ salePriceUgx: 29_500_000, soldOn: today }).expect(200);
     const m = (await http.get('/v1/dealer/dashboard').set(as(manager)).expect(200)).body;
     expect(m.monthly).toHaveLength(12);
     expect(m.monthly[11]).toEqual({ month: today.slice(0, 7), cars: 2, valueUgx: 50_500_000 });
     expect(m).toMatchObject({ manager: true, stock: { count: 1 }, soldThisMonth: { cars: 2, valueUgx: 50_500_000 }, payments: { owedUgx: 30_000_000, owingSales: 1, lateBuyers: 1 } });
     expect(m.payments.dueSoon[0]).toMatchObject({ planId: premio, state: 'late', car: { name: 'Toyota Premio' }, buyer: { name: 'Sarah Kemigisha' } });
     const s = (await http.get('/v1/dealer/dashboard').set(as(staff)).expect(200)).body;
-    expect(s).toMatchObject({ manager: false, soldThisMonth: { cars: 2 } });
+    expect(s).toMatchObject({ manager: false, soldThisMonth: { cars: 2 }, mySales: { thisMonth: 1, thisYear: 1 } });
     expect(JSON.stringify(s)).not.toMatch(/valueUgx|owedUgx|payments|commissions|50500000/);
     await http.get('/v1/dealer/payments').set(as(staff)).expect(403);
 

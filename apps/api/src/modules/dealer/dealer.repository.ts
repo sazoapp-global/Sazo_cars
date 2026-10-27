@@ -167,8 +167,8 @@ export class DealerRepository {
       `SELECT ${COLS} FROM dealer.stock_items WHERE organisation_id = $1 AND pending_submission_id IS NOT NULL AND vehicle_id IS NULL`, [organisationId])).rows;
   }
 
-  async markSold(id: string, price: number, at: string): Promise<boolean> {
-    const r = await this.pool.query(`UPDATE dealer.stock_items SET status = 'sold', sale_price_ugx = $2, sold_at = $3 WHERE id = $1 AND status = 'in_stock'`, [id, price, at]);
+  async markSold(id: string, price: number, at: string, byUserId: string): Promise<boolean> {
+    const r = await this.pool.query(`UPDATE dealer.stock_items SET status = 'sold', sale_price_ugx = $2, sold_at = $3, sold_by_user_id = $4 WHERE id = $1 AND status = 'in_stock'`, [id, price, at, byUserId]);
     return r.rowCount === 1;
   }
 

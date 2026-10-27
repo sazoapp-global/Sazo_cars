@@ -298,7 +298,7 @@ export class DealerService {
       const item = await this.send(actor.userId, organisationId, ids, [{ type: 'sale_recorded', attributes: { price: money(price) } }], at);
       if (item.status !== 'accepted') throw new DealerError('listing_rejected', 'SAZO could not record the sale', item.errors);
     }
-    if (!(await this.repo.markSold(id, price, at))) throw new DealerError('not_in_stock', 'This car is no longer in your stock');
+    if (!(await this.repo.markSold(id, price, at, actor.userId))) throw new DealerError('not_in_stock', 'This car is no longer in your stock');
     await this.iam.audit({ actor, organisationId, action: 'dealer.car_sold', targetType: 'dealer_stock', targetId: id });
     return this.get(organisationId, id);
   }

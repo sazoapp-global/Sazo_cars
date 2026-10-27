@@ -196,7 +196,8 @@ for (const c of cars) {
   for (const [category, amount, currency, rateToUgx] of c.costs ?? []) {
     await call(http.post(`/v1/dealer/stock/${added.stockId}/costs`).set(D()).send({ category, amount, currency, ...(rateToUgx ? { rateToUgx } : {}) }));
   }
-  if (c.sold) await call(http.post(`/v1/dealer/stock/${added.stockId}/sold`).set(D()).send({ salePriceUgx: c.sold, soldOn: day(-3) }));
+  // Ruth (sales) records this sale herself, so her dashboard counts it.
+  if (c.sold) await call(http.post(`/v1/dealer/stock/${added.stockId}/sold`).set(D(dealerSales.token)).send({ salePriceUgx: c.sold, soldOn: day(-3) }));
 }
 
 log('Enquiries…');
@@ -230,12 +231,13 @@ const planOf = async (stockId: string, body: object) => (await call(http.post(`/
   planId: string; schedule: { seq: number; dueOn: string; amountUgx: number; owingUgx: number }[];
 };
 const methods = ['mtn_momo', 'cash', 'bank', 'airtel_money'] as const;
-for (const s of DEMO_SALES) {
+for (const [k, s] of DEMO_SALES.entries()) {
   const added = (await call(http.post('/v1/dealer/stock').set(D()).send({ plate: s.plate, chassisNumber: s.chassis, askingPriceUgx: s.asking,
     details: { make: s.make, model: s.model, modelYear: s.year, colour: s.colour, stage: 'at_yard', yard: 'Kisementi yard', receivedOn: day(-s.soldDaysAgo - 35), openToBrokers: false } }))).body;
   const photo = await upload(dealerSales.token, 'vehicle_photo', await carPhoto(`${s.model} ${s.year} sold`, COLOURS[s.colour] ?? '#64748b', s.model, 0));
   await call(http.post(`/v1/dealer/stock/${added.stockId}/photos`).set(D(dealerSales.token)).send({ evidenceId: photo }));
-  await call(http.post(`/v1/dealer/stock/${added.stockId}/sold`).set(D()).send({ salePriceUgx: s.price, soldOn: day(-s.soldDaysAgo) }));
+  // Every third sale was recorded by Ruth (sales); the manager records how each buyer pays.
+  await call(http.post(`/v1/dealer/stock/${added.stockId}/sold`).set(D(k % 3 === 0 ? dealerSales.token : dealerMgr.token)).send({ salePriceUgx: s.price, soldOn: day(-s.soldDaysAgo) }));
   const p = s.plan;
   if (p.kind === 'cash') {
     await planOf(added.stockId, { buyer: s.buyer, kind: 'cash', paidAtSale: { method: p.method, reference: p.method === 'bank' ? `Stanbic ${s.chassis.slice(-4)}` : undefined } });
@@ -292,6 +294,17 @@ for (const [plate, km, description, items] of jobs) {
     form: { mileage: { value: km, unit: 'km', odometerPhotoId: odometer }, description, service: { items },
       customer: { name: 'Customer of Kansanga Motors', phone: `+2567524${String(km).slice(0, 5)}`, smsConsent: true },
       cost: { total: { amount: 180_000 + (km % 7) * 25_000, currency: 'UGX' }, method: 'mtn_momo' } } }));
+  await submit(`/v1/garage/jobs/${id}/submit`, G(mechanic.token));
+}
+// A job on the cloned plate UAX 123A with no car picked: two cars carry that plate, so a SAZO reviewer must say
+// which car it was (console: Vehicle matches). Until then the garage app shows it under Alerts as being checked.
+{
+  const id = randomUUID();
+  const odometer = await upload(mechanic.token, 'odometer_photo', await testPhoto('odometer UAX 123A 88400'));
+  await call(http.put(`/v1/garage/jobs/${id}`).set(G(mechanic.token)).send({
+    plateEntered: 'UAX 123A', workTypes: ['service'], clientCreatedAt: new Date(Date.now() - 3600_000).toISOString(),
+    form: { mileage: { value: 88_400, unit: 'km', odometerPhotoId: odometer }, description: 'Oil change. Customer said the car was bought last month.', service: { items: ['engine_oil'] },
+      customer: { name: 'Customer of Kansanga Motors', phone: '+256752488400', smsConsent: true }, cost: { total: { amount: 160_000, currency: 'UGX' }, method: 'cash' } } }));
   await submit(`/v1/garage/jobs/${id}/submit`, G(mechanic.token));
 }
 const draftRef = (await call(http.get('/v1/garage/vehicles/lookup').query({ plate: 'UBD 640H' }).set(G(mechanic.token)))).body.candidates[0]?.vehicleRef;

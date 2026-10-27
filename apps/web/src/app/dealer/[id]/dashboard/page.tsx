@@ -29,10 +29,12 @@ const greeting = () => {
   const h = (new Date().getUTCHours() + 3) % 24; // Kampala
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 };
+/** Messages shown when another page sends someone here (fixed texts: nothing from the address is shown). */
+const ERRORS: Record<string, string> = { managers_only: 'Payments is for managers of this business. Ask a manager if a buyer has paid or owes money.' };
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** The dealer's first page (D-146): cards that open each part of the console, and sales by month. */
-export default async function DealerDashboard({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ chart?: string }> }) {
+export default async function DealerDashboard({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ chart?: string; error?: string }> }) {
   const { id } = await params;
   const sp = await searchParams;
   if (!(await isSignedIn())) redirect(`/sign-in?next=/dealer/${id}/dashboard`);
@@ -54,6 +56,7 @@ export default async function DealerDashboard({ params, searchParams }: { params
         <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{greeting()}{firstName ? `, ${firstName}` : ''}</h1>
         <p className="mt-1 text-muted">{org.tradingName ?? org.legalName} at a glance. Click a card to open it.{d.manager ? '' : ' Money amounts are for managers.'}</p>
       </div>
+      {sp.error && ERRORS[sp.error] && <p role="alert" className="rounded-lg border border-warn-line bg-warn-fill p-3 font-semibold text-warn-text">{ERRORS[sp.error]}</p>}
 
       <section aria-label="Summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <DashCard href={base} icon="storefront" label="Cars in stock" value={String(d.stock.count)}
