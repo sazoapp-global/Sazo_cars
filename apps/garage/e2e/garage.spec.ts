@@ -34,6 +34,9 @@ test.beforeAll(async ({ request }) => {
 
 test('no sign-up in the app: unknown numbers are told to ask their manager; an added mechanic finishes their details once', async ({ page, request }) => {
   await page.goto('/');
+  // Email comes first; the phone code is the other tab.
+  await expect(page.getByRole('tab', { name: 'Email and password' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Phone code' }).click();
   await page.getByLabel('Your phone number').fill('0709999999');
   await page.getByRole('button', { name: 'Send code' }).click();
   await expect(page.getByRole('alert')).toContainText('Ask your manager to add you');

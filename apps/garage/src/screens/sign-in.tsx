@@ -16,7 +16,7 @@ const WEBSITE = import.meta.env.VITE_SAZO_WEB_URL ?? 'http://localhost:3001';
  * account with no phone adds one before going in (D-145).
  */
 export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
-  const [method, setMethod] = useState<'phone' | 'email'>('phone');
+  const [method, setMethod] = useState<'phone' | 'email'>('email'); // email first, phone code as the other way (27 Oct 2026)
   const [step, setStep] = useState<'start' | 'code' | 'second' | 'add_phone' | 'add_code' | 'staff'>('start');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -93,7 +93,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
         {idle && step === 'start' && <p role="alert" className="rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">You were logged out after 4 hours without activity. Your jobs are still on this phone; log in again to carry on.</p>}
         {(step === 'start' || step === 'code') && (
           <div role="tablist" aria-label="How to log in" className="grid grid-cols-2 gap-1 rounded-lg bg-soft p-1">
-            {(['phone', 'email'] as const).map((m) => (
+            {(['email', 'phone'] as const).map((m) => (
               <button key={m} type="button" role="tab" aria-selected={method === m} onClick={() => switchTo(m)}
                 className={`min-h-10 rounded-md text-sm font-semibold ${method === m ? 'bg-white text-primary-container shadow' : 'text-muted'}`}>
                 {m === 'phone' ? 'Phone code' : 'Email and password'}

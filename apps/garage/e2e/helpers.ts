@@ -76,6 +76,7 @@ export async function apiSignIn(request: APIRequestContext, phone: string, name?
 /** Log in on the phone app with a phone code (and the second step, if asked). */
 export async function signInInApp(page: Page, localPhone: string) {
   await page.goto('/');
+  await page.getByRole('tab', { name: 'Phone code' }).click(); // email comes first
   await page.getByLabel('Your phone number').fill(localPhone);
   let before = codesSoFar();
   await page.getByRole('button', { name: 'Send code' }).click();
