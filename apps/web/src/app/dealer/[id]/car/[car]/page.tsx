@@ -18,7 +18,7 @@ import { SaleForm, type BuyerChoice } from '../../../sale-form';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../../../car-kind-fields';
-import { EmbeddedReport, type EmbeddedReportParams } from '@/components/report/embedded-report';
+import { EmbeddedReport, type EmbeddedReportParams, type OwnCar } from '@/components/report/embedded-report';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
 
@@ -72,6 +72,10 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const live = c.status === 'in_stock';
   const today = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10); // Kampala
   const hidden = <><input type="hidden" name="org" value={id} /><input type="hidden" name="id" value={c.stockId} /></>;
+  // The dealer's other linked cars, to pick from in the report's Compare view (28 Oct 2026).
+  const ownCars = async (): Promise<OwnCar[]> => (await api<{ items: StockItem[] }>('/dealer/stock?status=in_stock', as).then((r) => r.items).catch(() => [] as StockItem[]))
+    .filter((s) => s.vehicleRef && s.stockId !== car)
+    .map((s) => ({ ref: s.vehicleRef!, name: carName(s), ...(s.vehicle?.currentPlate ? { plate: s.vehicle.currentPlate } : {}), href: `/dealer/${id}/car/${s.stockId}?tab=report` }));
 
   return (
     <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role, approved }} business={{ name: name, approved }}
@@ -104,7 +108,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           ))}
         </nav>
       )}
-      {sp.tab === 'report' && c.vehicleRef ? <EmbeddedReport vehicleRef={c.vehicleRef} base={`/dealer/${id}/car/${car}?tab=report`} sp={sp} /> : (<>
+      {sp.tab === 'report' && c.vehicleRef ? <EmbeddedReport vehicleRef={c.vehicleRef} base={`/dealer/${id}/car/${car}?tab=report`} sp={sp} mode="dealer" ownCars={await ownCars()} /> : (<>
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.report && /^[A-Za-z0-9_-]{22,64}$/.test(sp.report) && (
         <section id="report-link" className="scroll-mt-24 rounded-[14px] border border-ok-line bg-ok-fill p-4 md:p-5" aria-labelledby="report-link-h">

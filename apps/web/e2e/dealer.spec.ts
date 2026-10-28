@@ -199,6 +199,15 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('heading', { name: 'About this car' })).toBeVisible();
   await expect(dealer.getByRole('navigation', { name: 'Questions' })).toBeVisible();
   await expect(dealer.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
+  // Only the dealer's buttons, and none of them leave the console (28 Oct 2026).
+  const hero = dealer.getByRole('region', { name: 'This car' });
+  for (const gone of ['Save this car', 'Saved', 'This is my car']) await expect(hero.getByRole('button', { name: gone, exact: true })).toHaveCount(0);
+  await hero.getByRole('button', { name: 'Book an inspection' }).click();
+  await expect(dealer.getByRole('dialog', { name: 'Book an inspection' })).toBeVisible();
+  await dealer.getByRole('dialog', { name: 'Book an inspection' }).getByRole('button', { name: 'Close' }).click();
+  await hero.getByRole('link', { name: 'Compare' }).click();
+  await expect(dealer.getByRole('heading', { name: 'Compare', exact: true })).toBeVisible();
+  await expect(dealer).toHaveURL(/\/dealer\/.*view=compare/);
   await dealer.getByRole('navigation', { name: 'Report views' }).getByRole('link', { name: 'Records' }).click();
   await expect(dealer.getByRole('heading', { name: 'Every record' })).toBeVisible();
   await expect(dealer).toHaveURL(/tab=report&view=records/);

@@ -7,8 +7,12 @@ const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 /** I-07: ask an inspector to check a car. */
 export async function requestBooking(form: FormData) {
   const ref = str(form, 'ref');
-  const back = (error: string) => `/inspections/book?${new URLSearchParams({ ...(ref ? { ref } : {}), plate: str(form, 'plate'), error })}`;
-  let target = '/inspections?booked=1';
+  // From a car's report inside a workspace (28 Oct 2026): come back there, with a note or the problem.
+  const from = str(form, 'back');
+  const inWorkspace = /^\/(dealer|admin|partner)\/[^\s\\]*$/.test(from) && !from.startsWith('//');
+  const at = (q: Record<string, string>) => { const u = new URL(from, 'http://x'); for (const [k, v] of Object.entries(q)) u.searchParams.set(k, v); return `${u.pathname}${u.search}`; };
+  const back = (error: string) => inWorkspace ? at({ bookError: error }) : `/inspections/book?${new URLSearchParams({ ...(ref ? { ref } : {}), plate: str(form, 'plate'), error })}`;
+  let target = inWorkspace ? at({ booked: '1' }) : '/inspections?booked=1';
   try {
     await api('/bookings', {
       method: 'POST', auth: true,

@@ -1,11 +1,12 @@
 'use client';
 // A popup over the page (native <dialog>): opened by a button, closed by Close, Escape or a click outside.
 // Used to show an account's details without leaving the page.
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@/components/icon';
 
-export function Popup({ button, buttonClassName, buttonLabel, title, onOpen, children }: {
-  button: ReactNode; buttonClassName?: string; buttonLabel?: string; title: string; onOpen?: () => void; children: ReactNode;
+/** `wide`: room for a form with two columns. `startOpen`: opens straight away (e.g. sent back with a problem). */
+export function Popup({ button, buttonClassName, buttonLabel, title, onOpen, wide = false, startOpen = false, children }: {
+  button: ReactNode; buttonClassName?: string; buttonLabel?: string; title: string; onOpen?: () => void; wide?: boolean; startOpen?: boolean; children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -13,11 +14,12 @@ export function Popup({ button, buttonClassName, buttonLabel, title, onOpen, chi
   const [shown, setShown] = useState(false);
   const open = () => { setShown(true); ref.current?.showModal(); onOpen?.(); };
   const close = () => ref.current?.close();
+  useEffect(() => { if (startOpen) open(); }, [startOpen]);
   return (
     <>
       <button type="button" className={buttonClassName} aria-label={buttonLabel} aria-haspopup="dialog" onClick={open}>{button}</button>
       <dialog ref={ref} aria-labelledby={titleId} onClick={(e) => { if (e.target === ref.current) close(); }}
-        className="m-auto w-[min(520px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-hidden rounded-[14px] border border-line bg-card p-0 text-ink shadow-2xl backdrop:bg-ink/60">
+        className={`m-auto ${wide ? 'w-[min(680px,calc(100vw-32px))]' : 'w-[min(520px,calc(100vw-32px))]'} max-h-[calc(100dvh-32px)] overflow-hidden rounded-[14px] border border-line bg-card p-0 text-ink shadow-2xl backdrop:bg-ink/60`}>
         <div className="flex max-h-[calc(100dvh-32px)] flex-col">
           <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
             <h2 id={titleId} className="font-display text-lg font-bold">{title}</h2>
