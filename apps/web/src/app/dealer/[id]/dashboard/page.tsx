@@ -84,7 +84,7 @@ export default async function DealerDashboard({ params, searchParams }: { params
       </section>
 
       <div className={`grid gap-4 ${d.manager ? 'xl:grid-cols-[1.6fr_1fr]' : ''}`}>
-        <section aria-labelledby="sales-h" className={`rounded-[14px] border border-line bg-card p-4 md:p-5 ${d.manager ? '' : 'max-w-4xl'}`}>
+        <section aria-labelledby="sales-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="sales-h" className="font-display text-lg font-bold">{d.manager ? 'Sales by month' : 'Cars sold by month'}</h2>
             {d.manager && (

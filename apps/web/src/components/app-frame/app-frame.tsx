@@ -37,7 +37,8 @@ export async function AppFrame({ workspace, viewer, org, business, person, badge
           <Suspense><Bell unread={unread} /></Suspense>
           {me && <AccountPopup displayName={me.displayName} initials={me.initials} />}
         </div>
-        <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 md:px-8 md:py-8">
+        {/* The whole space beside the side bar (28 Oct 2026): pages lay themselves out in columns, not a centred strip. */}
+        <div className="w-full space-y-6 px-4 py-6 md:px-8 md:py-8">
           <Suspense>{/* the page; Notifications or Settings take its place without leaving it */}<PanelHost wide>{children}</PanelHost></Suspense>
         </div>
       </div>

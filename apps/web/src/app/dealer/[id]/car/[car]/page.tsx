@@ -18,6 +18,7 @@ import { SaleForm, type BuyerChoice } from '../../../sale-form';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../../../car-kind-fields';
+import { EmbeddedReport, type EmbeddedReportParams } from '@/components/report/embedded-report';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
 
@@ -35,7 +36,7 @@ function Section({ id, title, icon, children, note }: { id: string; title: strin
   );
 }
 
-type SP = Promise<{ done?: string; error?: string; link?: string; ch?: string; report?: string }>;
+type SP = Promise<{ done?: string; error?: string; link?: string; ch?: string; report?: string; tab?: string } & EmbeddedReportParams>;
 interface CarLink { linkId: string; channel: string; showDealerName: boolean; createdAt: string }
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const channelLabel = (c: string) => CHANNELS.find(([k]) => k === c)?.[1] ?? c;
@@ -94,6 +95,16 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           <p className="text-xs text-muted">{c.status === 'sold' ? 'Sold for (private)' : 'Asking price'}</p>
         </div>
       </div>
+      {/* Option A (approved 28 Oct 2026): the car and its full SAZO report as two tabs, beside the side bar. */}
+      {c.vehicleRef && (
+        <nav aria-label="This car" className="flex gap-1 border-b border-line">
+          {([['car', 'The car', `/dealer/${id}/car/${car}`], ['report', 'SAZO report', `/dealer/${id}/car/${car}?tab=report`]] as const).map(([k, label, href]) => (
+            <Link key={k} href={href} aria-current={(sp.tab === 'report' ? 'report' : 'car') === k ? 'page' : undefined}
+              className={`-mb-px border-b-[3px] px-4 py-3 ${(sp.tab === 'report' ? 'report' : 'car') === k ? 'border-primary-container font-bold text-primary-container' : 'border-transparent font-semibold text-muted hover:text-ink'}`}>{label}</Link>
+          ))}
+        </nav>
+      )}
+      {sp.tab === 'report' && c.vehicleRef ? <EmbeddedReport vehicleRef={c.vehicleRef} base={`/dealer/${id}/car/${car}?tab=report`} sp={sp} /> : (<>
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.report && /^[A-Za-z0-9_-]{22,64}$/.test(sp.report) && (
         <section id="report-link" className="scroll-mt-24 rounded-[14px] border border-ok-line bg-ok-fill p-4 md:p-5" aria-labelledby="report-link-h">
@@ -142,7 +153,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
               return <li key={x.question} className={`flex items-center gap-1 font-semibold ${st.cls}`}><Icon name={st.icon} size={16} />{QUESTION_TITLES[x.question]?.short}</li>;
             })}
           </ul>
-          {c.vehicleRef && <p className="mt-2"><Link href={`/v/${c.vehicleRef}`} className="link text-sm">Open the full SAZO report</Link></p>}
+          {c.vehicleRef && <p className="mt-2"><Link href={`/dealer/${id}/car/${car}?tab=report`} className="link text-sm">Open the full SAZO report</Link></p>}
         </Section>
           ) : (
             <Section id="records" title="What SAZO records show" icon="fact_check">
@@ -336,6 +347,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           ) : <p className="mt-2 text-sm text-muted">Costs can no longer change after the car is sold or removed.</p>}
         </Section>
       )}
+      </>)}
     </AppFrame>
   );
 }

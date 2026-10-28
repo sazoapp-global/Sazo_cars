@@ -191,6 +191,19 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await row.getByRole('link').click();
   const car = dealer.getByRole('main');
   await expect(car.getByRole('region', { name: 'Photos' })).toBeVisible();
+  // The full SAZO report opens beside the side bar as a second tab, not on the buyers' page (option A, 28 Oct 2026).
+  await car.getByRole('link', { name: 'Open the full SAZO report' }).click();
+  await expect(dealer).toHaveURL(/\/dealer\/[0-9a-f-]+\/car\/[0-9a-f-]+\?tab=report$/);
+  await expect(dealer.getByRole('navigation', { name: 'Dealer' }).first()).toBeAttached();
+  await expect(dealer.getByRole('link', { name: 'SAZO report' })).toHaveAttribute('aria-current', 'page');
+  await expect(dealer.getByRole('heading', { name: 'About this car' })).toBeVisible();
+  await expect(dealer.getByRole('navigation', { name: 'Questions' })).toBeVisible();
+  await expect(dealer.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
+  await dealer.getByRole('navigation', { name: 'Report views' }).getByRole('link', { name: 'Records' }).click();
+  await expect(dealer.getByRole('heading', { name: 'Every record' })).toBeVisible();
+  await expect(dealer).toHaveURL(/tab=report&view=records/);
+  await dealer.getByRole('link', { name: 'The car', exact: true }).click();
+  await expect(car.getByRole('region', { name: 'Photos' })).toBeVisible();
   await car.getByText('Change price').click();
   await car.getByLabel(/New asking price/).fill('24000000');
   await car.locator('form', { has: dealer.getByLabel(/New asking price/) }).getByRole('button', { name: 'Save' }).click();

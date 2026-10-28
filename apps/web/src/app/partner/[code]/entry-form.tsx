@@ -29,7 +29,7 @@ export function EntryForm({ source, domain, types, fields, idempotencyKey, corre
         <div role="status" className={`rounded-lg border p-4 ${s.cls}`}>
           <p className="font-semibold">{s.text}</p>
           {item.errors.map((e) => <p key={e.path} className="text-sm text-on-surface">{e.message}</p>)}
-          {item.vehicleRef && <p className="mt-1 text-sm text-on-surface">Vehicle <Link className="link sazo-id" href={`/v/${item.vehicleRef}`}>{item.vehicleRef}</Link></p>}
+          {item.vehicleRef && <p className="mt-1 text-sm text-on-surface">Vehicle <Link className="link sazo-id" href={`/partner/${source}/cars/${item.vehicleRef}`}>{item.vehicleRef}</Link></p>}
         </div>
         {correction && item.status === 'accepted' && <p className="text-sm">The earlier record is kept in the car&apos;s history, marked corrected, and no longer counts.</p>}
         <a href={correction ? `/partner/${source}?tab=records` : `/partner/${source}`} className="btn btn-primary">{correction ? 'Back to records sent' : 'Enter another record'}</a>

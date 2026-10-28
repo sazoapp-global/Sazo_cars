@@ -12,7 +12,8 @@ const Stars = ({ n }: { n: number }) => (
 );
 
 /** What owners say about the MODEL (D-063) — opinions, kept apart from this car's records. Moderated (P-008). */
-export async function ModelCommunity({ vehicleRef, modelId, done, error }: { vehicleRef: string; modelId: string; done?: string; error?: string }) {
+/** `back`: the workspace page the report is shown in, so sending a review comes back there (28 Oct 2026). */
+export async function ModelCommunity({ vehicleRef, modelId, done, error, back }: { vehicleRef: string; modelId: string; done?: string; error?: string; back?: string }) {
   const c = await api<Community>(`/models/${modelId}/community`, { auth: true }).catch(() => undefined);
   if (!c) return null;
   return (
@@ -51,7 +52,7 @@ export async function ModelCommunity({ vehicleRef, modelId, done, error }: { veh
           <p className="rounded-lg bg-soft p-3 text-sm">{c.myReviewStatus === 'pending' ? 'Your review is waiting for SAZO to check it.' : 'Thank you. Your review is published.'}</p>
         ) : (
           <form action={postReview} data-draft={`review-${c.model.modelId}`} className="space-y-2 rounded-lg bg-soft p-3">
-            <input type="hidden" name="ref" value={vehicleRef} /><input type="hidden" name="modelId" value={c.model.modelId} />
+            <input type="hidden" name="ref" value={vehicleRef} /><input type="hidden" name="modelId" value={c.model.modelId} />{back && <input type="hidden" name="back" value={back} />}
             <fieldset><legend className="label">Own or drove one? Rate the {c.model.label}</legend>
               <div className="flex flex-wrap gap-2">{[1, 2, 3, 4, 5].map((n) => (
                 <label key={n} className="pill cursor-pointer has-[:checked]:border-primary-container has-[:checked]:bg-primary-container has-[:checked]:text-white">
@@ -63,7 +64,7 @@ export async function ModelCommunity({ vehicleRef, modelId, done, error }: { veh
           </form>
         )}
         <form action={suggestVideo} data-draft={`video-${c.model.modelId}`} className="space-y-2 rounded-lg bg-soft p-3">
-          <input type="hidden" name="ref" value={vehicleRef} /><input type="hidden" name="modelId" value={c.model.modelId} />
+          <input type="hidden" name="ref" value={vehicleRef} /><input type="hidden" name="modelId" value={c.model.modelId} />{back && <input type="hidden" name="back" value={back} />}
           <label htmlFor="video-url" className="label">Suggest a TikTok, YouTube or Instagram video about this model</label>
           <input id="video-url" name="url" type="url" required placeholder="https://" className="field" />
           <label htmlFor="video-title" className="label">Title (optional)</label>

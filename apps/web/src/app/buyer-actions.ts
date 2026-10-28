@@ -4,14 +4,26 @@ import { ApiError, api } from '@/lib/api';
 
 const ref = (f: FormData) => String(f.get('ref') ?? '');
 
+/**
+ * Where to go after a button on a report: back to the workspace page the report was shown in (28 Oct 2026), when
+ * the form says so and it is one of SAZO's own pages; otherwise the car's public page. `q` adds to the address.
+ */
+function backTo(form: FormData, q: Record<string, string> = {}, hash = ''): string {
+  const back = String(form.get('back') ?? '');
+  const safe = /^\/(dealer|partner|admin|broker|saved|v)(\/|\?|$)/.test(back) && !back.startsWith('//') && !/[\s\\]/.test(back);
+  const u = new URL(safe ? back : `/v/${ref(form)}`, 'http://x');
+  for (const [k, v] of Object.entries(q)) u.searchParams.set(k, v);
+  return `${u.pathname}${u.search}${hash}`;
+}
+
 export async function saveCar(form: FormData) {
   await api('/me/saved-checks', { method: 'POST', auth: true, body: { vehicleRef: ref(form) } }).catch(() => undefined);
-  redirect(`/v/${ref(form)}`);
+  redirect(backTo(form));
 }
 
 export async function unsaveCar(form: FormData) {
   await api(`/me/saved-checks/${ref(form)}`, { method: 'DELETE', auth: true }).catch(() => undefined);
-  redirect(String(form.get('back') ?? `/v/${ref(form)}`));
+  redirect(backTo(form));
 }
 
 /** Freeze the report and make a share link (30 days). */
@@ -20,11 +32,13 @@ export async function shareReport(form: FormData) {
   try {
     token = (await api<{ shareToken: string | null }>(`/vehicles/${ref(form)}/snapshots`, { method: 'POST', auth: true, body: { createShareLink: true, expiresInDays: 30 } })).shareToken;
   } catch (err) {
-    redirect(`/v/${ref(form)}?error=${encodeURIComponent(err instanceof ApiError ? 'Could not make a link right now.' : 'Something went wrong.')}`);
+    redirect(backTo(form, { error: err instanceof ApiError ? 'Could not make a link right now.' : 'Something went wrong.' }));
   }
   // From a dealer's car page the link is shown there, so the dealer stays in their console.
   const back = String(form.get('back') ?? '');
   if (/^\/dealer\/[0-9a-f-]{36}\/car\/[0-9a-f-]{36}$/.test(back)) redirect(`${back}?report=${token}#report-link`);
+  // From a report shown inside a workspace: the link is shown there.
+  if (back && backTo(form) !== `/v/${ref(form)}`) redirect(backTo(form, { shared: token ?? '' }, '#share-link'));
   redirect(`/shares?new=${token}`);
 }
 
@@ -57,10 +71,9 @@ export async function addCar(_prev: AddCarState, form: FormData): Promise<AddCar
 
 /** A review of the MODEL (D-063); it waits for a SAZO moderator (P-008). */
 export async function postReview(form: FormData) {
-  const r = ref(form);
   const rating = Number(form.get('rating'));
   const body = String(form.get('body') ?? '').trim();
-  const to = (q: string) => redirect(`/v/${r}?${q}#community`);
+  const to = (q: string) => redirect(backTo(form, Object.fromEntries(new URLSearchParams(q)), '#community'));
   if (!(rating >= 1 && rating <= 5)) to('cerror=Choose a rating from 1 to 5.');
   if (body.length < 30) to('cerror=Write at least 30 characters about the model.');
   try {
@@ -72,8 +85,7 @@ export async function postReview(form: FormData) {
 }
 
 export async function suggestVideo(form: FormData) {
-  const r = ref(form);
-  const to = (q: string) => redirect(`/v/${r}?${q}#community`);
+  const to = (q: string) => redirect(backTo(form, Object.fromEntries(new URLSearchParams(q)), '#community'));
   try {
     await api(`/models/${String(form.get('modelId'))}/creator-links`, { method: 'POST', auth: true, body: { url: String(form.get('url') ?? '').trim(), ...(String(form.get('title') ?? '').trim() ? { title: String(form.get('title')).trim() } : {}) } });
   } catch (err) {

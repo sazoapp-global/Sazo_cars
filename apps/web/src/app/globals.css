@@ -89,3 +89,5 @@
   body:has([data-workspace-frame]) #site-note,
   body:has([data-workspace-frame]) #site-header { display: none; }
 }
+/* No site footer in a workspace, on any screen, wherever the frame comes from (e.g. Send records for SAZO staff, 28 Oct 2026). */
+body:has([data-workspace-frame]) #site-footer { display: none; }

@@ -102,7 +102,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
       <>
         <p><Link href={base} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All payments</Link></p>
         {notices}
-        <section aria-labelledby="add-h" className="max-w-2xl rounded-[14px] border border-line bg-card p-4 md:p-5">
+        <section aria-labelledby="add-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
           <h1 id="add-h" className="font-display text-2xl font-bold">How is {carTitle(adding.car)} paid for?</h1>
           <p className="mb-4 mt-1 text-sm text-muted">Sold on {longDate(adding.soldOn)}.</p>
           <SaleForm org={id} carId={adding.car.stockId} salePriceUgx={adding.salePriceUgx} today={today()} manager buyers={buyers} mode="plan" />

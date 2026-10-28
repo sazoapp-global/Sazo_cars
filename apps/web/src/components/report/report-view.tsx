@@ -29,7 +29,8 @@ const Eyebrow = ({ children }: { children: React.ReactNode }) => <p className="t
 
 /* ---------------------------------------------------------------- header */
 
-export function ReportHero({ r, x, actions, photoHref }: { r: FullReport; x: ReportExtras; actions?: React.ReactNode; photoHref?: (id: string) => string }) {
+/** `embedded`: shown inside a workspace beside its side bar (28 Oct 2026): no buyers' breadcrumb, and the whole width. */
+export function ReportHero({ r, x, actions, photoHref, embedded = false }: { r: FullReport; x: ReportExtras; actions?: React.ReactNode; photoHref?: (id: string) => string; embedded?: boolean }) {
   const f = factMap(r);
   const spec = x.ledger?.find((l) => l.type === 'spec_declared' && !l.excluded)?.attributes ?? {};
   const legal = legalStatus(r, x);
@@ -41,15 +42,15 @@ export function ReportHero({ r, x, actions, photoHref }: { r: FullReport; x: Rep
     { label: 'Police & loans', value: legalTone === 'bad' ? 'Needs checking' : 'Nothing open', sub: legalTone === 'bad' ? 'See question 6' : 'On the records we have', tone: legalTone },
   ];
   return (
-    <section className="border-b border-line bg-gradient-to-b from-soft to-surface" aria-label="This car">
-      <div className="mx-auto max-w-[1280px] px-4 py-6 md:px-8 md:py-8 lg:px-12">
-        <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
+    <section className={embedded ? '' : 'border-b border-line bg-gradient-to-b from-soft to-surface'} aria-label="This car">
+      <div className={embedded ? '' : 'mx-auto max-w-[1280px] px-4 py-6 md:px-8 md:py-8 lg:px-12'}>
+        {!embedded && <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
           <ol className="flex flex-wrap items-center gap-1">
             <li><Link href="/" className="hover:text-primary-container">Check a car</Link></li>
             <li aria-hidden><Icon name="chevron_right" size={16} /></li>
             <li aria-current="page" className="font-semibold text-ink">{vehicleName(r.vehicle)}{r.vehicle.currentPlate ? ` (${r.vehicle.currentPlate})` : ''}</li>
           </ol>
-        </nav>
+        </nav>}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
           <div className="card p-5 md:p-6">
             <div className="flex flex-wrap items-center gap-2">
@@ -148,11 +149,11 @@ function InspectionMini({ x }: { x: LatestInspection | null }) {
 
 /* ---------------------------------------------------------------- question bar */
 
-export function QuestionNav({ questions }: { questions: QuestionView[] }) {
+export function QuestionNav({ questions, embedded = false }: { questions: QuestionView[]; embedded?: boolean }) {
   const by = new Map(questions.map((q) => [q.question, q]));
   return (
-    <nav aria-label="Questions" className="sticky top-16 z-30 border-b border-line bg-surface/95 backdrop-blur-md md:top-20 print:hidden">
-      <ol className="mx-auto flex max-w-[1280px] items-center gap-2 overflow-x-auto px-4 py-3 md:px-8 lg:px-12">
+    <nav aria-label="Questions" className={`sticky z-20 border-b border-line bg-surface/95 backdrop-blur-md print:hidden ${embedded ? '-mx-4 top-16 md:-mx-8 md:top-20 lg:top-12' : 'top-16 md:top-20'}`}>
+      <ol className={`flex items-center gap-2 overflow-x-auto py-3 ${embedded ? 'px-4 md:px-8' : 'mx-auto max-w-[1280px] px-4 md:px-8 lg:px-12'}`}>
         <li className="hidden shrink-0 text-[11px] font-bold uppercase tracking-wider text-label sm:block">Questions:</li>
         {QUESTION_ORDER.filter((id) => by.has(id)).map((id, i) => {
           const q = by.get(id)!;

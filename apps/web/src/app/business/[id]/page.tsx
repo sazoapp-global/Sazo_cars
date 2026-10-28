@@ -27,13 +27,15 @@ export default async function BusinessStatus({ params, searchParams }: { params:
   if (!org) notFound();
   const name = org.tradingName ?? org.legalName;
   const pending = org.status === 'pending_verification';
+  // A dealer's page sits inside the dealer console (its layout adds the side bar): it uses the whole width (28 Oct 2026).
+  const framed = org.type === 'dealer' && org.status !== 'rejected' && org.status !== 'suspended';
   const steps: { label: string; state: 'done' | 'now' | 'later'; icon: IconName }[] = [
     { label: 'Registered', state: 'done', icon: 'check_circle' },
     { label: org.verificationStatus === 'info_requested' ? 'SAZO needs more from you' : 'SAZO is checking', state: pending ? 'now' : 'done', icon: pending ? 'hourglass_empty' : 'check_circle' },
     { label: org.status === 'approved' ? 'Approved' : org.status === 'rejected' ? 'Not approved' : org.status === 'suspended' ? 'Suspended' : 'Approved', state: pending ? 'later' : 'done', icon: org.status === 'approved' ? 'verified' : pending ? 'verified' : 'report' },
   ];
   return (
-    <div className="mx-auto max-w-2xl space-y-5 px-4 py-8 md:px-8">
+    <div className={framed ? 'space-y-5' : 'mx-auto max-w-2xl space-y-5 px-4 py-8 md:px-8'}>
       {sp.new && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{name} is registered. Next: send your documents and your National ID.</p>}
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
@@ -46,8 +48,9 @@ export default async function BusinessStatus({ params, searchParams }: { params:
         ))}
       </ol>
 
+      <div className={framed ? 'grid items-start gap-5 xl:grid-cols-2' : 'space-y-5'}>
       {org.verificationStatus === 'info_requested' && org.infoRequested && (
-        <div className="rounded-lg border border-warn-line bg-warn-fill p-4">
+        <div className="rounded-lg border border-warn-line bg-warn-fill p-4 xl:col-span-2">
           <p className="font-semibold text-warn-text">SAZO asked:</p>
           <p className="mt-1">“{org.infoRequested}”</p>
         </div>
@@ -111,6 +114,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
       )}
       {org.status === 'approved' && !WORKSHOP.includes(org.type) && org.type !== 'dealer' && <p className="text-muted">Approved. Your workspace is coming soon. We&apos;ll send an SMS when it&apos;s ready.</p>}
       {(org.status === 'rejected' || org.status === 'suspended') && <p className="text-muted">Contact SAZO support if you think this is a mistake.</p>}
+      </div>
       <Link href="/account" className="link inline-block">Back to your account</Link>
     </div>
   );

@@ -36,7 +36,7 @@ export function UploadForm({ source, domain }: { source: string; domain: string 
                 <tbody className="divide-y divide-line">
                   {problems.slice(0, 200).map((r) => (
                     <tr key={r.row}><td className="py-1.5 pr-3 tabular-nums">{r.row}</td><td className={`py-1.5 pr-3 font-semibold ${CLS[r.status]}`}>{LABEL[r.status]}</td>
-                      <td className="py-1.5 break-words">{r.message ?? (r.vehicleRef ? <Link className="link" href={`/v/${r.vehicleRef}`}>{r.vehicleRef}</Link> : '')}</td></tr>
+                      <td className="py-1.5 break-words">{r.message ?? (r.vehicleRef ? <Link className="link" href={`/partner/${source}/cars/${r.vehicleRef}`}>{r.vehicleRef}</Link> : '')}</td></tr>
                   ))}
                 </tbody>
               </table>

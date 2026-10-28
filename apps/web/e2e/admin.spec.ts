@@ -92,6 +92,13 @@ test('settle a cloned plate: the genuine car keeps it', async ({ page, request }
   await expect(page.getByText('Disputed plate on this vehicle')).toBeVisible();
   await shot(page, 'admin-conflict');
   await a11y(page);
+  // A car's records open inside the console, beside the side bar, and lead back to the conflict (28 Oct 2026).
+  const conflictUrl = page.url();
+  await page.getByRole('link', { name: /this vehicle.s records/ }).click();
+  await expect(page).toHaveURL(/\/admin\/cars\/SZV-[^?]+\?view=records&back=/);
+  await expect(page.getByRole('heading', { name: 'Every record' })).toBeVisible();
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await expect(page).toHaveURL(conflictUrl);
   await page.getByLabel('What happened').fill('The Harrier is using a copied plate');
   await page.getByLabel('Why you think so').fill('Registry record and chassis number match the Premio');
   await page.getByRole('radio', { name: new RegExp(genuine) }).check();

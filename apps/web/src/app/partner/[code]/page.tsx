@@ -51,7 +51,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
   const lookup = tab === 'lookup' && q.length >= 4 ? await api<SearchResult>(`/vehicles/search?q=${encodeURIComponent(q)}`) : undefined;
   const tabs = [['one', 'One record'], ['file', 'Upload a file'], ['recent', 'Sent recently'], ['records', 'Correct or withdraw'], ['lookup', 'Look up a car']] as const;
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-8 md:px-8 [[data-workspace-frame]_&]:max-w-none [[data-workspace-frame]_&]:p-0">
       <Link href="/partner" className="link text-sm">← All sources</Link>
       <h1 className="mt-2 font-display text-2xl font-bold">{source.name}</h1>
       <p className="text-muted">{DOMAIN_NAMES[source.domain] ?? source.domain} · <span className="sazo-id">{source.code}</span>{source.isSimulated ? ' · simulated test data' : ''}</p>
@@ -89,7 +89,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
                   <li key={r.id} className="flex flex-wrap items-start justify-between gap-2 p-3">
                     <div className="min-w-0">
                       <p className="font-semibold">{RECORD_LABELS[r.type] ?? r.type} <span className={`ml-1 rounded px-1.5 py-0.5 text-xs font-semibold ${STATE[r.state].cls}`}>{STATE[r.state].text}</span>{r.corrects ? <span className="ml-1 text-xs text-muted">a correction</span> : null}</p>
-                      <p className="text-sm text-muted">{formatDate(r.eventTime, r.precision)} · sent {formatDate(r.recordedAt)}{r.vehicleRef ? <> · <Link className="link sazo-id" href={`/v/${r.vehicleRef}`}>{r.identifiers.plate ?? r.vehicleRef}</Link></> : null}</p>
+                      <p className="text-sm text-muted">{formatDate(r.eventTime, r.precision)} · sent {formatDate(r.recordedAt)}{r.vehicleRef ? <> · <Link className="link sazo-id" href={`/partner/${code}/cars/${r.vehicleRef}`}>{r.identifiers.plate ?? r.vehicleRef}</Link></> : null}</p>
                       {r.withdrawReason && <p className="text-sm">Reason: {r.withdrawReason}</p>}
                     </div>
                     {r.state === 'active' && (

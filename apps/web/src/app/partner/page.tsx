@@ -13,13 +13,13 @@ export default async function Partner() {
   if (!(await isSignedIn())) redirect('/sign-in?next=/partner');
   const sources = (await api<PartnerSource[]>('/ingest/sources', { auth: true })).filter((s) => DOMAIN_NAMES[s.domain]);
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-8 md:px-8 [[data-workspace-frame]_&]:max-w-none [[data-workspace-frame]_&]:p-0">
       <h1 className="font-display text-2xl font-bold">Send records to SAZO</h1>
       <p className="mt-1 text-muted">Choose the data source you are entering records for. Each source can only send its own kinds of record.</p>
       {sources.length === 0 ? (
         <p className="card mt-6 p-4">Your account isn&apos;t linked to a data source. Ask SAZO to add you as an operator for your organisation.</p>
       ) : (
-        <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+        <ul className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {sources.map((s) => (
             <li key={s.code}>
               <Link href={`/partner/${s.code}`} className="card flex items-start justify-between gap-3 p-4 hover:border-line-strong">

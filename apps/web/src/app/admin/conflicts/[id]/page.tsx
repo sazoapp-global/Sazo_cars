@@ -31,8 +31,8 @@ export default async function ConflictPage({ params, searchParams }: { params: P
       <Link href="/admin/conflicts" className="link text-sm">← All conflicts</Link>
       <h1 className="mt-2 font-display text-2xl font-bold">{TOPIC[c.topic] ?? c.topic} conflict · <span className="sazo-id">{c.vehicleRef}</span></h1>
       <p className="text-muted">{c.openedByCheck ? CHECK[c.openedByCheck] ?? c.openedByCheck : ''} · {CONFLICT_STATUS[c.status]} · opened {day(c.openedAt)}
-        {' · '}<Link className="link" href={`/v/${c.vehicleRef}/evidence`}>this vehicle&apos;s records</Link>
-        {c.relatedVehicleRefs.map((r) => <span key={r}> · <Link className="link" href={`/v/${r}/evidence`}>{r}</Link></span>)}</p>
+        {' · '}<Link className="link" href={`/admin/cars/${c.vehicleRef}?${new URLSearchParams({ view: 'records', back: `/admin/conflicts/${id}` })}`}>this vehicle&apos;s records</Link>
+        {c.relatedVehicleRefs.map((r) => <span key={r}> · <Link className="link" href={`/admin/cars/${r}?${new URLSearchParams({ view: 'records', back: `/admin/conflicts/${id}` })}`}>{r}</Link></span>)}</p>
       <div className="mt-4"><Notice done={sp.done} error={sp.error} /></div>
 
       <section aria-labelledby="records" className="mt-2">

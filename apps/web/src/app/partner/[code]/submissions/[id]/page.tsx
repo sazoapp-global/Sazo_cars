@@ -14,7 +14,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ cod
     throw err;
   });
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 md:px-8">
+    <div className="mx-auto max-w-4xl px-4 py-8 md:px-8 [[data-workspace-frame]_&]:max-w-none [[data-workspace-frame]_&]:p-0">
       <Link href={`/partner/${code}?tab=recent`} className="link text-sm">← Sent recently</Link>
       <h1 className="mt-2 font-display text-2xl font-bold">Submission</h1>
       <p className="sazo-id text-sm text-muted">{s.submissionId}</p>
@@ -24,7 +24,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ cod
           <tbody className="divide-y divide-line">
             {s.items.map((i) => (
               <tr key={i.sequence}><td className="p-3 tabular-nums">{i.sequence}</td><td className="p-3 font-semibold">{LABEL[i.status] ?? i.status}</td>
-                <td className="p-3">{i.vehicleRef ? <Link className="link sazo-id" href={`/v/${i.vehicleRef}`}>{i.vehicleRef}</Link> : 'Not recorded'}</td>
+                <td className="p-3">{i.vehicleRef ? <Link className="link sazo-id" href={`/partner/${code}/cars/${i.vehicleRef}`}>{i.vehicleRef}</Link> : 'Not recorded'}</td>
                 <td className="p-3">{i.errors.map((e) => e.message).join('; ') || 'Not recorded'}</td></tr>
             ))}
           </tbody>
