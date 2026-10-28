@@ -1,20 +1,19 @@
-// The full SAZO report inside a workspace with a side bar (option A, approved 28 Oct 2026): the same content buyers
-// see on the car's public page, shown in the space beside the side bar and using its whole width. Its timeline and
-// records open in the same place, and its buttons come back here. `base` is this workspace page's own address.
-import { factValue } from '@sazo/contracts';
+// The full SAZO report inside a workspace with a side bar (option A, approved 28 Oct 2026): what buyers see on the
+// car's public page down to the seven questions (the "Before you pay" card, owners' reviews and closing note are left
+// off), in the space beside the side bar across its whole width. Its timeline and records open in the same place, and
+// its buttons come back here. `base` is this workspace page's own address.
 import Link from 'next/link';
 import { headers } from 'next/headers';
-import { saveCar, shareReport, unsaveCar } from '@/app/buyer-actions';
+import { saveCar, unsaveCar } from '@/app/buyer-actions';
 import { claimCar } from '@/app/my-cars/actions';
 import { loadVehicle } from '@/app/v/[ref]/load';
 import { Icon } from '../icon';
-import { ModelCommunity } from '../model-community';
 import { PrintButton, ShareButtons } from '../share-buttons';
 import { api } from '@/lib/api';
 import type { CarPhoto } from '@/lib/report-data';
 import type { LedgerItem, MyCar, TimelineItem } from '@/lib/types';
 import { RecordsList } from './records-list';
-import { NegotiateCard, QuestionNav, ReportHero, ReportSections } from './report-view';
+import { QuestionNav, ReportHero, ReportSections } from './report-view';
 import { TimelineList } from './timeline-list';
 
 export type EmbeddedReportParams = { view?: string; class?: string; error?: string; cdone?: string; cerror?: string; shared?: string };
@@ -95,23 +94,8 @@ export async function EmbeddedReport({ vehicleRef: ref, base, sp }: { vehicleRef
           <ReportHero r={r} x={x} actions={actions} photoHref={(id) => `/v/${ref}/photo/${id}`} embedded />
           <QuestionNav questions={r.questions} embedded />
           <ReportSections r={r} x={x} />
-          <NegotiateCard
-            actions={(
-              <>
-                <form action={shareReport}><input type="hidden" name="ref" value={ref} />{back}
-                  <button className="btn btn-focal"><Icon name="share" />Share this report</button></form>
-                <Link href={`/compare?r=${ref}`} className="btn btn-ghost bg-white"><Icon name="compare_arrows" />Compare with another car</Link>
-              </>
-            )}
-            links={(
-              <>
-                <Link href={at({ view: 'timeline' })} className="link">Timeline</Link>
-                <Link href={at({ view: 'records' })} className="link">Evidence</Link>
-              </>
-            )}
-          />
-          {r.model && <ModelCommunity vehicleRef={ref} modelId={r.model.modelId} done={sp.cdone} error={sp.cerror} back={here} />}
-          <p className="text-xs text-muted">SAZO describes what the available records show. It does not certify a vehicle. Rule set {r.ruleSetVersion} · Calculated {factValue('first_registration_date', r.asOf.slice(0, 10))}</p>
+          {/* Inside a workspace the report stops after the seven questions (28 Oct 2026): no "Before you pay" card,
+              owners' reviews or closing note; Timeline and Records are the buttons above. */}
         </>
       )}
     </div>
