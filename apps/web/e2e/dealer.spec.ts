@@ -55,7 +55,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(admin.getByRole('status')).toContainText('approve');
 
   await dealer.goto(businessUrl);
-  await dealer.getByRole('link', { name: 'Open your stock' }).click();
+  await dealer.getByRole('link', { name: 'Open your cars for sale' }).click();
   await expect(dealer.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
   // Approved: the car added while waiting has joined SAZO by itself, and the rest of the console is open.
   await expect(dealer.getByRole('heading', { name: /SAZO is checking your business/ })).toHaveCount(0);

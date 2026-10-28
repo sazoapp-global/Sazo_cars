@@ -20,7 +20,7 @@ const CHAIN: { icon: IconName; title: string; text: string; highlight?: boolean 
   { icon: 'key', title: 'Buyer', text: 'Buys with a clearer picture', highlight: true },
 ];
 
-const READY: { icon: IconName; title: string; tag: string; text: string; can: string[]; where: string; type: string; popular?: boolean }[] = [
+const READY: { icon: IconName; title: string; tag: string; text: string; can: string[]; where: string; type: string; popular?: boolean; also?: { label: string; type: string } }[] = [
   {
     icon: 'storefront', title: 'Car dealers', tag: 'Sell with more confidence', type: 'dealer', where: 'Dealer workspace on this website',
     text: 'List the cars on your yard and send each buyer a link to the car’s check.',
@@ -29,10 +29,11 @@ const READY: { icon: IconName; title: string; tag: string; text: string; can: st
   {
     icon: 'handyman', title: 'Garages & service centres', tag: 'Every job becomes part of the car’s record', type: 'garage', where: 'SAZO Garage app on your mechanics’ phones', popular: true,
     text: 'Record jobs from the bay in a minute, even without signal. Customers confirm by SMS.',
-    can: ['See the last mileage and engine number SAZO has', 'Record services, repairs and parts with photos', 'Customers confirm each visit by SMS', 'Add your mechanics from the Staff screen'],
+    can: ['See the last mileage and engine number SAZO has', 'Record services, repairs and parts with photos', 'Customers confirm each visit by SMS', 'Add your mechanics from the Team screen'],
   },
   {
-    icon: 'fact_check', title: 'Inspectors & inspection centres', tag: 'Inspections buyers can rely on', type: 'inspector', where: 'SAZO Garage app (inspection checklist)',
+    icon: 'fact_check', title: 'Inspectors & inspection centres', tag: 'Inspections buyers can rely on', type: 'inspector', where: 'SAZO Inspect app (inspection checklist)',
+    also: { label: 'Register as inspection centre', type: 'inspection_centre' },
     text: 'A step-by-step checklist: identity, mileage, paint thickness, structure, tyres and battery.',
     can: ['Work through the checklist on your phone', 'Photos of the car and any damage', 'Paint readings panel by panel', 'Your inspections appear in buyers’ reports'],
   },
@@ -120,7 +121,7 @@ export default async function Business() {
             {signedIn
               ? <Link href="/account" className="btn btn-primary"><Icon name="person" />Your businesses</Link>
               : <Link href="/sign-in?next=/account" className="btn btn-primary"><Icon name="person" />Log in</Link>}
-            <a href={GARAGE_APP_URL} className="btn btn-ghost"><Icon name="garage" />Open the Garage app</a>
+            <a href={`${GARAGE_APP_URL}/?for=garage`} className="btn btn-ghost"><Icon name="garage" />Open the Garage app</a>
           </div>
         </div>
       </section>
@@ -176,6 +177,7 @@ export default async function Business() {
                 </div>
                 <p className="mt-3 text-xs text-muted"><Icon name="smart_display" size={14} className="mr-1 inline align-[-2px]" />{b.where}</p>
                 <Link href={`/business/register?type=${b.type}`} className={`btn mt-auto ${b.popular ? 'btn-primary' : 'btn-ghost'} mt-4 w-full`}>Register as {b.title.toLowerCase().replace(/ &.*/, '').replace(/s$/, '')}<Icon name="arrow_forward" size={18} /></Link>
+                {b.also && <Link href={`/business/register?type=${b.also.type}`} className="btn btn-ghost mt-2 w-full">{b.also.label}<Icon name="arrow_forward" size={18} /></Link>}
               </article>
             ))}
           </div>

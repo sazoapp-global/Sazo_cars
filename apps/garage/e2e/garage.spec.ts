@@ -33,7 +33,14 @@ test.beforeAll(async ({ request }) => {
 });
 
 test('no sign-up in the app: unknown numbers are told to ask their manager; an added mechanic finishes their details once', async ({ page, request }) => {
+  // Before log-in the app is named for the business that opened it (28 Oct 2026); opened another way, just "SAZO".
   await page.goto('/');
+  await expect(page.getByText('SAZO', { exact: true })).toBeVisible();
+  await page.goto('/?for=inspect');
+  await expect(page.getByText('SAZO Inspect', { exact: true })).toBeVisible();
+  await expect(page.getByText('Your manager adds you from the Team screen.', { exact: false })).toBeVisible();
+  await page.goto('/?for=garage');
+  await expect(page.getByText('SAZO Garage', { exact: true })).toBeVisible();
   // Email comes first; the phone code is the other tab.
   await expect(page.getByRole('tab', { name: 'Email and password' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('tab', { name: 'Phone code' }).click();

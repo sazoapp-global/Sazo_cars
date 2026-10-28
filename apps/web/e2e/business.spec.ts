@@ -14,8 +14,13 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   const owner = await (await browser.newContext()).newPage();
   await owner.goto('/business');
   await a11y(owner);
+  // Inspection centres have their own way in (28 Oct 2026).
+  await expect(owner.getByRole('link', { name: 'Register as inspection centre' })).toHaveAttribute('href', '/business/register?type=inspection_centre');
   await owner.getByRole('link', { name: 'Register your business' }).first().click();
-  await expect(owner).toHaveURL(/sign-in/);
+  // A new business starts on Create Account, with a note saying why; the card back to this page is left off (28 Oct 2026).
+  await expect(owner).toHaveURL(/sign-up/);
+  await expect(owner.getByText('To register your business, first create your own SAZO account.')).toBeVisible();
+  await expect(owner.getByRole('link', { name: /Garage, dealership or inspector\?/ })).toHaveCount(0);
   await signIn(owner, OWNER, { name: 'Joseph Owner', next: '/business/register' });
 
   await expect(owner.getByRole('heading', { name: 'Register your business' })).toBeVisible();
@@ -69,7 +74,7 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
 
   await owner.reload();
   await expect(owner.getByRole('heading', { name: /You.re ready/ })).toBeVisible();
-  await expect(owner.getByRole('link', { name: 'Open the Garage app' })).toBeVisible();
+  await expect(owner.getByRole('link', { name: 'Open the SAZO Garage app' })).toHaveAttribute('href', /\?for=garage$/);
 
   // Signed in, the business page points to their businesses instead of sign-in.
   await owner.goto('/business');

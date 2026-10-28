@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { APP_TITLE, appKind } from './lib/app-kind';
 import { Icon } from './components/icon';
 import { OfflineError, onAuthChange, request, restoreSession, signOut } from './lib/api';
 import { kv, wipe } from './lib/db';
@@ -67,7 +68,7 @@ export function App() {
     return (
       <div className="mx-auto flex min-h-dvh max-w-xl flex-col bg-surface">
         <header className="sticky top-0 z-10 border-b-4 border-lime bg-primary px-4 py-3 text-white">
-          <span className="block font-display text-lg font-extrabold leading-tight">SAZO Garage</span>
+          <span className="block font-display text-lg font-extrabold leading-tight">{APP_TITLE[appKind() ?? 'any'].name}</span>
         </header>
         <UpdateBanner />
         <main className="flex-1">

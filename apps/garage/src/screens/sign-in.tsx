@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { APP_TITLE, appKind } from '../lib/app-kind';
 import { kv } from '../lib/db';
 import { ApiError, OfflineError, addPhone, confirmPhone, passwordLogin, requestCode, secondStep, verifyCode, type NextStep, type SecondStep } from '../lib/api';
 
@@ -16,6 +17,7 @@ const WEBSITE = import.meta.env.VITE_SAZO_WEB_URL ?? 'http://localhost:3001';
  * account with no phone adds one before going in (D-145).
  */
 export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
+  const [title] = useState(() => APP_TITLE[appKind() ?? 'any']);
   const [method, setMethod] = useState<'phone' | 'email'>('email'); // email first, phone code as the other way (27 Oct 2026)
   const [step, setStep] = useState<'start' | 'code' | 'second' | 'add_phone' | 'add_code' | 'staff'>('start');
   const [phone, setPhone] = useState('');
@@ -86,8 +88,8 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
 
   return (
     <div className="mx-auto max-w-md p-4 pt-10">
-      <p className="font-display text-3xl font-extrabold text-primary">SAZO Garage</p>
-      <p className="mt-1 text-muted">Record jobs for your customers&apos; cars. Works without signal.</p>
+      <p className="font-display text-3xl font-extrabold text-primary">{title.name}</p>
+      <p className="mt-1 text-muted">{title.line}</p>
       <form className="card mt-6 space-y-4 p-5" onSubmit={submit} noValidate>
         <h1 className="font-display text-xl font-bold">{step === 'second' ? 'Confirm it’s you' : step === 'add_phone' || step === 'add_code' ? 'Add your phone' : step === 'staff' ? 'Set up on the website' : 'Log in'}</h1>
         {idle && step === 'start' && <p role="alert" className="rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">You were logged out after 4 hours without activity. Your jobs are still on this phone; log in again to carry on.</p>}
@@ -147,7 +149,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
         </button>
         {method === 'email' && (step === 'start' || step === 'code') && <p className="text-center text-sm"><a href={`${WEBSITE}/forgot-password`} className="font-semibold text-primary-container underline">Forgot password?</a></p>}
       </form>
-      <p className="mt-4 text-center text-sm text-muted">No account? Your manager adds you from the Staff screen. Managers: <a href={`${WEBSITE}/sign-up`} className="font-semibold text-primary-container underline">create an account</a> and register your business on the SAZO website.</p>
+      <p className="mt-4 text-center text-sm text-muted">No account? Your manager adds you from the Team screen. Managers: <a href={`${WEBSITE}/sign-up`} className="font-semibold text-primary-container underline">create an account</a> and register your business on the SAZO website.</p>
     </div>
   );
 }

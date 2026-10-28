@@ -27,7 +27,8 @@ async function sample(): Promise<Summary | undefined> {
   }
 }
 
-export async function AuthPage({ children, notice }: { children: React.ReactNode; notice?: React.ReactNode }) {
+/** `forBusiness`: the person is already on their way to register a business, so the card that leads there is left off. */
+export async function AuthPage({ children, notice, forBusiness = false }: { children: React.ReactNode; notice?: React.ReactNode; forBusiness?: boolean }) {
   const preview = await sample();
   const tiles = preview?.questions.filter((q) => ['identity', 'mileage', 'damage'].includes(q.question)) ?? [];
   return (
@@ -85,12 +86,14 @@ export async function AuthPage({ children, notice }: { children: React.ReactNode
             </div>
             {notice}
             {children}
-            <Link href="/business" className="mt-6 flex items-center gap-3 rounded-xl border border-soft-3 bg-soft p-4 hover:border-primary-container">
+            {!forBusiness && (
+              <Link href="/business" className="mt-6 flex items-center gap-3 rounded-xl border border-soft-3 bg-soft p-4 hover:border-primary-container">
               <Icon name="storefront" size={24} className="shrink-0 text-primary-container" />
               <span className="flex-1"><span className="block text-sm font-bold text-ink">Garage, dealership or inspector?</span>
                 <span className="block text-sm text-muted">Register your business and record history on SAZO.</span></span>
               <Icon name="chevron_right" className="shrink-0 text-primary-container" />
             </Link>
+            )}
           </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { request } from '../lib/api';
 import { closePanel, go, openPanel, pagePath, usePanel, type Route } from '../lib/route';
 import { isInspector, type Garage, type Me } from '../lib/types';
+import { rememberAppKind } from '../lib/app-kind';
 import { Icon, type IconName } from './icon';
 import { ThemePicker } from './theme-picker';
 
@@ -46,6 +47,7 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
 }) {
   const inspector = isInspector(garage);
   const app = inspector ? 'SAZO Inspect' : 'SAZO Garage';
+  useEffect(() => { rememberAppKind(inspector ? 'inspect' : 'garage'); }, [inspector]);
   const panel = usePanel();
   const unread = useUnread(online, panel);
   const entries = navFor(inspector ? 'inspect' : 'garage', { platformRoles: [], orgRole: garage.role }).flatMap((e) => (isGroup(e) ? e.links : [e]));

@@ -96,16 +96,17 @@ export default async function BusinessStatus({ params, searchParams }: { params:
         <section className="card p-4">
           <h2 className="font-display text-lg font-semibold">You&apos;re ready</h2>
           <p className="text-muted">{org.type === 'garage'
-            ? <>Open the SAZO Garage app on your phone and log in with this phone number or your email. Add your mechanics from the app&apos;s Staff screen.</>
-            : <>Open the SAZO app on your phone and log in with this phone number or your email to record inspections. Add your inspectors from the app&apos;s Staff screen.</>}</p>
-          <a href={GARAGE_APP_URL} className="btn btn-primary mt-3"><Icon name="garage" />{org.type === 'garage' ? 'Open the Garage app' : 'Open the SAZO app'}</a>
+            ? <>Open the SAZO Garage app on your phone and log in with this phone number or your email. Add your mechanics from the app&apos;s Team screen.</>
+            : <>Open the SAZO Inspect app on your phone and log in with this phone number or your email to record inspections. Add your inspectors from the app&apos;s Team screen.</>}</p>
+          <a href={`${GARAGE_APP_URL}/?for=${org.type === 'garage' ? 'garage' : 'inspect'}`} className="btn btn-primary mt-3">
+            <Icon name={org.type === 'garage' ? 'garage' : 'fact_check'} />{org.type === 'garage' ? 'Open the SAZO Garage app' : 'Open the SAZO Inspect app'}</a>
         </section>
       )}
       {org.status === 'approved' && org.type === 'dealer' && (
         <section className="card p-4">
-          <h2 className="font-display text-lg font-semibold">Your cars for sale</h2>
-          <p className="text-muted">List the cars you are selling, keep prices up to date, record sales and send buyers report links.</p>
-          <Link href={`/dealer/${org.id}`} className="btn btn-primary mt-3"><Icon name="directions_car" />Open your stock</Link>
+          <h2 className="font-display text-lg font-semibold">You&apos;re ready</h2>
+          <p className="text-muted">Your dealer workspace is on this website. Add your cars, keep prices up to date, record sales and send each buyer a link to the car&apos;s SAZO check. Add your sales people from the Team page.</p>
+          <Link href={`/dealer/${org.id}`} className="btn btn-primary mt-3"><Icon name="directions_car" />Open your cars for sale</Link>
         </section>
       )}
       {org.status === 'approved' && !WORKSHOP.includes(org.type) && org.type !== 'dealer' && <p className="text-muted">Approved. Your workspace is coming soon. We&apos;ll send an SMS when it&apos;s ready.</p>}

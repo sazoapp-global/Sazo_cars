@@ -100,7 +100,7 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
       </section>
 
       <div className="flex flex-col gap-2">
-        {workplace.role === 'org_manager' && <button type="button" className="btn btn-ghost" onClick={() => go({ name: 'staff' })}><Icon name="group" />Staff</button>}
+        {workplace.role === 'org_manager' && <button type="button" className="btn btn-ghost" onClick={() => go({ name: 'staff' })}><Icon name="group" />Team</button>}
         <button type="button" className="btn btn-ghost" onClick={() => go({ name: 'concerns' })}><Icon name="report" />Report a problem with a car</button>
         <button type="button" className="btn btn-ghost" onClick={onSignOut}><Icon name="logout" />Sign out ({me.displayName})</button>
       </div>

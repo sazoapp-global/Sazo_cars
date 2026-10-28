@@ -39,7 +39,7 @@ export function Staff({ garage }: { garage: Garage }) {
   return (
     <div className="space-y-4 p-4">
       <button type="button" className="flex items-center gap-1 font-semibold text-primary-container" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Home</button>
-      <h1 className="font-display text-2xl font-bold">Staff</h1>
+      <h1 className="font-display text-2xl font-bold">Team</h1>
       <ul className="card divide-y divide-line">
         {(staff ?? []).map((s) => (
           <li key={s.userId} className="flex items-center justify-between gap-3 p-3"><span className="font-semibold">{s.displayName}</span><span className="text-sm text-muted">{ROLE[s.role] ?? s.role}</span></li>

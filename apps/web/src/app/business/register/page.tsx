@@ -12,7 +12,7 @@ export default async function Register({ searchParams }: { searchParams: Promise
   const t = (await searchParams).type;
   const type = t && TYPES.includes(t) ? t : undefined;
   const here = `/business/register${type ? `?type=${type}` : ''}`;
-  if (!(await isSignedIn())) redirect(`/sign-in?next=${encodeURIComponent(here)}`);
+  if (!(await isSignedIn())) redirect(`/sign-up?next=${encodeURIComponent(here)}`); // a new business starts with an account (28 Oct 2026)
   const me = await api<Me>('/me', { auth: true }).catch(() => undefined);
   if (me?.needsDetails.length) redirect(`/account/complete?next=${encodeURIComponent(here)}`);
   return (
