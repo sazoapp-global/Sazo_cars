@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Your account', robots: { index: fals
 export default async function Account({ searchParams }: { searchParams: Promise<SettingsQuery> }) {
   if (!(await isSignedIn())) redirect('/sign-in?next=/account');
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 md:px-8">
+    <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
       <AccountSettings sp={await searchParams} back="/account" />
     </div>
   );

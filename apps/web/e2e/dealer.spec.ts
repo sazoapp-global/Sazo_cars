@@ -71,11 +71,15 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('contentinfo')).toHaveCount(0);
   await menu.getByRole('link', { name: 'Settings' }).last().click();
   await expect(dealer.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await dealer.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: /^Appearance/ }).click();
   await dealer.getByRole('button', { name: 'Appearance: Same as device' }).click();
   await dealer.getByRole('group', { name: 'Appearance' }).getByRole('button', { name: 'Dark' }).click();
   await expect(dealer.locator('html')).toHaveAttribute('data-theme', 'dark');
   await dealer.getByRole('button', { name: 'Appearance: Dark' }).click();
   await dealer.getByRole('group', { name: 'Appearance' }).getByRole('button', { name: 'Light' }).click();
+  // On a phone: Back to the Settings menu, then Back to the page.
+  await dealer.getByRole('link', { name: 'Back', exact: true }).click();
+  await expect(dealer.getByRole('navigation', { name: 'Settings' })).toBeVisible();
   await dealer.getByRole('link', { name: 'Back', exact: true }).click();
   await a11y(dealer);
 

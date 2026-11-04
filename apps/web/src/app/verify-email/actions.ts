@@ -12,6 +12,6 @@ export async function confirmEmail(_prev: VerifyState, form: FormData): Promise<
     if (err instanceof ApiError && err.code === 'email_in_use') return { error: 'Another SAZO account already uses this email.' };
     return { error: 'This link has expired or was already used. Ask for a new one in Settings.' };
   }
-  if (await isSignedIn()) redirect('/account?done=Your+email+is+confirmed');
+  if (await isSignedIn()) redirect('/account?section=email&done=Your+email+is+confirmed'); // straight to Email in Settings (D-160)
   return { done: true };
 }

@@ -168,7 +168,7 @@ export function PanelHost({ children, enabled = true, wide = false }: { children
   const which = enabled ? search?.get('panel') : null;
   const panel = which === NOTIFICATIONS_PANEL || which === SETTINGS_PANEL || which === DATA_PANEL ? which : null;
   const q = new URLSearchParams(search?.toString() ?? '');
-  for (const k of ['panel', 'done', 'error', 'newPhone']) q.delete(k);
+  for (const k of ['panel', 'done', 'error', 'newPhone', 'section']) q.delete(k);
   const closeHref = q.toString() ? `${pathname}?${q}` : pathname;
   const box = wide ? '' : 'mx-auto max-w-3xl px-4 py-8 md:px-8';
   return (
@@ -176,7 +176,10 @@ export function PanelHost({ children, enabled = true, wide = false }: { children
       {panel && (
         <section aria-labelledby="panel-heading" className={`space-y-4 ${box}`}>
           {/* Back (D-158): Your data returns to Settings; Settings and Notifications to the page they opened over. */}
-          <BackButton href={panel === DATA_PANEL ? `${closeHref}${closeHref.includes('?') ? '&' : '?'}panel=${SETTINGS_PANEL}` : closeHref} />
+          <BackButton href={panel === DATA_PANEL ? `${closeHref}${closeHref.includes('?') ? '&' : '?'}panel=${SETTINGS_PANEL}` : closeHref}
+            className={panel === SETTINGS_PANEL && search?.get('section') ? 'max-lg:!hidden' : ''} />
+          {/* On phones a chosen setting goes Back to the Settings menu first (D-160). */}
+          {panel === SETTINGS_PANEL && search?.get('section') && <BackButton href={`${closeHref}${closeHref.includes('?') ? '&' : '?'}panel=${SETTINGS_PANEL}`} scroll={false} className="lg:!hidden" />}
           <div className="flex items-center justify-between gap-3">
             <h1 id="panel-heading" className="font-display text-2xl font-bold md:text-3xl">{panel === SETTINGS_PANEL ? 'Settings' : panel === DATA_PANEL ? 'Your data' : 'Notifications'}</h1>
           </div>
@@ -198,7 +201,7 @@ function SettingsPanel({ closeHref }: { closeHref: string }) {
     const q = new URLSearchParams(closeHref.split('?')[1] ?? '');
     q.set('panel', SETTINGS_PANEL);
     const back = `${closeHref.split('?')[0]}?${q}`;
-    void loadSettings({ back, done: search?.get('done') ?? undefined, error: search?.get('error') ?? undefined, newPhone: search?.get('newPhone') ?? undefined })
+    void loadSettings({ back, done: search?.get('done') ?? undefined, error: search?.get('error') ?? undefined, newPhone: search?.get('newPhone') ?? undefined, section: search?.get('section') ?? undefined })
       .then((v) => { if (live) setView(v); });
     return () => { live = false; };
   }, [key, closeHref, search]);

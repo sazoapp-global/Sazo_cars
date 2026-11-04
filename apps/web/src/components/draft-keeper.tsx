@@ -12,7 +12,8 @@ const SECRET = /pass|confirm|code|otp|nin|token|secret/i;
 const SKIP_TYPES = new Set(['password', 'file', 'hidden', 'submit', 'button', 'reset', 'image']);
 
 type Field = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-type Saved = { at: number; v: Record<string, string | string[]> };
+/** `sent`: the form was sent with these values; a page that then loads without a problem forgets them. */
+type Saved = { at: number; v: Record<string, string | string[]>; sent?: boolean };
 
 const store = {
   get(key: string): Saved | undefined {
@@ -22,7 +23,7 @@ const store = {
       return s;
     } catch { return undefined; }
   },
-  set(key: string, v: Saved['v']) { try { sessionStorage.setItem(PREFIX + key, JSON.stringify({ at: Date.now(), v })); } catch { /* storage off */ } },
+  set(key: string, v: Saved['v'], sent = false) { try { sessionStorage.setItem(PREFIX + key, JSON.stringify({ at: Date.now(), v, ...(sent ? { sent } : {}) })); } catch { /* storage off */ } },
   drop(key: string) { try { sessionStorage.removeItem(PREFIX + key); } catch { /* storage off */ } },
   dropAll() {
     try { for (const k of Object.keys(sessionStorage)) if (k.startsWith(PREFIX)) sessionStorage.removeItem(k); } catch { /* storage off */ }
@@ -96,6 +97,9 @@ export function DraftKeeper() {
         return;
       }
       const saved = store.get(key);
+      // A draft that was sent is kept only for the page that comes back with a problem. Moving on quickly (before
+      // the check above runs) used to leave it behind, filling the next form with the last one's values.
+      if (saved?.sent && !problem()) { store.drop(key); return; }
       if (saved) restore(form, saved.v);
     };
     const scan = () => document.querySelectorAll<HTMLFormElement>('form[data-draft]').forEach(adopt);
@@ -111,7 +115,7 @@ export function DraftKeeper() {
     const onSubmit = (e: Event) => {
       const form = e.target as HTMLFormElement;
       if (form.hasAttribute('data-clear-drafts')) { store.dropAll(); return; }
-      if (keyOf(form)) { store.set(keyOf(form)!, { ...(store.get(keyOf(form)!)?.v ?? {}), ...read(form) }); sent.add(form); }
+      if (keyOf(form)) { store.set(keyOf(form)!, { ...(store.get(keyOf(form)!)?.v ?? {}), ...read(form) }, true); sent.add(form); }
     };
 
     // After a send, React puts the form back to what the page now shows (the kept values after a problem,
@@ -120,7 +124,7 @@ export function DraftKeeper() {
       const form = e.target as HTMLFormElement;
       const key = keyOf(form);
       if (!key) return;
-      setTimeout(() => store.set(key, { ...(store.get(key)?.v ?? {}), ...read(form) }), 0);
+      setTimeout(() => store.set(key, { ...(store.get(key)?.v ?? {}), ...read(form) }, store.get(key)?.sent ?? false), 0);
     };
 
     // Forms come and go as people move around; a sent form that has gone means the page moved on: forget it.

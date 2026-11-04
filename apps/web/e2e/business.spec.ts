@@ -91,6 +91,7 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
 
   // "Download my data" opens Your data in the same place as Settings, not a new page (D-157): only your details
   // and your businesses on screen; the PDF and Excel files hold everything.
+  await later.goto('/account?section=data');
   await later.getByRole('link', { name: 'Download my data' }).click();
   await expect(later).toHaveURL(/panel=data/);
   await expect(later.getByRole('heading', { name: 'Your data', level: 1 })).toBeVisible();

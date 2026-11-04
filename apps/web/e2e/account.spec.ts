@@ -16,8 +16,12 @@ test('manage my account and delete it', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Akello Ruth' })).toBeVisible();
   // Signed up by phone: details and phone done, email and password still to add (D-102).
   await expect(page.getByRole('progressbar', { name: 'Your profile' })).toHaveAttribute('aria-valuenow', '50');
-  await expect(page.getByRole('link', { name: 'Add: confirmed email' })).toBeVisible();
+  // Settings as a menu with the chosen setting beside it (D-160); on a phone the menu comes first. The profile
+  // steps are a progress line whose next step says "Do this next".
+  await expect(page.getByRole('list', { name: 'Profile steps' }).getByRole('listitem').nth(2)).toHaveAttribute('aria-current', 'step');
+  await expect(page.getByRole('link', { name: 'Do this next' })).toBeVisible();
   await a11y(page);
+  await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: /^Your details/ }).click();
 
   // Names are tidied and shown surname first, with the middle initial; the circle shows "AR" (D-103).
   await page.getByLabel('Surname').fill('AKELLO');
@@ -44,11 +48,15 @@ test('manage my account and delete it', async ({ page }) => {
   await page.getByRole('group', { name: 'My SAZO' }).getByRole('link', { name: 'Settings' }).click();
   await expect(page).toHaveURL(/\/saved\?panel=settings/);
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: /^Your details/ }).click();
   await page.getByLabel('Middle name').fill('Nambi');
   await page.getByRole('button', { name: 'Save names' }).click();
   await expect(page.getByRole('status')).toContainText('Names saved');
   await expect(page).toHaveURL(/\/saved\?.*panel=settings/);
   await a11y(page);
+  // On a phone, Back goes from a setting to the Settings menu, then from the menu to the page.
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await expect(page.getByRole('navigation', { name: 'Settings' })).toBeVisible();
   await page.getByRole('link', { name: 'Back', exact: true }).click();
   await expect(page).toHaveURL(/\/saved$/);
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeHidden();
@@ -56,20 +64,26 @@ test('manage my account and delete it', async ({ page }) => {
 
   // Add an email (confirmed by link) and a password: 100%, and she can log in with them.
   const email = `ruth${stamp}@example.com`;
+  await page.goto('/account?section=email');
   await page.getByLabel('Email address').fill(email);
   await page.getByRole('button', { name: 'Send a confirmation link' }).click();
   await expect(page.getByRole('status')).toContainText(`We sent a link to ${email}`);
   await expect(page.getByText('Waiting for you to open the link')).toBeVisible();
   await page.goto(emailLink(email).replace(/^https?:\/\/[^/]+/, ''));
   await page.getByRole('button', { name: 'Confirm my email' }).click();
-  await expect(page.getByText('Confirmed', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Your email is confirmed');
+  await expect(page.getByRole('region', { name: 'Email' }).getByText('Confirmed', { exact: true })).toBeVisible();
+  await page.goto('/account?section=password');
   await page.getByLabel('New password', { exact: true }).fill('papyrus-boat-4');
   await page.getByLabel('New password again').fill('papyrus-boat-4');
   await page.getByRole('button', { name: 'Set password' }).click();
   await expect(page.getByRole('status')).toContainText('Password saved');
+  await page.goto('/account');
   await expect(page.getByRole('progressbar', { name: 'Your profile' })).toHaveAttribute('aria-valuenow', '100');
+  await expect(page.getByText('Complete', { exact: true })).toBeVisible();
 
   // New number: the code goes to the new phone.
+  await page.goto('/account?section=phone');
   await page.getByText('Change phone number').click();
   await page.getByLabel('New phone number').fill(`0${NEW_PHONE.slice(4)}`);
   const before = codesSoFar();
@@ -79,12 +93,14 @@ test('manage my account and delete it', async ({ page }) => {
   await page.getByLabel(/Code we sent to/).fill(lastCode());
   await page.getByRole('button', { name: 'Use this number' }).click();
   await expect(page.getByRole('status')).toContainText('Your account now uses your new number');
-  await expect(page.getByText(`0${NEW_PHONE.slice(4, 7)} ${NEW_PHONE.slice(7, 10)} ${NEW_PHONE.slice(10)}`)).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Phone number' }).getByText(`0${NEW_PHONE.slice(4, 7)} ${NEW_PHONE.slice(7, 10)} ${NEW_PHONE.slice(10)}`)).toBeVisible();
 
+  await page.goto('/account?section=texts');
   await page.getByLabel(/Ask me to confirm garage visits/).uncheck();
   await page.getByRole('region', { name: 'Texts' }).getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('status')).toContainText('You will not get texts');
   await expect(page.getByLabel(/Ask me to confirm garage visits/)).not.toBeChecked();
+  await page.goto('/account?section=devices');
   await expect(page.getByRole('listitem').filter({ hasText: 'This device' })).toContainText('Chrome on Android');
   await a11y(page);
   await shot(page, 'account');
@@ -98,7 +114,7 @@ test('manage my account and delete it', async ({ page }) => {
   const [xlsx] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: 'Download Excel' }).click()]);
   expect(xlsx.suggestedFilename()).toMatch(/^sazo-my-data-\d{4}-\d{2}-\d{2}\.xlsx$/);
   expect((await page.request.get('/account/export')).status()).toBe(404);
-  await page.goto('/account');
+  await page.goto('/account?section=data');
 
   await page.getByText('Delete my account').first().click();
   await page.getByLabel('Type DELETE to confirm').fill('delete');
@@ -172,7 +188,7 @@ test('create an account with email and password, then log in with it (D-100)', a
   await expect(page.getByRole('button', { name: 'Your details, Anguzu J. Mike' })).toContainText('AM');
   await shot(page, 'signed-up');
 
-  await page.goto('/account');
+  await page.goto('/account?section=devices');
   await page.getByRole('button', { name: 'Sign out here' }).click();
   await expect(page.getByRole('link', { name: 'Log in', exact: true })).toBeVisible();
   await page.goto('/sign-in?next=/account');
@@ -209,6 +225,7 @@ test('create an account with email and password, then log in with it (D-100)', a
   await expect(page.getByRole('progressbar', { name: 'Your profile' })).toHaveAttribute('aria-valuenow', '75');
 
   // Forgot password: the emailed link, then a code to the phone just added.
+  await page.goto('/account?section=devices');
   await page.getByRole('button', { name: 'Sign out here' }).click();
   await page.goto('/forgot-password');
   await page.getByLabel('Email').fill(email);
