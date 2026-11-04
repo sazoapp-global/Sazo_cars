@@ -13,6 +13,8 @@ import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { IngestionService } from './modules/ingest/index.js';
+import { TrustService } from './modules/trust/index.js';
+import { AS_OF } from '@sazo/scenarios';
 import { compareWithExpectations } from './seed/compare.js';
 import { seedScenarios, type SeededVehicle } from './seed/scenario-seed.js';
 
@@ -49,8 +51,22 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
 
   it('every scenario vehicle matches its expected outcome (Rule Set v1 §12)', async () => {
     expect(seeded).toHaveLength(27);
-    const mismatches = await compareWithExpectations(app, seeded);
-    expect(mismatches).toEqual([]);
+    // The scenarios are written for a fixed date (AS_OF); judged on today's date they age (S05's 2023 service left
+    // the 36-month window on 4 Nov 2026). In this throwaway database the records are marked as received just
+    // before AS_OF and judged on that date; afterwards everything is rebuilt on today's date for the other tests.
+    const db = new pg.Client({ connectionString: url.toString() });
+    await db.connect();
+    // obs.observations is append-only (a trigger); this connection alone skips triggers, in this test database only.
+    await db.query(`SET session_replication_role = replica`);
+    await db.query(`UPDATE obs.observations SET recorded_at = $1::timestamptz - interval '1 hour'`, [AS_OF]);
+    await db.end();
+    const trust = app.get(TrustService);
+    await trust.rebuild({ asOf: AS_OF });
+    try {
+      expect(await compareWithExpectations(app, seeded)).toEqual([]);
+    } finally {
+      await trust.rebuild();
+    }
   });
 
   it('S08: searching the cloned plate returns both vehicles with a serious banner', async () => {
