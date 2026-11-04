@@ -11,7 +11,7 @@ for (const name of ['TEST_DATABASE_URL', 'E2E_DATABASE_URL']) {
   if (!value) { delete process.env[name]; continue; }
   if (!URL.canParse(value) || !/^postgres(ql)?:$/.test(new URL(value).protocol)) {
     const shown = value.replace(/\/\/([^:@/]+):[^@/]*@/, '//$1:****@');
-    throw new Error(`${name} must be a database address like postgres://sazo:sazo@127.0.0.1:5433/sazo_test (got "${shown}"). See docs/RUNNING_LOCALLY.md, step 7.`);
+    throw new Error(`${name} must be a database address like postgres://sazo:sazo@127.0.0.1:5432/sazo_test (got "${shown}"). See docs/RUNNING_LOCALLY.md, step 7.`);
   }
   process.env[name] = value;
 }

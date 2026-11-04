@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { loadLocalEnv, localDatabaseUrl } from './local-env.js';
 
 const DEV_SECRET = 'dev-only-secret-change-me-dev-only-secret';
 /** A fixed 32-byte key, base64 — development only. */
@@ -8,7 +7,7 @@ const DEV_PII_KEY = Buffer.from('dev-only-pii-key-32-bytes-long!!').toString('ba
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
-  DATABASE_URL: z.string().min(1).default('postgres://sazo:sazo@127.0.0.1:5433/sazo'),
+  DATABASE_URL: z.string().min(1).default('postgres://sazo:sazo@127.0.0.1:5432/sazo'),
   /** True while all records come from simulated sources (D-002, D-011). */
   SIMULATED_DATA: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   /** Signs access tokens (HS256). */
@@ -67,9 +66,6 @@ export type AppConfig = z.infer<typeof Env>;
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
-  if (env === process.env) loadLocalEnv(env);
-  // No DATABASE_URL: the local database, on the port in SAZO_DB_PORT (the same one docker compose uses).
-  if (!env.DATABASE_URL && env.NODE_ENV !== 'production') env = { ...env, DATABASE_URL: localDatabaseUrl(env) };
   const parsed = Env.safeParse(env);
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`);

@@ -13,21 +13,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import pg from 'pg';
-import { existsSync, readFileSync } from 'node:fs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-// Local development: the project's .env (also read by docker compose) can set SAZO_DB_PORT or DATABASE_URL.
-// Values already set in the window win; never read in production.
-const envFile = path.join(here, '..', '.env');
-if (process.env.NODE_ENV !== 'production' && existsSync(envFile)) {
-  for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
-    const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
-    if (!m || process.env[m[1]] !== undefined) continue;
-    const q = /^(['"])(.*)\1$/.exec(m[2]);
-    process.env[m[1]] = q ? q[2] : m[2].replace(/\s+#.*$/, '');
-  }
-}
-const url = process.env.DATABASE_URL || `postgres://sazo:sazo@127.0.0.1:${process.env.SAZO_DB_PORT?.trim() || '5433'}/sazo`;
+const url = process.env.DATABASE_URL ?? 'postgres://sazo:sazo@127.0.0.1:5432/sazo';
 const runTests = process.argv.includes('--test');
 
 // The database may still be starting (e.g. just after `docker compose up`): keep trying for up to a minute.
@@ -45,7 +33,7 @@ async function connect() {
         const where = new URL(url);
         console.error(`\nCould not connect to the database at ${where.hostname}:${where.port || 5432} (${err.code ?? err.message}).`);
         console.error('Check that Docker Desktop is running and the database is up: docker compose ps   (logs: docker compose logs postgres)');
-        console.error('If another PostgreSQL is installed on this computer, or Windows has reserved the port, set another one with SAZO_DB_PORT in .env. See docs/RUNNING_LOCALLY.md.');
+        console.error('If another PostgreSQL is installed on this computer, it may be using port 5432 — see docs/RUNNING_LOCALLY.md.');
         process.exit(1);
       }
       if (attempt === 1) process.stdout.write('Waiting for the database to start ');
