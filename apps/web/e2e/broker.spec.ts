@@ -85,9 +85,10 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await dealer.getByRole('listitem').filter({ hasText: 'Sarah Nambi' }).getByRole('link').click();
   const lead = dealer.getByRole('region', { name: 'Enquiry from Sarah Nambi' });
   await expect(lead).toContainText('Brought by broker Ivan');
+  await lead.getByText('Choose another stage').click();
   await lead.getByLabel('Move to').selectOption('completed');
-  await lead.getByLabel(/Sold for/).fill('51,000,000');
-  await lead.getByRole('button', { name: 'Move' }).click();
+  await lead.getByLabel(/Sold for \(UGX, only/).fill('51,000,000');
+  await lead.getByRole('button', { name: 'Move', exact: true }).click();
   await expect(dealer.getByRole('status')).toContainText('Sale recorded');
   await dealer.getByRole('link', { name: 'Commission' }).first().click();
   const crow = dealer.getByRole('listitem').filter({ hasText: 'Ivan' });

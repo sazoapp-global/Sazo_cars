@@ -7,6 +7,7 @@ import { AppFrame } from '@/components/app-frame/app-frame';
 import { NumberStrip } from '@/components/number-strip';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { api, isSignedIn } from '@/lib/api';
+import { localPhone } from '@/lib/phone';
 import type { Me, MyOrganisation, StockItem } from '@/lib/types';
 import { addLead, decideLead, moveLead, noteLead } from '../../actions';
 import { carName } from '../../labels';
@@ -23,6 +24,27 @@ interface LeadEvent { kind: string; fromStage: string | null; toStage: string | 
 
 const STAGES: [string, string][] = [['enquiry', 'New enquiry'], ['viewing', 'Viewing'], ['negotiation', 'Negotiating'], ['deposit', 'Deposit paid'], ['handover', 'Handover'], ['completed', 'Completed'], ['lost', 'Lost']];
 const stageLabel = (s: string) => STAGES.find(([k]) => k === s)?.[1] ?? s;
+/** The way an enquiry goes, in order (Lost sits apart). */
+const FLOW = ['enquiry', 'viewing', 'negotiation', 'deposit', 'handover', 'completed'] as const;
+const initials = (name: string | null) => (name ?? 'Customer').split(/\s+/).filter(Boolean).map((w) => w[0]!.toUpperCase()).slice(0, 2).join('');
+
+/** The six stages as a line: done ones ticked, this one in lime, the rest waiting. */
+function ProgressLine({ stage }: { stage: string }) {
+  const at = stage === 'lost' ? -1 : FLOW.indexOf(stage as (typeof FLOW)[number]);
+  return (
+    <ol className="mt-5 grid grid-cols-3 gap-y-5 sm:grid-cols-6" aria-label="Stages">
+      {FLOW.map((s, i) => (
+        <li key={s} className="relative text-center" aria-current={i === at ? 'step' : undefined}>
+          <span aria-hidden className={`absolute top-[15px] hidden h-1 sm:block ${i === 0 ? 'left-1/2' : 'left-0'} ${i === FLOW.length - 1 ? 'right-1/2' : 'right-0'} ${at >= 0 && i <= at ? 'bg-primary-container' : 'bg-line'}`} />
+          <span className={`relative mx-auto grid size-8 place-items-center rounded-full font-extrabold ${i < at ? 'bg-primary-container text-white' : i === at ? 'border-[3px] border-primary-container bg-lime text-primary' : 'border-2 border-line bg-card text-muted'}`}>
+            {i < at ? <Icon name="check" size={16} /> : i + 1}
+          </span>
+          <p className={`mt-2.5 leading-snug ${i === at ? 'font-extrabold text-primary' : 'font-semibold text-on-surface/70'}`}>{stageLabel(s)}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
 const SOURCES: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['broker', 'A broker'], ['walk_in', 'Walked in'], ['phone_call', 'Phone call'], ['other', 'Other']];
 const sourceLabel = (s: string) => SOURCES.find(([k]) => k === s)?.[1] ?? s;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -60,63 +82,117 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
         <p><BackButton href={`/dealer/${id}/enquiries${closed ? '?show=closed' : ''}`} /></p>
         {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
         {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
-        <section className="rounded-[14px] border border-line bg-card p-4 md:p-5" aria-label={`Enquiry from ${l.customer.name ?? 'a customer'}`}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h2 className="font-display text-xl font-bold">{l.customer.name ?? 'Customer'}</h2>
-                  {l.customer.phone && <p className="text-sm"><a href={`tel:${l.customer.phone}`} className="link">{l.customer.phone}</a>
-                    {l.consentToContact && <> · <a href={`https://wa.me/${l.customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="link">WhatsApp</a></>}</p>}
-                  <p className="text-sm text-muted">{l.car ?? 'No car chosen'}. {sourceLabel(l.source)}{l.broker ? ` (${l.broker})` : ''}{l.addedBy ? `, added by ${l.addedBy}` : ''}. {formatDate(l.createdAt)}</p>
-                  {l.broker && <p className="mt-1 text-sm">Brought by broker {l.broker}{l.splitBroker ? `, shared with ${l.splitBroker.name} (${l.splitBroker.percent}%)` : ''}{l.protectedUntil && l.open ? `. Their customer until ${formatDate(l.protectedUntil)}` : ''}.</p>}
-                  {l.message && <p className="mt-1 text-sm">&ldquo;{l.message}&rdquo;</p>}
-                  {!l.consentToContact && <p className="mt-1 text-xs font-semibold text-warn-text">Did not agree to be contacted</p>}
-                </div>
-                <span className={`chip ${l.stage === 'completed' ? 'border-ok-line bg-ok-fill text-ok-text' : l.stage === 'lost' ? 'border-line bg-soft text-muted' : 'border-line-strong bg-white text-on-surface'}`}>{stageLabel(l.stage)}{l.salePriceUgx ? `, ${formatUgx(l.salePriceUgx)}` : ''}</span>
+        {/* Option B (approved 4 Nov 2026): the customer at the top, the stages as a progress line, then what they
+            asked and the history side by side, with room between the lines. */}
+        <div className="space-y-5" role="region" aria-label={`Enquiry from ${l.customer.name ?? 'a customer'}`}>
+          <section className="card flex flex-wrap items-center justify-between gap-5 p-5 md:p-6">
+            <div className="flex min-w-0 items-center gap-4">
+              <span aria-hidden className="grid size-14 shrink-0 place-items-center rounded-full bg-primary-container font-display text-xl font-extrabold text-white">{initials(l.customer.name)}</span>
+              <div className="min-w-0">
+                <h1 className="font-display text-2xl font-extrabold leading-snug md:text-[26px]">{l.customer.name ?? 'Customer'}</h1>
+                <p className="leading-relaxed text-muted">{[l.customer.phone ? localPhone(l.customer.phone) : null, l.car ?? 'No car chosen', `${sourceLabel(l.source)}${l.broker ? ` (${l.broker})` : ''}${l.addedBy ? `, added by ${l.addedBy}` : ''}`, formatDate(l.createdAt)].filter(Boolean).join(' · ')}</p>
+                {l.broker && <p className="mt-1 leading-relaxed">Brought by broker {l.broker}{l.splitBroker ? `, shared with ${l.splitBroker.name} (${l.splitBroker.percent}%)` : ''}{l.protectedUntil && l.open ? `. Their customer until ${formatDate(l.protectedUntil)}` : ''}.</p>}
+                {!l.consentToContact && <p className="mt-1 text-sm font-semibold text-warn-text">Did not agree to be contacted</p>}
               </div>
-              {l.needsDecision && (
-                <div className="mt-3 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm">
-                  <p className="font-semibold text-warn-text">Two claims on this customer. {l.earlier ? `${l.earlier.by} registered them first, on ${formatDate(l.earlier.at)}.` : ''} Commission is held until a manager decides.</p>
-                  {manager && (
-                    <form action={decideLead} data-draft={`lead-decide-${l.leadId}`} className="mt-2 grid gap-2 sm:grid-cols-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
-                      <div><label htmlFor={`o-${l.leadId}`} className="label">Who brought the customer?</label>
-                        <select id={`o-${l.leadId}`} name="outcome" className="field" defaultValue="keep">
-                          <option value="keep">{l.broker ?? 'This enquiry'}</option>
-                          {l.earlier && <option value="earlier">{l.earlier.broker ? l.earlier.by : 'Our own customer from before'}</option>}
-                          {l.earlier?.broker && l.broker && <option value="split">Both brokers share</option>}
-                          <option value="dealer">Our own customer (no broker)</option>
-                        </select></div>
-                      <div><label htmlFor={`sp-${l.leadId}`} className="label">If shared, {l.broker ?? 'this broker'}&apos;s percent</label><input id={`sp-${l.leadId}`} name="split" inputMode="numeric" defaultValue="50" className="field tabular-nums" /></div>
-                      <div className="sm:col-span-2"><label htmlFor={`dr-${l.leadId}`} className="label">Reason (kept on record)</label><input id={`dr-${l.leadId}`} name="reason" required minLength={3} className="field" /></div>
-                      <div><button className="btn btn-primary">Decide</button></div>
-                    </form>
-                  )}
-                </div>
-              )}
-              {(l.open || l.stage === 'lost') && (
-                <form action={moveLead} data-draft={`lead-move-${l.leadId}`} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">{hidden}<input type="hidden" name="lead" value={l.leadId} />
-                  <div><label htmlFor={`s-${l.leadId}`} className="label">Move to</label>
-                    <select id={`s-${l.leadId}`} name="stage" className="field" defaultValue="">
-                      <option value="" disabled>Choose</option>
-                      {STAGES.filter(([k]) => k !== l.stage && (l.stage !== 'lost' || k === 'enquiry')).map(([k, lab]) => <option key={k} value={k}>{lab}</option>)}
+            </div>
+            {l.customer.phone && (
+              <div className="flex flex-wrap gap-2.5">
+                <a href={`tel:${l.customer.phone}`} className="btn btn-primary"><Icon name="call" />Call</a>
+                {l.consentToContact && <a href={`https://wa.me/${l.customer.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost"><Icon name="chat" />WhatsApp</a>}
+              </div>
+            )}
+          </section>
+
+          {l.needsDecision && (
+            <section className="rounded-[14px] border border-warn-line bg-warn-fill p-5">
+              <p className="font-semibold leading-relaxed text-warn-text">Two claims on this customer. {l.earlier ? `${l.earlier.by} registered them first, on ${formatDate(l.earlier.at)}.` : ''} Commission is held until a manager decides.</p>
+              {manager && (
+                <form action={decideLead} data-draft={`lead-decide-${l.leadId}`} className="mt-3 grid gap-3 sm:grid-cols-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                  <div><label htmlFor={`o-${l.leadId}`} className="label">Who brought the customer?</label>
+                    <select id={`o-${l.leadId}`} name="outcome" className="field" defaultValue="keep">
+                      <option value="keep">{l.broker ?? 'This enquiry'}</option>
+                      {l.earlier && <option value="earlier">{l.earlier.broker ? l.earlier.by : 'Our own customer from before'}</option>}
+                      {l.earlier?.broker && l.broker && <option value="split">Both brokers share</option>}
+                      <option value="dealer">Our own customer (no broker)</option>
                     </select></div>
-                  <div><label htmlFor={`p-${l.leadId}`} className="label">Sold for (UGX, only for Completed)</label><input id={`p-${l.leadId}`} name="price" inputMode="numeric" className="field tabular-nums" /></div>
-                  <button className="btn btn-ghost">Move</button>
+                  <div><label htmlFor={`sp-${l.leadId}`} className="label">If shared, {l.broker ?? 'this broker'}&apos;s percent</label><input id={`sp-${l.leadId}`} name="split" inputMode="numeric" defaultValue="50" className="field tabular-nums" /></div>
+                  <div className="sm:col-span-2"><label htmlFor={`dr-${l.leadId}`} className="label">Reason (kept on record)</label><input id={`dr-${l.leadId}`} name="reason" required minLength={3} className="field" /></div>
+                  <div><button className="btn btn-primary">Decide</button></div>
                 </form>
               )}
-              {(
-                  <div className="mt-4 space-y-2 border-t border-line pt-3"><h3 className="text-sm font-bold">History and notes</h3>
-                    <ol className="space-y-1 text-sm">
-                      {paginate(events, sp.hp).items.map((e, i) => <li key={i} className="text-muted">{formatDate(e.at)}: {e.kind === 'created' ? 'Enquiry received' : e.kind === 'stage' ? `Moved to ${stageLabel(e.toStage ?? '')}` : 'Note'}{e.note ? `. ${e.note}` : ''}{e.by ? ` (${e.by})` : ''}</li>)}
-                    </ol>
-                    <Pager paged={paginate(events, sp.hp)} href={pageHref(`/dealer/${id}/enquiries`, { show: sp.show, open: sp.open }, 'hp')} noun="entries" label="Pages of the history" scroll={false} />
-                    <form action={noteLead} data-draft={`lead-note-${l.leadId}`} className="flex gap-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
-                      <label htmlFor={`n-${l.leadId}`} className="sr-only">Note</label>
-                      <input id={`n-${l.leadId}`} name="note" required minLength={2} maxLength={500} className="field !min-h-10 text-sm" placeholder="Called, coming Saturday" />
-                      <button className="btn btn-ghost !min-h-10">Save note</button>
+            </section>
+          )}
+
+          <section aria-labelledby="progress-h" className="card p-5 md:p-6">
+            <h2 id="progress-h" className="font-display text-lg font-bold">Progress</h2>
+            <ProgressLine stage={l.stage} />
+            {l.stage === 'completed' && <p className="mt-5 border-t border-line pt-4 font-semibold leading-relaxed text-ok-text">Sold{l.salePriceUgx ? ` for ${formatUgx(l.salePriceUgx, false)}` : ''}. The car is marked as sold.</p>}
+            {l.stage === 'lost' && (
+              <form action={moveLead} className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">{hidden}<input type="hidden" name="lead" value={l.leadId} /><input type="hidden" name="stage" value="enquiry" />
+                <p className="font-semibold text-muted">This enquiry was lost.</p><button className="btn btn-ghost">Open it again</button>
+              </form>
+            )}
+            {l.open && (() => {
+              const i = FLOW.indexOf(l.stage as (typeof FLOW)[number]);
+              const next = FLOW[i + 1];
+              return (
+                <div className="mt-5 space-y-4 border-t border-line pt-4">
+                  <div className="flex flex-wrap items-end gap-2.5">
+                    {next && (
+                      <form action={moveLead} className="flex flex-wrap items-end gap-2.5">{hidden}<input type="hidden" name="lead" value={l.leadId} /><input type="hidden" name="stage" value={next} />
+                        {next === 'completed' && <div><label htmlFor={`np-${l.leadId}`} className="label">Sold for (UGX)</label><input id={`np-${l.leadId}`} name="price" inputMode="numeric" required className="field tabular-nums" /></div>}
+                        <button className="btn btn-primary">Move to {stageLabel(next)}</button>
+                      </form>
+                    )}
+                    <form action={moveLead}>{hidden}<input type="hidden" name="lead" value={l.leadId} /><input type="hidden" name="stage" value="lost" />
+                      <button className="btn btn-ghost text-bad-text">Mark as lost</button>
                     </form>
                   </div>
-              )}
-        </section>
+                  <details className="group">
+                    <summary className="btn btn-ghost w-fit cursor-pointer list-none">Choose another stage</summary>
+                    <form action={moveLead} data-draft={`lead-move-${l.leadId}`} className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                      <div><label htmlFor={`s-${l.leadId}`} className="label">Move to</label>
+                        <select id={`s-${l.leadId}`} name="stage" className="field" defaultValue="">
+                          <option value="" disabled>Choose</option>
+                          {STAGES.filter(([k]) => k !== l.stage && k !== 'lost').map(([k, lab]) => <option key={k} value={k}>{lab}</option>)}
+                        </select></div>
+                      <div><label htmlFor={`p-${l.leadId}`} className="label">Sold for (UGX, only for Completed)</label><input id={`p-${l.leadId}`} name="price" inputMode="numeric" className="field tabular-nums" /></div>
+                      <button className="btn btn-ghost">Move</button>
+                    </form>
+                  </details>
+                </div>
+              );
+            })()}
+          </section>
+
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            <section aria-labelledby="asked-h" className="card p-5 md:p-6">
+              <h2 id="asked-h" className="font-display text-lg font-bold">What they asked</h2>
+              {l.message
+                ? <blockquote className="mt-4 rounded-r-xl border-l-4 border-lime bg-soft px-5 py-4 text-[17px] leading-relaxed">&ldquo;{l.message}&rdquo;</blockquote>
+                : <p className="mt-3 text-muted">No message.</p>}
+            </section>
+            <section aria-labelledby="hist-h" className="card p-5 md:p-6">
+              <h2 id="hist-h" className="font-display text-lg font-bold">History and notes</h2>
+              <form action={noteLead} data-draft={`lead-note-${l.leadId}`} className="mt-4 flex gap-2.5">{hidden}<input type="hidden" name="lead" value={l.leadId} />
+                <label htmlFor={`n-${l.leadId}`} className="sr-only">Note</label>
+                <input id={`n-${l.leadId}`} name="note" required minLength={2} maxLength={500} className="field" placeholder="Add a note, for example: Called, coming Saturday" />
+                <button className="btn btn-primary shrink-0">Save note</button>
+              </form>
+              {/* Newest first; a filled dot is something that happened, an open one a note. */}
+              <ol className="ml-2 mt-6 space-y-5 border-l-2 border-line pl-6">
+                {paginate([...events].reverse(), sp.hp).items.map((e, i) => (
+                  <li key={i} className="relative leading-relaxed">
+                    <span aria-hidden className={`absolute -left-[33px] top-1 size-4 rounded-full border-[3px] border-primary-container ${e.kind === 'note' ? 'bg-card' : 'bg-primary-container'}`} />
+                    <p className="text-sm text-muted">{formatDate(e.at)}{e.by ? ` · ${e.by}` : ''}</p>
+                    <p>{e.kind === 'note' ? e.note : <><strong>{e.kind === 'created' ? 'Enquiry received' : e.kind === 'stage' ? `Moved to ${stageLabel(e.toStage ?? '')}` : 'Note'}</strong>{e.note ? `. ${e.note}` : ''}</>}</p>
+                  </li>
+                ))}
+              </ol>
+              <Pager paged={paginate(events, sp.hp)} href={pageHref(`/dealer/${id}/enquiries`, { show: sp.show, open: sp.open }, 'hp')} noun="entries" label="Pages of the history" scroll={false} />
+            </section>
+          </div>
+        </div>
       </AppFrame>
     );
   }

@@ -174,9 +174,10 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   // An enquiry opens with all its details beside the side bar.
   await enq.getByRole('link').click();
   const lead = dealer.getByRole('region', { name: 'Enquiry from Peter Okello' });
-  await expect(lead).toContainText('+256701234567');
-  await lead.getByLabel('Move to').selectOption('viewing');
-  await lead.getByRole('button', { name: 'Move' }).click();
+  await expect(lead).toContainText('0701 234 567');
+  // Option B (4 Nov 2026): the next stage is one button under the progress line.
+  await expect(lead.getByRole('list', { name: 'Stages' }).getByRole('listitem').first()).toHaveAttribute('aria-current', 'step');
+  await lead.getByRole('button', { name: 'Move to Viewing' }).click();
   await expect(dealer.getByRole('status')).toContainText('Enquiry moved');
   await expect(dealer.getByRole('region', { name: 'Enquiry from Peter Okello' })).toContainText('Viewing');
   await a11y(dealer);
