@@ -287,7 +287,11 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(sold).toContainText('UGX 23M');
   await dealer.goto(listUrl);
 
-  // A salesperson.
+  // A salesperson, from Team in the side bar (4 Nov 2026: Cars for sale holds only the cars).
+  await expect(dealer.getByRole('region', { name: 'Your team' })).toHaveCount(0);
+  await expect(dealer.getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
+  await dealer.getByRole('navigation', { name: 'Dealer' }).getByRole('link', { name: /^Team/ }).click();
+  await expect(dealer.getByRole('heading', { name: `${NAME}: team` })).toBeVisible();
   await dealer.getByLabel('Name', { exact: true }).fill('Sam Sales');
   await dealer.getByLabel('Phone', { exact: true }).fill(`0772${stamp.slice(-6)}`);
   await dealer.getByRole('button', { name: 'Add', exact: true }).click();

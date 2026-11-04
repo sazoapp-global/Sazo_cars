@@ -272,21 +272,23 @@ export async function saveSettings(form: FormData) {
   const { org } = ids(form);
   const levels = text(form, 'levels').split(/[^\d]+/).filter(Boolean).map(Number);
   const wa = text(form, 'whatsapp') ? toE164(text(form, 'whatsapp')) : null;
-  if (text(form, 'whatsapp') && !wa) toList(org, { error: 'Enter the WhatsApp number like 0772 123 456.' });
+  const toSettings = (q: Record<string, string>): never => redirect(`/dealer/${org}/settings?${new URLSearchParams(q)}`);
+  if (text(form, 'whatsapp') && !wa) toSettings({ error: 'Enter the WhatsApp number like 0772 123 456.' });
   try {
     await api('/dealer/settings', { method: 'PUT', ...asDealer(org), body: { stockAgeAlertDays: levels, leadProtectionDays: digits(text(form, 'protection')), whatsappE164: wa } });
-  } catch (err) { toList(org, { error: reason(err, 'Could not save the settings. Use up to 5 numbers of days.') }); }
-  toList(org, { done: 'Settings saved.' });
+  } catch (err) { toSettings({ error: reason(err, 'Could not save the settings. Use up to 5 numbers of days.') }); }
+  toSettings({ done: 'Settings saved.' });
 }
 
 export async function addStaff(form: FormData) {
   const { org } = ids(form);
   const phone = toE164(text(form, 'phone'));
-  if (!phone || text(form, 'name').length < 2) toList(org, { error: 'Enter the person’s name and phone number.' });
+  const toTeam = (q: Record<string, string>): never => redirect(`/dealer/${org}/team?${new URLSearchParams(q)}`);
+  if (!phone || text(form, 'name').length < 2) toTeam({ error: 'Enter the person’s name and phone number.' });
   try {
     await api('/garage/staff', { method: 'POST', ...asDealer(org), body: { phone, displayName: text(form, 'name'), role: text(form, 'role') === 'org_manager' ? 'org_manager' : 'org_staff' } });
-  } catch (err) { toList(org, { error: reason(err, 'Could not add this person.') }); }
-  toList(org, { done: `${text(form, 'name')} can now sign in with their phone and manage your stock.` });
+  } catch (err) { toTeam({ error: reason(err, 'Could not add this person.') }); }
+  toTeam({ done: `${text(form, 'name')} can now sign in with their phone and manage your stock.` });
 }
 
 // Selling (D-125 step 2) --------------------------------------------------------------------------------

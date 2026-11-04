@@ -5,9 +5,9 @@ import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { Plate } from '@/components/plate';
 import { ApiError, api, isSignedIn } from '@/lib/api';
-import type { DealerSettings, Me, MyOrganisation, StaffMember, StockItem } from '@/lib/types';
+import type { Me, MyOrganisation, StaffMember, StockItem } from '@/lib/types';
 import { AppFrame } from '@/components/app-frame/app-frame';
-import { addStaff, addStock, saveSettings } from '../actions';
+import { addStock } from '../actions';
 import { FUELS, STAGES, carName, stageLabel } from '../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../car-kind-fields';
@@ -16,7 +16,7 @@ import { Pager, pageHref, paginate } from '@/components/pager';
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
-type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string; new?: string; kind?: string; page?: string; tp?: string }>;
+type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string; new?: string; kind?: string; page?: string }>;
 
 export default async function DealerStock({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -40,12 +40,11 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   const onlyFindings = sp.findings === '1';
   const q = (sp.q ?? '').replace(/\s/g, '').toUpperCase();
   const manager = org.role === 'org_manager';
-  const [inStock, soldList, staff, me, settings] = await Promise.all([
+  const [inStock, soldList, staff, me] = await Promise.all([
     api<{ items: StockItem[] }>('/dealer/stock?status=in_stock', as).then((r) => r.items),
     api<{ items: StockItem[] }>('/dealer/stock?status=sold', as).then((r) => r.items),
     org.role === 'org_manager' && approved ? api<StaffMember[]>('/garage/staff', as).catch((err) => { if (err instanceof ApiError) return []; throw err; }) : Promise.resolve(undefined),
     api<Me>('/me', { auth: true }).catch(() => undefined),
-    api<DealerSettings>('/dealer/settings', as).catch(() => undefined),
   ]);
   const findings = (c: StockItem) => ({ serious: c.questions.filter((x) => x.status === 'serious').length, attention: c.questions.filter((x) => x.status === 'attention').length });
   const base = show === 'sold' ? soldList : inStock;
@@ -203,44 +202,6 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       )}
       </>)}
 
-      {manager && settings && (
-        <section id="settings-section" className="scroll-mt-24 rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="settings">
-          <h2 id="settings" className="font-display text-lg font-bold">Settings</h2>
-          {/* Three settings side by side, each with its label, box and note in line; Save underneath (28 Oct 2026). */}
-          <form action={saveSettings} data-draft={`dealer-settings-${id}`} className="mt-3 space-y-4">
-            <input type="hidden" name="org" value={id} />
-            <div className="grid items-start gap-4 md:grid-cols-3">
-              <div><label htmlFor="levels" className="label md:min-h-10">Warn me when a car has been in stock for (days)</label>
-                <input id="levels" name="levels" defaultValue={settings.stockAgeAlertDays.join(', ')} className="field tabular-nums" />
-                <p className="mt-1 text-xs text-muted">Up to 5 numbers, for example 90, 180, 240. These are your own business levels, not customs rules.</p></div>
-              <div><label htmlFor="protection" className="label md:min-h-10">A broker keeps a customer they bring for (days)</label>
-                <input id="protection" name="protection" inputMode="numeric" defaultValue={settings.leadProtectionDays} className="field tabular-nums" />
-                <p className="mt-1 text-xs text-muted">One number, for example 30.</p></div>
-              <div><label htmlFor="whatsapp" className="label md:min-h-10">WhatsApp number for buyers</label>
-                <input id="whatsapp" name="whatsapp" type="tel" defaultValue={settings.whatsappE164 ?? ''} className="field" placeholder="0772 123 456" />
-                <p className="mt-1 text-xs text-muted">Shown as an &ldquo;Ask on WhatsApp&rdquo; button on the car pages you share.</p></div>
-            </div>
-            <div className="flex justify-end border-t border-line pt-4"><button className="btn btn-primary">Save settings</button></div>
-          </form>
-        </section>
-      )}
-
-      {staff && (
-        <section id="staff-section" className="scroll-mt-24 rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="staff">
-          <h2 id="staff" className="font-display text-lg font-bold">Your team</h2>
-          <ul className="mt-2 divide-y divide-line">
-            {paginate(staff, sp.tp).items.map((m) => <li key={m.userId} className="flex justify-between gap-3 py-2"><span>{m.displayName}</span><span className="text-sm text-muted">{m.role === 'org_manager' ? 'Manager' : 'Sales'}</span></li>)}
-          </ul>
-          <Pager paged={paginate(staff, sp.tp)} href={(n) => `${pageHref(`/dealer/${id}`, { ...sp, done: undefined, error: undefined }, 'tp')(n)}#staff-section`} noun="people" label="Pages of your team" scroll={false} />
-          <form action={addStaff} data-draft={`dealer-staff-${id}`} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
-            <input type="hidden" name="org" value={id} />
-            <div><label htmlFor="sname" className="label">Name</label><input id="sname" name="name" required className="field" /></div>
-            <div><label htmlFor="sphone" className="label">Phone</label><input id="sphone" name="phone" type="tel" required className="field" placeholder="0772 123 456" /></div>
-            <div><label htmlFor="srole" className="label">Role</label><select id="srole" name="role" className="field"><option value="org_staff">Sales</option><option value="org_manager">Manager</option></select></div>
-            <button className="btn btn-ghost"><Icon name="add" />Add</button>
-          </form>
-        </section>
-      )}
     </AppFrame>
   );
 }

@@ -229,7 +229,7 @@ function Detail({ a, org, base, back, plan }: { a: DealerAlert; org: string; bas
             <Link href={`${car}#share`} className="btn btn-ghost"><Icon name="share" size={18} />Share the car again</Link>
             <Link href={car!} className="btn btn-ghost">Mark as sold</Link>
           </div>
-          <p className="mt-3 text-sm">The levels are yours: <Link href={`/dealer/${org}#settings-section`} className="link">change them in Settings</Link>.</p>
+          <p className="mt-3 text-sm">The levels are yours: <Link href={`/dealer/${org}/settings`} className="link">change them in Settings</Link>.</p>
           {goesAway(a.tone === 'red' ? 'This alert goes away when the car is sold or removed.' : 'This alert turns red after your last level, and goes away when the car is sold or removed.')}
         </>
       )}
