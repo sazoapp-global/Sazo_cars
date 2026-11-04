@@ -21,6 +21,8 @@ export interface RailProps {
   business?: { name: string; approved: boolean };
   person?: { name: string; role: string };
   badges?: Record<string, number>;
+  /** A coloured count instead of a plain number: red or yellow (the dealer's Alerts, D-111). */
+  tones?: Record<string, 'red' | 'yellow'>;
 }
 
 const icon = (name: string) => name as IconName;
@@ -43,7 +45,7 @@ function useActive(entries: NavEntry[]) {
   return activeKey([...entries, SETTINGS_LINK], pathname, new URLSearchParams(search?.toString() ?? ''));
 }
 
-export function Rail({ label, entries, business, person, badges = {} }: RailProps) {
+export function Rail({ label, entries, business, person, badges = {}, tones = {} }: RailProps) {
   const active = useActive(entries);
   const href = useHref();
   const groupOf = (k?: string) => entries.find((e) => isGroup(e) && e.links.some((l) => l.key === k))?.key;
@@ -53,6 +55,7 @@ export function Rail({ label, entries, business, person, badges = {} }: RailProp
   const badge = (k: string) => {
     const n = badges[k];
     if (!n) return null;
+    if (tones[k]) return <ToneCount n={n} tone={tones[k]} />;
     return k === 'notifications'
       ? <span className="rounded-full bg-bad-text px-2 text-xs font-extrabold leading-5 text-white" aria-label={`${n} new`}>{n > 99 ? '99+' : n}</span>
       : <span className="text-sm text-white/70">{n.toLocaleString('en-UG')}</span>;
@@ -121,7 +124,13 @@ export function Rail({ label, entries, business, person, badges = {} }: RailProp
 }
 
 /** Phones and small tablets: the same links as one scrolling strip, the current one in view. */
-export function PhoneStrip({ label, entries, business, badges = {} }: Pick<RailProps, 'label' | 'entries' | 'business' | 'badges'>) {
+/** An alerts count in its colour: red = act now, yellow = only "check soon" left. */
+function ToneCount({ n, tone }: { n: number; tone: 'red' | 'yellow' }) {
+  return <span className={`rounded-full px-2 text-xs font-extrabold leading-5 ${tone === 'red' ? 'bg-bad-text text-white' : 'bg-warn-line text-warn-text'}`}
+    aria-label={`${n} ${tone === 'red' ? 'need acting on now' : 'to check soon'}`}>{n > 99 ? '99+' : n}</span>;
+}
+
+export function PhoneStrip({ label, entries, business, badges = {}, tones = {} }: Pick<RailProps, 'label' | 'entries' | 'business' | 'badges' | 'tones'>) {
   const active = useActive(entries);
   const href = useHref();
   const current = useRef<HTMLAnchorElement>(null);
@@ -135,6 +144,7 @@ export function PhoneStrip({ label, entries, business, badges = {} }: Pick<RailP
           <Link key={l.key} href={href(l)} ref={active === l.key ? current : undefined} aria-current={active === l.key ? 'page' : undefined}
             className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm ${active === l.key ? 'bg-primary-container font-bold shadow-[inset_0_-3px_0_#bff100]' : 'text-white/85'}`}>
             <Icon name={icon(l.icon)} size={18} />{l.label}
+            {tones[l.key] && !!badges[l.key] && <ToneCount n={badges[l.key]!} tone={tones[l.key]!} />}
             {l.key === 'notifications' && !!badges.notifications && <span className="rounded-full bg-bad-text px-1.5 text-xs font-bold text-white">{badges.notifications}</span>}
           </Link>
         ))}

@@ -132,6 +132,8 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
     entries: [
       { key: 'dashboard', label: 'Dashboard', short: 'Dashboard', icon: 'analytics', href: '/dealer/{org}/dashboard', rule: APPROVED },
       { key: 'stock', label: 'Cars for sale', short: 'For sale', icon: 'storefront', href: '/dealer/{org}', alsoActive: ['/dealer/{org}/car/'] },
+      // Alerts (4 Nov 2026): what needs the dealer, coloured red / yellow / green (D-111), off the Cars for sale page.
+      { key: 'alerts', label: 'Alerts', short: 'Alerts', icon: 'warning', href: '/dealer/{org}/alerts' },
       NOTIFICATIONS,
       { key: 'import', label: 'Add many cars', short: 'Add many', icon: 'upload_file', href: '/dealer/{org}/import', rule: MANAGER_APPROVED },
       { key: 'enquiries', label: 'Enquiries', short: 'Enquiries', icon: 'forum', href: '/dealer/{org}/enquiries', rule: APPROVED },

@@ -329,6 +329,18 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('heading', { name: /Toyota Premio/ })).toBeVisible();
   await expect(dealer.getByRole('region', { name: 'Costs', exact: true })).toContainText('22,940,000');
 
+  // Alerts (4 Nov 2026): their own item in the side bar, opened beside it; red = act now, yellow = check soon,
+  // green when there is nothing. Not on the Cars for sale page any more.
+  await dealer.goto(listUrl);
+  await expect(dealer.getByText(/serious finding in (its|their) records/)).toHaveCount(0);
+  await dealer.getByRole('navigation', { name: 'Dealer' }).getByRole('link', { name: /^Alerts/ }).click();
+  await expect(dealer.getByRole('heading', { name: `${NAME}: alerts` })).toBeVisible();
+  await expect(dealer.getByText('Act now').or(dealer.getByText('All clear')).first()).toBeVisible();
+  const anAlert = dealer.getByRole('link', { name: /^Open (the car|Payments|Enquiries)/ }).first();
+  if (await anAlert.count()) { await anAlert.click(); await expect(dealer).toHaveURL(/\/dealer\/[0-9a-f-]{36}\/(car\/|payments|enquiries)/); }
+  await dealer.goBack();
+  await a11y(dealer);
+
   // Signing in again with nowhere particular to go lands the approved dealer on their dashboard (D-146).
   const again = await (await browser.newContext()).newPage();
   await signIn(again, OWNER);

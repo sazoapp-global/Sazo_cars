@@ -7,6 +7,7 @@ import { navFor, WORKSPACES, type Viewer, type WorkspaceKey } from '@sazo/contra
 import { Suspense } from 'react';
 import { AccountPopup } from '@/app/account/account-popup';
 import { Bell } from '@/components/notifications/bell';
+import { alertsBadge } from '@/app/dealer/alerts';
 import { api } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { OnlineStatus } from './online-status';
@@ -19,16 +20,19 @@ export async function AppFrame({ workspace, viewer, org, business, person, badge
 }) {
   const ws = WORKSPACES[workspace];
   const entries = navFor(workspace, viewer, org);
-  const [unread, me] = await Promise.all([
+  const [unread, me, alerts] = await Promise.all([
     api<{ unread: number }>('/me/announcements', { auth: true }).then((r) => r.unread).catch(() => 0),
     api<Me>('/me', { auth: true }).catch(() => undefined),
+    // The dealer's Alerts count, red when anything needs acting on now, otherwise yellow (4 Nov 2026).
+    workspace === 'dealer' && org ? alertsBadge(org, viewer.approved !== false).catch(() => undefined) : Promise.resolve(undefined),
   ]);
-  const all = { ...badges, notifications: unread };
+  const all = { ...badges, notifications: unread, ...(alerts?.count ? { alerts: alerts.count } : {}) };
+  const tones = alerts?.tone ? { alerts: alerts.tone } : undefined;
   return (
     <>
       <Suspense>
-        <Rail label={ws.label} entries={entries} business={business} person={person} badges={all} />
-        <PhoneStrip label={ws.label} entries={entries} business={business} badges={all} />
+        <Rail label={ws.label} entries={entries} business={business} person={person} badges={all} tones={tones} />
+        <PhoneStrip label={ws.label} entries={entries} business={business} badges={all} tones={tones} />
       </Suspense>
       <div data-workspace-frame className="min-w-0 lg:pl-64">
         <div className="sticky top-0 z-30 hidden h-12 items-center gap-4 border-b border-line bg-card px-6 print:!hidden lg:flex">

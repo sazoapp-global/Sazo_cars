@@ -47,8 +47,6 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
     api<DealerSettings>('/dealer/settings', as).catch(() => undefined),
   ]);
   const findings = (c: StockItem) => ({ serious: c.questions.filter((x) => x.status === 'serious').length, attention: c.questions.filter((x) => x.status === 'attention').length });
-  const flagged = inStock.filter((c) => findings(c).serious > 0);
-  const bondUrgent = inStock.filter((c) => c.clocks.bond.level === 'soon' || c.clocks.bond.level === 'overdue');
   const base = show === 'sold' ? soldList : inStock;
   // D-148: the kind of car the dealer recorded, or the one SAZO's report shows.
   const kindOf = (c: StockItem) => c.details.kind ?? c.vehicle?.kind;
@@ -92,23 +90,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
       {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
-      {flagged.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-[14px] border-2 border-bad-line bg-bad-fill p-4 shadow-sm">
-          <Icon name="report" size={22} className="shrink-0 text-bad-text" />
-          <div className="min-w-0 flex-1">
-            <p className="font-bold text-bad-text">{flagged.length} {flagged.length === 1 ? 'car in stock has' : 'cars in stock have'} a serious finding in {flagged.length === 1 ? 'its' : 'their'} records</p>
-            <p className="text-sm text-on-surface">{flagged.map((c) => c.vehicle?.currentPlate ?? carName(c)).join(', ')}. Check before you sell. Buyers see the same findings.</p>
-          </div>
-          <Link href={href({ show: undefined, findings: '1' })} className="link text-sm text-bad-text">Show them</Link>
-        </div>
-      )}
-
-      {bondUrgent.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-[14px] border-2 border-warn-line bg-warn-fill p-4 shadow-sm">
-          <Icon name="inventory_2" size={22} className="shrink-0 text-warn-text" />
-          <p className="min-w-0 flex-1 font-bold text-warn-text">{bondUrgent.length} {bondUrgent.length === 1 ? 'car is' : 'cars are'} close to or past the bond deadline you entered: {bondUrgent.map(carName).join(', ')}</p>
-        </div>
-      )}
+      {/* Serious findings and bond deadlines are listed under Alerts in the side bar (4 Nov 2026). */}
 
       {sp.add === '1' ? (
         <section aria-labelledby="add-h" className="space-y-3">
