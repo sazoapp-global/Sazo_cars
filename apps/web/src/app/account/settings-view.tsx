@@ -1,5 +1,6 @@
 // Account settings (D-102): used by the Settings panel inside any page and by /account. Every form carries
 // `back`, the address to return to, so a change keeps you on the page you opened Settings from.
+import { unstable_rethrow } from 'next/navigation';
 import { formatDate } from '@sazo/contracts';
 import Link from 'next/link';
 import { BackButton } from '@/components/back-button';
@@ -60,7 +61,7 @@ function ProfileLine({ items, href }: { items: Profile['progress']['items']; hre
  * pieces, so the appearance choice is left as an empty slot that the panel fills in on the device.
  */
 export async function AccountSettings({ sp, back, inPanel = false }: { sp: SettingsQuery; back: string; inPanel?: boolean }) {
-  const me = await api<Me>('/me', { auth: true }).catch(() => undefined);
+  const me = await api<Me>('/me', { auth: true }).catch((e) => { unstable_rethrow(e); return undefined; }); // a device whose sign-in ended goes to log in
   if (!me) return <p className="card p-4">Sign in again to see your settings. <a href="/sign-in" className="link">Log in</a></p>;
   if (me.needsDetails.length) return <p className="card p-4">Add your details first. <a href={`/account/complete?next=${encodeURIComponent(back)}`} className="link">Add your details</a></p>;
   const [profile, prefs, devices, authenticator] = await Promise.all([
