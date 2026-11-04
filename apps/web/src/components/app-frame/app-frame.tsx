@@ -9,6 +9,7 @@ import { AccountPopup } from '@/app/account/account-popup';
 import { Bell } from '@/components/notifications/bell';
 import { alertsBadge } from '@/app/dealer/alerts';
 import { api } from '@/lib/api';
+import { unstable_rethrow } from 'next/navigation';
 import type { Me } from '@/lib/types';
 import { OnlineStatus } from './online-status';
 import { PanelHost, PhoneStrip, Rail } from './rail';
@@ -22,7 +23,7 @@ export async function AppFrame({ workspace, viewer, org, business, person, badge
   const entries = navFor(workspace, viewer, org);
   const [unread, me, alerts] = await Promise.all([
     api<{ unread: number }>('/me/announcements', { auth: true }).then((r) => r.unread).catch(() => 0),
-    api<Me>('/me', { auth: true }).catch(() => undefined),
+    api<Me>('/me', { auth: true }).catch((e) => { unstable_rethrow(e); return undefined; }),
     // The dealer's Alerts count, red when anything needs acting on now, otherwise yellow (4 Nov 2026).
     workspace === 'dealer' && org ? alertsBadge(org, viewer.approved !== false).catch(() => undefined) : Promise.resolve(undefined),
   ]);

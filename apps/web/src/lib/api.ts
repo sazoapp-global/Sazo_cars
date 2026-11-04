@@ -1,5 +1,6 @@
 // Server-side calls to the SAZO API. Runs only on the Next.js server (tokens never reach browser JavaScript).
-import { cookies } from 'next/headers';
+import { cookies, headers as requestHeaders } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 export const API_URL = process.env.SAZO_API_URL ?? 'http://localhost:3000';
 export const ACCESS_COOKIE = 'sazo_at';
@@ -24,8 +25,8 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
   const headers: Record<string, string> = { Accept: 'application/json', ...(opts.headers ?? {}) };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
   if (opts.raw) headers['Content-Type'] = opts.raw.contentType;
+  const token = opts.auth ? await accessToken() : undefined;
   if (opts.auth) {
-    const token = await accessToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
   const res = await fetch(`${API_URL}/v1${path}`, {
@@ -37,6 +38,11 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   const data = text ? JSON.parse(text) : undefined;
+  // This device's sign-in has ended (signed out from another device, or idle): log in again, then come back here.
+  if (res.status === 401 && token && (data?.code === 'invalid_token' || data?.code === 'session_idle')) {
+    const here = (await requestHeaders()).get('x-sazo-path') ?? '/';
+    redirect(`/auth/ended?next=${encodeURIComponent(here)}${data.code === 'session_idle' ? '&why=idle' : ''}`);
+  }
   if (!res.ok) throw new ApiError(res.status, data?.code ?? `http_${res.status}`, data?.detail, data?.errors);
   return data as T;
 }

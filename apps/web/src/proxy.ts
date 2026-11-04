@@ -6,11 +6,18 @@ import { secondsLeft } from './lib/jwt';
 const API_URL = process.env.SAZO_API_URL ?? 'http://localhost:3000';
 const secure = process.env.NODE_ENV === 'production';
 
+/** Carry on to the page, telling it its own address (x-sazo-path) for the "log in again" link back here. */
+function pass(request: NextRequest) {
+  const headers = new Headers(request.headers);
+  headers.set('x-sazo-path', request.nextUrl.pathname + request.nextUrl.search);
+  return NextResponse.next({ request: { headers } });
+}
+
 export async function proxy(request: NextRequest) {
   const access = request.cookies.get('sazo_at')?.value;
   const refresh = request.cookies.get('sazo_rt')?.value;
   // Prefetches never refresh: only real navigations do, so one browser doesn't race itself.
-  if (request.headers.get('next-router-prefetch') || !refresh || secondsLeft(access) > 60) return NextResponse.next();
+  if (request.headers.get('next-router-prefetch') || !refresh || secondsLeft(access) > 60) return pass(request);
 
   const res = await fetch(`${API_URL}/v1/auth/refresh`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: refresh }), cache: 'no-store',
@@ -26,17 +33,17 @@ export async function proxy(request: NextRequest) {
       const page = request.method === 'GET' && (request.headers.get('accept') ?? '').includes('text/html');
       const out = idle && page && !request.nextUrl.pathname.startsWith('/sign-in')
         ? NextResponse.redirect(new URL(`/sign-in?done=idle&next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`, request.url))
-        : NextResponse.next({ request: { headers: request.headers } });
+        : pass(request);
       out.cookies.delete('sazo_at');
       out.cookies.delete('sazo_rt');
       return out;
     }
-    return NextResponse.next();
+    return pass(request);
   }
   const t = (await res.json()) as { accessToken: string; refreshToken: string; expiresIn: number };
   request.cookies.set('sazo_at', t.accessToken);
   request.cookies.set('sazo_rt', t.refreshToken);
-  const out = NextResponse.next({ request: { headers: request.headers } });
+  const out = pass(request);
   // "Remember device" off at log-in: keep the cookies for this browser session only.
   const remember = request.cookies.get('sazo_rm')?.value !== '0';
   out.cookies.set('sazo_at', t.accessToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', ...(remember ? { maxAge: t.expiresIn } : {}) });

@@ -9,7 +9,10 @@ import { LoginPanel } from './login-panel';
 export const metadata: Metadata = { title: 'Sign in' };
 
 /** Messages shown after other pages send people here (fixed texts: nothing from the address is shown). */
-const DONE: Record<string, string> = { password_reset: 'Your password has been changed. Log in with the new one.' };
+const DONE: Record<string, string> = {
+  password_reset: 'Your password has been changed. Log in with the new one.',
+  ended: 'This device was signed out. Log in again to carry on.',
+};
 const GOOGLE: Record<string, string> = {
   unavailable: 'Google sign-in is not available right now. Use your mobile number or email.', expired: 'That took too long. Try Google again.',
   cancelled: 'Google sign-in was cancelled.', failed: 'Google sign-in did not work. Try again, or use your mobile number or email.', inactive: 'This account is not active. Contact SAZO.',

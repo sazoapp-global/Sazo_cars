@@ -9,6 +9,7 @@ import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
+import { unstable_rethrow } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { THEME_COOKIE, parseTheme } from '@/lib/theme';
 import { api, isSignedIn } from '@/lib/api';
@@ -35,7 +36,7 @@ export const viewport: Viewport = { themeColor: '#002177', width: 'device-width'
 
 async function currentUser(): Promise<Me | undefined> {
   if (!(await isSignedIn())) return undefined;
-  return api<Me>('/me', { auth: true }).catch(() => undefined);
+  return api<Me>('/me', { auth: true }).catch((e) => { unstable_rethrow(e); return undefined; });
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

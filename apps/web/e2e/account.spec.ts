@@ -102,6 +102,21 @@ test('manage my account and delete it', async ({ page }) => {
   await expect(page.getByLabel(/Ask me to confirm garage visits/)).not.toBeChecked();
   await page.goto('/account?section=devices');
   await expect(page.getByRole('listitem').filter({ hasText: 'This device' })).toContainText('Chrome on Android');
+
+  // Sign out one other device (4 Nov 2026): it goes, and that device's next page is the log-in page saying why,
+  // never "Something went wrong"; logging in there comes back to the page it was on.
+  const other = await page.context().browser()!.newPage();
+  await signIn(other, NEW_PHONE, { next: '/account?section=texts' });
+  await page.reload();
+  const others = page.getByRole('button', { name: /^Sign out (?!all|here)/ });
+  await expect(others).toHaveCount(1);
+  await others.click();
+  await expect(page.getByRole('status')).toContainText('That device has been signed out.');
+  await expect(others).toHaveCount(0);
+  await other.goto('/account?section=texts');
+  await expect(other.getByText('This device was signed out. Log in again to carry on.')).toBeVisible();
+  await expect(other.getByText('Something went wrong')).toHaveCount(0);
+  await other.close();
   await a11y(page);
   await shot(page, 'account');
 
