@@ -15,6 +15,7 @@ import type { Me, MyOrganisation } from '@/lib/types';
 import { changePrice, moveLead, noteLead, recordPayment, updateCar } from '../../actions';
 import { dealerAlerts, type AlertTone, type DealerAlert } from '../../alerts';
 import { CUSTOMS } from '../../labels';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Alerts', robots: { index: false } };
 
@@ -154,7 +155,7 @@ function Detail({ a, org, base, back, plan }: { a: DealerAlert; org: string; bas
 
   return (
     <section aria-labelledby="alert-h" className={`rounded-[16px] border-2 border-t-[6px] bg-card p-5 shadow-sm md:p-6 lg:sticky lg:top-16 ${t.card} ${a.tone === 'red' ? 'border-t-bad-text' : 'border-t-warn-text'}`}>
-      <p className="mb-3 lg:hidden"><Link href={base} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All alerts</Link></p>
+      <p className="mb-3 lg:hidden"><BackButton href={base} /></p>
       <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-extrabold uppercase tracking-wide ${t.card} ${t.circle}`}>{t.tag}</span>
       <h2 id="alert-h" className={`mt-2 font-display text-2xl font-extrabold ${t.text}`}>{a.title}</h2>
       <p className="mt-1 text-sm text-on-surface">{[a.about, a.plate].filter(Boolean).join(' · ')}</p>

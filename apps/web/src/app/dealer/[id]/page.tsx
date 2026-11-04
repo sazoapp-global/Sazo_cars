@@ -13,6 +13,7 @@ import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../car-kind-fields';
 import { SubmitOnChange } from '@/components/submit-on-change';
 import { Pager, pageHref, paginate } from '@/components/pager';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
@@ -95,7 +96,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
 
       {sp.add === '1' ? (
         <section aria-labelledby="add-h" className="space-y-3">
-          <p><Link href={`/dealer/${id}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All cars</Link></p>
+          <p><BackButton href={`/dealer/${id}`} /></p>
           <h2 id="add-h" className="font-display text-xl font-bold">Add a car</h2>
           <p className="text-sm text-muted">Start with the basics. You can add import costs and more photos later.{manager && approved && <> Many cars at once? <Link href={`/dealer/${id}/import`} className="link">Add them from an Excel file</Link>.</>}</p>
           <div className="rounded-[14px] border border-line bg-card p-4 md:p-5">

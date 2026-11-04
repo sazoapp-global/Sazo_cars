@@ -76,7 +76,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.locator('html')).toHaveAttribute('data-theme', 'dark');
   await dealer.getByRole('button', { name: 'Appearance: Dark' }).click();
   await dealer.getByRole('group', { name: 'Appearance' }).getByRole('button', { name: 'Light' }).click();
-  await dealer.getByRole('link', { name: 'Close' }).click();
+  await dealer.getByRole('link', { name: 'Back', exact: true }).click();
   await a11y(dealer);
 
   // A known car, by plate. A mileage needs an odometer photo.

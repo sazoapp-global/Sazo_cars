@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
 import type { Submission } from '@/lib/types';
 import { loadSource } from '../../load';
+import { BackButton } from '@/components/back-button';
 
 const LABEL: Record<string, string> = { accepted: 'Added', needs_review: 'SAZO will check', rejected: 'Not accepted', pending: 'Processing' };
 
@@ -17,7 +18,7 @@ export default async function SubmissionPage({ params, searchParams }: { params:
   });
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:px-8 [[data-workspace-frame]_&]:max-w-none [[data-workspace-frame]_&]:p-0">
-      <Link href={`/partner/${code}?tab=recent`} className="link text-sm">← Sent recently</Link>
+      <BackButton href={`/partner/${code}?tab=recent`} />
       <h1 className="mt-2 font-display text-2xl font-bold">Submission</h1>
       <p className="sazo-id text-sm text-muted">{s.submissionId}</p>
       <div className="card mt-4 overflow-x-auto">

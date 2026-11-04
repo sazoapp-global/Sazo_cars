@@ -7,6 +7,7 @@ import { actOnConflict } from '../../actions';
 import { requireStaff } from '../../guard';
 import { CHECK, CONFLICT_STATUS, TOPIC, day, recordLabel, recordLine } from '../../labels';
 import { Notice, type SP } from '../../notice';
+import { BackButton } from '@/components/back-button';
 
 export default async function ConflictPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -29,7 +30,7 @@ export default async function ConflictPage({ params, searchParams }: { params: P
   const canResolve = me.isAdmin || me.platformRoles.includes('sazo_reviewer');
   return (
     <>
-      <Link href="/admin/conflicts" className="link text-sm">← All conflicts</Link>
+      <BackButton href="/admin/conflicts" />
       <h1 className="mt-2 font-display text-2xl font-bold">{TOPIC[c.topic] ?? c.topic} conflict · <span className="sazo-id">{c.vehicleRef}</span></h1>
       <p className="text-muted">{c.openedByCheck ? CHECK[c.openedByCheck] ?? c.openedByCheck : ''} · {CONFLICT_STATUS[c.status]} · opened {day(c.openedAt)}
         {' · '}<Link className="link" href={`/admin/cars/${c.vehicleRef}?${new URLSearchParams({ view: 'records', back: `/admin/conflicts/${id}` })}`}>this vehicle&apos;s records</Link>

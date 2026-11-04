@@ -20,6 +20,7 @@ import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, cos
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../../../car-kind-fields';
 import { EmbeddedReport, type EmbeddedReportParams, type OwnCar } from '@/components/report/embedded-report';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Car', robots: { index: false } };
 
@@ -81,7 +82,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   return (
     <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role, approved }} business={{ name: name, approved }}
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
-      <p><Link href={`/dealer/${id}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All cars</Link></p>
+      <p><BackButton href={`/dealer/${id}`} /></p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

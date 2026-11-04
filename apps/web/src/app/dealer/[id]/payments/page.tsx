@@ -13,6 +13,7 @@ import { correctPayment, recordPayment } from '../../actions';
 import { DashCard, METHOD, Pill, longDate, shortDate } from '../../dashboard-bits';
 import { SaleForm, type BuyerChoice } from '../../sale-form';
 import { Pager, pageHref, paginate } from '@/components/pager';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Payments', robots: { index: false } };
 
@@ -101,7 +102,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
       .map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null }));
     return frame(
       <>
-        <p><Link href={base} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All payments</Link></p>
+        <p><BackButton href={base} /></p>
         {notices}
         <section aria-labelledby="add-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
           <h1 id="add-h" className="font-display text-2xl font-bold">How is {carTitle(adding.car)} paid for?</h1>
@@ -115,7 +116,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
   if (plan) {
     const d = await api<Detail>(`/dealer/payments/${plan}`, as).catch(() => undefined);
     if (!d) return frame(<><p><Link href={base} className="link text-sm">All payments</Link></p><p>This sale was not found.</p></>);
-    const back = <p><Link href={base} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All payments</Link></p>;
+    const back = <p><BackButton href={base} /></p>;
 
     const receiptId = sp.receipt && UUID.test(sp.receipt) ? sp.receipt : undefined;
     if (receiptId) {
@@ -123,7 +124,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
       if (r) {
         return frame(
           <>
-            <p className="print:hidden"><Link href={`${base}?plan=${plan}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />Back to this sale</Link></p>
+            <p className="print:hidden"><BackButton href={`${base}?plan=${plan}`} /></p>
             <article aria-labelledby="rc-h" className="max-w-xl rounded-[14px] border border-line bg-card p-6">
               <div className="flex items-start justify-between gap-3">
                 <div><p className="text-xs font-bold uppercase tracking-wider text-label">Receipt</p><h1 id="rc-h" className="font-display text-2xl font-extrabold">{r.receiptNo}</h1></div>

@@ -13,6 +13,7 @@ import { loadSettings, loadYourData } from '@/app/account/settings-actions';
 import { Icon, type IconName } from '@/components/icon';
 import { NotificationsView } from '@/components/notifications/notifications-view';
 import { ThemeChoice } from '@/components/theme/theme-choice';
+import { BackButton } from '@/components/back-button';
 
 export interface RailProps {
   label: string;
@@ -174,10 +175,10 @@ export function PanelHost({ children, enabled = true, wide = false }: { children
     <>
       {panel && (
         <section aria-labelledby="panel-heading" className={`space-y-4 ${box}`}>
-          {panel === DATA_PANEL && <p><Link href={`${closeHref}${closeHref.includes('?') ? '&' : '?'}panel=${SETTINGS_PANEL}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />Back to Settings</Link></p>}
+          {/* Back (D-158): Your data returns to Settings; Settings and Notifications to the page they opened over. */}
+          <BackButton href={panel === DATA_PANEL ? `${closeHref}${closeHref.includes('?') ? '&' : '?'}panel=${SETTINGS_PANEL}` : closeHref} />
           <div className="flex items-center justify-between gap-3">
             <h1 id="panel-heading" className="font-display text-2xl font-bold md:text-3xl">{panel === SETTINGS_PANEL ? 'Settings' : panel === DATA_PANEL ? 'Your data' : 'Notifications'}</h1>
-            <Link href={closeHref} className="inline-flex items-center gap-1.5 font-semibold text-primary-container hover:underline"><Icon name="close" size={20} />Close</Link>
           </div>
           {panel === SETTINGS_PANEL ? <SettingsPanel closeHref={closeHref} /> : panel === DATA_PANEL ? <DataPanel /> : <NotificationsView />}
         </section>

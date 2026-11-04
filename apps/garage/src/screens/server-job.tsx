@@ -2,11 +2,11 @@ import { formatKm } from '@sazo/contracts';
 import { useEffect, useState } from 'react';
 import type { Garage } from '../lib/types';
 import { Chip, JOB_STATUS, OWNER, PlateText, when, works } from '../components/bits';
-import { Icon } from '../components/icon';
 import { ApiError, OfflineError, request } from '../lib/api';
 import { kv } from '../lib/db';
 import { go } from '../lib/route';
 import type { ServerJob } from '../lib/types';
+import { BackButton } from '../components/back-button';
 
 /** A job already sent (or saved from another phone): who recorded it, when, and what the customer said. */
 export function ServerJobView({ jobId, garage }: { jobId: string; garage: Garage }) {
@@ -26,7 +26,7 @@ export function ServerJobView({ jobId, garage }: { jobId: string; garage: Garage
   const km = job.form.mileage ? (job.form.mileage.unit === 'mi' ? Math.round(job.form.mileage.value * 1.609344) : job.form.mileage.value) : undefined;
   return (
     <div className="space-y-4 p-4">
-      <button type="button" className="flex items-center gap-1 font-semibold text-primary-container" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Jobs</button>
+      <BackButton onClick={() => go({ name: 'home' })} />
       <div className="flex items-center justify-between gap-2"><PlateText value={job.plateEntered} /><span className="sazo-id text-sm text-label">{job.publicRef}</span></div>
       <div className="flex flex-wrap gap-2"><Chip s={JOB_STATUS[job.status]!} />{job.status !== 'draft' && <Chip s={OWNER[job.ownerConfirmation]!} />}</div>
       {job.status === 'draft' && <p className="text-sm text-muted">This draft was started on another phone. Finish it there.</p>}

@@ -10,6 +10,7 @@ import { api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation, StockItem } from '@/lib/types';
 import { addLead, decideLead, moveLead, noteLead } from '../../actions';
 import { carName } from '../../labels';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Enquiries', robots: { index: false } };
 
@@ -56,7 +57,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
     return (
       <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
         person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
-        <p><Link href={`/dealer/${id}/enquiries${closed ? '?show=closed' : ''}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All enquiries</Link></p>
+        <p><BackButton href={`/dealer/${id}/enquiries${closed ? '?show=closed' : ''}`} /></p>
         {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
         {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
         <section className="rounded-[14px] border border-line bg-card p-4 md:p-5" aria-label={`Enquiry from ${l.customer.name ?? 'a customer'}`}>

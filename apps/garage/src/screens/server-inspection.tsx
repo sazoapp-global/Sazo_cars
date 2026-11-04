@@ -7,6 +7,7 @@ import { kv } from '../lib/db';
 import { go } from '../lib/route';
 import type { Garage, ServerInspection } from '../lib/types';
 import { RESULT } from './inspection-home';
+import { BackButton } from '../components/back-button';
 
 /** An inspection already sent (or started on another phone): read-only. */
 export function ServerInspectionView({ id, workplace }: { id: string; workplace: Garage }) {
@@ -29,7 +30,7 @@ export function ServerInspectionView({ id, workplace }: { id: string; workplace:
   const thick = (f.paint?.readings ?? []).filter((r) => r.microns > REPAINT_MICRONS);
   return (
     <div className="space-y-4 p-4 print:p-0">
-      <button type="button" className="flex items-center gap-1 font-semibold text-primary-container print:hidden" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Inspections</button>
+      <BackButton onClick={() => go({ name: 'home' })} />
       {/* I-06: only on paper. The customer gets a printed summary of what was found. */}
       <div className="hidden border-b-4 border-lime pb-3 print:block">
         <p className="font-display text-xl font-extrabold text-primary">SAZO · Inspection summary</p>

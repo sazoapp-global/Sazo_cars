@@ -9,6 +9,7 @@ import { NumberStrip } from '@/components/number-strip';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation } from '@/lib/types';
 import { commissionAction } from '../../actions';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Broker commission', robots: { index: false } };
 
@@ -40,7 +41,7 @@ export default async function Commissions({ params, searchParams }: { params: Pr
     return (
       <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: org.tradingName ?? org.legalName, approved: true }}
         person={me ? { name: me.displayName, role: 'Manager' } : undefined}>
-        <p><Link href={`/dealer/${id}/commissions`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All commission</Link></p>
+        <p><BackButton href={`/dealer/${id}/commissions`} /></p>
         {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
         {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
         <section className="space-y-3 rounded-[14px] border border-line bg-card p-4 text-sm md:p-5" aria-label={`Commission for ${c.broker}`}>

@@ -7,6 +7,7 @@ import { Icon } from '@/components/icon';
 import { Pager, type Paged } from '@/components/pager';
 import { api } from '@/lib/api';
 import { clearAuthenticator, personDetails } from './person-actions';
+import { BackButton } from '@/components/back-button';
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'muted';
 const TONE: Record<Tone, string> = { ok: 'text-ok-text', warn: 'text-warn-text', bad: 'text-bad-text', muted: 'text-muted' };
@@ -37,7 +38,9 @@ export function Row({ href, title, meta, status, tone = 'muted', aside }: { href
 }
 
 export function Back({ href, label }: { href: string; label: string }) {
-  return <p><Link href={href} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />{label}</Link></p>;
+  // Every way back reads "Back" (D-158); `label` is kept for the callers, the page title says where you land.
+  void label;
+  return <p><BackButton href={href} /></p>;
 }
 
 /** Adds or replaces query values on a console address. */

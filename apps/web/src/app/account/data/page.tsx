@@ -3,13 +3,13 @@ import { Pager, pageHref, paginate } from '@/components/pager';
 // they belong to. Downloads are a PDF or an Excel file (D-147); there is no JSON download.
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Icon } from '@/components/icon';
 import { api, isSignedIn } from '@/lib/api';
 import { BUSINESS_STATUS as STATUS, BUSINESS_TYPE as TYPE, CLAIM, type DataExport as Export, MODERATION, ROLE } from '@/lib/data-export';
 import { deviceName, localPhone } from '@/lib/phone';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Your data', robots: { index: false } };
 
@@ -50,7 +50,7 @@ export default async function YourData({ searchParams }: { searchParams: Promise
   const p = d.profile;
   return (
     <div className="mx-auto max-w-2xl space-y-4 px-4 py-8 md:px-8">
-      <Link href="/account" className="link inline-flex items-center gap-1 print:hidden"><Icon name="arrow_back" size={18} />Your account</Link>
+      <BackButton href="/account" />
       <div>
         <h1 className="font-display text-2xl font-bold">Your data held by SAZO</h1>
         <p className="mt-1 text-muted">Prepared {formatDate(d.exportedAt)}. Records about cars (services, inspections, registrations) belong to each car&apos;s history and are not included.</p>

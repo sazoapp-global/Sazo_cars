@@ -9,6 +9,7 @@ import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { ImportStage, Me, MyOrganisation } from '@/lib/types';
 import { addCarsFromFile, checkCarsFile } from '../../actions';
 import { stageLabel } from '../../labels';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Add many cars', robots: { index: false } };
 
@@ -44,7 +45,7 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
     <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: org.tradingName ?? org.legalName, approved: true }}
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
       <div>
-        <p><Link href={`/dealer/${id}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />All cars</Link></p>
+        <p><BackButton href={`/dealer/${id}`} /></p>
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight md:text-3xl">Add many cars from a file</h1>
         <p className="mt-1 max-w-2xl text-muted">Put one car on each row of an Excel or CSV file, up to 200 cars a day. SAZO checks every row first and shows you what is ready. Nothing is added until you press Add.</p>
       </div>

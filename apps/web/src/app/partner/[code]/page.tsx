@@ -10,6 +10,7 @@ import { EntryForm, type Correction } from './entry-form';
 import { loadSource } from './load';
 import { UploadForm } from './upload-form';
 import { WithdrawForm } from './withdraw-form';
+import { BackButton } from '@/components/back-button';
 
 /** Attributes as form values: dotted paths, lists joined with "; ", yes or no. */
 function formValues(attrs: Record<string, unknown>, prefix = ''): Record<string, string> {
@@ -53,7 +54,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
   const tabs = [['one', 'One record'], ['file', 'Upload a file'], ['recent', 'Sent recently'], ['records', 'Correct or withdraw'], ['lookup', 'Look up a car']] as const;
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:px-8 [[data-workspace-frame]_&]:max-w-none [[data-workspace-frame]_&]:p-0">
-      <Link href="/partner" className="link text-sm">← All sources</Link>
+      <BackButton href="/partner" />
       <h1 className="mt-2 font-display text-2xl font-bold">{source.name}</h1>
       <p className="text-muted">{DOMAIN_NAMES[source.domain] ?? source.domain} · <span className="sazo-id">{source.code}</span>{source.isSimulated ? ' · simulated test data' : ''}</p>
       <nav aria-label="How to send" className="mt-4 flex gap-1 overflow-x-auto border-b border-line">

@@ -129,7 +129,7 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await shot(page, '8-dark-more');
-  await page.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeHidden();
   await page.getByRole('button', { name: 'Home' }).click();
   await shot(page, '9-dark-home');
@@ -146,7 +146,7 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await expect(rail.getByRole('button', { name: 'Sign out' })).toBeVisible();
   await rail.getByRole('button', { name: 'Settings' }).click();
   await expect(rail.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
-  await page.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await rail.getByRole('button', { name: /Job records/ }).click();
   await expect(rail.getByRole('button', { name: /Job records/ })).toHaveAttribute('aria-current', 'page');
   await page.setViewportSize({ width: 412, height: 839 });

@@ -49,7 +49,7 @@ test('manage my account and delete it', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Names saved');
   await expect(page).toHaveURL(/\/saved\?.*panel=settings/);
   await a11y(page);
-  await page.getByRole('link', { name: 'Close' }).click();
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
   await expect(page).toHaveURL(/\/saved$/);
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeHidden();
   await page.goto('/account');

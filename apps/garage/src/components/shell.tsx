@@ -13,6 +13,7 @@ import { isInspector, type Garage, type Me } from '../lib/types';
 import { rememberAppKind } from '../lib/app-kind';
 import { Icon, type IconName } from './icon';
 import { ThemePicker } from './theme-picker';
+import { BackButton } from './back-button';
 
 export const WEBSITE = import.meta.env.VITE_SAZO_WEB_URL ?? 'http://localhost:3001';
 const ROLE: Record<string, string> = { org_manager: 'Manager', org_staff: 'Staff' };
@@ -98,10 +99,9 @@ export function Shell({ garage, me, route, online, unsent, records, needsAction,
       <main className={`min-w-0 lg:pl-64 ${inWizard ? '' : 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0'}`}>
         {panel ? (
           <section aria-labelledby="panel-heading" className="mx-auto w-full max-w-xl space-y-4 p-4 lg:max-w-3xl lg:p-8">
-            <div className="flex items-center justify-between gap-3">
-              <h1 id="panel-heading" className="font-display text-2xl font-bold">{panel === 'settings' ? 'Settings' : 'Notifications'}</h1>
-              <button type="button" onClick={closePanel} className="inline-flex items-center gap-1.5 font-semibold text-primary-container hover:underline"><Icon name="close" size={20} />Close</button>
-            </div>
+            {/* Back (D-158): returns to the screen Settings or Notifications opened over. */}
+            <BackButton onClick={closePanel} />
+            <h1 id="panel-heading" className="font-display text-2xl font-bold">{panel === 'settings' ? 'Settings' : 'Notifications'}</h1>
             {panel === 'settings' ? <SettingsView garage={garage} me={me} onSignOut={onSignOut} onSwitch={onSwitch} /> : <NotificationsView online={online} />}
           </section>
         ) : children}

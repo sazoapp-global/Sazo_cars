@@ -12,6 +12,7 @@ import { uploadPhoto } from '../lib/sync';
 import type { Garage } from '../lib/types';
 import { uuidv7 } from '../lib/uuid';
 import { Pager, usePaged } from '../components/pager';
+import { BackButton } from '../components/back-button';
 
 interface Concern { concernId: string; plate: string; category: ConcernCategory; description: string; status: 'open' | 'upheld' | 'dismissed'; decisionReason: string | null; createdAt: string }
 const STATUS = {
@@ -56,7 +57,7 @@ export function Concerns({ workplace }: { workplace: Garage }) {
 
   return (
     <div className="space-y-5 p-4 pb-10">
-      <button type="button" className="flex items-center gap-1 font-semibold text-primary-container" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Home</button>
+      <BackButton onClick={() => go({ name: 'home' })} />
       <h1 className="font-display text-2xl font-bold">Report a problem with a car</h1>
       <p className="-mt-3 text-muted">Seen signs of fraud? Tell SAZO. A SAZO reviewer checks every report before buyers see anything. Your name is never shown to buyers.</p>
       {sent && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">Thank you. SAZO will check it. You can follow it below.</p>}

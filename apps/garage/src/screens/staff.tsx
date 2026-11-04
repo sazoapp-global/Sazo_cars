@@ -5,6 +5,7 @@ import { ApiError, OfflineError, request } from '../lib/api';
 import { go } from '../lib/route';
 import type { StaffMember } from '../lib/types';
 import { Pager, usePaged } from '../components/pager';
+import { BackButton } from '../components/back-button';
 
 const ROLE: Record<string, string> = { org_manager: 'Manager', org_staff: 'Staff' };
 
@@ -40,7 +41,7 @@ export function Staff({ garage }: { garage: Garage }) {
 
   return (
     <div className="space-y-4 p-4">
-      <button type="button" className="flex items-center gap-1 font-semibold text-primary-container" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Home</button>
+      <BackButton onClick={() => go({ name: 'home' })} />
       <h1 className="font-display text-2xl font-bold">Team</h1>
       <ul className="card divide-y divide-line">
         {paged.items.map((s) => (

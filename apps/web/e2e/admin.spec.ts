@@ -50,7 +50,7 @@ test('approve a garage that registered', async ({ page, request }) => {
   await strip.getByRole('link', { name: 'Settings' }).click();
   await expect(page).toHaveURL(/\/admin\?panel=settings/);
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
-  await page.getByRole('link', { name: 'Close' }).click();
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
   await expect(page.getByRole('heading', { name: /Good to see you/ })).toBeVisible();
   // On a computer they sit at the foot of the fixed side bar.
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -58,7 +58,7 @@ test('approve a garage that registered', async ({ page, request }) => {
   await expect(rail.getByRole('button', { name: 'Sign out' })).toBeVisible();
   await rail.getByRole('link', { name: 'Settings' }).click();
   await expect(rail.getByRole('link', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
-  await page.getByRole('link', { name: 'Close' }).click();
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
   await page.setViewportSize({ width: 412, height: 839 });
   await a11y(page);
   await page.getByRole('link', { name: 'Businesses', exact: true }).click();
@@ -72,7 +72,7 @@ test('approve a garage that registered', async ({ page, request }) => {
   await expect(page.getByRole('main')).toContainText(`Bugolobi Car Care ${stamp} Ltd`);
   await expect(page.getByRole('img', { name: /National ID photo/ })).toBeVisible();
   await a11y(page);
-  await page.getByRole('link', { name: 'Back to the business' }).click();
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
   await card.getByLabel(/Reason/).fill('Visited the workshop on Port Bell Road');
   await card.getByRole('button', { name: 'Approve' }).click();
   await expect(page.getByRole('status')).toContainText('Decision recorded: approve');
@@ -119,7 +119,7 @@ test('data sources show which are simulated', async ({ page }) => {
   await page.getByRole('navigation', { name: 'SAZO console' }).getByRole('link', { name: /Notifications/ }).click();
   await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
   await expect(page).toHaveURL(/\/admin\/sources\?panel=notifications$/);
-  await page.getByRole('link', { name: 'Close' }).click();
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
   await expect(page.getByText('Simulated').first()).toBeVisible();
   await a11y(page);
   await page.goto('/');

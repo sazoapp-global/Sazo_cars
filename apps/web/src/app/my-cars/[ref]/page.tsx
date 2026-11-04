@@ -1,7 +1,6 @@
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { EVENT_LABELS, RECORD_LABELS, formatDate, formatKm } from '@sazo/contracts';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { VehicleHeader } from '@/components/vehicle-header';
@@ -9,6 +8,7 @@ import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { Summary, Visit } from '@/lib/types';
 import { Notice, type SP } from '../../admin/notice';
 import { answerVisit } from '../actions';
+import { BackButton } from '@/components/back-button';
 
 export const metadata: Metadata = { title: 'Garage visits', robots: { index: false } };
 
@@ -26,7 +26,7 @@ export default async function Visits({ params, searchParams }: { params: Promise
     <>
       {summary && <VehicleHeader v={summary.vehicle} asOf={summary.asOf} />}
       <div className="mx-auto max-w-3xl px-4 py-6 md:px-8">
-        <Link href="/my-cars" className="link text-sm"><Icon name="arrow_back" size={16} className="mr-1 inline align-[-3px]" />My cars</Link>
+        <BackButton href="/my-cars" />
         <h1 className="mt-2 font-display text-2xl font-bold">Garage visits</h1>
         <p className="mb-4 mt-1 text-muted">Was your car really serviced or repaired here? Your answer as the owner counts more than anyone else&apos;s. You can only answer for visits since the car became yours.</p>
         <Notice done={sp.done} error={sp.error} />

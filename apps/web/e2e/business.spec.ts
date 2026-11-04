@@ -96,7 +96,7 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await expect(later.getByRole('heading', { name: 'Your data', level: 1 })).toBeVisible();
   await expect(later.getByRole('region', { name: 'Your details' })).toBeVisible();
   await expect(later.getByRole('heading', { name: 'Cars you own' })).toHaveCount(0);
-  await expect(later.getByRole('link', { name: 'Back to Settings' })).toBeVisible();
+  await expect(later.getByRole('link', { name: 'Back', exact: true })).toBeVisible();
   const biz = later.getByRole('region', { name: 'Your businesses' });
   await expect(biz).toContainText(NAME);
   await expect(biz).toContainText('Approved');

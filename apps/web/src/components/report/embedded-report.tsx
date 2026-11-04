@@ -19,6 +19,7 @@ import { addToCompare } from './compare-actions';
 import { RecordsList } from './records-list';
 import { QuestionNav, ReportHero, ReportSections } from './report-view';
 import { TimelineList } from './timeline-list';
+import { BackButton } from '../back-button';
 
 export type EmbeddedReportParams = {
   view?: string; class?: string; error?: string; cmp?: string; cmpError?: string; other?: string; booked?: string; bookError?: string; page?: string; vp?: string; dp?: string;
@@ -100,7 +101,7 @@ export async function EmbeddedReport({ vehicleRef: ref, base, sp, mode = 'view',
           {other && (
             <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-soft-3 bg-soft p-3">
               <span className="font-semibold">The report for the {vehicleName(r.vehicle)}{r.vehicle.currentPlate ? `, ${r.vehicle.currentPlate}` : ''}, opened from Compare.</span>
-              <Link href={at({ view: 'compare', other: undefined, cmp: sp.cmp })} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />Back to Compare</Link>
+              <BackButton href={at({ view: 'compare', other: undefined, cmp: sp.cmp })} />
             </div>
           )}
           <ReportHero r={r} x={x} actions={actions} photoHref={(id) => `/v/${shown}/photo/${id}`} embedded />
