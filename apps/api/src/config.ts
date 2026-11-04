@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { loadLocalEnv, localDatabaseUrl } from './local-env.js';
 
 const DEV_SECRET = 'dev-only-secret-change-me-dev-only-secret';
 /** A fixed 32-byte key, base64 — development only. */
@@ -66,6 +67,9 @@ export type AppConfig = z.infer<typeof Env>;
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  if (env === process.env) loadLocalEnv(env);
+  // No DATABASE_URL: the local database, on the port in SAZO_DB_PORT (the same one docker compose uses).
+  if (!env.DATABASE_URL && env.NODE_ENV !== 'production') env = { ...env, DATABASE_URL: localDatabaseUrl(env) };
   const parsed = Env.safeParse(env);
   if (!parsed.success) {
     throw new Error(`Invalid configuration: ${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`);

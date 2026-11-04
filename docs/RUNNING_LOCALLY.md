@@ -27,7 +27,7 @@ npm run db:migrate            # creates the tables
 npm run seed -w @sazo/api     # loads the 27 sample cars
 ```
 
-No settings file is needed — the defaults point at the Docker database. (`.env.example` lists what you can change.)
+No settings file is needed: the defaults point at the Docker database on port 5433. (`.env.example` lists what you can change.) To use another port, put one line in a file called `.env` in the project folder, for example `SAZO_DB_PORT=5440`. Docker, the API, the seeds and the migrations all read it.
 
 ## 4. Make yourself a SAZO admin
 
@@ -131,5 +131,6 @@ Start Docker Desktop, then `npm run dev:services` and the three windows from ste
 - **`ECONNRESET` while `docker compose ps` says `healthy`:** on Windows, "localhost" can go over IPv6, which Docker Desktop sometimes drops. SAZO now uses `127.0.0.1` by default; if you set `DATABASE_URL` yourself, use `127.0.0.1` instead of `localhost`.
 - **`ECONNRESET` or `ECONNREFUSED` when migrating:** the database isn't ready. Check Docker Desktop is running, then `docker compose ps` — `postgres` should say `healthy`. If it says `restarting` or is missing, `docker compose logs postgres` shows why. `npm run dev:services` now waits until it is healthy, and `db:migrate` waits up to a minute.
 - **Another PostgreSQL on this computer** (common on Windows): SAZO's database uses port 5433 so it does not clash with one on 5432. If you changed `DATABASE_URL` yourself or set it with `setx` earlier, make sure it says `127.0.0.1:5433`, or remove it (Command Prompt: `reg delete HKCU\Environment /v DATABASE_URL /f`, then open a new window) so the default is used.
+- **`ports are not available` or `An attempt was made to access a socket in a way forbidden by its access permissions` from `npm run dev:services`:** Windows has reserved that port (Hyper-V and WSL, which Docker Desktop uses, set aside blocks of ports at startup, and the blocks can change after a restart). See which ports are reserved with `netsh interface ipv4 show excludedportrange protocol=tcp`, choose a port that is not inside any listed range and not in use (`netstat -ano | findstr :5440` shows nothing), and put it in `.env` in the project folder: `SAZO_DB_PORT=5440`. Then run `npm run dev:services` again and restart the API. Nothing else needs changing.
 - **Website shows an error about the API:** window 1 isn't running or has stopped. Look at its last lines.
 - **Odd errors after pulling new code:** run `npm install`, `npm run build` and `npm run db:migrate` again.

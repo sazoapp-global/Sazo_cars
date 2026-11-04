@@ -7,8 +7,9 @@ services:
       POSTGRES_PASSWORD: sazo
       POSTGRES_DB: sazo
     ports:
-      # 5433 on this computer, so it never clashes with a PostgreSQL installed on Windows (which takes 5432).
-      - "5433:5432"
+      # On this computer: SAZO_DB_PORT from .env (default 5433). 5433 avoids a PostgreSQL installed on Windows; if
+      # Windows has reserved it too ("ports are not available"), choose another in .env. The API reads the same line.
+      - "${SAZO_DB_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
