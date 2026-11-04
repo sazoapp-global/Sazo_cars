@@ -12,6 +12,7 @@ import type { Me, MyOrganisation } from '@/lib/types';
 import { correctPayment, recordPayment } from '../../actions';
 import { DashCard, METHOD, Pill, longDate, shortDate } from '../../dashboard-bits';
 import { SaleForm, type BuyerChoice } from '../../sale-form';
+import { Pager, pageHref, paginate } from '@/components/pager';
 
 export const metadata: Metadata = { title: 'Payments', robots: { index: false } };
 
@@ -38,7 +39,7 @@ interface Receipt {
 }
 interface Lead { leadId: string; stockId: string | null; customer: { name: string | null; phone: string | null }; open: boolean; stage: string }
 
-type SP = Promise<{ show?: string; sort?: string; within?: string; plan?: string; add?: string; receipt?: string; done?: string; error?: string }>;
+type SP = Promise<{ show?: string; sort?: string; within?: string; plan?: string; add?: string; receipt?: string; done?: string; error?: string; page?: string; sch?: string; pr?: string; up?: string }>;
 const full = (n: number) => formatUgx(n, false);
 const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
 const carTitle = (c: Car) => `${c.name}${c.plate ? ` · ${c.plate}` : ''}`;
@@ -189,7 +190,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
                   <th className="py-2 pr-2">Payment</th><th className="py-2 pr-2">Due</th><th className="py-2 pr-2 text-right">Amount</th><th className="py-2 pr-2 text-right">Paid</th><th className="py-2">Status</th>
                 </tr></thead>
                 <tbody>
-                  {d.schedule.map((s) => (
+                  {paginate(d.schedule, sp.sch).items.map((s) => (
                     <tr key={s.seq} className="border-b border-line last:border-0">
                       <td className="py-2 pr-2">{s.seq === 0 ? (d.kind === 'cash' ? 'Full price' : 'Deposit') : s.seq}</td>
                       <td className="py-2 pr-2 whitespace-nowrap">{longDate(s.dueOn)}</td>
@@ -201,6 +202,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
                 </tbody>
               </table>
             </div>
+            <Pager paged={paginate(d.schedule, sp.sch)} href={pageHref(base, { plan }, 'sch')} noun="payments in the plan" label="Pages of the plan" scroll={false} />
           </section>
 
           <div className="space-y-4">
@@ -223,9 +225,9 @@ export default async function DealerPayments({ params, searchParams }: { params:
 
             <section aria-labelledby="rec-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
               <h2 id="rec-h" className="font-display text-lg font-bold">Payments received</h2>
-              {d.payments.length === 0 ? <p className="mt-2 text-sm text-muted">None yet.</p> : (
+              {d.payments.length === 0 ? <p className="mt-2 text-sm text-muted">None yet.</p> : (<>
                 <ul className="mt-1 divide-y divide-line">
-                  {d.payments.map((p) => (
+                  {paginate(d.payments, sp.pr).items.map((p) => (
                     <li key={p.id} className="py-2.5 text-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div className={p.corrected ? 'text-muted line-through' : ''}>
@@ -249,7 +251,8 @@ export default async function DealerPayments({ params, searchParams }: { params:
                     </li>
                   ))}
                 </ul>
-              )}
+                <Pager paged={paginate(d.payments, sp.pr)} href={pageHref(base, { plan }, 'pr')} noun="payments received" label="Pages of payments received" scroll={false} />
+              </>)}
             </section>
           </div>
         </div>
@@ -311,7 +314,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
               <span>Car and buyer</span><span>Next due</span><span className="text-right">Amount due</span><span>Status</span><span className="text-right">Balance</span><span />
             </div>
             <ul aria-label="Sales" className="divide-y divide-line">
-              {list.items.map((i) => (
+              {paginate(list.items, sp.page).items.map((i) => (
                 <li key={i.planId}>
                   <Link href={`${base}?plan=${i.planId}`}
                     className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3 hover:bg-soft md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_10rem_8rem_1.25rem] md:px-2">
@@ -336,6 +339,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
                 </li>
               ))}
             </ul>
+            <Pager paged={paginate(list.items, sp.page)} href={pageHref(base, { show: sp.show, sort: sp.sort, within: sp.within })} noun="sales" />
           </>
         )}
       </section>
@@ -344,7 +348,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
         <section aria-labelledby="unplanned-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
           <h2 id="unplanned-h" className="font-display text-lg font-bold">Sold, payment not recorded yet</h2>
           <ul className="mt-1 divide-y divide-line">
-            {list.unplanned.map((u) => (
+            {paginate(list.unplanned, sp.up).items.map((u) => (
               <li key={u.car.stockId}>
                 <Link href={`${base}?add=${u.car.stockId}`} className="flex items-center gap-3 py-3 hover:bg-soft sm:px-2">
                   <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{carTitle(u.car)}</span><span className="block text-xs text-muted">Sold {longDate(u.soldOn)} for {formatUgx(u.salePriceUgx)}</span></span>
@@ -354,6 +358,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
               </li>
             ))}
           </ul>
+          <Pager paged={paginate(list.unplanned, sp.up)} href={pageHref(base, { show: sp.show, sort: sp.sort, within: sp.within, page: sp.page }, 'up')} noun="sales" label="Pages of sales without payments" scroll={false} />
         </section>
       )}
     </>,

@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { Facts } from '@/components/popup';
 import { Icon } from '@/components/icon';
+import { Pager, type Paged } from '@/components/pager';
 import { api } from '@/lib/api';
 import { clearAuthenticator, personDetails } from './person-actions';
 
@@ -11,8 +12,12 @@ export type Tone = 'ok' | 'warn' | 'bad' | 'muted';
 const TONE: Record<Tone, string> = { ok: 'text-ok-text', warn: 'text-warn-text', bad: 'text-bad-text', muted: 'text-muted' };
 
 /** A list of rows; each opens its item's details. */
-export function Rows({ label, children }: { label: string; children: React.ReactNode }) {
-  return <ul aria-label={label} className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card">{children}</ul>;
+export function Rows({ label, children, paging }: { label: string; children: React.ReactNode;
+  /** Pages of 10 (4 Nov 2026): the page shown, the address of page n, and what is counted. */
+  paging?: { paged: Paged<unknown>; href: (n: number) => string; noun: string };
+}) {
+  const list = <ul aria-label={label} className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card">{children}</ul>;
+  return paging ? <div>{list}<Pager paged={paging.paged} href={paging.href} noun={paging.noun} label={`Pages of ${label.toLowerCase()}`} /></div> : list;
 }
 
 export function Row({ href, title, meta, status, tone = 'muted', aside }: { href: string; title: React.ReactNode; meta?: React.ReactNode; status?: string; tone?: Tone; aside?: React.ReactNode }) {

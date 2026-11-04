@@ -6,6 +6,7 @@ import { Icon } from '../components/icon';
 import { PlateText } from '../components/bits';
 import { ApiError, OfflineError, request } from '../lib/api';
 import type { Garage, InspectionBooking } from '../lib/types';
+import { Pager, usePaged } from '../components/pager';
 
 const time = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Kampala', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
 
@@ -23,13 +24,15 @@ export function BookingRequests({ workplace, onStart }: { workplace: Garage; onS
     }
   }, [workplace.id]);
   useEffect(() => { void load(); }, [load]);
+  const paged = usePaged(items ?? [], items?.length);
 
   if (offline) return <p className="text-sm text-muted">Booking requests show when there is signal.</p>;
   if (!items?.length) return null;
   return (
     <section aria-labelledby="bookings">
       <h2 id="bookings" className="font-display text-lg font-bold">Booking requests</h2>
-      <ul className="mt-2 space-y-2">{items.map((b) => <BookingCard key={b.bookingId} b={b} workplace={workplace} onChanged={load} onStart={onStart} />)}</ul>
+      <ul className="mt-2 space-y-2">{paged.items.map((b) => <BookingCard key={b.bookingId} b={b} workplace={workplace} onChanged={load} onStart={onStart} />)}</ul>
+      <Pager paged={paged} noun="booking requests" />
     </section>
   );
 }

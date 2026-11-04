@@ -6,6 +6,7 @@ import { decideMatch } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { day } from '../labels';
 import { Forbidden, Notice, type SP } from '../notice';
+import { pageHref, paginate } from '@/components/pager';
 import { Back, Row, Rows, carHref, withQuery } from '../rows';
 
 const IDENT: Record<string, string> = { vin: 'VIN', chassisNumber: 'Chassis', plate: 'Plate', engineNumber: 'Engine no.' };
@@ -17,7 +18,7 @@ export default async function Matches({ searchParams }: { searchParams: SP }) {
   const refs = data === 'forbidden' ? [] : [...new Set(data.items.flatMap((d) => d.candidateVehicleRefs))];
   const cars = new Map(await Promise.all(refs.map(async (r) => [r, await api<Summary>(`/vehicles/${r}/summary`).catch(() => undefined)] as const)));
   const PATH = '/admin/matches';
-  const Q = { status: sp.status, item: sp.item };
+  const Q = { status: sp.status, item: sp.item , page: sp.page };
   const one = data !== 'forbidden' && sp.item ? data.items.find((d) => d.decisionId === sp.item) : undefined;
   if (one) {
     const d = one;
@@ -62,8 +63,8 @@ export default async function Matches({ searchParams }: { searchParams: SP }) {
       <p className="mb-4 text-muted">A record arrived and SAZO could not be sure which car it belongs to, for example a new chassis number with a plate that is on a car entered by its owner. Pick the car, make a new one, or reject the record.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="deciding vehicle matches" /> : data.items.length === 0 ? <p className="text-muted">Nothing waiting.</p> : (
-        <Rows label="Records waiting for a vehicle match">
-          {data.items.map((d) => <Row key={d.decisionId} href={withQuery(PATH, Q, { item: d.decisionId })} title={Object.values(d.presentedIdentifiers).join(' · ') || 'A record'} meta={`${d.candidateVehicleRefs.length} possible cars · arrived ${formatDate(d.decidedAt)}`} status={'Choose the car'} tone={'warn'} />)}
+        <Rows label="Records waiting for a vehicle match" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'records' }}>
+          {paginate(data.items, sp.page).items.map((d) => <Row key={d.decisionId} href={withQuery(PATH, Q, { item: d.decisionId })} title={Object.values(d.presentedIdentifiers).join(' · ') || 'A record'} meta={`${d.candidateVehicleRefs.length} possible cars · arrived ${formatDate(d.decidedAt)}`} status={'Choose the car'} tone={'warn'} />)}
         </Rows>
       )}
     </>

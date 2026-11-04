@@ -3,6 +3,7 @@
 // shown; where SAZO has none, the section says so.
 import { PANELS, PANEL_LABELS, QUESTION_ORDER, QUESTION_TITLES, formatDate, formatKm, formatUgx, headline, kindLabel, statusLabel, type Panel } from '@sazo/contracts';
 import Image from 'next/image';
+import { Pager, paginate } from '../pager';
 import Link from 'next/link';
 import type { FullReport, LatestInspection, QuestionView } from '@/lib/types';
 import {
@@ -212,7 +213,10 @@ const Empty = ({ children }: { children: React.ReactNode }) => <p className="rou
 
 /* ---------------------------------------------------------------- the seven sections */
 
-export function ReportSections({ r, x }: { r: FullReport; x: ReportExtras }) {
+/** Pages of 10 for the report's growing lists (4 Nov 2026): each list's page from the address, and page n's address. */
+export type ReportPaging = { pages: Record<string, string | undefined>; href: (key: string, anchor: string) => (n: number) => string };
+
+export function ReportSections({ r, x, paging }: { r: FullReport; x: ReportExtras; paging?: ReportPaging }) {
   const by = new Map(r.questions.map((q) => [q.question, q]));
   const has = (id: string) => by.has(id);
   const full = !!x.ledger; // a shared copy has the report only, not the record ledger
@@ -227,8 +231,8 @@ export function ReportSections({ r, x }: { r: FullReport; x: ReportExtras }) {
         </div>
       )}
       {has('identity') && <Section q={by.get('identity')!} aside={<IdentityTips />}>{full && <IdentityTable rows={identityRows(r, x)} />}</Section>}
-      {has('care') && <CareSection q={by.get('care')!} x={x} full={full} />}
-      {has('damage') && <DamageSection q={by.get('damage')!} r={r} x={x} full={full} />}
+      {has('care') && <CareSection q={by.get('care')!} x={x} full={full} paging={paging} />}
+      {has('damage') && <DamageSection q={by.get('damage')!} r={r} x={x} full={full} paging={paging} />}
       {has('mileage') && <MileageSection q={by.get('mileage')!} r={r} x={x} full={full} />}
       {has('provenance') && <ProvenanceSection q={by.get('provenance')!} r={r} x={x} />}
       {has('legal_financial') && <LegalSection q={by.get('legal_financial')!} r={r} x={x} />}
@@ -291,7 +295,7 @@ function IdentityTips() {
   );
 }
 
-function CareSection({ q, x, full }: { q: QuestionView; x: ReportExtras; full: boolean }) {
+function CareSection({ q, x, full, paging }: { q: QuestionView; x: ReportExtras; full: boolean; paging?: ReportPaging }) {
   const visits = garageVisits(x);
   const main = mainGarage(visits);
   return (
@@ -313,7 +317,7 @@ function CareSection({ q, x, full }: { q: QuestionView; x: ReportExtras; full: b
         <>
           <h3 className="mb-3 font-display font-bold">Garage visits, newest first</h3>
           <ol className="space-y-3">
-            {visits.map((v) => (
+            {(paging ? paginate(visits, paging.pages.vp).items : visits).map((v) => (
               <li key={v.eventId} className="rounded-xl border border-line p-4">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <time dateTime={v.at ?? undefined} className="rounded bg-ink px-2 py-0.5 text-xs font-bold text-white">{formatDate(v.at, v.precision)}</time>
@@ -326,13 +330,14 @@ function CareSection({ q, x, full }: { q: QuestionView; x: ReportExtras; full: b
               </li>
             ))}
           </ol>
+          {paging && <Pager paged={paginate(visits, paging.pages.vp)} href={paging.href('vp', 'q-care')} noun="garage visits" label="Pages of garage visits" scroll={false} />}
         </>
       ) : <Empty>No garage visits on record yet. Ask the seller for service receipts.</Empty>)}
     </Section>
   );
 }
 
-function DamageSection({ q, r, x, full }: { q: QuestionView; r: FullReport; x: ReportExtras; full: boolean }) {
+function DamageSection({ q, r, x, full, paging }: { q: QuestionView; r: FullReport; x: ReportExtras; full: boolean; paging?: ReportPaging }) {
   const records = damageRecords(x);
   const insp = r.latestInspection;
   return (
@@ -341,13 +346,14 @@ function DamageSection({ q, r, x, full }: { q: QuestionView; r: FullReport; x: R
         <>
           <h3 className="mb-3 font-display font-bold">Accident, repair and paint records</h3>
           <ul className="divide-y divide-line rounded-xl border border-line">
-            {records.map((d) => (
+            {(paging ? paginate(records, paging.pages.dp).items : records).map((d) => (
               <li key={d.id} className="flex flex-col gap-0.5 p-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
                 <span className="font-semibold">{d.label}</span>
                 <span className="text-sm text-muted">{formatDate(d.at, d.precision)} · {d.source}</span>
               </li>
             ))}
           </ul>
+          {paging && <Pager paged={paginate(records, paging.pages.dp)} href={paging.href('dp', 'q-damage')} noun="records" label="Pages of accident and repair records" scroll={false} />}
         </>
       ) : <Empty>No accident, insurance, repair or paint records for this car.</Empty>)}
       {insp && insp.panelsMeasured > 0 && <PanelGrid repainted={insp.repaintedPanels} />}

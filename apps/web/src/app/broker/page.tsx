@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { PrintButton, ShareButtons } from '@/components/share-buttons';
 import { statusIcon } from '@/components/status';
 import { api, isSignedIn } from '@/lib/api';
@@ -29,7 +30,7 @@ const TABS = [['cars', 'Cars to share', 'storefront'], ['links', 'My links', 'ad
 const name = (s: BrokerCar['specs']) => [s.year, s.make, s.model].filter(Boolean).join(' ') || 'Car';
 const commissionText = (c: BrokerCar['commission']) => (c.kind === 'fixed' ? `${formatUgx(c.amountUgx, false)} commission` : `${c.percent}% of the selling price`);
 
-type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string; kind?: string }>;
+type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string; kind?: string; page?: string }>;
 
 export default async function Broker({ searchParams }: { searchParams: SP }) {
   if (!(await isSignedIn())) redirect('/sign-in?next=/broker');
@@ -102,15 +103,15 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
           </div>
         </div>
       )}
-      {tab === 'cars' && <Cars kind={isVehicleKind(sp.kind) ? sp.kind : undefined} />}
-      {tab === 'links' && <Links />}
-      {tab === 'enquiries' && <Enquiries />}
-      {tab === 'commissions' && <Commissions />}
+      {tab === 'cars' && <Cars kind={isVehicleKind(sp.kind) ? sp.kind : undefined} page={sp.page} />}
+      {tab === 'links' && <Links page={sp.page} />}
+      {tab === 'enquiries' && <Enquiries page={sp.page} />}
+      {tab === 'commissions' && <Commissions page={sp.page} />}
     </div>
   );
 }
 
-async function Cars({ kind }: { kind?: VehicleKind }) {
+async function Cars({ kind, page }: { kind?: VehicleKind; page?: string }) {
   const { items: all } = await api<{ items: BrokerCar[] }>('/broker/cars', { auth: true });
   if (!all.length) return <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">No cars are open to brokers right now.</p>;
   // D-148: filter by the kind of car.
@@ -127,7 +128,7 @@ async function Cars({ kind }: { kind?: VehicleKind }) {
     )}
     {!items.length && <p className="text-muted">No cars of this kind right now.</p>}
     <ul className="grid gap-4 sm:grid-cols-2" aria-label="Cars to share">
-      {items.map((c) => {
+      {paginate(items, page).items.map((c) => {
         const qs = QUESTION_ORDER.map((k) => c.questions.find((q) => q.question === k)).filter((q): q is QuestionView => !!q);
         return (
           <li key={c.stockId} className="card overflow-hidden">
@@ -153,31 +154,36 @@ async function Cars({ kind }: { kind?: VehicleKind }) {
         );
       })}
     </ul>
+    <Pager paged={paginate(items, page)} href={pageHref('/broker', { tab: 'cars', kind })} noun="cars" />
     </>
   );
 }
 
-async function Links() {
+async function Links({ page }: { page?: string }) {
   const { items } = await api<{ items: BrokerLink[] }>('/broker/links', { auth: true });
   if (!items.length) return <p className="text-muted">You have not made any links yet.</p>;
   return (
+    <>
     <ul className="divide-y divide-line rounded-[14px] border border-line" aria-label="My links">
-      {items.map((l) => (
+      {paginate(items, page).items.map((l) => (
         <li key={l.linkId} className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
           <span><strong>{l.car ?? 'Car'}</strong>. {CHANNELS.find(([k]) => k === l.channel)?.[1]} link, made {formatDate(l.createdAt)}{l.live ? '' : '. The car is no longer for sale'}</span>
           <form action={stopBrokerLink}><input type="hidden" name="link" value={l.linkId} /><button className="link text-sm">Stop this link</button></form>
         </li>
       ))}
     </ul>
+    <Pager paged={paginate(items, page)} href={pageHref('/broker', { tab: 'links' })} noun="links" />
+    </>
   );
 }
 
-async function Enquiries() {
+async function Enquiries({ page }: { page?: string }) {
   const { items } = await api<{ items: BrokerEnquiry[] }>('/broker/enquiries', { auth: true });
   if (!items.length) return <p className="text-muted">No customers yet. Share a car to bring some.</p>;
   return (
+    <>
     <ul className="divide-y divide-line rounded-[14px] border border-line" aria-label="My customers">
-      {items.map((e) => (
+      {paginate(items, page).items.map((e) => (
         <li key={e.leadId} className="p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -192,11 +198,14 @@ async function Enquiries() {
         </li>
       ))}
     </ul>
+    <Pager paged={paginate(items, page)} href={pageHref('/broker', { tab: 'enquiries' })} noun="customers" />
+    </>
   );
 }
 
-async function Commissions() {
+async function Commissions({ page }: { page?: string }) {
   const s = await api<{ items: Commission[]; totals: { waiting: number; approved: number; paid: number } }>('/broker/commissions', { auth: true });
+  const shown = paginate(s.items, page);
   return (
     <section aria-labelledby="statement" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -212,7 +221,8 @@ async function Commissions() {
       {s.items.length === 0 ? <p className="text-muted">No commission yet.</p> : (
         <ul className="divide-y divide-line rounded-[14px] border border-line" aria-label="Commissions">
           {s.items.map((c) => (
-            <li key={c.commissionId} className="flex flex-wrap items-start justify-between gap-2 p-4 text-sm">
+            // On screen one page of 10; a printed statement keeps every line.
+            <li key={c.commissionId} className={`flex-wrap items-start justify-between gap-2 p-4 text-sm ${shown.items.includes(c) ? 'flex' : `hidden print:flex`}`}>
               <div><p className="font-bold">{c.car ?? 'Car'} at {c.dealer ?? 'a dealer'}</p>
                 <p className="text-muted">{formatDate(c.createdAt)}{c.sharePercent < 100 ? `. Your share: ${c.sharePercent}%` : ''}{c.paidReference ? `. Reference: ${c.paidReference}` : ''}</p></div>
               <div className="sm:text-right"><p className="font-display text-lg font-extrabold tabular-nums">{formatUgx(c.amountUgx, false)}</p><p className="text-muted">{PAY[c.status] ?? c.status}</p></div>
@@ -220,6 +230,7 @@ async function Commissions() {
           ))}
         </ul>
       )}
+      <Pager paged={shown} href={pageHref('/broker', { tab: 'commissions' })} noun="commissions" />
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import { Pager, paginate } from '../pager';
 // A car's dated records, newest first: on the car's public page and inside the workspaces (28 Oct 2026).
 import { EVENT_LABELS, RECORD_LABELS, formatDate, formatKm } from '@sazo/contracts';
 import { Icon, type IconName } from '../icon';
@@ -14,11 +15,13 @@ const CONFIRMATION: Record<TimelineItem['ownerConfirmation'], { text: string; cl
   not_requested: undefined,
 };
 
-export function TimelineList({ items }: { items: TimelineItem[] }) {
+/** Pages of 10 (4 Nov 2026): `page` from the address and `pageHref` for page n; without them every entry shows. */
+export function TimelineList({ items, page, pageHref }: { items: TimelineItem[]; page?: string; pageHref?: (n: number) => string }) {
   if (items.length === 0) return <p className="text-muted">No dated records for this car yet.</p>;
   return (
+    <>
     <ol className="relative space-y-4 border-l-2 border-soft-3 pl-6">
-      {items.map((e) => {
+      {(pageHref ? paginate(items, page).items : items).map((e) => {
         const serious = e.flags.some((f) => f.severity === 'serious');
         const confirmation = CONFIRMATION[e.ownerConfirmation];
         return (
@@ -44,5 +47,7 @@ export function TimelineList({ items }: { items: TimelineItem[] }) {
         );
       })}
     </ol>
+    {pageHref && <Pager paged={paginate(items, page)} href={pageHref} noun="entries" label="Pages of the timeline" />}
+    </>
   );
 }

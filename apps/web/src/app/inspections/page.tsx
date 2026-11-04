@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -17,9 +18,9 @@ const STATUS: Record<BookingStatus, { text: string; cls: string }> = {
 };
 const when = (iso: string) => new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Kampala', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
 
-export default async function Inspections({ searchParams }: { searchParams: Promise<{ booked?: string }> }) {
+export default async function Inspections({ searchParams }: { searchParams: Promise<{ booked?: string; page?: string }> }) {
   if (!(await isSignedIn())) redirect('/sign-in?next=/inspections');
-  const { booked } = await searchParams;
+  const { booked, page } = await searchParams;
   const { items } = await api<{ items: Booking[] }>('/me/bookings', { auth: true });
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:px-8">
@@ -30,7 +31,7 @@ export default async function Inspections({ searchParams }: { searchParams: Prom
       {booked && <p role="status" className="mt-4 rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">Request sent. The inspector has been told by SMS, and you will get an SMS when they reply.</p>}
       {items.length === 0 ? <p className="card mt-6 p-4">No inspections booked yet. Open a car&apos;s report and tap <strong>Book an inspection</strong>.</p> : (
         <ul className="mt-6 space-y-3">
-          {items.map((b) => (
+          {paginate(items, page).items.map((b) => (
             <li key={b.bookingId} className="card p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold"><span className="sazo-id">{b.plate}</span> with {b.inspector.name}</p>
@@ -52,6 +53,7 @@ export default async function Inspections({ searchParams }: { searchParams: Prom
           ))}
         </ul>
       )}
+      <Pager paged={paginate(items, page)} href={pageHref('/inspections', {})} noun="inspections" />
     </div>
   );
 }

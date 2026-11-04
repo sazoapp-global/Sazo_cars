@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -34,7 +35,7 @@ export default async function MyCars({ searchParams }: { searchParams: SP }) {
         </div>
       ) : (
         <ul className="space-y-3">
-          {items.map((c) => {
+          {paginate(items, sp.page).items.map((c) => {
             const s = STATUS[c.status];
             const v = c.summary?.vehicle;
             return (
@@ -61,6 +62,7 @@ export default async function MyCars({ searchParams }: { searchParams: SP }) {
           })}
         </ul>
       )}
+      <Pager paged={paginate(items, sp.page)} href={pageHref('/my-cars', {})} noun="cars" />
     </div>
   );
 }

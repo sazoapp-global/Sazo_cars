@@ -1,3 +1,4 @@
+import { pageHref } from '@/components/pager';
 import { CONFIDENCE_LABELS, QUESTION_ORDER, QUESTION_TITLES, factValue, kindLabel, statusLabel, summaryLine } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -17,7 +18,7 @@ import { saveCar, shareReport, unsaveCar } from '../../buyer-actions';
 import { claimCar } from '../../my-cars/actions';
 import { loadVehicle } from './load';
 
-type Props = { params: Promise<{ ref: string }>; searchParams: Promise<{ error?: string; cdone?: string; cerror?: string }> };
+type Props = { params: Promise<{ ref: string }>; searchParams: Promise<{ error?: string; cdone?: string; cerror?: string; vp?: string; dp?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { ref } = await params;
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function VehiclePage({ params, searchParams }: Props) {
   const { ref } = await params;
-  const { error, cdone, cerror } = await searchParams;
+  const { error, cdone, cerror, vp, dp } = await searchParams;
   const data = await loadVehicle(ref);
   if (data.kind === 'summary') return <PublicSummary s={data.summary} vref={ref} />;
 
@@ -63,7 +64,7 @@ export default async function VehiclePage({ params, searchParams }: Props) {
       <QuestionNav questions={r.questions} />
       <div className="mx-auto max-w-[1280px] space-y-6 px-4 py-6 md:px-8 md:py-10 lg:px-12">
         {error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{error}</p>}
-        <ReportSections r={r} x={x} />
+        <ReportSections r={r} x={x} paging={{ pages: { vp, dp }, href: (key, anchor) => (n) => `${pageHref(`/v/${ref}`, { vp, dp }, key)(n)}#${anchor}` }} />
         <NegotiateCard
           actions={(
             <>

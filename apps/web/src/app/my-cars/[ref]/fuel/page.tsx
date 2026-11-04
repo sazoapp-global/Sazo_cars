@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 // The fuel log (D-148): the owner logs each fill-up; with two full tanks SAZO works out how far the car goes on a
 // litre. Buyers see only the owners' average on the report (from 3 measured tanks), never who logged it.
 import { formatDate } from '@sazo/contracts';
@@ -56,7 +57,7 @@ export default async function FuelLog({ params, searchParams }: { params: Promis
               <table className="w-full text-sm">
                 <thead><tr className="text-left text-muted"><th className="px-4 py-2">Date</th><th>Litres</th><th>Mileage</th><th>Full tank</th><th>km per litre</th><th><span className="sr-only">Remove</span></th></tr></thead>
                 <tbody>
-                  {log.items.map((f) => (
+                  {paginate(log.items, sp.page).items.map((f) => (
                     <tr key={f.id} className="border-t border-line">
                       <td className="px-4 py-2">{formatDate(f.filledOn)}</td>
                       <td className="tabular-nums">{n(f.litres, 2)}</td>
@@ -73,6 +74,7 @@ export default async function FuelLog({ params, searchParams }: { params: Promis
               </table>
             </div>
           )}
+          <Pager paged={paginate(log.items, sp.page)} href={pageHref(`/my-cars/${ref}/fuel`, {})} noun="fill-ups" />
           <p className="mt-3 font-semibold">
             {log.average !== null ? <>Your average: {n(log.average)} km per litre</> : 'Your average shows after two full tanks.'}
             {maker && <span className="font-normal text-muted"> · maker&apos;s figure {n(Number(maker.value))}{maker.source === 'maker_test' ? ' (test data)' : ''}</span>}

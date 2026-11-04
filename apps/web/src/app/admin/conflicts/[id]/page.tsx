@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
@@ -113,11 +114,12 @@ export default async function ConflictPage({ params, searchParams }: { params: P
           <button name="action" value="comment" className="btn btn-ghost">Add note</button>
         </form>
         <ol className="mt-3 space-y-2 text-sm">
-          {c.activity.slice().reverse().map((a, i) => (
+          {paginate(c.activity.slice().reverse(), sp.page).items.map((a, i) => (
             <li key={i} className="flex gap-3"><span className="w-28 shrink-0 text-muted">{day(a.at)}</span>
               <span><strong className="capitalize">{a.kind.replace('_', ' ')}</strong>{typeof a.details.comment === 'string' ? `: ${a.details.comment}` : typeof a.details.reasoning === 'string' ? `: ${a.details.reasoning}` : ''}</span></li>
           ))}
         </ol>
+        <Pager paged={paginate(c.activity, sp.page)} href={pageHref(`/admin/conflicts/${id}`, {})} noun="entries" label="Pages of the activity" scroll={false} />
       </section>
     </>
   );

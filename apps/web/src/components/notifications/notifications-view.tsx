@@ -8,12 +8,14 @@ import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { audienceLabel } from '@/app/admin/audiences';
 import { loadNotifications, markNotificationsRead, type Notice } from '@/app/notifications/actions';
 import { Icon } from '@/components/icon';
+import { ButtonPager, paginate } from '@/components/pager';
 
 export function NotificationsView() {
   const router = useRouter();
   const [items, setItems] = useState<Notice[] | null | undefined>();
   const [open, setOpen] = useState<Notice>();
   const [pending, start] = useTransition();
+  const [page, setPage] = useState(1);
   useEffect(() => { void loadNotifications().then((r) => setItems(r?.items ?? null)); }, []);
   const unread = (items ?? []).filter((i) => !i.read).map((i) => i.id);
   const markRead = (ids: string[]) => start(async () => {
@@ -32,7 +34,7 @@ export function NotificationsView() {
   return (
     <div className="space-y-3">
       <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card" aria-label="Messages from SAZO">
-        {items.map((a) => (
+        {paginate(items, String(page)).items.map((a) => (
           <li key={a.id}>
             <button type="button" onClick={() => show(a)} aria-haspopup="dialog"
               className={`flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-soft-2 ${a.read ? '' : 'bg-soft'}`}>
@@ -43,6 +45,7 @@ export function NotificationsView() {
           </li>
         ))}
       </ul>
+      <ButtonPager paged={paginate(items, String(page))} onPage={setPage} noun="messages" />
       {unread.length > 0 && <button type="button" onClick={() => markRead(unread)} disabled={pending} className="link text-sm font-semibold">{pending ? 'Marking…' : 'Mark all as read'}</button>}
       <NoticeDialog notice={open} onClose={() => setOpen(undefined)} />
     </div>

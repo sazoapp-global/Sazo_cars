@@ -4,6 +4,7 @@ import { KIND_LABELS, VEHICLE_KINDS, type VehicleKind } from '@sazo/contracts';
 import { decideKind } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { pageHref, paginate } from '@/components/pager';
 import { Back, Row, Rows, carHref, withQuery } from '../rows';
 
 type Source = 'registry' | 'inspector' | 'garage' | 'dealer' | 'owner' | 'admin' | 'record' | string;
@@ -27,7 +28,7 @@ export default async function Kinds({ searchParams }: { searchParams: Promise<Aw
   if (data === 'forbidden') return <Forbidden what="setting the kind of car" />;
   const PATH = '/admin/kinds';
   const tab = sp.tab === 'disagree' ? 'disagree' : 'needed';
-  const Q = { tab: tab === 'disagree' ? 'disagree' : undefined, item: sp.item };
+  const Q = { tab: tab === 'disagree' ? 'disagree' : undefined, item: sp.item , page: sp.page };
 
   const needed = data.needed.find((c) => c.vehicleRef === sp.item);
   const disagree = data.disagree.find((c) => c.vehicleRef === sp.item);
@@ -80,15 +81,15 @@ export default async function Kinds({ searchParams }: { searchParams: Promise<Aw
       </nav>
       {tab === 'needed' ? (
         data.needed.length === 0 ? <p className="text-muted">Every car has a kind.</p> : (
-          <Rows label="Kind needed">
-            {data.needed.map((c) => <Row key={c.vehicleRef} href={withQuery(PATH, Q, { item: c.vehicleRef })} title={<>{name(c)}{c.plate ? <span className="font-normal text-muted"> · {c.plate}</span> : null}</>}
+          <Rows label="Kind needed" paging={{ paged: paginate(data.needed, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'cars' }}>
+            {paginate(data.needed, sp.page).items.map((c) => <Row key={c.vehicleRef} href={withQuery(PATH, Q, { item: c.vehicleRef })} title={<>{name(c)}{c.plate ? <span className="font-normal text-muted"> · {c.plate}</span> : null}</>}
               meta={[why(c), c.origin ? ORIGIN[c.origin] : undefined].filter(Boolean).join(' · ')} status="Set the kind" tone="warn" />)}
           </Rows>
         )
       ) : (
         data.disagree.length === 0 ? <p className="text-muted">No disagreements.</p> : (
-          <Rows label="Records disagree">
-            {data.disagree.map((c) => <Row key={c.vehicleRef} href={withQuery(PATH, Q, { item: c.vehicleRef })} title={<>{name(c)}{c.plate ? <span className="font-normal text-muted"> · {c.plate}</span> : null}</>}
+          <Rows label="Records disagree" paging={{ paged: paginate(data.disagree, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'cars' }}>
+            {paginate(data.disagree, sp.page).items.map((c) => <Row key={c.vehicleRef} href={withQuery(PATH, Q, { item: c.vehicleRef })} title={<>{name(c)}{c.plate ? <span className="font-normal text-muted"> · {c.plate}</span> : null}</>}
               meta={[...new Set(c.candidates.map((x) => `${SOURCE[x.source] ?? x.source}: ${KIND_LABELS[x.kind]}`))].join(' · ')} status="Decide" tone="warn" />)}
           </Rows>
         )

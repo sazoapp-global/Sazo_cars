@@ -1,3 +1,4 @@
+import { pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import { api } from '@/lib/api';
 import type { Organisation } from '@/lib/types';
@@ -18,12 +19,18 @@ export default async function Organisations({ searchParams }: { searchParams: SP
   const sp = await searchParams;
   const status = sp.status ?? 'pending_verification';
   const data = await adminFetch<{ items: Organisation[] }>(`/admin/organisations?status=${status}`);
-  const docs = new Map(data === 'forbidden' ? [] : await Promise.all(data.items.map(async (o) =>
+  // One page of 10 (4 Nov 2026); documents and managers are looked up for that page only.
+  // Waiting businesses stay first come, first served; decided ones show the newest first, so a business just
+  // approved or rejected is on page 1.
+  const ordered = data === 'forbidden' ? [] : status === 'pending_verification' ? data.items : [...data.items].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const paged = data === 'forbidden' ? undefined : paginate(ordered, sp.page);
+  const look = data === 'forbidden' ? [] : [...new Set([...paged!.items, ...ordered.filter((o) => o.id === sp.item)])];
+  const docs = new Map(await Promise.all(look.map(async (o) =>
     [o.id, (await api<{ evidenceIds: string[] }>(`/admin/organisations/${o.id}/documents`, { auth: true }).catch(() => ({ evidenceIds: [] }))).evidenceIds] as const)));
-  const managers = new Map(data === 'forbidden' ? [] : await Promise.all(data.items.map(async (o) =>
+  const managers = new Map(await Promise.all(look.map(async (o) =>
     [o.id, (await api<{ items: Manager[] }>(`/admin/organisations/${o.id}/managers`, { auth: true }).catch(() => ({ items: [] as Manager[] }))).items] as const)));
   const path = '/admin/organisations';
-  const q = { status: sp.status, item: sp.item };
+  const q = { status: sp.status, item: sp.item, page: sp.page };
   if (sp.person) return <PersonView userId={sp.person} back={withQuery(path, q, {})} backLabel="Back to the business" />;
   const one = data !== 'forbidden' && sp.item ? data.items.find((o) => o.id === sp.item) : undefined;
   if (one) {
@@ -77,13 +84,13 @@ export default async function Organisations({ searchParams }: { searchParams: SP
         ))}
       </nav>
       {data === 'forbidden' ? <Forbidden what="approving businesses" /> : data.items.length === 0 ? <p className="text-muted">Nothing here.</p> : (
-        <Rows label="Businesses">
-          {data.items.map((o) => {
+        <Rows label="Businesses" paging={{ paged: paged!, href: pageHref(path, { status: sp.status }), noun: 'businesses' }}>
+          {paged!.items.map((o) => {
             const ms = managers.get(o.id) ?? [];
             const nDocs = (docs.get(o.id) ?? []).length;
             const idSent = ms.some((m) => m.identity === 'pending');
             return (
-              <Row key={o.id} href={withQuery(path, { status: sp.status }, { item: o.id })} title={o.tradingName ?? o.legalName}
+              <Row key={o.id} href={withQuery(path, { status: sp.status, page: sp.page }, { item: o.id })} title={o.tradingName ?? o.legalName}
                 meta={`${TYPE[o.type] ?? o.type} · ${o.district ?? 'District not given'} · registered ${formatDate(o.createdAt)} · ${ms.map((m) => m.name).join(', ') || 'no manager'}`}
                 status={idSent ? 'ID sent: check it' : nDocs ? `${nDocs} ${nDocs === 1 ? 'document' : 'documents'}` : 'No documents yet'} tone={idSent ? 'warn' : nDocs ? 'ok' : 'muted'} />
             );

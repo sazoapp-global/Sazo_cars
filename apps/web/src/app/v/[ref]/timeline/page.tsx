@@ -8,15 +8,16 @@ import { requireFull } from '../load';
 
 export const metadata: Metadata = { title: 'Timeline', robots: { index: false } };
 
-export default async function Timeline({ params }: { params: Promise<{ ref: string }> }) {
+export default async function Timeline({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ page?: string }> }) {
   const { ref } = await params;
+  const { page } = await searchParams;
   const summary = await api<Summary>(`/vehicles/${ref}/summary`).catch(() => undefined);
   const data = await requireFull<{ items: TimelineItem[] }>(ref, 'timeline');
   return (
     <>
       {summary && <VehicleHeader v={summary.vehicle} asOf={summary.asOf} tab="timeline" />}
       <div className="mx-auto max-w-3xl px-4 py-6 md:px-8">
-        {!data ? <SignInPrompt next={`/v/${ref}/timeline`} what="the timeline" /> : <TimelineList items={data.items} />}
+        {!data ? <SignInPrompt next={`/v/${ref}/timeline`} what="the timeline" /> : <TimelineList items={data.items} page={page} pageHref={(n) => (n > 1 ? `/v/${ref}/timeline?page=${n}` : `/v/${ref}/timeline`)} />}
       </div>
     </>
   );

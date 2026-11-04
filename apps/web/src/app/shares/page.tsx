@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
@@ -9,9 +10,9 @@ import { revokeShare } from '../buyer-actions';
 
 export const metadata: Metadata = { title: 'Shared reports', robots: { index: false } };
 
-export default async function Shares({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
+export default async function Shares({ searchParams }: { searchParams: Promise<{ new?: string; page?: string }> }) {
   if (!(await isSignedIn())) redirect('/sign-in?next=/shares');
-  const token = (await searchParams).new;
+  const { new: token, page } = await searchParams;
   const h = await headers();
   const origin = `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host')}`;
   const { items } = await api<{ items: ShareLink[] }>('/me/shares', { auth: true });
@@ -30,7 +31,7 @@ export default async function Shares({ searchParams }: { searchParams: Promise<{
         <h2 id="links" className="font-display text-lg font-semibold">Links you have shared</h2>
         {items.length === 0 ? <p className="mt-2 text-muted">None yet.</p> : (
           <ul className="card mt-2 divide-y divide-line">
-            {items.map((l) => (
+            {paginate(items, page).items.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <span><span className="sazo-id font-semibold">{l.plate ?? l.vehicleRef}</span> <span className="text-sm text-muted">· {formatDate(l.createdAt)} · {l.revoked ? 'stopped' : l.expiresAt && Date.parse(l.expiresAt) < Date.now() ? 'expired' : `works until ${formatDate(l.expiresAt)}`}</span></span>
                 {!l.revoked && <form action={revokeShare}><input type="hidden" name="id" value={l.id} /><button className="btn btn-ghost !min-h-10 text-sm">Stop this link</button></form>}
@@ -38,6 +39,7 @@ export default async function Shares({ searchParams }: { searchParams: Promise<{
             ))}
           </ul>
         )}
+        <Pager paged={paginate(items, page)} href={pageHref('/shares', {})} noun="shared reports" />
       </section>
     </div>
   );

@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { DOMAIN_RECORD_TYPES, RECORD_LABELS, fieldsFor, formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -32,7 +33,7 @@ const STATE: Record<PartnerRecord['state'], { text: string; cls: string }> = {
 
 export const metadata: Metadata = { title: 'Send records', robots: { index: false } };
 
-export default async function SourcePage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ tab?: string; correct?: string; withdraw?: string; q?: string }> }) {
+export default async function SourcePage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ tab?: string; correct?: string; withdraw?: string; q?: string; page?: string }> }) {
   const { code } = await params;
   const sp = await searchParams;
   const tab = sp.tab ?? 'one';
@@ -66,7 +67,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
         {tab === 'file' && <UploadForm source={code} domain={source.domain} />}
         {tab === 'recent' && (recent.length === 0 ? <p className="text-muted">Nothing sent yet.</p> : (
           <ul className="card divide-y divide-line">
-            {recent.map((r) => (
+            {paginate(recent, sp.page).items.map((r) => (
               <li key={r.submissionId} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <span>{formatDate(r.receivedAt)} · {r.items} {r.items === 1 ? 'record' : 'records'}</span>
                 <span className="text-sm"><span className="text-ok-text">{r.accepted} added</span>{r.needsReview ? <span className="text-warn-text"> · {r.needsReview} to check</span> : null}{r.rejected ? <span className="text-bad-text"> · {r.rejected} not accepted</span> : null}
@@ -75,6 +76,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
             ))}
           </ul>
         ))}
+        {tab === 'recent' && <Pager paged={paginate(recent, sp.page)} href={pageHref(`/partner/${code}`, { tab: 'recent' })} noun="files and entries" />}
         {tab === 'records' && correction && (
           <EntryForm source={code} domain={source.domain} types={[correction.type]} fields={fields} idempotencyKey={crypto.randomUUID()} correction={correction} />
         )}
@@ -85,7 +87,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
             <p className="text-sm text-muted">A record already sent is never edited. To fix one, send a correction: the new record replaces it and the old one stays in the history, marked corrected. To take one back, withdraw it with a reason.</p>
             {records.length === 0 ? <p className="mt-3 text-muted">Nothing sent yet.</p> : (
               <ul className="card mt-3 divide-y divide-line">
-                {records.map((r) => (
+                {paginate(records, sp.page).items.map((r) => (
                   <li key={r.id} className="flex flex-wrap items-start justify-between gap-2 p-3">
                     <div className="min-w-0">
                       <p className="font-semibold">{RECORD_LABELS[r.type] ?? r.type} <span className={`ml-1 rounded px-1.5 py-0.5 text-xs font-semibold ${STATE[r.state].cls}`}>{STATE[r.state].text}</span>{r.corrects ? <span className="ml-1 text-xs text-muted">a correction</span> : null}</p>
@@ -101,6 +103,9 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
                   </li>
                 ))}
               </ul>
+            )}
+            {records.length > 0 && (
+              <Pager paged={paginate(records, sp.page)} href={pageHref(`/partner/${code}`, { tab: 'records' })} noun="records" />
             )}
           </section>
         )}

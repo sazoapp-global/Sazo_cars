@@ -1,3 +1,4 @@
+import { pageHref, paginate } from '@/components/pager';
 import type { Source } from '@/lib/types';
 import { updateSource } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
@@ -11,7 +12,7 @@ export default async function Sources({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const data = await adminFetch<Source[]>('/admin/sources');
   const PATH = '/admin/sources';
-  const Q = { item: sp.item };
+  const Q = { item: sp.item, page: sp.page };
   const one = data !== 'forbidden' && sp.item ? data.find((s) => s.id === sp.item) : undefined;
   if (one && data !== 'forbidden') {
     const s = one;
@@ -53,8 +54,8 @@ export default async function Sources({ searchParams }: { searchParams: SP }) {
       <p className="mb-4 text-muted">Where records come from. While SAZO is in testing most are <strong>simulated</strong>. When a real partner connects, retire the simulated source and say which real one replaces it: its records stop counting but are kept.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="managing data sources" /> : (
-        <Rows label="Data sources">
-          {data.map((s) => <Row key={s.id} href={withQuery(PATH, Q, { item: s.id })} title={`${s.code} · ${s.name}`} meta={`${s.domain} · ${s.isSimulated ? 'simulated' : 'real'} · via ${s.channel.replace('_', ' ')}`} status={STATUS[s.status]} tone={s.status === 'active' ? 'ok' : 'muted'} />)}
+        <Rows label="Data sources" paging={{ paged: paginate(data, sp.page), href: pageHref(PATH, {}), noun: 'data sources' }}>
+          {paginate(data, sp.page).items.map((s) => <Row key={s.id} href={withQuery(PATH, Q, { item: s.id })} title={`${s.code} · ${s.name}`} meta={`${s.domain} · ${s.isSimulated ? 'simulated' : 'real'} · via ${s.channel.replace('_', ' ')}`} status={STATUS[s.status]} tone={s.status === 'active' ? 'ok' : 'muted'} />)}
         </Rows>
       )}
     </>

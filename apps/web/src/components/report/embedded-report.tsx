@@ -21,7 +21,7 @@ import { QuestionNav, ReportHero, ReportSections } from './report-view';
 import { TimelineList } from './timeline-list';
 
 export type EmbeddedReportParams = {
-  view?: string; class?: string; error?: string; cmp?: string; cmpError?: string; other?: string; booked?: string; bookError?: string;
+  view?: string; class?: string; error?: string; cmp?: string; cmpError?: string; other?: string; booked?: string; bookError?: string; page?: string; vp?: string; dp?: string;
 };
 /** One of the dealer's own cars, for Compare: its report opens on its own page in the console. */
 export type OwnCar = { ref: string; name: string; plate?: string; href: string };
@@ -53,7 +53,7 @@ export async function EmbeddedReport({ vehicleRef: ref, base, sp, mode = 'view',
     view === 'report' ? items(api<{ items: CarPhoto[] }>(`/vehicles/${shown}/photos`, { auth: true })) : Promise.resolve(undefined),
   ]);
   const x = { timeline, ledger, photos };
-  const here = at({ view: undefined, class: undefined, error: undefined, cmp: undefined, cmpError: undefined, other: undefined, booked: undefined, bookError: undefined });
+  const here = at({ view: undefined, class: undefined, page: undefined, error: undefined, cmp: undefined, cmpError: undefined, other: undefined, booked: undefined, bookError: undefined });
 
   const actions = (
     <>
@@ -73,7 +73,7 @@ export async function EmbeddedReport({ vehicleRef: ref, base, sp, mode = 'view',
     <div className="space-y-6">
       <nav aria-label="Report views" className="flex flex-wrap gap-2">
         {VIEWS.map(([v, label]) => (
-          <Link key={v} href={at({ view: v === 'report' ? undefined : v, class: undefined, other: undefined, cmp: v === 'compare' ? sp.cmp : undefined, booked: undefined, bookError: undefined, cmpError: undefined })}
+          <Link key={v} href={at({ view: v === 'report' ? undefined : v, class: undefined, page: undefined, other: undefined, cmp: v === 'compare' ? sp.cmp : undefined, booked: undefined, bookError: undefined, cmpError: undefined })}
             aria-current={view === v && !other ? 'true' : undefined}
             className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${view === v && !other ? 'border-primary-container bg-primary-container text-white' : 'border-line bg-card hover:border-primary-container'}`}>{label}</Link>
         ))}
@@ -84,13 +84,14 @@ export async function EmbeddedReport({ vehicleRef: ref, base, sp, mode = 'view',
       {view === 'timeline' && (
         <section aria-labelledby="tl-h" className="space-y-4">
           <h2 id="tl-h" className="font-display text-xl font-bold">Timeline</h2>
-          {timeline ? <TimelineList items={timeline} /> : <p className="text-muted">The timeline is not available to you.</p>}
+          {timeline ? <TimelineList items={timeline} page={sp.page} pageHref={(n) => at({ view: 'timeline', page: n > 1 ? String(n) : undefined })} /> : <p className="text-muted">The timeline is not available to you.</p>}
         </section>
       )}
       {view === 'records' && (
         <section aria-labelledby="rec-h">
           <h2 id="rec-h" className="font-display text-xl font-bold">Every record</h2>
-          {ledger ? <RecordsList all={ledger} cls={sp.class ?? 'all'} hrefFor={(c) => at({ view: 'records', class: c === 'all' ? undefined : c })} /> : <p className="text-muted">The records are not available to you.</p>}
+          {ledger ? <RecordsList all={ledger} cls={sp.class ?? 'all'} hrefFor={(c) => at({ view: 'records', class: c === 'all' ? undefined : c, page: undefined })}
+            page={sp.page} pageHref={(n) => at({ view: 'records', page: n > 1 ? String(n) : undefined })} /> : <p className="text-muted">The records are not available to you.</p>}
         </section>
       )}
       {view === 'compare' && dealer && <CompareView self={ref} cmp={cmp} sp={sp} base={base} at={at} ownCars={ownCars} />}
@@ -104,7 +105,7 @@ export async function EmbeddedReport({ vehicleRef: ref, base, sp, mode = 'view',
           )}
           <ReportHero r={r} x={x} actions={actions} photoHref={(id) => `/v/${shown}/photo/${id}`} embedded />
           <QuestionNav questions={r.questions} embedded />
-          <ReportSections r={r} x={x} />
+          <ReportSections r={r} x={x} paging={{ pages: { vp: sp.vp, dp: sp.dp }, href: (key, anchor) => (n) => `${at({ [key]: n > 1 ? String(n) : undefined })}#${anchor}` }} />
           {/* Inside a workspace the report stops after the seven questions (28 Oct 2026): no "Before you pay" card,
               owners' reviews or closing note; Timeline and Records are the buttons above. */}
         </>

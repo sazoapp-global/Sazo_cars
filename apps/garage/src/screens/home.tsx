@@ -3,6 +3,7 @@
 import { formatKm } from '@sazo/contracts';
 import { Chip, PlateText, firstName, kmOfJob, rowStatus, when, works } from '../components/bits';
 import { Icon } from '../components/icon';
+import { Pager, usePaged } from '../components/pager';
 import { saveDraft, type LocalDraft } from '../lib/db';
 import { go } from '../lib/route';
 import type { Garage, Me, ServerJob } from '../lib/types';
@@ -77,7 +78,7 @@ function Numbers({ jobs }: { jobs: JobsState }) {
 /** Jobs as a table on wide screens and as cards on phones. Drafts on this phone come first. */
 export function JobList({ drafts, jobs, limit }: { drafts: LocalDraft[]; jobs: ServerJob[]; limit?: number }) {
   type Row = { id: string; plate: string; work: string; km?: number; by?: string; date: string; status: ReturnType<typeof rowStatus>; open: () => void; sync?: string; synced?: boolean; ref?: string };
-  const rows: Row[] = [
+  const all: Row[] = [
     ...drafts.map((d) => ({
       id: d.jobId, plate: d.plateEntered, work: d.workTypes.length ? works(d.workTypes) : 'Work not chosen yet', km: kmOfJob(d.form.mileage), date: d.clientCreatedAt,
       status: { ...rowStatus({ status: 'draft' }), text: d.lastSyncError ? 'Not sent' : d.dirty ? 'On this phone' : 'Draft' }, open: () => go({ name: 'job', jobId: d.jobId }),
@@ -87,7 +88,10 @@ export function JobList({ drafts, jobs, limit }: { drafts: LocalDraft[]; jobs: S
       id: j.jobId, plate: j.plateEntered, work: works(j.workTypes), km: kmOfJob(j.form.mileage), by: j.createdBy.displayName, date: j.clientCreatedAt, ref: j.publicRef,
       status: rowStatus(j), open: () => go({ name: 'server-job', jobId: j.jobId }),
     })),
-  ].slice(0, limit);
+  ];
+  // The full list has pages of 10 (4 Nov 2026); a new filter or search starts again at page 1.
+  const paged = usePaged(all, all.map((x) => x.id).join());
+  const rows = limit ? all.slice(0, limit) : paged.items;
   return (
     <>
       <div tabIndex={0} role="region" aria-label="Job records" className="mt-3 hidden overflow-x-auto rounded-[14px] border border-line bg-white shadow-sm focus-visible:outline-2 focus-visible:outline-primary-container md:block">
@@ -121,6 +125,7 @@ export function JobList({ drafts, jobs, limit }: { drafts: LocalDraft[]; jobs: S
           </li>
         ))}
       </ul>
+      {!limit && <Pager paged={paged} noun="records" />}
     </>
   );
 }
@@ -128,7 +133,8 @@ export function JobList({ drafts, jobs, limit }: { drafts: LocalDraft[]; jobs: S
 const TONE: Record<Alert['tone'], string> = { bad: 'text-bad-text', warn: 'text-warn-text', ok: 'text-ok-text', info: 'text-primary-container' };
 
 export function AlertsPanel({ alerts, limit }: { alerts: Alert[]; limit?: number }) {
-  const shown = limit ? alerts.slice(0, limit) : alerts;
+  const paged = usePaged(alerts, alerts.length);
+  const shown = limit ? alerts.slice(0, limit) : paged.items;
   return (
     <section aria-labelledby="alerts-h" className="min-w-0">
       <div className="flex items-baseline justify-between gap-3">
@@ -146,6 +152,7 @@ export function AlertsPanel({ alerts, limit }: { alerts: Alert[]; limit?: number
           ))}
         </ul>
       )}
+      {!limit && <Pager paged={paged} noun="alerts" />}
     </section>
   );
 }

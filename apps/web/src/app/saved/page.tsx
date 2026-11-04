@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { QUESTION_TITLES, formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -12,7 +13,8 @@ import { unsaveCar } from '../buyer-actions';
 
 export const metadata: Metadata = { title: 'Saved cars' };
 
-export default async function Saved() {
+export default async function Saved({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page } = await searchParams;
   if (!(await isSignedIn())) redirect('/sign-in?next=/saved');
   const { items } = await api<{ items: SavedCheck[] }>('/me/saved-checks', { auth: true });
   return (
@@ -21,7 +23,7 @@ export default async function Saved() {
       <p className="mt-1 text-muted">Answers update when new records arrive. Tick 2 or 3 cars to compare them.</p>
       {items.length === 0 ? <p className="card mt-6 p-4">Nothing saved yet. Open a car&apos;s report and tap <strong>Save this car</strong>.</p> : (
         <form action="/compare" method="get" className="mt-6 space-y-3">
-          {items.map((i) => (
+          {paginate(items, page).items.map((i) => (
             <div key={i.vehicleRef} className="card flex items-start gap-3 p-4">
               <input type="checkbox" name="r" value={i.vehicleRef} aria-label={`Compare ${vehicleName(i.summary.vehicle)}`} className="mt-1 h-6 w-6 shrink-0 accent-[#0033aa]" />
               <div className="min-w-0 flex-1">
@@ -41,6 +43,7 @@ export default async function Saved() {
           <button className="btn btn-primary"><Icon name="list_alt" />Compare selected</button>
         </form>
       )}
+      <Pager paged={paginate(items, page)} href={pageHref('/saved', {})} noun="saved cars" />
     </div>
   );
 }

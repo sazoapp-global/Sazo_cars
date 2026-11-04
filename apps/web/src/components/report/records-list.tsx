@@ -1,3 +1,4 @@
+import { Pager, paginate } from '../pager';
 // Every record SAZO holds for a car, with a filter by kind of source: on the car's public page and inside the
 // workspaces (28 Oct 2026). `hrefFor` gives the address of each filter where the list is shown.
 import { RECORD_LABELS, formatDate, formatKm } from '@sazo/contracts';
@@ -30,7 +31,8 @@ function describe(item: LedgerItem): string {
   return parts.join(' · ');
 }
 
-export function RecordsList({ all, cls, hrefFor }: { all: LedgerItem[]; cls: string; hrefFor: (cls: string) => string }) {
+/** Pages of 10 (4 Nov 2026): `page` from the address and `pageHref` for page n; a new filter starts at page 1. */
+export function RecordsList({ all, cls, hrefFor, page, pageHref }: { all: LedgerItem[]; cls: string; hrefFor: (cls: string) => string; page?: string; pageHref?: (n: number) => string }) {
   const items = all.filter((i) => cls === 'all' || i.evidenceClass === cls);
   return (
     <>
@@ -43,9 +45,9 @@ export function RecordsList({ all, cls, hrefFor }: { all: LedgerItem[]; cls: str
           </Link>
         ))}
       </nav>
-      {items.length === 0 ? <p className="mt-6 text-muted">No records of this type.</p> : (
+      {items.length === 0 ? <p className="mt-6 text-muted">No records of this type.</p> : (<>
         <ul className="mt-4 space-y-3">
-          {items.map((i) => (
+          {(pageHref ? paginate(items, page).items : items).map((i) => (
             <li key={i.observationId} className={`card p-4 ${i.excluded ? 'opacity-75' : ''}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                 <h2 className="font-semibold">{RECORD_LABELS[i.type] ?? i.type}</h2>
@@ -61,7 +63,8 @@ export function RecordsList({ all, cls, hrefFor }: { all: LedgerItem[]; cls: str
             </li>
           ))}
         </ul>
-      )}
+        {pageHref && <Pager paged={paginate(items, page)} href={pageHref} noun="records" label="Pages of records" />}
+      </>)}
     </>
   );
 }

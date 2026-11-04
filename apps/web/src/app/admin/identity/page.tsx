@@ -1,3 +1,4 @@
+import { pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import { decideIdentity } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
@@ -19,7 +20,7 @@ export default async function IdentityChecks({ searchParams }: { searchParams: S
   const sp = await searchParams;
   const data = await adminFetch<{ items: Check[] }>('/admin/identity-checks?status=pending');
   const PATH = '/admin/identity';
-  const Q = { status: sp.status, item: sp.item };
+  const Q = { status: sp.status, item: sp.item , page: sp.page };
   if (sp.person) return <PersonView userId={sp.person} back={withQuery(PATH, Q, {})} backLabel="Back" />;
   const one = data !== 'forbidden' && sp.item ? data.items.find((c) => c.checkId === sp.item) : undefined;
   if (one) {
@@ -55,8 +56,8 @@ export default async function IdentityChecks({ searchParams }: { searchParams: S
       <p className="mb-4 max-w-2xl text-muted">Business managers&apos; National IDs, sent by choice (they are optional). Check that the photo shows the same name and ID number, then approve or reject. The person gets an SMS with your reason. A business that is still waiting can also be approved from Businesses, which approves its managers&apos; IDs with it.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="checking National IDs" /> : data.items.length === 0 ? <p className="text-muted">No one is waiting.</p> : (
-        <Rows label="National IDs waiting">
-          {data.items.map((c) => <Row key={c.checkId} href={withQuery(PATH, Q, { item: c.checkId })} title={c.person.name ?? 'No name given'} meta={`${c.businesses.length ? c.businesses.map((b) => b.name).join(', ') : 'No business yet'} · sent ${formatDate(c.createdAt)}`} status={'Waiting for a check'} tone={'warn'} />)}
+        <Rows label="National IDs waiting" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'IDs' }}>
+          {paginate(data.items, sp.page).items.map((c) => <Row key={c.checkId} href={withQuery(PATH, Q, { item: c.checkId })} title={c.person.name ?? 'No name given'} meta={`${c.businesses.length ? c.businesses.map((b) => b.name).join(', ') : 'No business yet'} · sent ${formatDate(c.createdAt)}`} status={'Waiting for a check'} tone={'warn'} />)}
         </Rows>
       )}
     </>

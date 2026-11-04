@@ -4,6 +4,7 @@ import { Icon } from '../components/icon';
 import { ApiError, OfflineError, request } from '../lib/api';
 import { go } from '../lib/route';
 import type { StaffMember } from '../lib/types';
+import { Pager, usePaged } from '../components/pager';
 
 const ROLE: Record<string, string> = { org_manager: 'Manager', org_staff: 'Staff' };
 
@@ -21,6 +22,7 @@ export function Staff({ garage }: { garage: Garage }) {
     }
   }, [garage.id]);
   useEffect(() => { void load(); }, [load]);
+  const paged = usePaged(staff ?? [], staff?.length);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -41,11 +43,12 @@ export function Staff({ garage }: { garage: Garage }) {
       <button type="button" className="flex items-center gap-1 font-semibold text-primary-container" onClick={() => go({ name: 'home' })}><Icon name="arrow_back" size={18} />Home</button>
       <h1 className="font-display text-2xl font-bold">Team</h1>
       <ul className="card divide-y divide-line">
-        {(staff ?? []).map((s) => (
+        {paged.items.map((s) => (
           <li key={s.userId} className="flex items-center justify-between gap-3 p-3"><span className="font-semibold">{s.displayName}</span><span className="text-sm text-muted">{ROLE[s.role] ?? s.role}</span></li>
         ))}
         {!staff && <li className="p-3"><div className="skeleton h-6" /></li>}
       </ul>
+      <Pager paged={paged} noun="people" />
       <form className="card space-y-3 p-4" onSubmit={(e) => void add(e)}>
         <h2 className="font-display text-lg font-bold">Add someone</h2>
         <div><label htmlFor="s-name" className="label">Name</label><input id="s-name" className="field" required minLength={2} value={name} onChange={(e) => setName(e.target.value)} /></div>

@@ -3,6 +3,7 @@ import type { ModerationCase } from '@/lib/types';
 import { decideModeration } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { pageHref, paginate } from '@/components/pager';
 import { Back, Row, Rows, withQuery } from '../rows';
 
 export const metadata = { title: 'Reviews and videos' };
@@ -14,7 +15,7 @@ export default async function Moderation({ searchParams }: { searchParams: SP })
   const status = STATUSES.some(([s]) => s === sp.status) ? sp.status! : 'open';
   const data = await adminFetch<{ items: ModerationCase[] }>(`/admin/moderation?status=${status}`);
   const PATH = '/admin/moderation';
-  const Q = { status: sp.status, item: sp.item };
+  const Q = { status: sp.status, item: sp.item , page: sp.page };
   const one = data !== 'forbidden' && sp.item ? data.items.find((c) => c.caseId === sp.item) : undefined;
   if (one) {
     const c = one;
@@ -56,8 +57,8 @@ export default async function Moderation({ searchParams }: { searchParams: SP })
         ))}
       </nav>
       {data === 'forbidden' ? <Forbidden what="moderating reviews" /> : data.items.length === 0 ? <p className="text-muted">Nothing here.</p> : (
-        <Rows label="Reviews and videos">
-          {data.items.map((c) => <Row key={c.caseId} href={withQuery(PATH, Q, { item: c.caseId })} title={`${c.type === 'model_review' ? 'Review' : 'Video'} of the ${c.model}`} meta={`${(c.body ?? c.title ?? c.url ?? '').slice(0, 90)} · by ${c.author} · ${formatDate(c.submittedAt)}`} status={c.reason ? 'Decided' : 'To check'} tone={c.reason ? 'muted' : 'warn'} />)}
+        <Rows label="Reviews and videos" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'items' }}>
+          {paginate(data.items, sp.page).items.map((c) => <Row key={c.caseId} href={withQuery(PATH, Q, { item: c.caseId })} title={`${c.type === 'model_review' ? 'Review' : 'Video'} of the ${c.model}`} meta={`${(c.body ?? c.title ?? c.url ?? '').slice(0, 90)} · by ${c.author} · ${formatDate(c.submittedAt)}`} status={c.reason ? 'Decided' : 'To check'} tone={c.reason ? 'muted' : 'warn'} />)}
         </Rows>
       )}
     </>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { Plate } from '@/components/plate';
 import { statusIcon } from '@/components/status';
 import { ShareButtons } from '@/components/share-buttons';
@@ -36,7 +37,7 @@ function Section({ id, title, icon, children, note }: { id: string; title: strin
   );
 }
 
-type SP = Promise<{ done?: string; error?: string; link?: string; ch?: string; report?: string; tab?: string } & EmbeddedReportParams>;
+type SP = Promise<{ done?: string; error?: string; link?: string; ch?: string; report?: string; tab?: string; lp?: string; cp?: string } & EmbeddedReportParams>;
 interface CarLink { linkId: string; channel: string; showDealerName: boolean; createdAt: string }
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const channelLabel = (c: string) => CHANNELS.find(([k]) => k === c)?.[1] ?? c;
@@ -217,7 +218,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           </form>
           {links.length > 0 && (
             <ul className="mt-4 divide-y divide-line border-t border-line text-sm" aria-label="Links in use">
-              {links.map((l) => (
+              {paginate(links, sp.lp).items.map((l) => (
                 <li key={l.linkId} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>{channelLabel(l.channel)} link, made {formatDate(l.createdAt)}{l.showDealerName ? '' : ', without your name'}</span>
                   <form action={revokeLink}>{hidden}<input type="hidden" name="link" value={l.linkId} /><button className="link text-sm">Stop this link</button></form>
@@ -225,6 +226,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
               ))}
             </ul>
           )}
+          <Pager paged={paginate(links, sp.lp)} href={(n) => `${pageHref(`/dealer/${id}/car/${car}`, {}, 'lp')(n)}#share`} noun="links" label="Pages of links" scroll={false} />
           <p className="mt-3 text-sm"><Link href={`/dealer/${id}/enquiries`} className="link">See enquiries</Link></p>
         </Section>
       )}
@@ -311,7 +313,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
         <Section id="costs" title="Costs" icon="receipt_long" note="Managers only. Each cost keeps its own currency and the rate you used. To correct one, cancel it and add it again: both entries stay.">
           {costs.entries.length > 0 && (
             <ul className="divide-y divide-line border-y-2 border-line-strong" aria-label="Cost entries">
-              {costs.entries.map((e) => (
+              {paginate(costs.entries, sp.cp).items.map((e) => (
                 <li key={e.id} className={`flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-2 text-sm ${e.reversedBy || e.reversesEntryId ? 'text-muted' : ''}`}>
                   <div className="min-w-0 flex-1">
                     <p className={`font-semibold ${e.reversedBy ? 'line-through' : ''}`}>{e.reversesEntryId ? `Cancelled: ${costLabel(e.category)}` : costLabel(e.category)}</p>
@@ -333,6 +335,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
               <li className="flex items-baseline justify-between gap-4 py-2"><span className="font-bold">Landed cost</span><span className="font-display text-lg font-extrabold tabular-nums">{formatUgx(costs.totalUgx, false)}</span></li>
             </ul>
           )}
+          <Pager paged={paginate(costs.entries, sp.cp)} href={(n) => `${pageHref(`/dealer/${id}/car/${car}`, {}, 'cp')(n)}#costs`} noun="cost entries" label="Pages of costs" scroll={false} />
           <p className="mt-2 text-sm">{c.status === 'sold' && c.marginUgx !== null && c.marginUgx !== undefined
             ? <>Margin on the sale: <strong className="tabular-nums">{formatUgx(c.marginUgx, false)}</strong></>
             : costs.totalUgx > 0 ? <>At the asking price the margin would be <strong className="tabular-nums">{formatUgx(c.askingPriceUgx - costs.totalUgx, false)}</strong></> : 'No costs recorded yet.'}</p>

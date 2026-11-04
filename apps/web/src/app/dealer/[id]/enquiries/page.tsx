@@ -5,6 +5,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { AppFrame } from '@/components/app-frame/app-frame';
 import { NumberStrip } from '@/components/number-strip';
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation, StockItem } from '@/lib/types';
 import { addLead, decideLead, moveLead, noteLead } from '../../actions';
@@ -25,7 +26,7 @@ const SOURCES: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTo
 const sourceLabel = (s: string) => SOURCES.find(([k]) => k === s)?.[1] ?? s;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type SP = Promise<{ done?: string; error?: string; show?: string; open?: string; add?: string }>;
+type SP = Promise<{ done?: string; error?: string; show?: string; open?: string; add?: string; page?: string; hp?: string }>;
 
 export default async function Enquiries({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -104,8 +105,9 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
               {(
                   <div className="mt-4 space-y-2 border-t border-line pt-3"><h3 className="text-sm font-bold">History and notes</h3>
                     <ol className="space-y-1 text-sm">
-                      {events.map((e, i) => <li key={i} className="text-muted">{formatDate(e.at)}: {e.kind === 'created' ? 'Enquiry received' : e.kind === 'stage' ? `Moved to ${stageLabel(e.toStage ?? '')}` : 'Note'}{e.note ? `. ${e.note}` : ''}{e.by ? ` (${e.by})` : ''}</li>)}
+                      {paginate(events, sp.hp).items.map((e, i) => <li key={i} className="text-muted">{formatDate(e.at)}: {e.kind === 'created' ? 'Enquiry received' : e.kind === 'stage' ? `Moved to ${stageLabel(e.toStage ?? '')}` : 'Note'}{e.note ? `. ${e.note}` : ''}{e.by ? ` (${e.by})` : ''}</li>)}
                     </ol>
+                    <Pager paged={paginate(events, sp.hp)} href={pageHref(`/dealer/${id}/enquiries`, { show: sp.show, open: sp.open }, 'hp')} noun="entries" label="Pages of the history" scroll={false} />
                     <form action={noteLead} data-draft={`lead-note-${l.leadId}`} className="flex gap-2">{hidden}<input type="hidden" name="lead" value={l.leadId} />
                       <label htmlFor={`n-${l.leadId}`} className="sr-only">Note</label>
                       <input id={`n-${l.leadId}`} name="note" required minLength={2} maxLength={500} className="field !min-h-10 text-sm" placeholder="Called, coming Saturday" />
@@ -166,7 +168,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
 
       {data.items.length === 0 ? <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">{closed ? 'Nothing closed yet.' : 'No open enquiries. Share a car to get some.'}</p> : (
         <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card" aria-label="Enquiries">
-          {data.items.map((l) => (
+          {paginate(data.items, sp.page).items.map((l) => (
             <li key={l.leadId}>
               <Link href={`/dealer/${id}/enquiries?${new URLSearchParams({ ...(closed ? { show: 'closed' } : {}), open: l.leadId })}`} className="flex items-center gap-3 px-4 py-3 hover:bg-soft">
                 <span className="min-w-0 flex-1">
@@ -180,6 +182,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
           ))}
         </ul>
       )}
+      <Pager paged={paginate(data.items, sp.page)} href={pageHref(`/dealer/${id}/enquiries`, { show: closed ? 'closed' : undefined })} noun="enquiries" />
     </AppFrame>
   );
 }

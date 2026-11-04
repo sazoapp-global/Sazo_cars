@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { AppFrame } from '@/components/app-frame/app-frame';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { ImportStage, Me, MyOrganisation } from '@/lib/types';
@@ -19,7 +20,7 @@ interface Checked {
   importId: string; fileName: string; status: 'checked' | 'adding' | 'added'; ready: number; withProblems: number; rows: Row[];
   results: { line: number; stockId?: string; error?: string; costsAdded?: number }[] | null;
 }
-type SP = Promise<{ file?: string; done?: string; error?: string }>;
+type SP = Promise<{ file?: string; done?: string; error?: string; page?: string }>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Add many cars from an Excel or CSV file (D-131). Managers only: the file can carry import costs. */
@@ -84,7 +85,7 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
             </form>
           )}
           <ul className="mt-3 divide-y divide-line rounded-lg border border-line" aria-label="Rows in the file">
-            {checked.rows.map((l) => {
+            {paginate(checked.rows, sp.page).items.map((l) => {
               const res = result(l.line);
               const ok = !l.problems.length && !res?.error;
               return (
@@ -106,6 +107,7 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
               );
             })}
           </ul>
+          <Pager paged={paginate(checked.rows, sp.page)} href={pageHref(`/dealer/${id}/import`, { file: sp.file })} noun="rows" scroll={false} />
           <p className="mt-3"><Link href={`/dealer/${id}/import`} className="link text-sm">Check another file</Link></p>
         </section>
       )}

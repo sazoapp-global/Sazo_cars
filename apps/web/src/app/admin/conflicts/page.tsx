@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import Link from 'next/link';
 import type { Conflict } from '@/lib/types';
 import { adminFetch, requireStaff } from '../guard';
@@ -34,7 +35,7 @@ export default async function Conflicts({ searchParams }: { searchParams: SP }) 
               <tr><th className="p-3">Vehicle</th><th className="p-3">Topic</th><th className="p-3">Why it opened</th><th className="p-3">Status</th><th className="p-3">Opened</th><th className="p-3"><span className="sr-only">Open</span></th></tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {data.items.map((c) => (
+              {paginate(data.items, sp.page).items.map((c) => (
                 <tr key={c.conflictId}>
                   <td className="p-3"><span className="sazo-id font-semibold">{c.vehicleRef}</span>{c.relatedVehicleRefs.length > 0 && <span className="block text-xs text-muted">also {c.relatedVehicleRefs.join(', ')}</span>}</td>
                   <td className="p-3">{TOPIC[c.topic] ?? c.topic}</td>
@@ -47,6 +48,9 @@ export default async function Conflicts({ searchParams }: { searchParams: SP }) 
             </tbody>
           </table>
         </div>
+      )}
+      {data !== 'forbidden' && (
+        <Pager paged={paginate(data.items, sp.page)} href={pageHref('/admin/conflicts', { status: sp.status, topic: sp.topic })} noun="conflicts" />
       )}
     </>
   );

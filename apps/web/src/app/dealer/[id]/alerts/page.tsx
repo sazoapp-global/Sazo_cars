@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { AppFrame } from '@/components/app-frame/app-frame';
 import { Icon } from '@/components/icon';
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation } from '@/lib/types';
 import { changePrice, moveLead, noteLead, recordPayment, updateCar } from '../../actions';
@@ -33,7 +34,7 @@ interface PlanDetail {
   schedule: { seq: number; dueOn: string; amountUgx: number; paidUgx: number; owingUgx: number; status: string; daysLate: number }[];
 }
 
-type SP = Promise<{ alert?: string; done?: string; error?: string }>;
+type SP = Promise<{ alert?: string; done?: string; error?: string; page?: string }>;
 
 export default async function DealerAlerts({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -46,12 +47,14 @@ export default async function DealerAlerts({ params, searchParams }: { params: P
   const manager = org.role === 'org_manager';
   const name = org.tradingName ?? org.legalName;
   const [alerts, me] = await Promise.all([dealerAlerts(id, approved), api<Me>('/me', { auth: true }).catch(() => undefined)]);
-  const red = alerts.filter((a) => a.tone === 'red');
-  const yellow = alerts.filter((a) => a.tone === 'yellow');
+  // Pages of 10, worst first across the pages (red ones come first on page 1).
+  const paged = paginate(alerts, sp.page);
+  const red = paged.items.filter((a) => a.tone === 'red');
+  const yellow = paged.items.filter((a) => a.tone === 'yellow');
   const asked = alerts.find((a) => a.id === sp.alert);
-  const open = asked ?? alerts[0];
+  const open = asked ?? paged.items[0];
   const base = `/dealer/${id}/alerts`;
-  const hrefOf = (a: DealerAlert) => `${base}?alert=${encodeURIComponent(a.id)}`;
+  const hrefOf = (a: DealerAlert) => `${base}?alert=${encodeURIComponent(a.id)}${paged.page > 1 ? `&page=${paged.page}` : ''}`;
   // A sale's instalment, for its alert: what was due and what is paid.
   const plan = open?.planId ? await api<PlanDetail>(`/dealer/payments/${open.planId}`, { auth: true, headers: { 'X-Organisation-Id': id } }).catch(() => undefined) : undefined;
 
@@ -108,7 +111,7 @@ export default async function DealerAlerts({ params, searchParams }: { params: P
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
           <div className={`space-y-5 ${asked ? 'max-lg:hidden' : ''}`}>
             <div className="grid grid-cols-2 gap-3">
-              {([['red', red.length, 'Act now'], ['yellow', yellow.length, 'Check soon']] as const).map(([tone, n, label]) => (
+              {([['red', alerts.filter((a) => a.tone === 'red').length, 'Act now'], ['yellow', alerts.filter((a) => a.tone === 'yellow').length, 'Check soon']] as const).map(([tone, n, label]) => (
                 <a key={tone} href={`#${tone}-h`} className={`flex items-center gap-3 rounded-[14px] border-2 p-3 ${tone === 'red' ? 'border-bad-line bg-bad-fill' : 'border-warn-line bg-warn-fill'}`}>
                   <span className={`font-display text-2xl font-extrabold tabular-nums ${TONE[tone].text}`}>{n}</span>
                   <span className={`font-semibold ${TONE[tone].text}`}>{label}</span>
@@ -117,6 +120,7 @@ export default async function DealerAlerts({ params, searchParams }: { params: P
             </div>
             {group('red', 'Act now', red)}
             {group('yellow', 'Check soon', yellow)}
+            <Pager paged={paged} href={pageHref(base, {})} noun="alerts" scroll={false} />
           </div>
           {open && <div className={asked ? '' : 'max-lg:hidden'}><Detail a={open} org={id} base={base} back={hrefOf(open)} plan={plan} /></div>}
         </div>

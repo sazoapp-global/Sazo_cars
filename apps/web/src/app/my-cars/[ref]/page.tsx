@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { EVENT_LABELS, RECORD_LABELS, formatDate, formatKm } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -33,7 +34,7 @@ export default async function Visits({ params, searchParams }: { params: Promise
           <>
             {open.length > 0 && <p className="mb-3 font-semibold">{open.length} {open.length === 1 ? 'visit needs' : 'visits need'} your answer.</p>}
             <ul className="space-y-3">
-              {visits.map((v) => (
+              {paginate(visits, sp.page).items.map((v) => (
                 <li key={v.eventId} className="card p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                     <h2 className="font-display font-semibold">{EVENT_LABELS[v.type] ?? 'Record'} · {v.sourceLabel.replace(/^Garage record · /, '')}</h2>
@@ -57,6 +58,7 @@ export default async function Visits({ params, searchParams }: { params: Promise
                 </li>
               ))}
             </ul>
+            <Pager paged={paginate(visits, sp.page)} href={pageHref(`/my-cars/${ref}`, {})} noun="garage visits" />
           </>
         )}
       </div>

@@ -11,6 +11,7 @@ import { go, useOnline } from '../lib/route';
 import { uploadPhoto } from '../lib/sync';
 import type { Garage } from '../lib/types';
 import { uuidv7 } from '../lib/uuid';
+import { Pager, usePaged } from '../components/pager';
 
 interface Concern { concernId: string; plate: string; category: ConcernCategory; description: string; status: 'open' | 'upheld' | 'dismissed'; decisionReason: string | null; createdAt: string }
 const STATUS = {
@@ -37,6 +38,7 @@ export function Concerns({ workplace }: { workplace: Garage }) {
     }
   }, [workplace.id]);
   useEffect(() => { void load(); }, [load]);
+  const paged = usePaged(list ?? [], list?.length);
 
   const ready = plate.replace(/\s/g, '').length >= 4 && !!category && text.trim().length >= 10;
   async function send() {
@@ -89,7 +91,7 @@ export function Concerns({ workplace }: { workplace: Garage }) {
         <h2 id="raised" className="font-display text-lg font-bold">Reports from {workplace.name}</h2>
         {list === undefined ? <div className="skeleton mt-2 h-16" /> : list.length === 0 ? <p className="mt-2 text-muted">None yet.</p> : (
           <ul className="mt-2 space-y-2">
-            {list.map((c) => (
+            {paged.items.map((c) => (
               <li key={c.concernId} className="card p-4">
                 <div className="flex items-center justify-between gap-2"><PlateText value={c.plate} /><span className="text-xs text-label">{formatDate(c.createdAt)}</span></div>
                 <p className="mt-1 font-semibold">{CONCERNS[c.category].label}</p>
@@ -99,6 +101,7 @@ export function Concerns({ workplace }: { workplace: Garage }) {
             ))}
           </ul>
         )}
+        <Pager paged={paged} noun="reports" />
       </section>
     </div>
   );

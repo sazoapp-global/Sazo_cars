@@ -3,6 +3,7 @@ import { sendAnnouncement, withdrawAnnouncement } from '../actions';
 import { AUDIENCES, audienceLabel } from '../audiences';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { pageHref, paginate } from '@/components/pager';
 import { Back, Row, Rows, withQuery } from '../rows';
 
 interface Announcement { id: string; audience: string; title: string; body: string; createdAt: string; withdrawnAt: string | null; reads: number }
@@ -13,7 +14,7 @@ export default async function Announcements({ searchParams }: { searchParams: SP
   const sp = await searchParams;
   const data = await adminFetch<{ items: Announcement[] }>('/admin/announcements');
   const PATH = '/admin/announcements';
-  const Q = { item: sp.item };
+  const Q = { item: sp.item , page: sp.page };
   const one = data !== 'forbidden' && sp.item ? data.items.find((a) => a.id === sp.item) : undefined;
   if (one) {
     const a = one;
@@ -49,8 +50,8 @@ export default async function Announcements({ searchParams }: { searchParams: SP
             <div className="sm:col-span-2"><button className="btn btn-primary">Send</button></div>
           </form>
           {data.items.length === 0 ? <p className="text-muted">Nothing sent yet.</p> : (
-            <Rows label="Sent announcements">
-              {data.items.map((a) => <Row key={a.id} href={withQuery(PATH, Q, { item: a.id })} title={a.title} meta={`${audienceLabel(a.audience)} · ${formatDate(a.createdAt)} · read by ${a.reads}`} status={a.withdrawnAt ? 'Withdrawn' : 'Sent'} tone={a.withdrawnAt ? 'muted' : 'ok'} />)}
+            <Rows label="Sent announcements" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'announcements' }}>
+              {paginate(data.items, sp.page).items.map((a) => <Row key={a.id} href={withQuery(PATH, Q, { item: a.id })} title={a.title} meta={`${audienceLabel(a.audience)} · ${formatDate(a.createdAt)} · read by ${a.reads}`} status={a.withdrawnAt ? 'Withdrawn' : 'Sent'} tone={a.withdrawnAt ? 'muted' : 'ok'} />)}
             </Rows>
           )}
         </>

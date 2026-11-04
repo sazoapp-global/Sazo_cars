@@ -12,10 +12,11 @@ import { FUELS, STAGES, carName, stageLabel } from '../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../car-kind-fields';
 import { SubmitOnChange } from '@/components/submit-on-change';
+import { Pager, pageHref, paginate } from '@/components/pager';
 
 export const metadata: Metadata = { title: 'Cars for sale', robots: { index: false } };
 
-type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string; new?: string; kind?: string }>;
+type SP = Promise<{ done?: string; error?: string; show?: string; findings?: string; q?: string; add?: string; new?: string; kind?: string; page?: string; tp?: string }>;
 
 export default async function DealerStock({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
@@ -53,6 +54,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
   const kindFilter = isVehicleKind(sp.kind) ? sp.kind : undefined;
   const items = base.filter((c) => (!onlyFindings || findings(c).serious + findings(c).attention > 0) && (!kindFilter || kindOf(c) === kindFilter)
     && (!q || (c.vehicle?.currentPlate ?? '').replace(/\s/g, '').toUpperCase().includes(q) || carName(c).replace(/\s/g, '').toUpperCase().includes(q)));
+  const paged = paginate(items, sp.page);
   const href = (o: Record<string, string | undefined>) => {
     const p = new URLSearchParams(Object.entries({ show: show === 'sold' ? 'sold' : undefined, findings: onlyFindings ? '1' : undefined, q: sp.q || undefined, kind: kindFilter, ...o }).filter(([, v]) => v) as [string, string][]);
     return `/dealer/${id}${p.size ? `?${p}` : ''}`;
@@ -164,7 +166,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           </div>
           {/* The list only (approved 25 Oct 2026): a car opens with all its details beside the side bar. */}
           <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card" aria-label={show === 'sold' ? 'Cars sold' : 'Cars for sale'}>
-            {items.map((c) => {
+            {paged.items.map((c) => {
               const v = c.vehicle;
               const plate = v?.currentPlate ?? c.held?.plate ?? undefined;
               const f = findings(c);
@@ -195,6 +197,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
               );
             })}
           </ul>
+          <Pager paged={paged} href={pageHref(`/dealer/${id}`, { show: show === 'sold' ? 'sold' : undefined, findings: onlyFindings ? '1' : undefined, q: sp.q || undefined, kind: kindFilter })} noun={show === 'sold' ? 'cars sold' : 'cars for sale'} />
           <p className="mt-2 text-sm text-muted">Open a car to see all its details, photos, costs and actions.</p>
         </div>
       )}
@@ -226,8 +229,9 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
         <section id="staff-section" className="scroll-mt-24 rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="staff">
           <h2 id="staff" className="font-display text-lg font-bold">Your team</h2>
           <ul className="mt-2 divide-y divide-line">
-            {staff.map((m) => <li key={m.userId} className="flex justify-between gap-3 py-2"><span>{m.displayName}</span><span className="text-sm text-muted">{m.role === 'org_manager' ? 'Manager' : 'Sales'}</span></li>)}
+            {paginate(staff, sp.tp).items.map((m) => <li key={m.userId} className="flex justify-between gap-3 py-2"><span>{m.displayName}</span><span className="text-sm text-muted">{m.role === 'org_manager' ? 'Manager' : 'Sales'}</span></li>)}
           </ul>
+          <Pager paged={paginate(staff, sp.tp)} href={(n) => `${pageHref(`/dealer/${id}`, { ...sp, done: undefined, error: undefined }, 'tp')(n)}#staff-section`} noun="people" label="Pages of your team" scroll={false} />
           <form action={addStaff} data-draft={`dealer-staff-${id}`} className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
             <input type="hidden" name="org" value={id} />
             <div><label htmlFor="sname" className="label">Name</label><input id="sname" name="name" required className="field" /></div>

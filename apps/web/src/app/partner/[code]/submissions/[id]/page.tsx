@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
@@ -6,8 +7,9 @@ import { loadSource } from '../../load';
 
 const LABEL: Record<string, string> = { accepted: 'Added', needs_review: 'SAZO will check', rejected: 'Not accepted', pending: 'Processing' };
 
-export default async function SubmissionPage({ params }: { params: Promise<{ code: string; id: string }> }) {
+export default async function SubmissionPage({ params, searchParams }: { params: Promise<{ code: string; id: string }>; searchParams: Promise<{ page?: string }> }) {
   const { code, id } = await params;
+  const sp = await searchParams;
   await loadSource(code, `/partner/${code}/submissions/${id}`);
   const s = await api<Submission>(`/ingest/submissions/${id}`, { auth: true }).catch((err) => {
     if (err instanceof ApiError && err.status === 404) notFound();
@@ -22,7 +24,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ cod
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead className="border-b border-line text-[11px] uppercase tracking-wider text-label"><tr><th className="p-3">#</th><th className="p-3">Result</th><th className="p-3">Vehicle</th><th className="p-3">Why</th></tr></thead>
           <tbody className="divide-y divide-line">
-            {s.items.map((i) => (
+            {paginate(s.items, sp.page).items.map((i) => (
               <tr key={i.sequence}><td className="p-3 tabular-nums">{i.sequence}</td><td className="p-3 font-semibold">{LABEL[i.status] ?? i.status}</td>
                 <td className="p-3">{i.vehicleRef ? <Link className="link sazo-id" href={`/partner/${code}/cars/${i.vehicleRef}`}>{i.vehicleRef}</Link> : 'Not recorded'}</td>
                 <td className="p-3">{i.errors.map((e) => e.message).join('; ') || 'Not recorded'}</td></tr>
@@ -30,6 +32,7 @@ export default async function SubmissionPage({ params }: { params: Promise<{ cod
           </tbody>
         </table>
       </div>
+      <Pager paged={paginate(s.items, sp.page)} href={pageHref(`/partner/${code}/submissions/${id}`, {})} noun="records in this file" />
     </div>
   );
 }

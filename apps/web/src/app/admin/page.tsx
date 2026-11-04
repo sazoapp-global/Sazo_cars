@@ -1,3 +1,4 @@
+import { Pager, pageHref, paginate } from '@/components/pager';
 import Link from 'next/link';
 import { Icon } from '@/components/icon';
 import type { Conflict, Decision, Organisation } from '@/lib/types';
@@ -13,7 +14,8 @@ const when = (iso: string) => {
 };
 
 /** The console overview (approved 25 Oct 2026): what is waiting first, the empty queues on one line, then recent decisions. */
-export default async function AdminHome() {
+export default async function AdminHome({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const sp = await searchParams;
   const me = await requireStaff('/admin');
   const [orgs, conflicts, matches, concerns, claims, moderation, activity] = await Promise.all([
     adminFetch<{ items: Organisation[] }>('/admin/organisations?status=pending_verification'),
@@ -72,7 +74,7 @@ export default async function AdminHome() {
           <h2 id="activity" className="mb-3 text-xs font-bold uppercase tracking-wider text-label">Recent activity</h2>
           {activity.items.length === 0 ? <p className="card p-5 text-muted">No decisions yet.</p> : (
             <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card">
-              {activity.items.map((a, i) => (
+              {paginate(activity.items, sp.page).items.map((a, i) => (
                 <li key={`${a.at}-${i}`} className="flex items-baseline justify-between gap-3 px-5 py-3 text-sm">
                   <span><strong>{a.actor}</strong> {a.text}</span>
                   <span className="shrink-0 text-muted">{when(a.at)}</span>
@@ -80,6 +82,7 @@ export default async function AdminHome() {
               ))}
             </ul>
           )}
+          <Pager paged={paginate(activity.items, sp.page)} href={(n) => `${pageHref('/admin', {})(n)}#activity`} noun="entries" label="Pages of recent activity" scroll={false} />
         </section>
       )}
     </>

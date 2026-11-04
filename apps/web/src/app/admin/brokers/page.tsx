@@ -1,3 +1,4 @@
+import { pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import { adminFetch, requireStaff } from '../guard';
 import { decideBroker } from '../actions';
@@ -15,7 +16,7 @@ export default async function Brokers({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const data = await adminFetch<{ items: Application[] }>('/admin/brokers/applications?status=pending');
   const PATH = '/admin/brokers';
-  const Q = { status: sp.status, item: sp.item };
+  const Q = { status: sp.status, item: sp.item , page: sp.page };
   if (sp.person) return <PersonView userId={sp.person} back={withQuery(PATH, Q, {})} backLabel="Back" />;
   const one = data !== 'forbidden' && sp.item ? data.items.find((a) => a.applicationId === sp.item) : undefined;
   if (one) {
@@ -49,8 +50,8 @@ export default async function Brokers({ searchParams }: { searchParams: SP }) {
       <p className="mb-4 max-w-2xl text-muted">People who want to share dealers&apos; cars as brokers. Check that the ID photo shows the same name and ID number, then approve or reject. The person sees your reason.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="checking brokers" /> : data.items.length === 0 ? <p className="text-muted">No one is waiting.</p> : (
-        <Rows label="Broker applications">
-          {data.items.map((a) => <Row key={a.applicationId} href={withQuery(PATH, Q, { item: a.applicationId })} title={a.person.name ?? 'No name given'} meta={`${a.person.phone ?? 'No phone'} · applied ${formatDate(a.createdAt)}`} status={'Waiting for a check'} tone={'warn'} />)}
+        <Rows label="Broker applications" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'applications' }}>
+          {paginate(data.items, sp.page).items.map((a) => <Row key={a.applicationId} href={withQuery(PATH, Q, { item: a.applicationId })} title={a.person.name ?? 'No name given'} meta={`${a.person.phone ?? 'No phone'} · applied ${formatDate(a.createdAt)}`} status={'Waiting for a check'} tone={'warn'} />)}
         </Rows>
       )}
     </>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
+import { Pager, pageHref, paginate } from '@/components/pager';
 import { AppFrame } from '@/components/app-frame/app-frame';
 import { NumberStrip } from '@/components/number-strip';
 import { api, isSignedIn } from '@/lib/api';
@@ -17,7 +18,7 @@ interface Commission {
 }
 const STATUS: Record<string, string> = { on_hold: 'On hold: decide who brought the customer', pending: 'Waiting for your approval', approved: 'Approved, not paid', paid: 'Paid', cancelled: 'Cancelled' };
 
-type SP = Promise<{ done?: string; error?: string; item?: string }>;
+type SP = Promise<{ done?: string; error?: string; item?: string; page?: string }>;
 
 /** Broker commission records for this dealer's sales (D-122, D-129). Managers only; no money moves through SAZO. */
 export default async function Commissions({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
@@ -90,7 +91,7 @@ export default async function Commissions({ params, searchParams }: { params: Pr
       ]} />
       {items.length === 0 ? <p className="rounded-[14px] border border-dashed border-line-strong p-6 text-center text-muted">No commission yet.</p> : (
         <ul className="divide-y divide-line overflow-hidden rounded-[14px] border border-line bg-card" aria-label="Commissions">
-          {items.map((c) => (
+          {paginate(items, sp.page).items.map((c) => (
             <li key={c.commissionId}>
               <Link href={`/dealer/${id}/commissions?item=${c.commissionId}`} className="flex items-center gap-3 px-4 py-3 hover:bg-soft">
                 <span className="min-w-0 flex-1"><span className="block font-semibold">{c.broker}</span>
@@ -102,6 +103,7 @@ export default async function Commissions({ params, searchParams }: { params: Pr
           ))}
         </ul>
       )}
+      <Pager paged={paginate(items, sp.page)} href={pageHref(`/dealer/${id}/commissions`, {})} noun="commissions" />
     </AppFrame>
   );
 }

@@ -1,3 +1,4 @@
+import { pageHref, paginate } from '@/components/pager';
 import { CONCERNS, formatDate } from '@sazo/contracts';
 import type { ConcernQueueItem } from '@/lib/types';
 import { decideConcern } from '../actions';
@@ -15,7 +16,7 @@ export default async function Concerns({ searchParams }: { searchParams: SP }) {
   const status = STATUSES.some(([s]) => s === sp.status) ? sp.status! : 'open';
   const data = await adminFetch<{ items: ConcernQueueItem[] }>(`/admin/concerns?status=${status}`);
   const PATH = '/admin/concerns';
-  const Q = { status: sp.status, item: sp.item };
+  const Q = { status: sp.status, item: sp.item , page: sp.page };
   if (sp.person) return <PersonView userId={sp.person} back={withQuery(PATH, Q, {})} backLabel="Back" />;
   const one = data !== 'forbidden' && sp.item ? data.items.find((c) => c.concernId === sp.item) : undefined;
   if (one) {
@@ -64,8 +65,8 @@ export default async function Concerns({ searchParams }: { searchParams: SP }) {
         ))}
       </nav>
       {data === 'forbidden' ? <Forbidden what="reviewing reported problems" /> : data.items.length === 0 ? <p className="text-muted">Nothing here.</p> : (
-        <Rows label="Reported problems">
-          {data.items.map((c) => <Row key={c.concernId} href={withQuery(PATH, Q, { item: c.concernId })} title={CONCERNS[c.category].label} meta={`${c.plate ?? c.vehicleRef ?? 'No plate'} · reported ${formatDate(c.createdAt)}`} status={c.status === 'open' ? 'To check' : c.status} tone={c.status === 'open' ? 'warn' : 'muted'} />)}
+        <Rows label="Reported problems" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'reported problems' }}>
+          {paginate(data.items, sp.page).items.map((c) => <Row key={c.concernId} href={withQuery(PATH, Q, { item: c.concernId })} title={CONCERNS[c.category].label} meta={`${c.plate ?? c.vehicleRef ?? 'No plate'} · reported ${formatDate(c.createdAt)}`} status={c.status === 'open' ? 'To check' : c.status} tone={c.status === 'open' ? 'warn' : 'muted'} />)}
         </Rows>
       )}
     </>

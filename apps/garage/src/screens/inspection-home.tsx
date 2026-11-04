@@ -9,6 +9,7 @@ import { syncAll } from '../lib/sync';
 import type { Garage, Me, ServerInspection } from '../lib/types';
 import { uuidv7 } from '../lib/uuid';
 import { BookingRequests } from './booking-requests';
+import { Pager, usePaged } from '../components/pager';
 
 export const RESULT = (passed: boolean | undefined) => (passed === undefined ? undefined : passed
   ? { text: 'Passed', cls: 'text-ok-text bg-ok-fill border-ok-line', icon: 'check_circle' as const }
@@ -45,6 +46,8 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
 
   const localIds = new Set(local.map((i) => i.id));
   const others = (sent ?? []).filter((i) => !localIds.has(i.inspectionId));
+  const onPhone = usePaged(local, local.length);
+  const sentPaged = usePaged(others, others.length);
 
   return (
     <div className="space-y-6 p-4 pb-10">
@@ -55,7 +58,7 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
         <section aria-labelledby="on-phone">
           <h2 id="on-phone" className="font-display text-lg font-bold">On this phone</h2>
           <ul className="mt-2 space-y-2">
-            {local.map((i) => (
+            {onPhone.items.map((i) => (
               <li key={i.id}>
                 <button type="button" onClick={() => go({ name: 'inspection', id: i.id })} className="card flex w-full items-center justify-between gap-3 p-4 text-left">
                   <div className="min-w-0">
@@ -71,6 +74,7 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
               </li>
             ))}
           </ul>
+          <Pager paged={onPhone} noun="inspections" />
         </section>
       )}
 
@@ -83,7 +87,7 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
           <p className="mt-2 text-muted">No inspections yet. Tap <strong>New inspection</strong> when you start on a car.</p>
         ) : (
           <ul className="mt-2 space-y-2">
-            {others.map((i) => {
+            {sentPaged.items.map((i) => {
               const result = RESULT(i.form.result?.passed);
               return (
                 <li key={i.inspectionId}>
@@ -97,6 +101,7 @@ export function InspectionHome({ workplace, me, onSignOut }: { workplace: Garage
             })}
           </ul>
         )}
+        <Pager paged={sentPaged} noun="inspections" />
       </section>
 
       <div className="flex flex-col gap-2">

@@ -2,6 +2,7 @@ import { saveFaq } from '../actions';
 import { AUDIENCES, audienceLabel } from '../audiences';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { pageHref, paginate } from '@/components/pager';
 import { Back, Row, Rows, withQuery } from '../rows';
 
 interface Faq { id: string; audience: string; topic: string; question: string; answer: string; status: 'draft' | 'published' | 'hidden'; position: number }
@@ -33,7 +34,7 @@ export default async function Faqs({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const data = await adminFetch<{ items: Faq[] }>('/admin/faqs');
   const PATH = '/admin/faqs';
-  const Q = { item: sp.item };
+  const Q = { item: sp.item , page: sp.page };
   const one = data !== 'forbidden' && sp.item ? data.items.find((f) => f.id === sp.item) : undefined;
   if (one) {
     const f = one;
@@ -67,8 +68,8 @@ export default async function Faqs({ searchParams }: { searchParams: SP }) {
             <form action={saveFaq} data-draft="faq-new" className="mt-3 grid gap-3 sm:grid-cols-2"><Fields /><div className="sm:col-span-2"><button className="btn btn-primary">Add</button></div></form>
           </details>
           {data.items.length === 0 ? <p className="text-muted">No questions yet.</p> : (
-            <Rows label="Help answers">
-              {data.items.map((f) => <Row key={f.id} href={withQuery(PATH, Q, { item: f.id })} title={f.question} meta={`${f.topic} · ${audienceLabel(f.audience)}`} status={STATUS.find(([v]) => v === f.status)?.[1]} tone={f.status === 'published' ? 'ok' : 'muted'} />)}
+            <Rows label="Help answers" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'help answers' }}>
+              {paginate(data.items, sp.page).items.map((f) => <Row key={f.id} href={withQuery(PATH, Q, { item: f.id })} title={f.question} meta={`${f.topic} · ${audienceLabel(f.audience)}`} status={STATUS.find(([v]) => v === f.status)?.[1]} tone={f.status === 'published' ? 'ok' : 'muted'} />)}
             </Rows>
           )}
         </>

@@ -1,3 +1,4 @@
+import { pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import { Plate } from '@/components/plate';
 import type { OwnershipClaim } from '@/lib/types';
@@ -13,7 +14,7 @@ export default async function Ownership({ searchParams }: { searchParams: SP }) 
   const sp = await searchParams;
   const data = await adminFetch<{ items: OwnershipClaim[] }>('/admin/ownership-claims');
   const PATH = '/admin/ownership';
-  const Q = { status: sp.status, item: sp.item };
+  const Q = { status: sp.status, item: sp.item , page: sp.page };
   if (sp.person) return <PersonView userId={sp.person} back={withQuery(PATH, Q, {})} backLabel="Back" />;
   const one = data !== 'forbidden' && sp.item ? data.items.find((c) => c.claimId === sp.item) : undefined;
   if (one) {
@@ -49,8 +50,8 @@ export default async function Ownership({ searchParams }: { searchParams: SP }) 
       <p className="mb-4 text-muted">People whose phone is not on the registry record sent a logbook photo. Approve only if the logbook shows this car (plate or chassis) and the owner&apos;s name matches the person.</p>
       <Notice done={sp.done} error={sp.error} />
       {data === 'forbidden' ? <Forbidden what="checking ownership claims" /> : data.items.length === 0 ? <p className="text-muted">No claims waiting.</p> : (
-        <Rows label="Ownership claims">
-          {data.items.map((c) => <Row key={c.claimId} href={withQuery(PATH, Q, { item: c.claimId })} title={c.claimant || 'Unnamed account'} meta={`${c.plate ?? c.vehicleRef} · sent ${formatDate(c.claimedAt)}`} status={'Logbook to check'} tone={'warn'} />)}
+        <Rows label="Ownership claims" paging={{ paged: paginate(data.items, sp.page), href: pageHref(PATH, { ...Q, item: undefined }), noun: 'claims' }}>
+          {paginate(data.items, sp.page).items.map((c) => <Row key={c.claimId} href={withQuery(PATH, Q, { item: c.claimId })} title={c.claimant || 'Unnamed account'} meta={`${c.plate ?? c.vehicleRef} · sent ${formatDate(c.claimedAt)}`} status={'Logbook to check'} tone={'warn'} />)}
         </Rows>
       )}
     </>
