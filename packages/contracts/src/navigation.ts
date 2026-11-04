@@ -45,7 +45,9 @@ export const isGroup = (e: NavEntry): e is NavGroup => 'links' in e;
 export const NOTIFICATIONS_PANEL = 'notifications';
 /** Opens the person's settings inside the page they are on (?panel=settings). */
 export const SETTINGS_PANEL = 'settings';
-export const FRAME_PANELS = [NOTIFICATIONS_PANEL, SETTINGS_PANEL] as const;
+/** Your data, opened from Settings in the same place (?panel=data, 4 Nov 2026). */
+export const DATA_PANEL = 'data';
+export const FRAME_PANELS = [NOTIFICATIONS_PANEL, SETTINGS_PANEL, DATA_PANEL] as const;
 
 /** Settings, at the foot of every side bar and in the My SAZO menu. */
 export const SETTINGS_LINK: NavLink = { key: 'settings', label: 'Settings', short: 'Settings', icon: 'edit', href: `?panel=${SETTINGS_PANEL}` };
@@ -182,7 +184,7 @@ export function activeKey(entries: NavEntry[], pathname: string, search: QueryRe
   for (const l of entries.flatMap((e) => (isGroup(e) ? e.links : [e]))) {
     if ((l.href.includes('#') && !l.href.startsWith('#/')) || l.href.startsWith('?')) continue; // a page's #section, or a panel
     if (search.get('panel') === NOTIFICATIONS_PANEL) return NOTIFICATIONS.key;
-    if (search.get('panel') === SETTINGS_PANEL) return SETTINGS_LINK.key;
+    if (search.get('panel') === SETTINGS_PANEL || search.get('panel') === DATA_PANEL) return SETTINGS_LINK.key;
     const [path, query] = l.href.split('?');
     const want = (query ?? '').split('&').filter(Boolean).map((kv) => kv.split('=').map(decodeURIComponent) as [string, string]);
     let score = 0;

@@ -206,7 +206,8 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
       <section className="card p-5" aria-labelledby="data">
         <h2 id="data" className="font-display text-lg font-semibold">Your data</h2>
         <p className="mt-1 text-muted">See what SAZO holds about you: your details, your businesses, saved cars, shared reports, cars you own, reviews and devices. Download it as a PDF or an Excel file.</p>
-        <a href="/account/data" className="btn btn-ghost mt-3"><Icon name="description" />Download my data</a>
+        {/* Opens in the same white space as Settings (D-157), never a new page. */}
+        <a href={back.includes(`panel=settings`) ? back.replace('panel=settings', 'panel=data') : `${back}${back.includes('?') ? '&' : '?'}panel=data`} className="btn btn-ghost mt-3"><Icon name="description" />Download my data</a>
 
         <details className="mt-5 rounded-lg border border-bad-line p-3">
           <summary className="cursor-pointer font-semibold text-bad-text">Delete my account</summary>

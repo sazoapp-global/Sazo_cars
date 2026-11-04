@@ -89,9 +89,14 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await signIn(later, OWNER, { next: '/account' });
   await expect(later.getByRole('heading', { name: 'Owner Joseph' })).toBeVisible();
 
-  // "Download my data" opens a readable page that includes the business; the JSON file is still offered.
+  // "Download my data" opens Your data in the same place as Settings, not a new page (D-157): only your details
+  // and your businesses on screen; the PDF and Excel files hold everything.
   await later.getByRole('link', { name: 'Download my data' }).click();
-  await expect(later.getByRole('heading', { name: 'Your data held by SAZO' })).toBeVisible();
+  await expect(later).toHaveURL(/panel=data/);
+  await expect(later.getByRole('heading', { name: 'Your data', level: 1 })).toBeVisible();
+  await expect(later.getByRole('region', { name: 'Your details' })).toBeVisible();
+  await expect(later.getByRole('heading', { name: 'Cars you own' })).toHaveCount(0);
+  await expect(later.getByRole('link', { name: 'Back to Settings' })).toBeVisible();
   const biz = later.getByRole('region', { name: 'Your businesses' });
   await expect(biz).toContainText(NAME);
   await expect(biz).toContainText('Approved');

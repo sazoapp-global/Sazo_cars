@@ -2,14 +2,14 @@
 // The side bar (approved 25 Oct 2026): navy, always full width, fixed in place from the top of the screen
 // (option A) so scrolling the page never moves it. Groups open as dropdowns; Notifications opens inside the page. Phones get the same
 // links as a strip above the page. The links come from the one navigation list (@sazo/contracts).
-import { NOTIFICATIONS_PANEL, SETTINGS_LINK, SETTINGS_PANEL, activeKey, isGroup, type NavEntry, type NavGroup, type NavLink } from '@sazo/contracts';
+import { DATA_PANEL, NOTIFICATIONS_PANEL, SETTINGS_LINK, SETTINGS_PANEL, activeKey, isGroup, type NavEntry, type NavGroup, type NavLink } from '@sazo/contracts';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { signOut } from '@/app/sign-in/actions';
-import { loadSettings } from '@/app/account/settings-actions';
+import { loadSettings, loadYourData } from '@/app/account/settings-actions';
 import { Icon, type IconName } from '@/components/icon';
 import { NotificationsView } from '@/components/notifications/notifications-view';
 import { ThemeChoice } from '@/components/theme/theme-choice';
@@ -165,7 +165,7 @@ export function PanelHost({ children, enabled = true, wide = false }: { children
   const pathname = usePathname() ?? '';
   const search = useSearchParams();
   const which = enabled ? search?.get('panel') : null;
-  const panel = which === NOTIFICATIONS_PANEL || which === SETTINGS_PANEL ? which : null;
+  const panel = which === NOTIFICATIONS_PANEL || which === SETTINGS_PANEL || which === DATA_PANEL ? which : null;
   const q = new URLSearchParams(search?.toString() ?? '');
   for (const k of ['panel', 'done', 'error', 'newPhone']) q.delete(k);
   const closeHref = q.toString() ? `${pathname}?${q}` : pathname;
@@ -174,11 +174,12 @@ export function PanelHost({ children, enabled = true, wide = false }: { children
     <>
       {panel && (
         <section aria-labelledby="panel-heading" className={`space-y-4 ${box}`}>
+          {panel === DATA_PANEL && <p><Link href={`${closeHref}${closeHref.includes('?') ? '&' : '?'}panel=${SETTINGS_PANEL}`} className="link inline-flex items-center gap-1 text-sm"><Icon name="arrow_back" size={16} />Back to Settings</Link></p>}
           <div className="flex items-center justify-between gap-3">
-            <h1 id="panel-heading" className="font-display text-2xl font-bold md:text-3xl">{panel === SETTINGS_PANEL ? 'Settings' : 'Notifications'}</h1>
+            <h1 id="panel-heading" className="font-display text-2xl font-bold md:text-3xl">{panel === SETTINGS_PANEL ? 'Settings' : panel === DATA_PANEL ? 'Your data' : 'Notifications'}</h1>
             <Link href={closeHref} className="inline-flex items-center gap-1.5 font-semibold text-primary-container hover:underline"><Icon name="close" size={20} />Close</Link>
           </div>
-          {panel === SETTINGS_PANEL ? <SettingsPanel closeHref={closeHref} /> : <NotificationsView />}
+          {panel === SETTINGS_PANEL ? <SettingsPanel closeHref={closeHref} /> : panel === DATA_PANEL ? <DataPanel /> : <NotificationsView />}
         </section>
       )}
       <div hidden={!!panel} className={wide ? 'space-y-6' : undefined}>{children}</div>
@@ -206,4 +207,11 @@ function SettingsPanel({ closeHref }: { closeHref: string }) {
   useEffect(() => { setSlot(box.current?.querySelector('[data-slot="appearance"]') ?? null); }, [view]);
   if (!view) return <div className="skeleton h-64" />;
   return <div ref={box}>{view}{slot && createPortal(<ThemeChoice />, slot)}</div>;
+}
+
+/** Your data, drawn by the server, in the same place as Settings (D-157). */
+function DataPanel() {
+  const [view, setView] = useState<ReactNode>(null);
+  useEffect(() => { let live = true; void loadYourData().then((v) => { if (live) setView(v); }); return () => { live = false; }; }, []);
+  return view ?? <div className="skeleton h-64" />;
 }
