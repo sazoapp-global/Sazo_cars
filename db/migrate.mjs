@@ -15,7 +15,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import pg from 'pg';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const url = process.env.DATABASE_URL ?? 'postgres://sazo:sazo@127.0.0.1:5432/sazo';
+const url = process.env.DATABASE_URL ?? 'postgres://sazo:sazo@127.0.0.1:5433/sazo';
 const runTests = process.argv.includes('--test');
 
 // The database may still be starting (e.g. just after `docker compose up`): keep trying for up to a minute.
@@ -33,7 +33,7 @@ async function connect() {
         const where = new URL(url);
         console.error(`\nCould not connect to the database at ${where.hostname}:${where.port || 5432} (${err.code ?? err.message}).`);
         console.error('Check that Docker Desktop is running and the database is up: docker compose ps   (logs: docker compose logs postgres)');
-        console.error('If another PostgreSQL is installed on this computer, it may be using port 5432 — see docs/RUNNING_LOCALLY.md.');
+        console.error('If another PostgreSQL is installed on this computer, check DATABASE_URL uses the port in docker-compose.yml (5433). See docs/RUNNING_LOCALLY.md.');
         process.exit(1);
       }
       if (attempt === 1) process.stdout.write('Waiting for the database to start ');
