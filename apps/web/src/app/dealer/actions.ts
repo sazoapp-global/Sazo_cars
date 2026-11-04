@@ -26,6 +26,16 @@ function ids(form: FormData): { org: string; car: string } {
   return { org, car: UUID.test(car) ? car : '' };
 }
 const toList = (org: string, q: Record<string, string>): never => redirect(`/dealer/${org}?${new URLSearchParams(q)}`);
+/**
+ * A fix made from an alert (D-153) returns to that alert on the Alerts page. Only this dealer's Alerts page is accepted,
+ * so the address can never send anyone elsewhere.
+ */
+function fromAlert(form: FormData, org: string): ((q: Record<string, string>) => never) | undefined {
+  const m = /^\/dealer\/([0-9a-f-]{36})\/alerts(?:\?alert=([a-z]+(?::|%3A)[0-9a-f-]{36}))?$/i.exec(text(form, 'back'));
+  if (!m || m[1] !== org) return undefined;
+  const alert = m[2]?.replace(/%3A/i, ':');
+  return (q) => redirect(`/dealer/${org}/alerts?${new URLSearchParams({ ...(alert ? { alert } : {}), ...q })}`);
+}
 const toCar = (org: string, car: string, q: Record<string, string>): never => redirect(car ? `/dealer/${org}/car/${car}?${new URLSearchParams(q)}${q.at ? `#${q.at}` : ''}` : `/dealer/${org}?${new URLSearchParams(q)}`);
 
 /** Upload an odometer photo for a mileage; sends the dealer back with SAZO's reason if the photo fails its checks. */
@@ -158,9 +168,10 @@ export async function updateCar(form: FormData) {
   const d = details(form, ['make', 'model', 'modelYear', 'engineCc', 'fuel', 'transmission', 'colour', 'yard', 'stage', 'receivedOn', 'tiktokUrl',
     'bondArrivedOn', 'customsStatus', 'customsDeadline', 'customsExtensionUntil', 'customsValue']);
   Object.assign(d, await kindAndSpecs(form, { make: d.make, model: d.model, chassis: text(form, 'chassis') }));
+  const go = fromAlert(form, org) ?? ((q: Record<string, string>) => toCar(org, car, { ...q, at }));
   try { await api(`/dealer/stock/${car}`, { method: 'PATCH', ...asDealer(org), body: { details: d } }); }
-  catch (err) { toCar(org, car, { error: reason(err, 'Could not save. Check the fields and try again.'), at }); }
-  toCar(org, car, { done: 'Saved.', at });
+  catch (err) { go({ error: reason(err, 'Could not save. Check the fields and try again.') }); }
+  go({ done: 'Saved.' });
 }
 
 /** Open to brokers (D-126) and the commission for this car (D-129). */
@@ -233,7 +244,7 @@ export async function removePhoto(form: FormData) {
 export async function changePrice(form: FormData) {
   const { org, car } = ids(form);
   const price = digits(text(form, 'price'));
-  const go = text(form, 'from') === 'car' ? (q: Record<string, string>) => toCar(org, car, q) : (q: Record<string, string>) => toList(org, q);
+  const go = fromAlert(form, org) ?? (text(form, 'from') === 'car' ? (q: Record<string, string>) => toCar(org, car, q) : (q: Record<string, string>) => toList(org, q));
   if (!price) go({ error: 'Enter the new asking price.' });
   try { await api(`/dealer/stock/${car}`, { method: 'PATCH', ...asDealer(org), body: { askingPriceUgx: price } }); }
   catch (err) { go({ error: reason(err, 'Could not change the price.') }); }
@@ -321,12 +332,14 @@ export async function moveLead(form: FormData) {
   const { org } = ids(form);
   const lead = text(form, 'lead');
   const stage = text(form, 'stage');
-  if (!UUID.test(lead) || !STAGES.includes(stage)) toLeads(org, { error: 'Choose a stage.' });
+  const back = fromAlert(form, org);
+  if (!UUID.test(lead) || !STAGES.includes(stage)) (back ?? ((q) => toLeads(org, q)))({ error: 'Choose a stage.' });
   const price = text(form, 'price') ? digits(text(form, 'price')) : undefined;
-  if (stage === 'completed' && !price) toLeads(org, { error: 'Enter the price the car sold for. Buyers never see it.', open: lead });
+  if (stage === 'completed' && !price) (back ?? ((q) => toLeads(org, q)))({ error: 'Enter the price the car sold for. Buyers never see it.', open: lead });
   try {
     await api(`/dealer/leads/${lead}`, { method: 'PATCH', ...asDealer(org), body: { stage, ...(price ? { salePriceUgx: price } : {}), ...(text(form, 'note') ? { note: text(form, 'note') } : {}) } });
-  } catch (err) { toLeads(org, { error: reason(err, 'Could not move the enquiry.'), open: lead }); }
+  } catch (err) { (back ?? ((q) => toLeads(org, q)))({ error: reason(err, 'Could not move the enquiry.'), open: lead }); }
+  if (back) back({ done: 'Enquiry moved.' });
   // Stay on the enquiry; a completed or lost one is under Completed and lost.
   toLeads(org, { done: stage === 'completed' ? 'Sale recorded. The car is marked as sold.' : 'Enquiry moved.', open: lead, ...(stage === 'completed' || stage === 'lost' ? { show: 'closed' } : {}) });
 }
@@ -334,10 +347,11 @@ export async function moveLead(form: FormData) {
 export async function noteLead(form: FormData) {
   const { org } = ids(form);
   const lead = text(form, 'lead');
-  if (!UUID.test(lead) || text(form, 'note').length < 2) toLeads(org, { error: 'Write a note first.' });
+  const go = fromAlert(form, org) ?? ((q: Record<string, string>) => toLeads(org, q));
+  if (!UUID.test(lead) || text(form, 'note').length < 2) go({ error: 'Write a note first.' });
   try { await api(`/dealer/leads/${lead}/notes`, { method: 'POST', ...asDealer(org), body: { note: text(form, 'note') } }); }
-  catch (err) { toLeads(org, { error: reason(err, 'Could not save the note.') }); }
-  toLeads(org, { done: 'Note saved.', open: lead });
+  catch (err) { go({ error: reason(err, 'Could not save the note.') }); }
+  go({ done: 'Note saved.', open: lead });
 }
 
 // Brokers (D-128, D-129) ----------------------------------------------------------------------------------
@@ -470,7 +484,8 @@ export async function recordPayment(form: FormData) {
   const org = text(form, 'org');
   const plan = text(form, 'plan');
   if (!UUID.test(org) || !UUID.test(plan)) redirect('/business');
-  const fail = (error: string): never => toPayments(org, { plan, error });
+  const back = fromAlert(form, org);
+  const fail = (error: string): never => (back ? back({ error }) : toPayments(org, { plan, error }));
   const amount = digits(text(form, 'amount'));
   if (!amount) fail('Enter the amount received.');
   const method = PAY_METHODS.includes(text(form, 'method')) ? text(form, 'method') : '';
@@ -481,7 +496,9 @@ export async function recordPayment(form: FormData) {
       amountUgx: amount, method, paidOn: text(form, 'paidOn'), ...(text(form, 'reference') ? { reference: text(form, 'reference') } : {}),
     } })).receiptNo;
   } catch (err) { fail(reason(err, 'Could not save the payment.')); }
-  toPayments(org, { plan, done: `Payment saved. Receipt ${receipt} was sent to the buyer by SMS.` });
+  const done = `Payment saved. Receipt ${receipt} was sent to the buyer by SMS.`;
+  if (back) back({ done });
+  toPayments(org, { plan, done });
 }
 
 /** A mistaken payment is corrected (both stay on record), never edited. */
