@@ -31,7 +31,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
   const framed = org.type === 'dealer' && org.status !== 'rejected' && org.status !== 'suspended';
   const steps: { label: string; state: 'done' | 'now' | 'later'; icon: IconName }[] = [
     { label: 'Registered', state: 'done', icon: 'check_circle' },
-    { label: org.verificationStatus === 'info_requested' ? 'SAZO needs more from you' : 'SAZO is checking', state: pending ? 'now' : 'done', icon: pending ? 'hourglass_empty' : 'check_circle' },
+    { label: !pending ? 'Checked by SAZO' : org.verificationStatus === 'info_requested' ? 'SAZO needs more from you' : 'SAZO is checking', state: pending ? 'now' : 'done', icon: pending ? 'hourglass_empty' : 'check_circle' },
     { label: org.status === 'approved' ? 'Approved' : org.status === 'rejected' ? 'Not approved' : org.status === 'suspended' ? 'Suspended' : 'Approved', state: pending ? 'later' : 'done', icon: org.status === 'approved' ? 'verified' : pending ? 'verified' : 'report' },
   ];
   return (
