@@ -10,6 +10,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { signOut } from '@/app/sign-in/actions';
 import { loadSettings, loadYourData } from '@/app/account/settings-actions';
+// The Settings forms' actions, imported here too (5 Nov 2026): Settings is drawn by a server action inside any page,
+// and the development server only finds an action on a page that imports it, so without this "Sign out" on a device
+// and the other Settings forms failed there with "Server Action was not found".
+import * as settingsFormActions from '@/app/account/actions';
+export const SETTINGS_FORM_ACTIONS = settingsFormActions;
 import { Icon, type IconName } from '@/components/icon';
 import { NotificationsView } from '@/components/notifications/notifications-view';
 import { ThemeChoice } from '@/components/theme/theme-choice';
