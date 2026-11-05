@@ -55,6 +55,12 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(admin.getByRole('status')).toContainText('approve');
 
   await dealer.goto(businessUrl);
+  // Notifications from Business details open beside the side bar, not in place of the whole page (5 Nov 2026).
+  await menu.getByRole('link', { name: /^Notifications/ }).click();
+  await expect(dealer).toHaveURL(/\/business\/.*panel=notifications/);
+  await expect(dealer.getByRole('heading', { name: 'Notifications', level: 1 })).toBeVisible();
+  await expect(menu).toBeVisible();
+  await dealer.goto(businessUrl);
   await dealer.getByRole('link', { name: 'Open your cars for sale' }).click();
   await expect(dealer.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
   // Approved: the car added while waiting has joined SAZO by itself, and the rest of the console is open.

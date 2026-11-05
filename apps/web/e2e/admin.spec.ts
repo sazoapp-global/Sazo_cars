@@ -156,6 +156,8 @@ test('announcements reach the bell and help answers reach the Help page (A-06, A
   // The list shows only the badge and the title; the message itself opens in a pop-up over the page.
   await expect(list).toContainText(`Testing week ${stamp}`);
   await expect(list).not.toContainText('Records on SAZO are simulated this week.');
+  // Each one shows when it was sent, opposite its title: the time for today's (5 Nov 2026).
+  await expect(list.getByRole('listitem').filter({ hasText: `Testing week ${stamp}` }).locator('time')).toHaveText(/^\d{2}:\d{2}$/);
   await list.getByRole('button', { name: `New Testing week ${stamp}` }).click();
   const notice = buyer.getByRole('dialog', { name: `Testing week ${stamp}` });
   await expect(notice).toContainText('Records on SAZO are simulated this week.');
@@ -163,7 +165,7 @@ test('announcements reach the bell and help answers reach the Help page (A-06, A
   await a11y(buyer);
   await notice.getByRole('button', { name: 'Close' }).last().click();
   await expect(notice).toBeHidden();
-  await expect(list.getByRole('button', { name: `Testing week ${stamp}`, exact: true })).toBeVisible(); // read: no badge
+  await expect(list.getByRole('button', { name: new RegExp(`^Testing week ${stamp} \\d{2}:\\d{2}$`) })).toBeVisible(); // read: no badge, the time beside it
   const markAll = buyer.getByRole('dialog', { name: 'Notifications' }).getByRole('button', { name: 'Mark all as read' });
   if (await markAll.isVisible()) await markAll.click();
   await expect(buyer.getByRole('button', { name: 'Notifications', exact: true })).toBeVisible();

@@ -18,6 +18,12 @@ import { BackButton } from './back-button';
 export const WEBSITE = import.meta.env.VITE_SAZO_WEB_URL ?? 'http://localhost:3001';
 const ROLE: Record<string, string> = { org_manager: 'Manager', org_staff: 'Staff' };
 
+/** When it was sent (5 Nov 2026), as on the website: the time for today's, otherwise the day, with the year when it is not this year. */
+function when(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(d.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }) });
+}
 interface Notice { id: string; audience?: string; title: string; body: string; createdAt: string; read: boolean }
 
 /** Unread messages from SAZO, for the bell and the side bar (refreshed when a panel closes or one is read). */
@@ -243,6 +249,7 @@ function NotificationsView({ online }: { online: boolean }) {
               className={`flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left hover:bg-soft-2 ${a.read ? '' : 'bg-soft'}`}>
               {!a.read && <span className="chip shrink-0 border-primary-container bg-primary-container text-white">New</span>}
               <span className={`min-w-0 flex-1 truncate ${a.read ? 'font-semibold text-muted' : 'font-bold text-ink'}`}>{a.title}</span>
+              <time dateTime={a.createdAt} className="shrink-0 text-sm font-semibold tabular-nums text-muted">{when(a.createdAt)}</time>
               <Icon name="chevron_right" size={20} className="shrink-0 text-label" />
             </button>
           </li>
@@ -276,7 +283,7 @@ function NoticeDialog({ notice, onClose }: { notice?: Notice; onClose: () => voi
             </button>
           </div>
           <h2 id="notice-title" className="mt-3 font-display text-xl font-bold">{notice.title}</h2>
-          <p className="mt-1 text-sm text-muted">{new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+          <p className="mt-1 text-sm text-muted">{new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(notice.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
           <p className="mt-4 whitespace-pre-line leading-relaxed">{notice.body}</p>
           {notice.audience && <p className="mt-4"><span className="rounded-full bg-soft px-2.5 py-1 text-xs text-muted">For {AUDIENCE[notice.audience] ?? notice.audience}</span></p>}
           <div className="mt-6 flex justify-end"><button type="button" onClick={() => ref.current?.close()} className="btn btn-primary">Close</button></div>

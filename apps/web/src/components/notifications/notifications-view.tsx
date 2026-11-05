@@ -10,6 +10,13 @@ import { loadNotifications, markNotificationsRead, type Notice } from '@/app/not
 import { Icon } from '@/components/icon';
 import { ButtonPager, paginate } from '@/components/pager';
 
+/** When it was sent (5 Nov 2026): the time for today's, otherwise the day ("3 Nov"), with the year when it is not this year. */
+export function when(iso: string, now = new Date()): string {
+  const d = new Date(iso);
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(d.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }) });
+}
+
 export function NotificationsView() {
   const router = useRouter();
   const [items, setItems] = useState<Notice[] | null | undefined>();
@@ -40,6 +47,7 @@ export function NotificationsView() {
               className={`flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-soft-2 ${a.read ? '' : 'bg-soft'}`}>
               {!a.read && <span className="chip shrink-0 border-primary-container bg-primary-container text-white">New</span>}
               <span className={`min-w-0 flex-1 truncate ${a.read ? 'font-semibold text-muted' : 'font-bold text-ink'}`}>{a.title}</span>
+              <time dateTime={a.createdAt} className="shrink-0 text-sm font-semibold tabular-nums text-muted">{when(a.createdAt)}</time>
               <Icon name="chevron_right" size={20} className="shrink-0 text-label" />
             </button>
           </li>
@@ -74,7 +82,7 @@ function NoticeDialog({ notice, onClose }: { notice?: Notice; onClose: () => voi
             </button>
           </div>
           <h2 id={titleId} className="mt-3 font-display text-xl font-bold">{notice.title}</h2>
-          <p className="mt-1 text-sm text-muted">{formatDate(notice.createdAt)}</p>
+          <p className="mt-1 text-sm text-muted">{formatDate(notice.createdAt)}, {new Date(notice.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
           <p className="mt-4 whitespace-pre-line leading-relaxed">{notice.body}</p>
           {notice.audience && <p className="mt-4"><span className="rounded-full bg-soft px-2.5 py-1 text-xs text-muted">For {audienceLabel(notice.audience).toLowerCase()}</span></p>}
           <div className="mt-6 flex justify-end"><button type="button" onClick={() => ref.current?.close()} className="btn btn-primary">Close</button></div>
