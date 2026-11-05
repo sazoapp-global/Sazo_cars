@@ -1,4 +1,4 @@
-import { QUESTION_TITLES, formatDate, formatKm, formatUgx } from '@sazo/contracts';
+import { CAR_CATEGORIES, CAR_CATEGORY_LABELS, QUESTION_TITLES, formatDate, formatKm, formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
@@ -269,6 +269,9 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           <div><label htmlFor="engineCc" className="label">Engine (cc)</label><input id="engineCc" name="engineCc" inputMode="numeric" defaultValue={d.engineCc ?? ''} className="field tabular-nums" disabled={!live} /></div>
           <div><label htmlFor="fuel" className="label">Fuel</label><select id="fuel" name="fuel" defaultValue={d.fuel ?? ''} className="field" disabled={!live}><option value="">Not given</option>{FUELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
           <div><label htmlFor="transmission" className="label">Gearbox</label><select id="transmission" name="transmission" defaultValue={d.transmission ?? ''} className="field" disabled={!live}><option value="">Not given</option>{GEARS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+          {/* D-163: the category; a car added before categories says so until the dealer picks one. */}
+          <div><label htmlFor="car-category" className="label">Category</label><select id="car-category" name="category" defaultValue={d.category ?? ''} className="field" disabled={!live}>
+            {!d.category && <option value="">Not set yet</option>}{CAR_CATEGORIES.map((k) => <option key={k} value={k}>{CAR_CATEGORY_LABELS[k]}</option>)}</select></div>
           <div><label htmlFor="colour" className="label">Colour</label><input id="colour" name="colour" defaultValue={d.colour ?? ''} className="field" disabled={!live} /></div>
           <div><label htmlFor="stage" className="label">Where is it now?</label><select id="stage" name="stage" defaultValue={d.stage} className="field" disabled={!live}>{STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
           <div><label htmlFor="yard" className="label">Bond or yard</label><input id="yard" name="yard" defaultValue={d.yard ?? ''} className="field" disabled={!live} /></div>

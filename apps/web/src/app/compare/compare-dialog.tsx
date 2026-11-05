@@ -8,7 +8,7 @@ import { Icon } from '@/components/icon';
 import { Plate } from '@/components/plate';
 import { findCarToCompare, type PickedCar } from './actions';
 
-export interface ForSaleCar { vehicleRef: string; name: string; plate?: string; askingPriceUgx: number; listedMileageKm: number | null; dealerName: string }
+export interface ForSaleCar { vehicleRef: string; name: string; plate?: string; askingPriceUgx: number; listedMileageKm: number | null; dealerName: string; category?: string }
 
 const MAX = 3;
 
@@ -100,7 +100,7 @@ export function CompareDialog({ initial, forSale, closeHref }: { initial: Picked
                             onChange={() => (on ? remove(c.vehicleRef) : add({ ref: c.vehicleRef, name: c.name, plate: c.plate }))} />
                           <span className="min-w-0 flex-1">
                             <span className="flex flex-wrap items-center gap-2 font-semibold">{c.name}{c.plate && <Plate value={c.plate} size="sm" />}</span>
-                            <span className="block text-sm text-muted">{formatUgx(c.askingPriceUgx)}{c.listedMileageKm !== null ? ` · ${c.listedMileageKm.toLocaleString('en-UG')} km` : ''} · {c.dealerName}</span>
+                            <span className="block text-sm text-muted">{c.category ? `${c.category} · ` : ''}{formatUgx(c.askingPriceUgx)}{c.listedMileageKm !== null ? ` · ${c.listedMileageKm.toLocaleString('en-UG')} km` : ''} · {c.dealerName}</span>
                           </span>
                         </label>
                       </li>

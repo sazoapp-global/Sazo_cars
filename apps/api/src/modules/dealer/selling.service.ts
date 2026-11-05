@@ -105,7 +105,7 @@ export class SellingService {
       vehicleRef: view.vehicleRef!,
       vehicle: view.vehicle,
       specs: { make: view.vehicle?.make ?? d.make, model: view.vehicle?.model ?? d.model, year: view.vehicle?.year ?? d.modelYear,
-        engineCc: d.engineCc, fuel: d.fuel, transmission: d.transmission, colour: d.colour },
+        engineCc: d.engineCc, fuel: d.fuel, transmission: d.transmission, colour: d.colour, category: d.category ?? null },
       askingPriceUgx: view.askingPriceUgx,
       listedMileageKm: view.listedMileageKm,
       tiktokUrl: d.tiktokUrl,

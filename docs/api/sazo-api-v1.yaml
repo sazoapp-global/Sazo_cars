@@ -2808,6 +2808,7 @@ components:
         commissionFixedUgx: { type: [integer, 'null'] }
         commissionPercent: { type: [number, 'null'], maximum: 20 }
         kind: { oneOf: [{ $ref: '#/components/schemas/VehicleKind' }, { type: 'null' }], description: 'Kind of car (D-148). Filled in from the chassis code or model when not sent.' }
+        category: { type: [string, 'null'], enum: [new, foreign_used, ug_used, null], description: 'New, Imported used or Ugandan used (D-163). A used car added with a plate or chassis number needs mileageKm (mileage_required).' }
         specs:
           type: [object, 'null']
           description: "The dealer's own figures where they differ from the model's (D-148)"

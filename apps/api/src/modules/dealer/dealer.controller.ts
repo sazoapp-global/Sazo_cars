@@ -1,7 +1,7 @@
 // Dealer workspace API. Every call acts for one dealer: X-Organisation-Id header. Costs, margins, commission
 // terms and dealer settings need dealer.costs.manage (managers); sales staff manage cars and prices.
 import { Body, Controller, Delete, Get, Header, Headers, HttpCode, Inject, Param, Patch, Post, Put, Query, StreamableFile } from '@nestjs/common';
-import { DRIVES, STEERING_SIDES, VEHICLE_KINDS, isVehicleKind, tidyName, tidySentence } from '@sazo/contracts';
+import { CAR_CATEGORIES, DRIVES, STEERING_SIDES, VEHICLE_KINDS, isVehicleKind, tidyName, tidySentence } from '@sazo/contracts';
 import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import { canForOrg, CurrentActor, IamService, type Actor } from '../iam/index.js';
@@ -37,6 +37,7 @@ const Details = z.object({
   commissionFixedUgx: Price.nullable(),
   commissionPercent: z.number().positive().max(20).multipleOf(0.01).nullable(),
   kind: z.enum(VEHICLE_KINDS).nullable(),
+  category: z.enum(CAR_CATEGORIES).nullable(),
   specs: z.object({
     seats: z.number().int().min(1).max(120), doors: z.number().int().min(0).max(8), cylinders: z.number().int().min(1).max(16),
     powerHp: z.number().int().min(10).max(2000), fuelKmPerL: z.number().min(0.5).max(60), loadTonnes: z.number().min(0).max(100),
@@ -78,7 +79,7 @@ const Settings = z.object({
 });
 
 const STATUS: Record<string, number> = {
-  stock_not_found: 404, vehicle_not_found: 404, cost_not_found: 404, photo_not_found: 404, identifiers_required: 400, make_required: 400, link_first: 400, rate_required: 400,
+  stock_not_found: 404, mileage_required: 400, vehicle_not_found: 404, cost_not_found: 404, photo_not_found: 404, identifiers_required: 400, make_required: 400, link_first: 400, rate_required: 400,
   commission_incomplete: 400, odometer_photo_required: 422, photo_not_allowed: 422, too_many_photos: 422, too_many_listings: 429, already_in_stock: 409, not_in_stock: 409,
   import_empty: 400, import_too_big: 400, import_already_added: 409, import_not_found: 404,
   already_linked: 409, already_reversed: 409, costs_locked: 409, waiting_for_review: 409, listing_rejected: 422, organisation_not_approved: 403,

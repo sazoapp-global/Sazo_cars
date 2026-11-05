@@ -6,6 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { PARAMS } from '@sazo/trust-engine';
+import { categoryNeedsMileage } from '@sazo/contracts';
 import { IamService, type Actor } from '../iam/index.js';
 import { IngestionError, IngestionService } from '../ingest/index.js';
 import { EvidenceService } from '../obs/index.js';
@@ -14,7 +15,7 @@ import { ReportsService } from '../report/index.js';
 import { VehicleRegistry } from '../vehicle/index.js';
 import { DealerRepository, type CostCategory, type CostRow, type DealerSettings, type StockDetails, type StockRow, type StockStatus } from './dealer.repository.js';
 
-export type DealerErrorCode = 'stock_not_found' | 'vehicle_not_found' | 'identifiers_required' | 'odometer_photo_required' | 'too_many_listings' | 'already_in_stock'
+export type DealerErrorCode = 'stock_not_found' | 'mileage_required' | 'vehicle_not_found' | 'identifiers_required' | 'odometer_photo_required' | 'too_many_listings' | 'already_in_stock'
   | 'waiting_for_review' | 'listing_rejected' | 'not_in_stock' | 'organisation_not_approved' | 'already_linked' | 'link_first' | 'costs_locked'
   | 'cost_not_found' | 'already_reversed' | 'photo_not_allowed' | 'too_many_photos' | 'photo_not_found' | 'commission_incomplete' | 'make_required' | 'rate_required'
   | 'import_empty' | 'import_too_big' | 'import_already_added' | 'import_not_found'
@@ -188,6 +189,10 @@ export class DealerService {
     const hasIds = !!(input.vehicleRef || input.vin || input.chassisNumber || input.plate);
     if (!hasIds && !details.make) throw new DealerError('make_required', 'Enter the make and model, or the number plate or chassis number');
     if (!hasIds && input.mileageKm !== undefined) throw new DealerError('link_first', 'Add the mileage with the number plate or chassis number');
+    // D-163: a used car (imported or Ugandan) comes with its mileage once its plate or chassis number is known.
+    if (hasIds && categoryNeedsMileage(details.category) && input.mileageKm === undefined) {
+      throw new DealerError('mileage_required', details.category === 'foreign_used' ? 'Add the mileage on arrival, with a photo of the odometer' : 'Add the mileage now, with a photo of the odometer');
+    }
     await this.checkOdometer(organisationId, input.mileageKm, input.odometerPhotoId);
     // Waiting for approval: the car stays private to the dealer and nothing goes to SAZO until approval (D-055).
     const approved = (await this.iam.organisation(organisationId))?.status === 'approved';
@@ -437,7 +442,7 @@ export class DealerService {
       const v = await this.registry.getVehicle(r.vehicleId!);
       if (!v) continue;
       const summary = await this.reports.publicSummary(v.publicRef).catch(() => undefined);
-      out.push({ vehicleRef: v.publicRef, vehicle: summary?.vehicle ?? null, askingPriceUgx: r.askingPriceUgx, listedMileageKm: r.listedMileageKm,
+      out.push({ vehicleRef: v.publicRef, vehicle: summary?.vehicle ?? null, askingPriceUgx: r.askingPriceUgx, listedMileageKm: r.listedMileageKm, category: r.category ?? null,
         dealerName: orgs.get(r.organisationId)!.name, listedAt: new Date(r.listedAt).toISOString() });
       if (out.length >= limit) break;
     }
@@ -480,7 +485,7 @@ export class DealerService {
         make: r.make, model: r.model, modelYear: r.modelYear, engineCc: r.engineCc, fuel: r.fuel, transmission: r.transmission, colour: r.colour, yard: r.yard,
         stage: r.stage, receivedOn: r.receivedOn, bondArrivedOn: r.bondArrivedOn, customsStatus: r.customsStatus, customsDeadline: r.customsDeadline,
         customsExtensionUntil: r.customsExtensionUntil, tiktokUrl: r.tiktokUrl, openToBrokers: r.openToBrokers,
-        commissionKind: r.commissionKind, commissionFixedUgx: r.commissionFixedUgx, commissionPercent: r.commissionPercent, kind: r.kind, specs: r.specs ?? {},
+        commissionKind: r.commissionKind, commissionFixedUgx: r.commissionFixedUgx, commissionPercent: r.commissionPercent, kind: r.kind, specs: r.specs ?? {}, category: r.category ?? null,
         ...(cost !== undefined ? { customsValueUgx: r.customsValueUgx } : {}),
       },
       clocks: {

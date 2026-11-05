@@ -1,4 +1,4 @@
-import { CONFIDENCE_LABELS, QUESTION_ORDER, QUESTION_TITLES, formatKm, formatUgx, headline, statusLabel } from '@sazo/contracts';
+import { CAR_CATEGORY_LABELS, type CarCategory, CONFIDENCE_LABELS, QUESTION_ORDER, QUESTION_TITLES, formatKm, formatUgx, headline, statusLabel } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: 'Car for sale', robots: { index: fals
 
 interface CarPage {
   vehicleRef: string; vehicle: VehicleCard | null;
-  specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; colour: string | null };
+  specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; colour: string | null; category?: CarCategory | null };
   askingPriceUgx: number; listedMileageKm: number | null; tiktokUrl: string | null; photos: string[]; questions: QuestionView[]; recordConfidence: RecordConfidence | null;
   seller: { kind: 'dealer' | 'broker'; name: string | null; dealerName: string | null; whatsapp: string | null };
 }
@@ -70,6 +70,8 @@ export default async function CarForSale({ params, searchParams }: { params: Pro
 
       <section aria-labelledby="car-name">
         <p className="text-sm font-semibold uppercase tracking-wide text-label">{car.seller.kind === 'broker' ? `Shared by ${sellerName}` : car.seller.name ? `For sale at ${car.seller.name}` : 'For sale'}</p>
+        {/* D-163: buyers see whether the car is new, imported used or Ugandan used. */}
+        {s.category && <p className="chip mb-2 w-fit border-primary-container bg-soft text-primary-container">{CAR_CATEGORY_LABELS[s.category]}</p>}
         <h1 id="car-name" className="font-display text-3xl font-extrabold tracking-tight">{name}</h1>
         <p className="mt-1 font-display text-2xl font-extrabold tabular-nums text-primary-container">{formatUgx(car.askingPriceUgx, false)}</p>
         {facts.length > 0 && <p className="mt-1 text-muted">{facts.join(' · ')}</p>}

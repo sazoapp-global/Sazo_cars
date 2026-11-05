@@ -1,7 +1,7 @@
 'use server';
 // Dealer workspace (P-005, D-120): every change goes through the API, which checks the person works for this
 // dealer (and is a manager for costs, commission and settings).
-import { isVehicleKind, normalizeIdentifier } from '@sazo/contracts';
+import { type CarCategory, categoryNeedsMileage, isCarCategory, isVehicleKind, normalizeIdentifier } from '@sazo/contracts';
 import { redirect } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
@@ -80,6 +80,7 @@ function details(form: FormData, keys: string[]) {
   if (has('customsValue')) d.customsValueUgx = text(form, 'customsValue') ? digits(text(form, 'customsValue')) : null;
   if (has('tiktokUrl')) d.tiktokUrl = orNull(text(form, 'tiktokUrl'));
   if (has('stage') && text(form, 'stage')) d.stage = text(form, 'stage');
+  if (has('category') && isCarCategory(text(form, 'category'))) d.category = text(form, 'category');
   return d;
 }
 
@@ -132,6 +133,13 @@ export async function addStock(form: FormData) {
   if (!d.kind) delete d.kind;
   if (!plate && !anchor && !d.make) fail('Enter the make and model, or the number plate or chassis number.');
   if (km !== undefined && !anchor && !plate) fail('Add the mileage with the number plate or chassis number.');
+  // D-163: the category comes first; a used car needs its mileage once its plate or chassis number is given.
+  const category = text(form, 'category');
+  if (!isCarCategory(category)) fail('Choose the category: New, Imported used or Ugandan used.');
+  d.category = category;
+  if (categoryNeedsMileage(category as CarCategory) && (anchor || plate) && km === undefined) {
+    fail(category === 'foreign_used' ? 'Add the mileage on arrival, with a photo of the odometer.' : 'Add the mileage now, with a photo of the odometer.');
+  }
   const idents = await identifiers(plate, anchor);
   const odometerPhotoId = await odometerFor(form, km, fail);
   let added: Added | undefined;
@@ -166,7 +174,7 @@ export async function updateCar(form: FormData) {
   const { org, car } = ids(form);
   const at = text(form, 'at') || 'details';
   const d = details(form, ['make', 'model', 'modelYear', 'engineCc', 'fuel', 'transmission', 'colour', 'yard', 'stage', 'receivedOn', 'tiktokUrl',
-    'bondArrivedOn', 'customsStatus', 'customsDeadline', 'customsExtensionUntil', 'customsValue']);
+    'bondArrivedOn', 'customsStatus', 'customsDeadline', 'customsExtensionUntil', 'customsValue', 'category']);
   Object.assign(d, await kindAndSpecs(form, { make: d.make, model: d.model, chassis: text(form, 'chassis') }));
   const go = fromAlert(form, org) ?? ((q: Record<string, string>) => toCar(org, car, { ...q, at }));
   try { await api(`/dealer/stock/${car}`, { method: 'PATCH', ...asDealer(org), body: { details: d } }); }

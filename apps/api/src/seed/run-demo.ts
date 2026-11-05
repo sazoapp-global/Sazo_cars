@@ -16,6 +16,7 @@ import type pg from 'pg';
 import { AuthService, IamService } from '../modules/iam/index.js';
 import { PII_KEYRING, type Keyring } from '../platform/keyring.js';
 import { DB_POOL } from '../platform/tokens.js';
+import { fillCategories } from './categories.js';
 import { ConsoleEmailSender } from '../modules/notify/index.js';
 import { signInWithCode } from '../test-auth.js';
 import { testPhoto } from '../test-photos.js';
@@ -160,6 +161,8 @@ interface CarSpec {
   sold?: number;
   /** D-148: the kind the dealer typed (left out, SAZO fills it in from the chassis code or model when it can). */
   kind?: string;
+  /** D-163: set here only for a new car; the used ones get theirs from fillCategories at the end. */
+  category?: 'new';
 }
 const cars: CarSpec[] = [
   { ids: { plate: 'UBJ 214K' }, price: 78_000_000, make: 'toyota', model: 'harrier', year: 2015, colour: 'pearl white', stage: 'at_yard', yard: 'Kisementi yard', received: -21, photos: 5,
@@ -185,6 +188,9 @@ const cars: CarSpec[] = [
   // D-148: a Land Cruiser comes as an SUV or a pickup and has no chassis number here, so a SAZO admin sets the kind.
   { ids: { plate: 'UBH 551C' }, price: 96_000_000, make: 'toyota', model: 'land cruiser', year: 2014, colour: 'white', stage: 'at_yard', yard: 'Kisementi yard', received: -15, photos: 2,
     costs: [['purchase', 81_000_000, 'UGX']] },
+  // D-163: a new car straight from the factory (no mileage needed).
+  { ids: { chassisNumber: 'MXGA10-2026014' }, price: 145_000_000, make: 'toyota', model: 'corolla cross', year: 2026, colour: 'white', stage: 'at_yard', yard: 'Kisementi yard', received: -4, photos: 2,
+    costs: [['purchase', 128_000_000, 'UGX']], kind: 'suv', category: 'new' },
   // D-148: the dealer typed SUV for a Hilux; the inspector later records a pickup, so the records disagree.
   { ids: { plate: 'UBF 300T' }, price: 72_000_000, make: 'toyota', model: 'hilux', year: 2016, colour: 'silver', stage: 'at_yard', yard: 'Kisementi yard', received: -18, photos: 2,
     costs: [['purchase', 60_000_000, 'UGX']], kind: 'suv' },
@@ -192,7 +198,7 @@ const cars: CarSpec[] = [
 const COLOURS: Record<string, string> = { 'pearl white': '#f8fafc', silver: '#cbd5e1', grey: '#6b7280', blue: '#1d4ed8', black: '#111827', red: '#b91c1c', orange: '#ea580c', green: '#15803d', white: '#f1f5f9' };
 const stock: Record<string, string> = {};
 for (const c of cars) {
-  const details = { make: c.make, model: c.model, modelYear: c.year, colour: c.colour, stage: c.stage, ...(c.kind ? { kind: c.kind } : {}), ...(c.yard ? { yard: c.yard } : {}), receivedOn: day(c.received),
+  const details = { make: c.make, model: c.model, modelYear: c.year, colour: c.colour, stage: c.stage, ...(c.kind ? { kind: c.kind } : {}), ...(c.category ? { category: c.category } : {}), ...(c.yard ? { yard: c.yard } : {}), receivedOn: day(c.received),
     ...(c.bond ? { bondArrivedOn: day(c.bond.arrived), customsStatus: 'in_bond', customsDeadline: day(c.bond.deadline) } : {}),
     ...(c.brokers === 'fixed' ? { openToBrokers: true, commissionKind: 'fixed', commissionFixedUgx: 500_000 } : c.brokers === 'percent' ? { openToBrokers: true, commissionKind: 'percent', commissionPercent: 1.5 } : { openToBrokers: false }) };
   const added = (await call(http.post('/v1/dealer/stock').set(D()).send({ ...c.ids, askingPriceUgx: c.price, details }))).body;
@@ -407,6 +413,9 @@ if (wishRef) {
 }
 
 // ---------------------------------------------------------------------------------------------- done
+
+// D-163: every demo car gets its category (Imported used or Ugandan used) from what the dealer recorded about it.
+for (const r of await fillCategories(app.get<pg.Pool>(DB_POOL, { strict: false }))) log(`Category ${r.category}: ${r.cars} cars`);
 
 log('\nDemo data loaded. Log in on the website (or the garage app) with a phone code, or with the email and the password below.\n');
 log(`Password for every demo account: ${PASSWORD}\n`);

@@ -1,4 +1,4 @@
-import { KIND_LABELS, QUESTION_ORDER, QUESTION_TITLES, VEHICLE_KINDS, formatDate, formatKm, formatUgx, isVehicleKind, type VehicleKind } from '@sazo/contracts';
+import { CAR_CATEGORY_LABELS, type CarCategory, KIND_LABELS, QUESTION_ORDER, QUESTION_TITLES, VEHICLE_KINDS, formatDate, formatKm, formatUgx, isVehicleKind, type VehicleKind } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import { PICTURE_ACCEPT } from '@/lib/upload-types';
 export const metadata: Metadata = { title: 'Brokers', robots: { index: false } };
 
 interface BrokerCar {
-  stockId: string; vehicleRef: string; vehicle: VehicleCard | null; specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; kind?: VehicleKind | null };
+  stockId: string; vehicleRef: string; vehicle: VehicleCard | null; specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; kind?: VehicleKind | null; category?: CarCategory | null };
   askingPriceUgx: number; listedMileageKm: number | null; photos: string[]; commission: { kind: 'fixed'; amountUgx: number } | { kind: 'percent'; percent: number };
   dealer: { name: string; district: string | null }; questions: QuestionView[]; listedAt: string;
 }
@@ -136,7 +136,7 @@ async function Cars({ kind, page }: { kind?: VehicleKind; page?: string }) {
               : <div className="flex aspect-[4/3] items-center justify-center bg-soft text-muted"><Icon name="directions_car" size={40} /></div>}
             <div className="space-y-2 p-4">
               <h2 className="font-display text-lg font-bold">{name(c.specs)}</h2>
-              {c.specs.kind && <p className="text-sm font-semibold text-primary-container">{KIND_LABELS[c.specs.kind]}</p>}
+              {(c.specs.category || c.specs.kind) && <p className="text-sm font-semibold text-primary-container">{[c.specs.category && CAR_CATEGORY_LABELS[c.specs.category], c.specs.kind && KIND_LABELS[c.specs.kind]].filter(Boolean).join(' · ')}</p>}
               <p className="font-display text-xl font-extrabold tabular-nums">{formatUgx(c.askingPriceUgx, false)}</p>
               <p className="text-sm text-muted">{c.dealer.name}{c.dealer.district ? `, ${c.dealer.district}` : ''}{c.listedMileageKm !== null ? `. ${formatKm(c.listedMileageKm)}` : ''}</p>
               <p className="chip w-fit border-lime bg-lime/30 text-ink"><Icon name="payments" size={14} />{commissionText(c.commission)}</p>

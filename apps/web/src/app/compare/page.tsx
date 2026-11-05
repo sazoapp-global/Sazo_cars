@@ -1,3 +1,4 @@
+import { CAR_CATEGORY_LABELS, type CarCategory } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -23,11 +24,11 @@ async function dialogData(refs: string[]) {
       const s = await api<Summary>(`/vehicles/${r}/summary`).catch(() => undefined);
       return s ? { ref: r, name: vehicleName(s.vehicle), ...(s.vehicle.currentPlate ? { plate: s.vehicle.currentPlate } : {}) } : undefined;
     })),
-    api<{ items: { vehicleRef: string; vehicle: Summary['vehicle'] | null; askingPriceUgx: number; listedMileageKm: number | null; dealerName: string }[] }>('/cars-for-sale', { auth: true })
+    api<{ items: { vehicleRef: string; vehicle: Summary['vehicle'] | null; askingPriceUgx: number; listedMileageKm: number | null; dealerName: string; category?: CarCategory | null }[] }>('/cars-for-sale', { auth: true })
       .then((x) => x.items).catch(() => []),
   ]);
   const forSale: ForSaleCar[] = sale.map((c) => ({ vehicleRef: c.vehicleRef, name: c.vehicle ? vehicleName(c.vehicle) : 'Vehicle', ...(c.vehicle?.currentPlate ? { plate: c.vehicle.currentPlate } : {}),
-    askingPriceUgx: c.askingPriceUgx, listedMileageKm: c.listedMileageKm, dealerName: c.dealerName }));
+    askingPriceUgx: c.askingPriceUgx, listedMileageKm: c.listedMileageKm, dealerName: c.dealerName, ...(c.category ? { category: CAR_CATEGORY_LABELS[c.category] } : {}) }));
   return { initial: initial.filter((x): x is PickedCar => !!x), forSale };
 }
 

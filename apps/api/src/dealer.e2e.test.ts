@@ -102,7 +102,11 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     const outsiderPhoto = await upload(await signIn('+256772500077', 'Not a dealer'), 'odometer_photo', 'someone else');
     await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, mileageKm: 131000, odometerPhotoId: outsiderPhoto }).expect(422);
     const odometer = await upload(staffToken, 'odometer_photo', 'odometer 131000');
-    const res = await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, mileageKm: 131000, odometerPhotoId: odometer }).expect(201);
+    // D-163: a used car (here Ugandan used) is added with its mileage; New, Imported used and Ugandan used only.
+    expect((await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, details: { category: 'ug_used' } }).expect(400)).body.code).toBe('mileage_required');
+    await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, details: { category: 'second_hand' } }).expect(400);
+    const res = await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 38_500_000, mileageKm: 131000, odometerPhotoId: odometer, details: { category: 'ug_used' } }).expect(201);
+    expect(res.body.details.category).toBe('ug_used');
     stockId = res.body.stockId;
     expect(res.body).toMatchObject({ vehicleRef: knownRef, status: 'in_stock', askingPriceUgx: 38_500_000, listedMileageKm: 131000, vehicle: { make: 'Toyota' } });
     expect(res.body.questions).toHaveLength(7);
@@ -126,9 +130,9 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     const buyer = await signIn('+256772500051', 'Another buyer');
     const items = (await http.get('/v1/cars-for-sale').set(bearer(buyer)).expect(200)).body.items;
     const known = items.find((i: { vehicleRef: string }) => i.vehicleRef === knownRef);
-    expect(known).toMatchObject({ askingPriceUgx: 36_000_000, listedMileageKm: 131000, vehicle: { make: 'Toyota' } });
+    expect(known).toMatchObject({ askingPriceUgx: 36_000_000, listedMileageKm: 131000, category: 'ug_used', vehicle: { make: 'Toyota' } });
     expect(known.dealerName).toBeTruthy();
-    expect(Object.keys(known).sort()).toEqual(['askingPriceUgx', 'dealerName', 'listedAt', 'listedMileageKm', 'vehicle', 'vehicleRef']);
+    expect(Object.keys(known).sort()).toEqual(['askingPriceUgx', 'category', 'dealerName', 'listedAt', 'listedMileageKm', 'vehicle', 'vehicleRef']);
   });
 
   it('a sale is recorded but its price stays confidential; buyer links work like any share link', async () => {

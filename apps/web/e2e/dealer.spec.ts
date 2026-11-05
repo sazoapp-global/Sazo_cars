@@ -33,6 +33,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Model', { exact: true }).fill('Wish');
   await dealer.getByLabel('Number plate').fill('UBR 314W');
   await dealer.getByLabel('Asking price (UGX) *').fill('41,000,000');
+  await dealer.getByRole('radio', { name: /^New/ }).check();
   await dealer.getByRole('button', { name: 'Add the car' }).click();
   await expect(dealer.getByRole('region', { name: 'Joins SAZO once your business is approved' })).toContainText('Plate UBR 314W');
   await expect(dealer.getByText('Joins SAZO after approval')).toBeVisible();
@@ -44,7 +45,6 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   const businessUrl = dealer.url();
   /** The "Add a car" panel stays open after a mistake; open it only if it is closed. */
   const openAdd = async () => { if (!(await dealer.getByLabel('Make', { exact: true }).isVisible())) await dealer.getByRole('link', { name: 'Add a car' }).first().click(); };
-  const openMileage = async () => { if (!(await dealer.getByLabel('Mileage now (km)').isVisible())) await dealer.getByText(/Add the mileage now/).click(); };
 
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN, { next: '/admin/organisations' });
@@ -83,18 +83,24 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByRole('link', { name: 'Back', exact: true }).click();
   await a11y(dealer);
 
-  // A known car, by plate. A mileage needs an odometer photo.
+  // A known car, by plate: a Ugandan used car needs its mileage now (D-163), and a mileage needs an odometer photo.
   await openAdd();
   await dealer.getByLabel('Number plate').fill('uba 905t');
   await dealer.getByLabel('Asking price (UGX) *').fill('25,500,000');
-  await openMileage();
+  await dealer.getByRole('radio', { name: /^Ugandan used/ }).check();
+  await dealer.getByRole('button', { name: 'Add the car' }).click();
+  await expect(dealer.getByText('Add the mileage now, with a photo of the odometer.')).toBeVisible();
+  await openAdd();
+  await dealer.getByLabel('Number plate').fill('uba 905t');
+  await dealer.getByLabel('Asking price (UGX) *').fill('25,500,000');
+  await dealer.getByRole('radio', { name: /^Ugandan used/ }).check();
   await dealer.getByLabel('Mileage now (km)').fill('150000');
   await dealer.getByRole('button', { name: 'Add the car' }).click();
   await expect(dealer.getByText('Add a photo of the odometer with the mileage.')).toBeVisible();
   await openAdd();
   await dealer.getByLabel('Number plate').fill('uba 905t');
   await dealer.getByLabel('Asking price (UGX) *').fill('25,500,000');
-  await openMileage();
+  await dealer.getByRole('radio', { name: /^Ugandan used/ }).check();
   await dealer.getByLabel('Mileage now (km)').fill('150000');
   await dealer.getByLabel('Odometer photo').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: testPhoto(`dealer odometer ${stamp}`) });
   await dealer.getByRole('button', { name: 'Add the car' }).click();
@@ -112,6 +118,8 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByText('Filled in from the model. Change it if it is wrong.')).toBeVisible();
   await dealer.getByLabel('Asking price (UGX) *').fill('75000000');
   await dealer.getByLabel('Where is it now?').selectOption('shipping');
+  // Imported used, still on the ship: no plate or chassis number yet, so the mileage comes later.
+  await dealer.getByRole('radio', { name: /^Imported used/ }).check();
   await dealer.getByLabel('Photos of the car').setInputFiles({ name: 'front.png', mimeType: 'image/png', buffer: testPhoto(`harrier front ${stamp}`) });
   await dealer.getByRole('button', { name: 'Add the car' }).click();
   await expect(dealer.getByRole('status')).toContainText('Add the number plate or chassis number when you have it');
@@ -290,7 +298,27 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   const sold = dealer.getByRole('listitem').filter({ hasText: 'UBA 905T' });
   await expect(sold).toContainText('Sold');
   await expect(sold).toContainText('UGX 23M');
+  // Sold is its own page (5 Nov 2026): its own title, no Add a car, and no For sale / Sold switch.
+  await expect(dealer.getByRole('heading', { name: `${NAME}: cars sold` })).toBeVisible();
+  await expect(dealer.getByRole('main').getByRole('link', { name: 'Add a car' })).toHaveCount(0);
+  await expect(sold).toContainText('Ugandan used');
   await dealer.goto(listUrl);
+  // Category tabs and a search that changes the list as you type (D-163), with no button to press.
+  const tabs = dealer.getByRole('navigation', { name: 'Category' });
+  await tabs.getByRole('link', { name: /^Imported used/ }).click();
+  await expect(dealer).toHaveURL(/cat=foreign_used/);
+  await expect(dealer.getByRole('listitem').filter({ hasText: 'Toyota Harrier' })).toBeVisible();
+  await expect(dealer.getByRole('listitem').filter({ hasText: 'UBR 314W' })).toHaveCount(0);
+  await tabs.getByRole('link', { name: /^All/ }).click();
+  await dealer.getByRole('searchbox', { name: 'Search plate, make or model' }).pressSequentially('ubr314', { delay: 40 });
+  await expect(dealer).toHaveURL(/q=ubr314/);
+  await expect(dealer.getByText(/1 car matches/)).toBeVisible();
+  await expect(dealer.getByRole('listitem').filter({ hasText: 'UBR 314W' })).toBeVisible();
+  await expect(dealer.getByRole('listitem').filter({ hasText: 'Toyota Harrier' })).toHaveCount(0);
+  await expect(dealer.getByRole('searchbox', { name: 'Search plate, make or model' })).toBeFocused();
+  await dealer.getByRole('button', { name: 'Clear the search' }).click();
+  await expect(dealer).not.toHaveURL(/q=/);
+  await expect(dealer.getByRole('listitem').filter({ hasText: 'Toyota Harrier' })).toBeVisible();
 
   // A salesperson, from Team in the side bar (4 Nov 2026: Cars for sale holds only the cars).
   await expect(dealer.getByRole('region', { name: 'Your team' })).toHaveCount(0);
@@ -310,6 +338,7 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await dealer.getByLabel('Model', { exact: true }).fill('note');
   await dealer.getByLabel('Number plate').fill(`UBY ${String(stamp).slice(-3)}N`);
   await dealer.getByLabel('Asking price (UGX) *').fill('18000000');
+  await dealer.getByRole('radio', { name: /^New/ }).check();
   await dealer.getByRole('button', { name: 'Add the car' }).click();
   await expect(dealer.getByRole('status')).toContainText('It is now in SAZO with its listing');
   await expect(dealer.getByRole('region', { name: 'What SAZO records show' })).toBeVisible();
