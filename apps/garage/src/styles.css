@@ -84,10 +84,10 @@
    these must win over a field's own utilities. (:has() cannot be nested, so a label row is matched by two in a row.) */
 :root { --notch: linear-gradient(to bottom, transparent 45%, var(--color-card) 45%); }
 :is(div, fieldset):has(> .label + :is(.field, .phone-field)),
-div:has(> .label + div.relative > .field),
+div:has(> .label + :is(div.relative, div.flex) > .field),
 div:has(> div:first-child > .label):has(> div:first-child + :is(.field, .phone-field)) { position: relative; padding-top: 9px; }
 :is(div, fieldset):has(> .label + :is(.field, .phone-field)) > .label,
-div:has(> .label + div.relative > .field) > .label {
+div:has(> .label + :is(div.relative, div.flex) > .field) > .label {
   position: absolute; top: 0; left: 10px; z-index: 1; margin: 0; padding: 0 6px; min-height: 0; max-width: calc(100% - 20px);
   font-size: 12px; line-height: 18px; font-weight: 600; color: var(--color-muted); background: var(--notch);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -100,17 +100,17 @@ div:has(> div:first-child > .label):has(> div:first-child + :is(.field, .phone-f
 }
 div:has(> div:first-child > .label):has(> div:first-child + :is(.field, .phone-field)) > div:first-child > .label { margin: 0; font-weight: 600; color: var(--color-muted); }
 :is(div, fieldset):has(> .label + .field) > .field,
-div:has(> .label + div.relative > .field) > div.relative > .field,
+div:has(> .label + :is(div.relative, div.flex) > .field) > :is(div.relative, div.flex) > .field,
 div:has(> div:first-child > .label):has(> div:first-child + .field) > .field,
 .phone-field {
   min-height: 52px; border: 1.5px solid var(--color-line-strong) !important; border-radius: 12px !important; background: var(--color-card) !important;
 }
 :is(div, fieldset):has(> .label + .field) > .field:focus,
-div:has(> .label + div.relative > .field) > div.relative > .field:focus,
+div:has(> .label + :is(div.relative, div.flex) > .field) > :is(div.relative, div.flex) > .field:focus,
 div:has(> div:first-child > .label):has(> div:first-child + .field) > .field:focus,
 .phone-field:focus-within { border-color: var(--color-primary-container) !important; box-shadow: none !important; }
 :is(div, fieldset):has(> .label + :is(.field, .phone-field)):focus-within > .label,
-div:has(> .label + div.relative > .field):focus-within > .label,
+div:has(> .label + :is(div.relative, div.flex) > .field):focus-within > .label,
 div:has(> div:first-child > .label):focus-within > div:first-child > .label { color: var(--color-primary-container); }
 .field[aria-invalid='true'] { border-color: var(--color-bad-text) !important; }
 :is(div, fieldset):has(> .label + .field[aria-invalid='true']) > .label { color: var(--color-bad-text); }
@@ -119,3 +119,8 @@ div:has(> div:first-child > .label):focus-within > div:first-child > .label { co
 section:is(.card, .border):not([class*='bg-primary']):has(> h2:first-child) { border-left: 4px solid var(--color-lime); }
 section:is(.card, .border):not([class*='bg-primary']) > h2:first-child { color: var(--color-primary); font-size: 1.3rem; }
 section:is(.card, .border):not([class*='bg-primary']) > h2:first-child > svg:first-child { display: none; }
+
+/* A section whose first line is a heading row (the heading with a button or count beside it) gets the same edge. */
+section:is(.card, .border):not([class*='bg-primary']):has(> div:first-child > h2:first-child) { border-left: 4px solid var(--color-lime); }
+section:is(.card, .border):not([class*='bg-primary']) > div:first-child > h2:first-child { color: var(--color-primary); font-size: 1.3rem; }
+section:is(.card, .border):not([class*='bg-primary']) > div:first-child > h2:first-child > svg:first-child { display: none; }
