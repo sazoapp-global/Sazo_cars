@@ -75,3 +75,56 @@
   .pill[aria-pressed='true'] { border-color: var(--color-primary-container); background: var(--color-primary-container); color: #fff; }
   .bottom-bar { position: sticky; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--color-card) 96%, transparent); border-top: 1px solid var(--color-line); }
 }
+
+/* Option C (8 Nov 2026, D-167): every form field is its own box with its label small inside it, and every section
+   card whose first line is its heading gets a pale blue strip across its top. Pure CSS over the existing markup:
+   a field box is any wrapper holding a .label followed by its .field (or the password field's wrapper); search
+   boxes and filters have hidden labels, so they keep their one-line look. The car report keeps its own design. */
+/* Outside the layers on purpose: these must win over a field's own background and border utilities. */
+  :is(div, fieldset):has(> .label + .field),
+  div:has(> .label + div.relative > .field),
+  div:has(> div:first-child > .label):has(> div:first-child + .field) {
+    border: 1px solid var(--color-line-strong); border-radius: 12px; padding: 8px 12px 6px; background: var(--color-card);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  :is(div, fieldset):has(> .label + .field):focus-within,
+  div:has(> .label + div.relative > .field):focus-within,
+  div:has(> div:first-child > .label):has(> div:first-child + .field):focus-within { border-color: var(--color-primary-container); box-shadow: 0 0 0 3px rgba(0, 51, 170, 0.15); }
+  :is(div, fieldset):has(> .label + .field[aria-invalid='true']),
+  div:has(> .label + div.relative > .field[aria-invalid='true']) { border-color: var(--color-bad-text); }
+  :is(div, fieldset):has(> .label + .field:disabled) { background: var(--color-soft); }
+  :is(div, fieldset):has(> .label + .field) > .label,
+  div:has(> .label + div.relative > .field) > .label,
+  div:has(> div:first-child > .label):has(> div:first-child + .field) > div > .label { font-size: 12px; font-weight: 600; color: var(--color-muted); margin: 0; min-height: 0; }
+  :is(div, fieldset):has(> .label + .field) > .field,
+  div:has(> .label + div.relative > .field) > div.relative > .field,
+  div:has(> div:first-child > .label):has(> div:first-child + .field) > .field {
+    border: 0 !important; border-radius: 0; padding: 0; min-height: 34px; background: transparent !important; box-shadow: none !important; font-weight: 600;
+  }
+  :is(div, fieldset):has(> .label + .field) > textarea.field { padding-top: 4px; }
+  :is(div, fieldset):has(> .label + .field) > p { margin-top: 2px; }
+
+  /* Only light cards with a border: a dark navy panel keeps its own heading. */
+  section:is(.card, .border):not([class*='bg-primary']):is(.p-3, .p-4, .p-5, .p-6) > h2:first-child {
+    --strip: 16px;
+    margin: calc(var(--strip) * -1) calc(var(--strip) * -1) 12px; padding: 14px var(--strip);
+    background: color-mix(in srgb, var(--color-primary-container) 7%, var(--color-card));
+    border-bottom: 1px solid var(--color-line); border-top-left-radius: inherit; border-top-right-radius: inherit;
+  }
+  section.p-3 > h2:first-child { --strip: 12px; }
+  section.p-5 > h2:first-child { --strip: 20px; }
+  section.p-6 > h2:first-child { --strip: 24px; }
+  section:is(.card, .border):not([class*='bg-primary']):is([class*='md:p-'], [class*='md:!p-'], [class*='lg:p-']) > h2:first-child {
+    margin: calc(var(--strip, 16px) * -1) calc(var(--strip, 16px) * -1) 12px; padding: 14px var(--strip, 16px);
+    background: color-mix(in srgb, var(--color-primary-container) 7%, var(--color-card));
+    border-bottom: 1px solid var(--color-line); border-top-left-radius: inherit; border-top-right-radius: inherit;
+  }
+  @media (min-width: 768px) {
+    section.md\:\!p-5 > h2:first-child { --strip: 20px; }
+    section.md\:\!p-6 > h2:first-child { --strip: 24px; }
+    section.md\:p-4 > h2:first-child { --strip: 16px; }
+    section.md\:p-5 > h2:first-child { --strip: 20px; }
+    section.md\:p-6 > h2:first-child { --strip: 24px; }
+    section.md\:p-7 > h2:first-child { --strip: 28px; }
+  }
+  section:is(.p-3, .p-4, .p-5, .p-6) > h2:first-child + p { margin-top: 0; }
