@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { API_LOG } from '../playwright.config';
-import { a11y, codesSoFar, lastCode, shot, signIn } from './helpers';
+import { a11y, ageSecondStepCodes, codesSoFar, lastCode, shot, signIn } from './helpers';
 
 /** The link in the latest email to an address (emails are printed in the API log on a developer's computer). */
 const emailLink = (to: string) => [...readFileSync(API_LOG, 'utf8').matchAll(new RegExp(`Email to ${to.replace('.', '\\.')}:[\\s\\S]*?(http\\S+token=[A-Za-z0-9_-]+)`, 'g'))].at(-1)![1]!;
@@ -220,10 +220,27 @@ test('create an account with email and password, then log in with it (D-100)', a
   await login.getByRole('button', { name: 'Log in to SAZO' }).click();
   // A new device: a code by email, since he has no phone yet (D-145).
   await expect(page.getByRole('heading', { name: /Confirm it.s you/ })).toBeVisible();
-  await expect(page.getByText('We sent a code by email to')).toBeVisible();
+  await expect(page.getByText('We sent a 6-digit code by email to')).toBeVisible();
+  // "Resend code" (8 Nov 2026): it waits a minute after the last code, then sends a new one; only the newest works.
+  await expect(page.getByRole('button', { name: /^Resend code in \d:\d{2}$/ })).toBeDisabled();
   await a11y(page);
   await shot(page, 'second-step');
   await expect.poll(codesSoFar).toBeGreaterThan(before);
+  const firstCode = lastCode();
+  // A minute later, for SAZO and for the page's clock.
+  ageSecondStepCodes();
+  await page.clock.install();
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Resend code in/ })).toBeDisabled();
+  await page.clock.fastForward('01:05');
+  before = codesSoFar();
+  await page.getByRole('button', { name: 'Resend code', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'We sent a new code to' })).toContainText('Use the newest one.');
+  await expect(page.getByRole('button', { name: /^Resend code in \d:\d{2}$/ })).toBeDisabled();
+  await expect.poll(codesSoFar).toBeGreaterThan(before);
+  await page.getByLabel('6-digit code').fill(firstCode);
+  await page.getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByText('That code is wrong or has expired. Check it, or use the newest code we sent.')).toBeVisible();
   await page.getByLabel('6-digit code').fill(lastCode());
   await page.getByRole('button', { name: 'Confirm' }).click();
   // No phone on the account: he adds one before going in.

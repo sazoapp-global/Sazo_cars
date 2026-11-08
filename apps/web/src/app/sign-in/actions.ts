@@ -3,13 +3,14 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ACCESS_COOKIE, ApiError, REFRESH_COOKIE, api } from '@/lib/api';
 import { safeNext, toE164 } from '@/lib/phone';
-import { BACKUP_COOKIE, REMEMBER_COOKIE, SECOND_STEP_COOKIE, SETUP_COOKIE, TOTP_KEY_COOKIE, afterLogin, clientHeaders, deviceToken, pendingSecondStep, pendingSetup, type LoginResult, type SetupPending } from '@/lib/session';
+import { BACKUP_COOKIE, REMEMBER_COOKIE, SECOND_STEP_COOKIE, SETUP_COOKIE, TOTP_KEY_COOKIE, afterLogin, clientHeaders, deviceToken, keepSecondStep, pendingSecondStep, pendingSetup, type LoginResult, type SetupPending } from '@/lib/session';
 
 export type PasswordLoginState = { error?: string; email?: string; noAccount?: boolean };
 export type PhoneLoginState =
   | { step: 'phone'; error?: string; phoneInput?: string; noAccount?: boolean }
   | { step: 'code'; phone: string; remember: boolean; error?: string };
 export type SecondStepState = { error?: string };
+export type ResendState = { sent?: string; error?: string; waitSeconds?: number; at?: number };
 
 const tooMany = 'Too many tries. Wait a while and try again.';
 /** "Remember device" (checked by default): stay logged in on this browser after it closes. */
@@ -101,12 +102,31 @@ export async function completeSecondStep(_prev: SecondStepState, form: FormData)
     if (err instanceof ApiError && err.status === 401) {
       return { error: pending.channel === 'password' ? 'Wrong password.'
         : pending.channel === 'authenticator' ? 'That code is wrong. Type the newest code from the app, or a backup code you have not used.'
-        : 'That code is wrong or has expired. Check it, or log in again for a new code.' };
+        : 'That code is wrong or has expired. Check it, or use the newest code we sent.' };
     }
     if (err instanceof ApiError && err.code === 'account_locked') return { error: err.detail ?? 'Too many wrong tries. Try again later.' };
     return { error: 'Something went wrong. Please try again.' };
   }
   redirect(to);
+}
+
+/** "Resend code" on the second step (8 Nov 2026): a new SMS or email code; the old one stops working. */
+export async function resendSecondStepCode(_prev: ResendState): Promise<ResendState> {
+  const pending = await pendingSecondStep();
+  if (!pending) redirect('/sign-in');
+  try {
+    const r = await api<LoginResult>('/auth/second-step/resend', { method: 'POST', body: { challengeId: pending.challengeId } });
+    if (r.status !== 'second_step') return { error: 'This code has expired. Start again from the log-in page.' };
+    const resendAt = Date.now() + (r.resendInSeconds ?? 60) * 1000;
+    keepSecondStep(await cookies(), { ...pending, challengeId: r.challengeId, sentTo: r.sentTo ?? pending.sentTo, resendAt });
+    return { sent: `We sent a new code to ${r.sentTo ?? pending.sentTo}. Use the newest one.`, waitSeconds: r.resendInSeconds ?? 60, at: resendAt };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 429) {
+      return { error: /^Wait/.test(err.detail ?? '') ? `${err.detail}.` : 'Too many codes sent. Wait a while, then log in again.' };
+    }
+    if (err instanceof ApiError && err.status === 401) return { error: 'This code has expired. Start again from the log-in page.' };
+    return { error: 'The code could not be sent. Try again.' };
+  }
 }
 
 // ---------- before going in (D-145)

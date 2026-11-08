@@ -42,7 +42,7 @@ export interface LoginContext { userAgent?: string; ip?: string | null; deviceTo
  */
 export type LoginResult =
   | ({ status: 'signed_in'; created: boolean; deviceToken?: string; backupCodes?: string[] } & Tokens)
-  | { status: 'second_step'; challengeId: string; channel: SecondStepChannel; sentTo?: string }
+  | { status: 'second_step'; challengeId: string; channel: SecondStepChannel; sentTo?: string; resendInSeconds?: number }
   | { status: 'add_phone'; setupToken: string }
   | { status: 'setup_authenticator'; setupToken: string };
 type FirstFactor = 'password' | 'phone_code' | 'google';
@@ -55,6 +55,8 @@ const OTP_MAX_ATTEMPTS = 5;
 const LOCK_AFTER = { normal: 10, sensitive: 5 };
 const LOCK_MINUTES = 15;
 const SECOND_STEP_TTL_MINUTES = 10;
+/** "Resend code" waits this long after the last code (8 Nov 2026). */
+const SECOND_STEP_RESEND_SECONDS = 60;
 const TRUSTED_DEVICE_DAYS = 90;
 const VERIFY_LINK_MINUTES = 24 * 60;
 const RESET_LINK_MINUTES = 60;
@@ -267,12 +269,37 @@ export class AuthService {
       const challengeId = await this.repo.createSecondStep(user.id, channel, method, null, SECOND_STEP_TTL_MINUTES);
       return { status: 'second_step', challengeId, channel };
     }
+    return this.sendSecondStepCode(user, channel, method);
+  }
+
+  /** A new texted or emailed code (at most OTP_MAX_PER_HOUR an hour), on a new challenge. */
+  private async sendSecondStepCode(user: UserRow, channel: 'sms' | 'email', method: FirstFactor): Promise<LoginResult> {
     if ((await this.repo.recentSecondSteps(user.id, 60)) >= OTP_MAX_PER_HOUR) throw new AuthError('rate_limited', 'Too many codes requested; try again later');
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
     const challengeId = await this.repo.createSecondStep(user.id, channel, method, this.secondStepHmac(user.id, code), SECOND_STEP_TTL_MINUTES);
     if (channel === 'sms') await this.notify.sendSmsToPhone(user.phone!, 'second_step', { code }, 'otp', user.id);
     else await this.notify.sendEmail(user.email!, 'second_step', { code, name: user.firstName ?? user.displayName }, 'otp', user.id);
-    return { status: 'second_step', challengeId, channel, sentTo: channel === 'sms' ? mask(user.phone!) : maskEmail(user.email!) };
+    return { status: 'second_step', challengeId, channel, sentTo: channel === 'sms' ? mask(user.phone!) : maskEmail(user.email!), resendInSeconds: SECOND_STEP_RESEND_SECONDS };
+  }
+
+  /**
+   * "Resend code" on the second step (8 Nov 2026): a new code by the same SMS or email, at least a minute after the
+   * last one, within the hourly limit. The old code stops working, so only the newest one is accepted. An
+   * authenticator app makes its own codes, so there is nothing to resend for it (or for the password).
+   */
+  async resendSecondStep(challengeId: string): Promise<LoginResult> {
+    const c = await this.repo.secondStep(challengeId);
+    if (!c || c.attempts >= OTP_MAX_ATTEMPTS) throw new AuthError('invalid_code', 'This code has expired. Log in again');
+    if (c.channel !== 'sms' && c.channel !== 'email') throw new AuthError('invalid_code', 'There is no code to resend for this step');
+    if (c.ageSeconds < SECOND_STEP_RESEND_SECONDS) {
+      throw new AuthError('rate_limited', `Wait ${SECOND_STEP_RESEND_SECONDS - c.ageSeconds} seconds before asking for a new code`);
+    }
+    const user = await this.repo.userById(c.userId);
+    if (!user || user.status !== 'active') throw new AuthError('invalid_code', 'This code has expired. Log in again');
+    if (c.channel === 'sms' ? !user.phone : !user.email) throw new AuthError('invalid_code', 'There is no code to resend for this step');
+    const r = await this.sendSecondStepCode(user, c.channel, c.method as FirstFactor);
+    await this.repo.closeSecondStep(c.id);
+    return r;
   }
 
   private secondStepHmac(userId: string, code: string): string {

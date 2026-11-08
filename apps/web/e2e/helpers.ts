@@ -157,6 +157,13 @@ export function createAdmin(phone: string, name: string) {
     { cwd: '../api', env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL }, stdio: 'pipe' });
 }
 
+/** Make the waiting second-step codes a minute older, so "Resend code" can be tested without waiting (8 Nov 2026). */
+export function ageSecondStepCodes() {
+  execFileSync('node', ['-e', `const pg = require('pg'); const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    c.connect().then(() => c.query("UPDATE iam.second_step_challenges SET created_at = created_at - interval '61 seconds' WHERE consumed_at IS NULL")).then(() => c.end());`],
+    { cwd: '../api', env: { ...process.env, DATABASE_URL: process.env.E2E_DATABASE_URL }, stdio: 'pipe' });
+}
+
 /** The same test photo as a WebP picture (D-147: the website turns it into a JPEG before sending). */
 export function testWebp(seed: string): Promise<Buffer> {
   return sharp(testPhoto(seed)).webp().toBuffer();

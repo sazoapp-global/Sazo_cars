@@ -476,11 +476,17 @@ export class IamRepository {
     return rows[0]!.n;
   }
 
-  async secondStep(id: string): Promise<{ id: string; userId: string; channel: SecondStepChannel; codeHmac: string | null; attempts: number; method: string } | undefined> {
+  async secondStep(id: string): Promise<{ id: string; userId: string; channel: SecondStepChannel; codeHmac: string | null; attempts: number; method: string; ageSeconds: number } | undefined> {
     const { rows } = await this.pool.query(
-      `SELECT id, user_id AS "userId", channel, code_hmac AS "codeHmac", attempts, method FROM iam.second_step_challenges
+      `SELECT id, user_id AS "userId", channel, code_hmac AS "codeHmac", attempts, method,
+              extract(epoch FROM now() - created_at)::int AS "ageSeconds" FROM iam.second_step_challenges
         WHERE id = $1 AND consumed_at IS NULL AND expires_at > now()`, [id]);
     return rows[0];
+  }
+
+  /** Close a second step that a newer code replaced (a resend): only the newest code works. */
+  async closeSecondStep(id: string): Promise<void> {
+    await this.pool.query(`UPDATE iam.second_step_challenges SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, [id]);
   }
 
   async secondStepAttempt(id: string, success: boolean): Promise<void> {

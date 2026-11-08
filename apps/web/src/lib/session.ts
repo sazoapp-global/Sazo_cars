@@ -18,11 +18,12 @@ const secure = process.env.NODE_ENV === 'production';
 export type SecondStepChannel = 'sms' | 'email' | 'authenticator' | 'password';
 export type LoginResult =
   | { status: 'signed_in'; accessToken: string; refreshToken: string; expiresIn: number; deviceToken?: string; created: boolean; backupCodes?: string[] }
-  | { status: 'second_step'; challengeId: string; channel: SecondStepChannel; sentTo?: string }
+  | { status: 'second_step'; challengeId: string; channel: SecondStepChannel; sentTo?: string; resendInSeconds?: number }
   | { status: 'add_phone'; setupToken: string }
   | { status: 'setup_authenticator'; setupToken: string };
 
-export interface SecondStepPending { challengeId: string; channel: SecondStepChannel; sentTo?: string; next: string; remember?: boolean }
+/** `resendAt`: when "Resend code" can be pressed (ms since 1970), for a texted or emailed code. */
+export interface SecondStepPending { challengeId: string; channel: SecondStepChannel; sentTo?: string; next: string; remember?: boolean; resendAt?: number }
 export interface SetupPending { kind: 'add_phone' | 'setup_authenticator'; setupToken: string; next: string; remember?: boolean }
 
 /** The browser's description and address, passed on so "Signed-in devices" and the log-in record are right. */
@@ -49,6 +50,11 @@ export async function storeTokens(t: { accessToken: string; refreshToken: string
   if (t.deviceToken) jar.set(DEVICE_COOKIE, t.deviceToken, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 90 * 86400 });
 }
 
+/** The second step waiting on this browser, kept for 10 minutes (the code's life). */
+export function keepSecondStep(jar: Awaited<ReturnType<typeof cookies>>, pending: SecondStepPending) {
+  jar.set(SECOND_STEP_COOKIE, JSON.stringify(pending), { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 10 * 60 });
+}
+
 /**
  * After a log-in call: tokens → stored, and the page to go to (finish details first when needed);
  * second step → remembered in a short cookie and the code page is next.
@@ -56,8 +62,9 @@ export async function storeTokens(t: { accessToken: string; refreshToken: string
 export async function afterLogin(r: LoginResult, next: string, remember = true): Promise<string> {
   const jar = await cookies();
   if (r.status === 'second_step') {
-    const pending: SecondStepPending = { challengeId: r.challengeId, channel: r.channel, sentTo: r.sentTo, next: safeNext(next), remember };
-    jar.set(SECOND_STEP_COOKIE, JSON.stringify(pending), { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 10 * 60 });
+    const pending: SecondStepPending = { challengeId: r.challengeId, channel: r.channel, sentTo: r.sentTo, next: safeNext(next), remember,
+      ...(r.resendInSeconds ? { resendAt: Date.now() + r.resendInSeconds * 1000 } : {}) };
+    keepSecondStep(jar, pending);
     return '/sign-in/verify';
   }
   if (r.status === 'add_phone' || r.status === 'setup_authenticator') {

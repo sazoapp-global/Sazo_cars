@@ -89,6 +89,15 @@ export class AuthController {
     return this.auth.completeSecondStep(b.challengeId, b.code, b.rememberDevice, ctxOf(ua, ip)).catch(authProblem);
   }
 
+  /** POST /v1/auth/second-step/resend: a new texted or emailed code for the second step, a minute after the last (8 Nov 2026). */
+  @Public()
+  @Post('auth/second-step/resend')
+  @HttpCode(200)
+  async resendSecondStep(@Body() body: unknown) {
+    const b = parse(z.object({ challengeId: z.string().uuid() }), body);
+    return this.auth.resendSecondStep(b.challengeId).catch(authProblem);
+  }
+
   /** POST /v1/auth/password/forgot — always 202: an email is sent if the address has an account. */
   @Public()
   @Post('auth/password/forgot')

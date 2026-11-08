@@ -180,7 +180,17 @@ describe.skipIf(!base)('accounts (e2e)', () => {
     // The new password also ends the lock-out; the second step now texts his phone.
     const again = await http.post('/v1/auth/password/sign-in').send({ email: EMAIL, password: 'lake-victoria-22' }).expect(200);
     expect(again.body).toMatchObject({ status: 'second_step', channel: 'sms' });
-    mikeToken = (await http.post('/v1/auth/second-step').send({ challengeId: again.body.challengeId, code: codeIn(smsTo('+256772900050')) }).expect(200)).body.accessToken;
+    expect(again.body.resendInSeconds).toBe(60);
+    // "Resend code" (8 Nov 2026): not within a minute; then a new code, and the old one stops working.
+    const first = codeIn(smsTo('+256772900050'));
+    expect((await http.post('/v1/auth/second-step/resend').send({ challengeId: again.body.challengeId }).expect(429)).body.code).toBe('rate_limited');
+    await db.query(`UPDATE iam.second_step_challenges SET created_at = created_at - interval '61 seconds' WHERE id = $1`, [again.body.challengeId]);
+    const resent = await http.post('/v1/auth/second-step/resend').send({ challengeId: again.body.challengeId }).expect(200);
+    expect(resent.body).toMatchObject({ status: 'second_step', channel: 'sms', resendInSeconds: 60 });
+    expect(resent.body.challengeId).not.toBe(again.body.challengeId);
+    await http.post('/v1/auth/second-step').send({ challengeId: again.body.challengeId, code: first }).expect(401);
+    await http.post('/v1/auth/second-step/resend').send({ challengeId: again.body.challengeId }).expect(401);
+    mikeToken = (await http.post('/v1/auth/second-step').send({ challengeId: resent.body.challengeId, code: codeIn(smsTo('+256772900050')) }).expect(200)).body.accessToken;
     expect(mikeToken).toBeTruthy();
   });
 
@@ -216,6 +226,8 @@ describe.skipIf(!base)('accounts (e2e)', () => {
     const r = await http.post('/v1/auth/otp/verify').send({ phone, code: codeIn(smsTo(phone)) }).expect(200);
     expect(r.body).toMatchObject({ status: 'second_step', channel: 'password' });
     expect(r.body.sentTo).toBeUndefined();
+    // Nothing to resend for the password (or the authenticator app).
+    await http.post('/v1/auth/second-step/resend').send({ challengeId: r.body.challengeId }).expect(401);
     expect((await http.post('/v1/auth/second-step').send({ challengeId: r.body.challengeId, code: 'not-my-password' }).expect(401)).body.detail).toBe('Wrong password');
     expect((await http.post('/v1/auth/second-step').send({ challengeId: r.body.challengeId, code: 'mango-tree-41' }).expect(200)).body.status).toBe('signed_in');
   });
