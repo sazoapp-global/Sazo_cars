@@ -1,4 +1,4 @@
-import { CAR_CATEGORIES, CAR_CATEGORY_LABELS, QUESTION_TITLES, formatDate, formatKm, formatUgx } from '@sazo/contracts';
+import { CAR_CATEGORIES, CAR_CATEGORY_LABELS, formatDate, formatKm, formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
@@ -6,7 +6,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { Plate } from '@/components/plate';
-import { statusIcon } from '@/components/status';
+import { RecordChecklist } from '@/components/record-checklist';
 import { ShareButtons } from '@/components/share-buttons';
 import { AppFrame } from '@/components/app-frame/app-frame';
 import { Popup } from '@/components/popup';
@@ -28,12 +28,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fileInput = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary';
 const money = (n: number, currency: string) => (currency === 'UGX' ? formatUgx(n, false) : `${currency} ${n.toLocaleString('en-UG', { maximumFractionDigits: 2 })}`);
 
-function Section({ id, title, icon, children, note }: { id: string; title: string; icon: Parameters<typeof Icon>[0]['name']; children: React.ReactNode; note?: string }) {
+function Section({ id, title, icon, children, note, grow }: { id: string; title: string; icon: Parameters<typeof Icon>[0]['name']; children: React.ReactNode; note?: string; grow?: boolean }) {
   return (
-    <section id={id} className="scroll-mt-24 rounded-[14px] border border-line p-4 md:p-5" aria-labelledby={`${id}-h`}>
+    <section id={id} className={`scroll-mt-24 rounded-[14px] border border-line p-4 md:p-5 ${grow ? 'flex flex-1 flex-col' : ''}`} aria-labelledby={`${id}-h`}>
       <h2 id={`${id}-h`} className="flex items-center gap-2 font-display text-lg font-bold"><Icon name={icon} />{title}</h2>
       {note && <p className="mt-1 text-sm text-muted">{note}</p>}
-      <div className="mt-3">{children}</div>
+      <div className={`mt-3 ${grow ? 'flex flex-1 flex-col' : ''}`}>{children}</div>
     </section>
   );
 }
@@ -150,16 +150,18 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
             </form>
           )}
         </Section>
-        <div className="space-y-4">
+        {/* 8 Nov 2026: this column runs the height of the photos; the checklist's rows share the room. */}
+        <div className="flex flex-col gap-4">
           {c.linked ? (
-        <Section id="records" title="What SAZO records show" icon="fact_check" note="Buyers see the same.">
-          <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-            {c.questions.map((x) => {
-              const st = statusIcon(x.status);
-              return <li key={x.question} className={`flex items-center gap-1 font-semibold ${st.cls}`}><Icon name={st.icon} size={16} />{QUESTION_TITLES[x.question]?.short}</li>;
-            })}
-          </ul>
-          {c.vehicleRef && <p className="mt-2"><Link href={`/dealer/${id}/car/${car}?tab=report`} className="link text-sm">Open the full SAZO report</Link></p>}
+        <Section id="records" title="What SAZO records show" icon="fact_check" note="Buyers see the same." grow>
+          <RecordChecklist questions={c.questions} className="flex-1" />
+          {c.vehicleRef && (
+            <Link href={`/dealer/${id}/car/${car}?tab=report`} className="mt-4 flex items-center gap-3 rounded-xl border border-primary-container/30 bg-soft px-4 py-3 font-semibold text-primary-container hover:bg-soft-2">
+              <Icon name="description" />
+              <span className="min-w-0 flex-1"><span className="block">Open the full SAZO report</span><span className="block text-sm font-normal text-muted">Every record, the timeline and the seven questions</span></span>
+              <Icon name="arrow_forward" />
+            </Link>
+          )}
         </Section>
           ) : (
             <Section id="records" title="What SAZO records show" icon="fact_check">
@@ -177,10 +179,11 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
       </div>
 
       {live && (
-        <div className="flex flex-wrap gap-2">
+        // The car's buttons share the width (8 Nov 2026): four across on a computer, two by two on a phone.
+        <div className="grid grid-cols-2 items-start gap-3 lg:grid-cols-4">
           {c.vehicleRef && <form action={shareReport}><input type="hidden" name="ref" value={c.vehicleRef} /><input type="hidden" name="back" value={`/dealer/${id}/car/${car}`} />
-            <button className="btn btn-primary"><Icon name="share" />Report link for a buyer</button></form>}
-          <details className="w-full sm:w-auto">
+            <button className="btn btn-primary w-full"><Icon name="share" />Report link for a buyer</button></form>}
+          <details className="w-full">
             <summary className="btn btn-ghost w-full cursor-pointer list-none bg-white">Change price</summary>
             <form action={changePrice} className="mt-2 flex gap-2">{hidden}<input type="hidden" name="from" value="car" />
               <label htmlFor="newprice" className="sr-only">New asking price (UGX)</label>
@@ -189,7 +192,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
             </form>
           </details>
           {approved && (
-            <Popup title="Mark as sold" button="Mark as sold" buttonClassName="btn btn-ghost w-full bg-white sm:w-auto">
+            <Popup title="Mark as sold" button="Mark as sold" buttonClassName="btn btn-ghost w-full bg-white">
               <p className="mb-3 text-sm text-muted">{title} · asking {formatUgx(c.askingPriceUgx, false)}</p>
               <SaleForm org={id} carId={c.stockId} askingPriceUgx={c.askingPriceUgx} today={today} manager={manager} buyers={buyers} mode="sell" />
             </Popup>

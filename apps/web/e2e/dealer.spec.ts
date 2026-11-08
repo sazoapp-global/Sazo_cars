@@ -210,6 +210,10 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await row.getByRole('link').click();
   const car = dealer.getByRole('main');
   await expect(car.getByRole('region', { name: 'Photos' })).toBeVisible();
+  // What SAZO records show is a checklist of the seven questions, each with what the records say (8 Nov 2026).
+  const checklist = car.getByRole('region', { name: 'What SAZO records show' }).getByRole('listitem');
+  await expect(checklist).toHaveCount(7);
+  await expect(checklist.filter({ hasText: 'Identity' })).toContainText(/Consistent|Worth a closer look|Serious|Not available/);
   // The full SAZO report opens beside the side bar as a second tab, not on the buyers' page (option A, 28 Oct 2026).
   await car.getByRole('link', { name: 'Open the full SAZO report' }).click();
   await expect(dealer).toHaveURL(/\/dealer\/[0-9a-f-]+\/car\/[0-9a-f-]+\?tab=report$/);
