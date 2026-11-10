@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -37,7 +38,7 @@ export default async function BusinessStatus({ params, searchParams }: { params:
   return (
     <div className={framed ? 'space-y-5' : 'mx-auto max-w-2xl space-y-5 px-4 py-8 md:px-8'}>
       {sp.new && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{name} is registered. Next: send your documents and your National ID.</p>}
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
       <h1 className="font-display text-2xl font-bold">{name}</h1>
       <ol className="card flex flex-col gap-3 p-4 sm:flex-row sm:justify-between" aria-label="Approval progress">

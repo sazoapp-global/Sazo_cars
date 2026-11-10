@@ -1,3 +1,4 @@
+import { Flash } from '@/components/app-frame/hide-in';
 // Account settings (D-102): used by the Settings panel inside any page and by /account. Every form carries
 // `back`, the address to return to, so a change keeps you on the page you opened Settings from.
 import { unstable_rethrow } from 'next/navigation';
@@ -276,7 +277,7 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
           <div><h1 className="font-display text-2xl font-bold">{profile.displayName}</h1><p className="text-sm text-muted">Settings</p></div>
         </div>
       )}
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
       {/* One grid: the profile line beside the menu on computers and above it on phones; the chosen setting under the

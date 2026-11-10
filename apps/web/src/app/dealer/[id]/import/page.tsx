@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import { formatUgx, kindLabel } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -49,7 +50,7 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight md:text-3xl">Add many cars from a file</h1>
         <p className="mt-1 max-w-2xl text-muted">Put one car on each row of an Excel or CSV file, up to 200 cars a day. SAZO checks every row first and shows you what is ready. Nothing is added until you press Add.</p>
       </div>
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
       {!checked && (

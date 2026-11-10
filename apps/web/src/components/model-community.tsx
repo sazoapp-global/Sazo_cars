@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import { formatDate } from '@sazo/contracts';
 import { api } from '@/lib/api';
 import type { ModelCommunity as Community } from '@/lib/types';
@@ -20,7 +21,7 @@ export async function ModelCommunity({ vehicleRef, modelId, done, error, back }:
     <section id="community" className="card scroll-mt-4 p-4 md:p-5" aria-labelledby="community-h">
       <h2 id="community-h" className="font-display text-lg font-semibold">What owners say about the {c.model.label}</h2>
       <p className="text-sm text-muted">Opinions about this model in general, not records about this car. Checked by SAZO before they appear.</p>
-      {done && <p role="status" className="mt-2 rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{done}</p>}
+      {done && <Flash param="cdone" className="mt-2 rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{done}</Flash>}
       {error && <p role="alert" className="mt-2 rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{error}</p>}
       {c.averageRating !== null && <p className="mt-2 flex items-center gap-2 font-semibold"><Stars n={Math.round(c.averageRating)} />{c.averageRating} from {c.reviewCount} reviews</p>}
 

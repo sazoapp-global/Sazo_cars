@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import { formatDate, formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -80,7 +81,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
       <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role }} business={{ name: name, approved: true }}
         person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
         <p><BackButton href={`/dealer/${id}/enquiries${closed ? '?show=closed' : ''}`} /></p>
-        {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+        {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
         {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
         {/* Option B (approved 4 Nov 2026): the customer at the top, the stages as a progress line, then what they
             asked and the history side by side, with room between the lines. */}
@@ -204,7 +205,7 @@ export default async function Enquiries({ params, searchParams }: { params: Prom
         <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">Enquiries</h1>
         <p className="mt-1 max-w-2xl text-muted">People who asked about your cars, from your shared links or added by your team. Only your business sees their names and numbers.</p>
       </div>
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
       {!closed && <NumberStrip cells={[

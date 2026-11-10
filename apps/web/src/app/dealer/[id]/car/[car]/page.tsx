@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import { CAR_CATEGORIES, CAR_CATEGORY_LABELS, formatDate, formatKm, formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -111,7 +112,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
         </nav>
       )}
       {sp.tab === 'report' && c.vehicleRef ? <EmbeddedReport vehicleRef={c.vehicleRef} base={`/dealer/${id}/car/${car}?tab=report`} sp={sp} mode="dealer" ownCars={await ownCars()} /> : (<>
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.report && /^[A-Za-z0-9_-]{22,64}$/.test(sp.report) && (
         <section id="report-link" className="scroll-mt-24 rounded-[14px] border border-ok-line bg-ok-fill p-4 md:p-5" aria-labelledby="report-link-h">
           <h2 id="report-link-h" className="font-display text-lg font-bold">Your link is ready</h2>

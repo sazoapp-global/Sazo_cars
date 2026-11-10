@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import { formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -83,7 +84,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
   const base = `/dealer/${id}/payments`;
   const notices = (
     <>
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
     </>
   );

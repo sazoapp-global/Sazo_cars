@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import { CAR_CATEGORY_LABELS, type CarCategory, KIND_LABELS, QUESTION_ORDER, QUESTION_TITLES, VEHICLE_KINDS, formatDate, formatKm, formatUgx, isVehicleKind, type VehicleKind } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
@@ -37,7 +38,7 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const status = await api<{ isBroker: boolean; application: { status: string; decisionReason: string | null; createdAt: string } | null }>('/broker/application', { auth: true });
   const notice = <>
-    {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+    {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
     {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
   </>;
 

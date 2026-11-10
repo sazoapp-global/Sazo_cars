@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 import { CAR_CATEGORIES, CAR_CATEGORY_LABELS, KIND_LABELS, VEHICLE_KINDS, formatDate, formatUgx, isCarCategory, isVehicleKind } from '@sazo/contracts';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -93,7 +94,7 @@ export default async function DealerStock({ params, searchParams }: { params: Pr
           </details>
         </section>
       )}
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
       {/* Serious findings and bond deadlines are listed under Alerts in the side bar (4 Nov 2026). */}

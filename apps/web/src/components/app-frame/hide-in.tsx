@@ -4,6 +4,10 @@
 import { workspaceOf, type WorkspaceKey } from '@sazo/contracts';
 import { usePathname } from 'next/navigation';
 
+// The timed "done" note, passed on from here (10 Nov 2026): Settings is drawn by a server action inside any page,
+// and a client part it uses must be one the page already loads. The root layout loads this file on every page.
+export { Flash } from '@/components/flash';
+
 export function HideIn({ workspaces, children }: { workspaces: WorkspaceKey[] | 'all'; children: React.ReactNode }) {
   const ws = workspaceOf(usePathname() ?? '');
   return ws && (workspaces === 'all' || workspaces.includes(ws.key)) ? null : <>{children}</>;

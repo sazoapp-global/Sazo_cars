@@ -24,7 +24,7 @@ test('review a model, suggest a video, moderator publishes', async ({ browser })
   await section.getByRole('button', { name: 'Suggest video' }).click();
   await expect(buyer.getByText('The video will appear once SAZO has checked it.')).toBeVisible();
   await a11y(buyer);
-  const carUrl = buyer.url().replace(/\?.*$/, '');
+  const carUrl = buyer.url().replace(/[?#].*$/, '');
 
   const admin = await (await browser.newContext()).newPage();
   await signIn(admin, ADMIN, { next: '/admin/moderation' });

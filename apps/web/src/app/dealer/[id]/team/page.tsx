@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 // Team (4 Nov 2026): who works at the dealer and adding someone, on its own page under Team in the side bar
 // (it used to sit under the cars on Cars for sale). Managers of an approved business only.
 import type { Metadata } from 'next';
@@ -35,7 +36,7 @@ export default async function DealerTeam({ params, searchParams }: { params: Pro
         <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{name}: team</h1>
         <p className="mt-1 max-w-2xl text-muted">The people who work with your cars. Each one signs in with their own phone number.</p>
       </div>
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
       <section id="staff-section" className="rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="staff">

@@ -1,6 +1,9 @@
+import { Flash } from '@/components/flash';
+
 /** Shows the outcome of the last admin action (?done= / ?error=). */
 export function Notice({ done, error }: { done?: string; error?: string }) {
   if (!done && !error) return null;
+  if (!error) return <Flash className="mb-4 rounded-lg border border-ok-line bg-ok-fill p-3 text-sm font-semibold text-ok-text">{done}</Flash>;
   return (
     <p role={error ? 'alert' : 'status'} className={`mb-4 rounded-lg border p-3 text-sm font-semibold ${error ? 'border-bad-line bg-bad-fill text-bad-text' : 'border-ok-line bg-ok-fill text-ok-text'}`}>{error ?? done}</p>
   );

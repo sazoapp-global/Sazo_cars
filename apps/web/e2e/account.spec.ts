@@ -31,6 +31,9 @@ test('manage my account and delete it', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Names saved');
   await expect(page.getByRole('heading', { name: 'Akello N. Ruth' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Your details, Akello N. Ruth' })).toContainText('AR');
+  // A "done" note fades after a few seconds and leaves the address, so a refresh does not repeat it.
+  await expect(page).not.toHaveURL(/done=/);
+  await expect(page.getByText('Names saved')).toBeHidden({ timeout: 8000 });
   // The account opens in a popup over the page, not on a new page.
   await page.getByRole('button', { name: 'Your details, Akello N. Ruth' }).click();
   const popup = page.getByRole('dialog', { name: 'Your details' });

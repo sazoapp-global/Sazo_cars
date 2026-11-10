@@ -1,3 +1,4 @@
+import { Flash } from '@/components/flash';
 // Alerts (D-153, approved 4 Nov 2026): what needs the dealer, worst first, beside the side bar. Choosing an alert opens
 // its details beside the list: what is wrong, and where to fix it. Where the console can make the fix, it is right
 // there and saves to the same place as the car, Payments or Enquiries page; the alert then goes away by itself.
@@ -97,7 +98,7 @@ export default async function DealerAlerts({ params, searchParams }: { params: P
           <span className="inline-flex items-center gap-1"><Dot tone="green" />All clear</span>
         </p>
       </div>
-      {sp.done && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</p>}
+      {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
 
       {alerts.length === 0 ? (
