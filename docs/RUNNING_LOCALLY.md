@@ -64,7 +64,12 @@ Leave them running. Stop with `Ctrl + C`.
   - Garage manager (Kansanga Motors): `+256700400001` or `sarah.nambi@demo.sazo.test`
   - Buyer: `+256700600001` or `mary.achieng@demo.sazo.test`
 
-  It runs once per database; to start again, recreate the database, run `npm run db:migrate` and load it again.
+  It runs once per database. To load it again (or if an earlier run stopped part way), empty the database and
+  load everything from the start with one command. It deletes everything in your local database, including the
+  admin from step 4, so make that admin again afterwards if you need it:
+  ```bash
+  npm run seed:fresh -w @sazo/api
+  ```
 - **Sample plates to search:**
   - `UBJ 214K` — clean Toyota Harrier
   - `UAX 123A` — cloned (copied) plate

@@ -12,6 +12,7 @@
     "seed:check": "tsx src/seed/run-check.ts",
     "seed:demo": "tsx src/seed/run-demo.ts",
     "seed:categories": "tsx src/seed/run-categories.ts",
+    "seed:fresh": "tsx src/seed/run-fresh.ts",
     "create-admin": "tsx src/scripts/create-admin.ts",
     "pii:new-key": "tsx src/scripts/pii-new-key.ts",
     "pii:rotate": "tsx src/scripts/pii-rotate.ts"

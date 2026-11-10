@@ -119,7 +119,8 @@ async function submit(path: string, headers: Record<string, string>) {
 // ---------------------------------------------------------------------------------------------- run once
 
 if (await iam.userIdByPhone('+256700100001')) {
-  log('Demo data is already loaded in this database. To start again, recreate the database, migrate it and run this again.');
+  log('Demo data is already in this database (or an earlier run stopped part way), so nothing was added.');
+  log('To empty the database and load the sample cars and the demo accounts again: npm run seed:fresh -w @sazo/api');
   await app.close();
   process.exit(0);
 }
