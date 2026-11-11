@@ -13,4 +13,4 @@ export interface Thread {
   messages: ThreadMessage[]; seenBy: { name: string; you: boolean }[];
 }
 /** A car the writer may put in a message. */
-export interface CarOption { stockId: string; name: string; detail: string; photoUrl: string | null }
+export interface CarOption { stockId: string; name: string; detail: string; photoUrl: string | null; plate?: string | null }

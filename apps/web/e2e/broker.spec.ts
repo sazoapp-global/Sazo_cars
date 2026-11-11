@@ -99,7 +99,15 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await expect(broker.getByRole('heading', { level: 1, name: 'Messages' })).toBeVisible();
   await broker.getByRole('navigation', { name: 'Conversations' }).getByRole('link', { name: new RegExp(DEALER) }).click();
   await broker.getByRole('button', { name: 'Add a car' }).click();
-  await broker.getByRole('group', { name: /cars open to brokers/ }).getByRole('button', { name: /2016 Toyota Esquire/ }).click();
+  // The live search (D-176): it starts in the search box, a word that matches nothing says so, and Enter picks the match.
+  const picker = broker.getByRole('group', { name: /cars open to brokers/ });
+  await expect(picker.getByLabel('Search your cars')).toBeFocused();
+  await picker.getByLabel('Search your cars').fill('lamborghini');
+  await expect(picker.getByText('No cars match. Try the year or the plate.')).toBeVisible();
+  await picker.getByLabel('Search your cars').fill('esquire');
+  await expect(picker.getByRole('button')).toHaveCount(1);
+  await picker.getByLabel('Search your cars').press('Enter');
+  await expect(broker.getByRole('button', { name: /Take 2016 Toyota Esquire out/ })).toBeVisible();
   await broker.getByLabel('Message', { exact: true }).fill('a customer of mine wants to see this one on Saturday. is that fine?');
   await broker.getByRole('button', { name: 'Send' }).click();
   const brokerThread = broker.getByRole('list', { name: 'Messages' });

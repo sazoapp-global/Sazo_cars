@@ -38,8 +38,8 @@ export default async function DealerMessages({ params, searchParams }: { params:
   const cars: CarOption[] = stock
     .filter((c) => thread?.kind !== 'broker' || (c.details.openToBrokers && c.details.commissionKind && c.linked))
     .map((c) => ({
-      stockId: c.stockId, name: carName(c),
-      detail: [c.details.category ? CAR_CATEGORY_LABELS[c.details.category as keyof typeof CAR_CATEGORY_LABELS] : null, formatUgx(c.askingPriceUgx, false)].filter(Boolean).join(' · '),
+      stockId: c.stockId, name: carName(c), plate: c.vehicle?.currentPlate ?? c.held?.plate ?? null,
+      detail: [c.details.category ? CAR_CATEGORY_LABELS[c.details.category as keyof typeof CAR_CATEGORY_LABELS] : null, c.vehicle?.currentPlate ?? c.held?.plate, formatUgx(c.askingPriceUgx, false)].filter(Boolean).join(' · '),
       photoUrl: c.photos[0] ? `/dealer/${id}/car/${c.stockId}/photo/${c.photos[0].photoId}` : null,
     }));
   return (

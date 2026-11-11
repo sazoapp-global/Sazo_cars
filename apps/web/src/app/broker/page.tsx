@@ -104,8 +104,8 @@ async function Messages({ dealer, error, info }: { dealer?: string; error?: stri
   ]);
   // Only this dealer's cars open to brokers can go in a message to them.
   const options: CarOption[] = cars.filter((c) => c.dealer.organisationId === valid).map((c) => ({
-    stockId: c.stockId, name: name(c.specs),
-    detail: [c.specs.category ? CAR_CATEGORY_LABELS[c.specs.category as keyof typeof CAR_CATEGORY_LABELS] : null, formatUgx(c.askingPriceUgx, false)].filter(Boolean).join(' · '),
+    stockId: c.stockId, name: name(c.specs), plate: c.vehicle?.currentPlate ?? null,
+    detail: [c.specs.category ? CAR_CATEGORY_LABELS[c.specs.category as keyof typeof CAR_CATEGORY_LABELS] : null, c.vehicle?.currentPlate, formatUgx(c.askingPriceUgx, false)].filter(Boolean).join(' · '),
     photoUrl: c.photos[0] ? `/broker/car/${c.stockId}/photo/${c.photos[0]}` : null,
   }));
   return (
