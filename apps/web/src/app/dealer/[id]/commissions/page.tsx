@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Flash } from '@/components/flash';
 import { formatDate, formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -67,7 +68,8 @@ export default async function Commissions({ params, searchParams }: { params: Pr
                     <form action={commissionAction} className="mt-2 flex gap-2">{hidden(c)}<input type="hidden" name="action" value="cancel" />
                       <label htmlFor={`why-${c.commissionId}`} className="sr-only">Why is it cancelled?</label>
                       <input id={`why-${c.commissionId}`} name="note" required minLength={3} placeholder="Why?" className="field !min-h-10" />
-                      <button className="btn btn-ghost !min-h-10 shrink-0">Cancel it</button>
+                      <ConfirmButton className="btn btn-ghost !min-h-10 shrink-0" icon="money_off" title="Cancel this commission?"
+                        text={`${formatUgx(c.amountUgx, false)} will not be paid.`} confirm="Cancel commission">Cancel it</ConfirmButton>
                     </form></details>
                 )}
               </div>

@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import { api } from '@/lib/api';
@@ -65,7 +66,8 @@ export default async function Organisations({ searchParams }: { searchParams: SP
               {o.status !== 'approved' && <button name="decision" value="approve" className="btn btn-primary">Approve</button>}
               {o.status === 'pending_verification' && <button name="decision" value="request_info" className="btn btn-ghost">Ask for more</button>}
               {o.status === 'pending_verification' && <button name="decision" value="reject" className="btn btn-ghost">Reject</button>}
-              {o.status === 'approved' && <button name="decision" value="suspend" className="btn btn-ghost">Suspend</button>}
+              {o.status === 'approved' && <ConfirmButton name="decision" value="suspend" className="btn btn-ghost" icon="block" centred
+                title={`Suspend ${o.tradingName ?? o.legalName}?`} text="Its staff can no longer use it on SAZO until you approve it again." confirm="Suspend business" keep="Keep it approved">Suspend</ConfirmButton>}
             </div>
           </form>
         </section>

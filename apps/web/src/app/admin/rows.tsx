@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 // The console's lists and details (approved 25 Oct 2026): every list shows one row per item, and clicking a row
 // opens all its details in the space beside the side bar, with a link back to the list. People and cars open
 // there too, instead of in a pop-up or on another page.
@@ -89,7 +90,8 @@ export async function PersonView({ userId, back, backLabel }: { userId: string; 
                     <form action={clearAuthenticator} className="mt-2">
                       <input type="hidden" name="userId" value={p.userId} />
                       <input type="hidden" name="back" value={back} />
-                      <button type="submit" className="btn btn-ghost !min-h-10 text-sm">Clear their app (lost phone)</button>
+                      <ConfirmButton className="btn btn-ghost !min-h-10 text-sm" icon="lock_reset" title="Clear their authenticator app?"
+                        text="They set it up again at their next log-in." confirm="Clear app">Clear their app (lost phone)</ConfirmButton>
                     </form>
                   )}
                 </section>

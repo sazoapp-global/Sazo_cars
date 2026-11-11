@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -46,7 +47,8 @@ export default async function Inspections({ searchParams }: { searchParams: Prom
               <div className="mt-2 flex flex-wrap gap-2 text-sm">
                 {b.vehicleRef && <Link className="btn btn-ghost" href={`/v/${b.vehicleRef}`}>Open the report</Link>}
                 {(b.status === 'requested' || b.status === 'accepted') && (
-                  <form action={cancelBooking}><input type="hidden" name="id" value={b.bookingId} /><button className="btn btn-ghost">Cancel</button></form>
+                  <form action={cancelBooking}><input type="hidden" name="id" value={b.bookingId} /><ConfirmButton className="btn btn-ghost" icon="event_busy"
+                    title="Cancel this inspection?" text="You can book another inspection at any time." confirm="Cancel inspection" keep="Keep it">Cancel</ConfirmButton></form>
                 )}
               </div>
             </li>

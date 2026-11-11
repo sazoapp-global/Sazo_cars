@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Pager, pageHref, paginate } from '@/components/pager';
 // The fuel log (D-148): the owner logs each fill-up; with two full tanks SAZO works out how far the car goes on a
 // litre. Buyers see only the owners' average on the report (from 3 measured tanks), never who logged it.
@@ -66,7 +67,8 @@ export default async function FuelLog({ params, searchParams }: { params: Promis
                       <td className="tabular-nums">{f.kmPerL !== null ? n(f.kmPerL) : <span className="text-muted">·</span>}</td>
                       <td className="pr-3 text-right">
                         <form action={removeFillup}><input type="hidden" name="ref" value={ref} /><input type="hidden" name="id" value={f.id} />
-                          <button className="link text-sm" aria-label={`Remove the fill-up of ${formatDate(f.filledOn)}`}>Remove</button></form>
+                          <ConfirmButton className="link text-sm" label={`Remove the fill-up of ${formatDate(f.filledOn)}`} icon="local_gas_station"
+                            title="Remove this fill-up?" text={`The fill-up of ${formatDate(f.filledOn)} comes off your fuel log.`} confirm="Remove">Remove</ConfirmButton></form>
                       </td>
                     </tr>
                   ))}

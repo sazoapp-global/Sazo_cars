@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { Pager, pageHref, paginate } from '@/components/pager';
+import { ConfirmButton } from '@/components/confirm-button';
 import { Plate } from '@/components/plate';
 import { RecordChecklist } from '@/components/record-checklist';
 import { ShareButtons } from '@/components/share-buttons';
@@ -137,11 +138,12 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
                   <li key={p.photoId} className="relative overflow-hidden rounded-md border border-line">
                     <a href={`/dealer/${id}/car/${c.stockId}/photo/${p.photoId}`} target="_blank" rel="noopener noreferrer"><img src={`/dealer/${id}/car/${c.stockId}/photo/${p.photoId}`} alt={`${title}, photo ${p.position + 1}`} className="aspect-[4/3] w-full object-cover" /></a>
                     {live && <form action={removePhoto} className="absolute right-0.5 top-0.5">{hidden}<input type="hidden" name="photo" value={p.photoId} />
-                      <button className="rounded-full bg-white/90 p-1 shadow" aria-label={`Remove photo ${p.position + 1}`}><Icon name="delete" size={14} /></button></form>}
+                      <ConfirmButton className="rounded-full bg-white/90 p-1 shadow" label={`Remove photo ${p.position + 1}`}
+                        title="Remove this photo?" text="Buyers and brokers stop seeing it." confirm="Remove photo"><Icon name="delete" size={14} /></ConfirmButton></form>}
                   </li>
                 ))}
               </ul>
-              {live && <form action={removePhoto} className="mt-2">{hidden}<input type="hidden" name="photo" value={c.photos[0]!.photoId} /><button className="link text-xs">Remove the main photo</button></form>}
+              {live && <form action={removePhoto} className="mt-2">{hidden}<input type="hidden" name="photo" value={c.photos[0]!.photoId} /><ConfirmButton className="link text-xs" title="Remove the main photo?" text="Buyers and brokers stop seeing it." confirm="Remove photo">Remove the main photo</ConfirmButton></form>}
             </>
           ) : <div className="grid aspect-[4/3] place-items-center rounded-lg bg-soft text-label"><Icon name="directions_car" size={56} /></div>}
           {live && c.photos.length < 12 && (
@@ -198,7 +200,9 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
               <SaleForm org={id} carId={c.stockId} askingPriceUgx={c.askingPriceUgx} today={today} manager={manager} buyers={buyers} mode="sell" />
             </Popup>
           )}
-          <form action={removeStock}>{hidden}<button className="btn btn-ghost w-full bg-white" aria-label={`Remove ${title} without a sale`}><Icon name="delete" />Remove</button></form>
+          <form action={removeStock}>{hidden}<ConfirmButton className="btn btn-ghost w-full bg-white" label={`Remove ${title} without a sale`}
+            title="Remove this car from your stock?" text="It leaves Cars for sale. Its SAZO records stay." confirm="Remove car"
+            {...(c.photos[0] ? { photo: { src: `/dealer/${id}/car/${c.stockId}/photo/${c.photos[0].photoId}`, name: title, caption: [c.vehicle?.currentPlate ?? c.held?.plate, `Asking ${formatUgx(c.askingPriceUgx)}`].filter(Boolean).join(' · ') } } : {})}><Icon name="delete" />Remove</ConfirmButton></form>
         </div>
       )}
 
@@ -226,7 +230,8 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
               {paginate(links, sp.lp).items.map((l) => (
                 <li key={l.linkId} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>{channelLabel(l.channel)} link, made {formatDate(l.createdAt)}{l.showDealerName ? '' : ', without your name'}</span>
-                  <form action={revokeLink}>{hidden}<input type="hidden" name="link" value={l.linkId} /><button className="link text-sm">Stop this link</button></form>
+                  <form action={revokeLink}>{hidden}<input type="hidden" name="link" value={l.linkId} /><ConfirmButton className="link text-sm" icon="link_off"
+                    title="Stop this buyer link?" text="Buyers who open it will see it has stopped." confirm="Stop link" keep="Keep the link">Stop this link</ConfirmButton></form>
                 </li>
               ))}
             </ul>
@@ -336,7 +341,8 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
                       <form action={reverseCost} className="mt-2 flex gap-2">{hidden}<input type="hidden" name="entry" value={e.id} />
                         <label htmlFor={`r-${e.id}`} className="sr-only">Why is this cost being cancelled?</label>
                         <input id={`r-${e.id}`} name="reason" required minLength={3} placeholder="Why?" className="field !min-h-10 text-sm" />
-                        <button className="btn btn-ghost !min-h-10">Cancel it</button>
+                        <ConfirmButton className="btn btn-ghost !min-h-10" icon="money_off" title="Cancel this cost?"
+                          text={`${formatUgx(e.amountUgx, false)} comes off this car's costs.`} confirm="Cancel cost" keep="Keep it">Cancel it</ConfirmButton>
                       </form></details>)}
                 </li>
               ))}

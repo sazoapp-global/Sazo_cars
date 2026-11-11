@@ -134,13 +134,16 @@ test('manage my account and delete it', async ({ page }) => {
   expect((await page.request.get('/account/export')).status()).toBe(404);
   await page.goto('/account?section=data');
 
+  // A popup asks first (D-170): closing it or "Keep my account" changes nothing; "Delete account" deletes.
   await page.getByText('Delete my account').first().click();
-  await page.getByLabel('Type DELETE to confirm').fill('delete');
   await page.getByRole('button', { name: 'Delete my account' }).click();
-  await expect(page.getByText('Type DELETE in capitals to confirm.')).toBeVisible();
-  await page.getByText('Delete my account').first().click();
-  await page.getByLabel('Type DELETE to confirm').fill('DELETE');
+  const ask = page.getByRole('dialog', { name: 'Delete your SAZO account?' });
+  await expect(ask).toBeVisible();
+  await expect(ask.getByRole('button', { name: 'Keep my account' })).toBeFocused();
+  await ask.getByRole('button', { name: 'Close' }).click();
+  await expect(ask).toBeHidden();
   await page.getByRole('button', { name: 'Delete my account' }).click();
+  await ask.getByRole('button', { name: 'Delete account' }).click();
   await expect(page.getByText('Your account has been deleted.')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Log in', exact: true })).toBeVisible();
 });

@@ -3,6 +3,7 @@ import { APP_TITLE, appKind } from './lib/app-kind';
 import { Icon } from './components/icon';
 import { OfflineError, onAuthChange, request, restoreSession, signOut } from './lib/api';
 import { kv, wipe } from './lib/db';
+import { Confirm } from './components/confirm';
 import { go, useOnline, useRoute } from './lib/route';
 import { syncAll } from './lib/sync';
 import type { Me } from './lib/types';
@@ -87,8 +88,14 @@ function Workspace({ garage, me, route, online, onSignOut, onSwitch }: { garage:
   // Coming back to a list (e.g. after sending a job): fetch the latest.
   useEffect(() => { if (route.name === 'home' || route.name === 'records' || route.name === 'alerts') void refresh(); }, [route.name, refresh]);
   const narrow = (node: React.ReactNode) => <div className="mx-auto w-full max-w-xl">{node}</div>;
-  return (
-    <Shell garage={garage} me={me} route={route} online={online} unsent={jobs.unsent} records={jobs.jobs ? jobs.jobs.length + jobs.drafts.length : undefined} needsAction={jobs.needsAction} onSignOut={onSignOut} onSwitch={onSwitch}>
+  // Signing out empties this phone, so jobs not sent yet would be lost: ask first (D-170).
+  const [asking, setAsking] = useState(false);
+  const askSignOut = () => { if (jobs.unsent) setAsking(true); else onSignOut(); };
+  return (<>
+    <Confirm open={asking} icon="logout" title="Sign out with jobs not sent?"
+      text={`${jobs.unsent} ${jobs.unsent === 1 ? 'job is' : 'jobs are'} not sent yet. Signing out deletes ${jobs.unsent === 1 ? 'it' : 'them'} from this phone.`}
+      confirm="Sign out" keep="Stay signed in" onConfirm={() => { setAsking(false); onSignOut(); }} onClose={() => setAsking(false)} />
+    <Shell garage={garage} me={me} route={route} online={online} unsent={jobs.unsent} records={jobs.jobs ? jobs.jobs.length + jobs.drafts.length : undefined} needsAction={jobs.needsAction} onSignOut={askSignOut} onSwitch={onSwitch}>
       <UpdateBanner />
       {route.name === 'job' ? narrow(<JobWizard key={route.jobId} jobId={route.jobId} garage={garage} me={me} />)
         : route.name === 'server-job' ? narrow(<ServerJobView jobId={route.jobId} garage={garage} />)
@@ -96,13 +103,13 @@ function Workspace({ garage, me, route, online, onSignOut, onSwitch }: { garage:
         : route.name === 'server-inspection' ? narrow(<ServerInspectionView id={route.id} workplace={garage} />)
         : route.name === 'staff' ? narrow(<Staff garage={garage} />)
         : route.name === 'concerns' ? narrow(<Concerns workplace={garage} />)
-        : route.name === 'more' ? narrow(<More garage={garage} me={me} onSignOut={onSignOut} />)
-        : isInspector(garage) ? narrow(<InspectionHome workplace={garage} me={me} onSignOut={onSignOut} />)
+        : route.name === 'more' ? narrow(<More garage={garage} me={me} onSignOut={askSignOut} />)
+        : isInspector(garage) ? narrow(<InspectionHome workplace={garage} me={me} onSignOut={askSignOut} />)
         : route.name === 'records' ? <Records garage={garage} jobs={jobs} />
         : route.name === 'alerts' ? <Alerts jobs={jobs} />
         : <Home garage={garage} me={me} jobs={jobs} />}
     </Shell>
-  );
+  </>);
 }
 
 function GaragePicker({ session, onPick, onSignOut }: { session: Extract<Session, { state: 'ready' }>; onPick: (id: string) => void; onSignOut: () => void }) {

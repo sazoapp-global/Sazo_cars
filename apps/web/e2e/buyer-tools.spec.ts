@@ -61,6 +61,7 @@ test('save, compare, share and stop sharing', async ({ page, browser }) => {
   await shot(stranger, 'shared');
 
   await page.getByRole('button', { name: 'Stop this link' }).first().click();
+  await page.getByRole('dialog', { name: 'Stop this shared link?' }).getByRole('button', { name: 'Stop link' }).click();
   await expect(page.getByText(/· stopped/).first()).toBeVisible();
   await stranger.reload();
   await expect(stranger.getByRole('heading', { name: 'This link is not valid' })).toBeVisible();
@@ -95,5 +96,6 @@ test('I-07: book an inspection from a report, then cancel it', async ({ page }) 
   await a11y(page);
   await shot(page, 'buyer-inspections');
   await booking.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('dialog', { name: 'Cancel this inspection?' }).getByRole('button', { name: 'Cancel inspection' }).click();
   await expect(page.locator('li', { hasText: 'UBJ 214K' }).first()).toContainText('Cancelled');
 });

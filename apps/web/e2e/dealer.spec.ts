@@ -250,6 +250,13 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
 
   // Sold on instalments (D-146): the sale price stays private; the plan and payments open beside the side bar.
   await dealer.goBack();
+  // Remove asks first (D-170): "Keep it" has focus, and keeping it leaves the car in stock.
+  await car.getByRole('button', { name: /without a sale/ }).click();
+  const ask = dealer.getByRole('dialog', { name: 'Remove this car from your stock?' });
+  await expect(ask).toContainText('It leaves Cars for sale. Its SAZO records stay.');
+  await expect(ask.getByRole('button', { name: 'Keep it' })).toBeFocused();
+  await ask.getByRole('button', { name: 'Keep it' }).click();
+  await expect(ask).toBeHidden();
   await car.getByRole('button', { name: 'Mark as sold' }).click();
   const sale = dealer.getByRole('dialog', { name: 'Mark as sold' });
   await sale.getByLabel(/Sold for/).fill('23,000,000');

@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Flash } from '@/components/flash';
 import { CAR_CATEGORY_LABELS, type CarCategory, KIND_LABELS, QUESTION_ORDER, QUESTION_TITLES, VEHICLE_KINDS, formatDate, formatKm, formatUgx, isVehicleKind, type VehicleKind } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -169,7 +170,8 @@ async function Links({ page }: { page?: string }) {
       {paginate(items, page).items.map((l) => (
         <li key={l.linkId} className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
           <span><strong>{l.car ?? 'Car'}</strong>. {CHANNELS.find(([k]) => k === l.channel)?.[1]} link, made {formatDate(l.createdAt)}{l.live ? '' : '. The car is no longer for sale'}</span>
-          <form action={stopBrokerLink}><input type="hidden" name="link" value={l.linkId} /><button className="link text-sm">Stop this link</button></form>
+          <form action={stopBrokerLink}><input type="hidden" name="link" value={l.linkId} /><ConfirmButton className="link text-sm" icon="link_off"
+            title="Stop this link?" text="Buyers who open it will see it has stopped." confirm="Stop link" keep="Keep the link">Stop this link</ConfirmButton></form>
         </li>
       ))}
     </ul>

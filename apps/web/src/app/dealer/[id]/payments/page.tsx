@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Flash } from '@/components/flash';
 import { formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -246,7 +247,8 @@ export default async function DealerPayments({ params, searchParams }: { params:
                             <input type="hidden" name="org" value={id} /><input type="hidden" name="plan" value={d.planId} /><input type="hidden" name="payment" value={p.id} />
                             <label htmlFor={`why-${p.id}`} className="sr-only">Why is it being corrected?</label>
                             <input id={`why-${p.id}`} name="reason" required minLength={3} placeholder="Why? e.g. typed the wrong amount" className="field !min-h-10 text-sm" />
-                            <button className="btn btn-ghost !min-h-10 shrink-0 text-sm">Correct</button>
+                            <ConfirmButton className="btn btn-ghost !min-h-10 shrink-0 text-sm" icon="payments" title="Correct this payment?"
+                              text={`${p.amountUgx.toLocaleString('en-US')} is crossed out and no longer counts as paid.`} confirm="Correct payment">Correct</ConfirmButton>
                           </form>
                         </details>
                       )}

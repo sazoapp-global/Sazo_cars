@@ -82,7 +82,7 @@ export async function signOutOthers(form: FormData) {
 }
 
 export async function deleteAccount(form: FormData) {
-  if (text(form, 'confirm') !== 'DELETE') back(form, { error: 'Type DELETE in capitals to confirm.' });
+  // Asked in a popup first (D-170), so nothing needs typing.
   try { await api('/me', { method: 'DELETE', auth: true, body: { confirm: 'DELETE' } }); } catch (err) { back(form, { error: why(err, 'Could not delete your account.') }); }
   const jar = await cookies();
   jar.delete(ACCESS_COOKIE);

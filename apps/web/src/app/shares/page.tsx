@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -34,7 +35,7 @@ export default async function Shares({ searchParams }: { searchParams: Promise<{
             {paginate(items, page).items.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <span><span className="sazo-id font-semibold">{l.plate ?? l.vehicleRef}</span> <span className="text-sm text-muted">· {formatDate(l.createdAt)} · {l.revoked ? 'stopped' : l.expiresAt && Date.parse(l.expiresAt) < Date.now() ? 'expired' : `works until ${formatDate(l.expiresAt)}`}</span></span>
-                {!l.revoked && <form action={revokeShare}><input type="hidden" name="id" value={l.id} /><button className="btn btn-ghost !min-h-10 text-sm">Stop this link</button></form>}
+                {!l.revoked && <form action={revokeShare}><input type="hidden" name="id" value={l.id} /><ConfirmButton className="btn btn-ghost !min-h-10 text-sm" icon="link_off" title="Stop this shared link?" text="Anyone who opens it will see it has stopped." confirm="Stop link" keep="Keep the link">Stop this link</ConfirmButton></form>}
               </li>
             ))}
           </ul>

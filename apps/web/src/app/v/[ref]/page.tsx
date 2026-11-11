@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { pageHref } from '@/components/pager';
 import { CONFIDENCE_LABELS, QUESTION_ORDER, QUESTION_TITLES, factValue, kindLabel, statusLabel, summaryLine } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -45,7 +46,9 @@ export default async function VehiclePage({ params, searchParams }: Props) {
   const actions = (
     <>
       <form action={saved ? unsaveCar : saveCar}><input type="hidden" name="ref" value={ref} />
-        <button className="btn btn-ghost" aria-pressed={saved}><Icon name={saved ? 'bookmark_added' : 'bookmark'} />{saved ? 'Saved' : 'Save this car'}</button></form>
+        {saved
+          ? <ConfirmButton className="btn btn-ghost" icon="bookmark_remove" title="Remove this saved car?" text="It leaves your saved cars. You can save it again at any time." confirm="Remove"><Icon name="bookmark_added" />Saved</ConfirmButton>
+          : <button className="btn btn-ghost" aria-pressed={false}><Icon name="bookmark" />Save this car</button>}</form>
       <Link href={`/compare?r=${ref}`} className="btn btn-ghost"><Icon name="compare_arrows" />Compare</Link>
       <Link href={`/inspections/book?${new URLSearchParams({ ref, ...(r.vehicle.currentPlate ? { plate: r.vehicle.currentPlate } : {}) })}`} className="btn btn-ghost"><Icon name="fact_check" />Book an inspection</Link>
       <PrintButton primary />

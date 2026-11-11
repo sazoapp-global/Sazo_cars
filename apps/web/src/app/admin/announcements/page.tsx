@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { formatDate } from '@sazo/contracts';
 import { sendAnnouncement, withdrawAnnouncement } from '../actions';
 import { AUDIENCES, audienceLabel } from '../audiences';
@@ -29,7 +30,7 @@ export default async function Announcements({ searchParams }: { searchParams: SP
                   </div>
                   <p className="mt-1 whitespace-pre-line text-sm">{a.body}</p>
                   {a.withdrawnAt ? <p className="mt-2 text-sm font-semibold text-muted">Withdrawn {formatDate(a.withdrawnAt)}</p> : (
-                    <form action={withdrawAnnouncement} className="mt-2"><input type="hidden" name="id" value={a.id} /><button className="link text-sm">Withdraw</button></form>
+                    <form action={withdrawAnnouncement} className="mt-2"><input type="hidden" name="id" value={a.id} /><ConfirmButton className="link text-sm" icon="campaign" title="Withdraw this announcement?" text="People stop seeing it in SAZO." confirm="Withdraw" keep="Keep it">Withdraw</ConfirmButton></form>
                   )}
         </section>
       </>

@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { QUESTION_TITLES, formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -36,7 +37,8 @@ export default async function Saved({ searchParams }: { searchParams: Promise<{ 
                   })}
                 </ul>
               </div>
-              <button formAction={unsaveCar} name="ref" value={i.vehicleRef} className="shrink-0 p-2 text-label hover:text-bad-text" aria-label={`Remove ${vehicleName(i.summary.vehicle)}`}><Icon name="delete" /></button>
+              <ConfirmButton formAction={unsaveCar} name="ref" value={i.vehicleRef} className="shrink-0 p-2 text-label hover:text-bad-text" label={`Remove ${vehicleName(i.summary.vehicle)}`}
+                icon="bookmark_remove" title="Remove this saved car?" text={`${vehicleName(i.summary.vehicle)} leaves your saved cars. You can save it again at any time.`} confirm="Remove"><Icon name="delete" /></ConfirmButton>
             </div>
           ))}
           <input type="hidden" name="back" value="/saved" />

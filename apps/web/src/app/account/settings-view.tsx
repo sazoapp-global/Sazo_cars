@@ -1,4 +1,4 @@
-import { Flash } from '@/components/app-frame/hide-in';
+import { ConfirmButton, Flash } from '@/components/app-frame/hide-in';
 // Account settings (D-102): used by the Settings panel inside any page and by /account. Every form carries
 // `back`, the address to return to, so a change keeps you on the page you opened Settings from.
 import { unstable_rethrow } from 'next/navigation';
@@ -255,13 +255,12 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
         <details className="mt-5 rounded-lg border border-bad-line p-3">
           <summary className="cursor-pointer font-semibold text-bad-text">Delete my account</summary>
           <div className="mt-2 space-y-2 text-sm">
-            <p>This can&apos;t be undone. SAZO will delete your name and phone number, sign out all your devices, and remove your saved cars, shared links (they stop working), car claims and reviews. The encrypted record SAZO keeps for your phone number is erased.</p>
-            <p>Records you entered for a business (for example garage jobs) stay in each car&apos;s history, without your name. If you are the only manager of a business with staff, make someone else a manager first.</p>
-            <form action={deleteAccount} className="flex flex-col gap-2 sm:flex-row sm:items-end"><input type="hidden" name="back" value={here} />
-              <div className="flex-1"><label htmlFor="confirm" className="label">Type DELETE to confirm</label>
-                <input id="confirm" name="confirm" required autoComplete="off" className="field" /></div>
-              <button className="btn border-bad-line bg-bad-fill text-bad-text">Delete my account</button>
-            </form>
+          <p>SAZO will delete your name and phone number, sign out all your devices, and remove your saved cars, shared links (they stop working), car claims and reviews. The encrypted record SAZO keeps for your phone number is erased.</p>
+          <p>Records you entered for a business (for example garage jobs) stay in each car&apos;s history, without your name. If you are the only manager of a business with staff, make someone else a manager first.</p>
+          <form action={deleteAccount}><input type="hidden" name="back" value={here} />
+            <ConfirmButton className="btn border-bad-line bg-bad-fill text-bad-text" icon="warning" centred title="Delete your SAZO account?"
+              text="Your details and saved cars are deleted. This cannot be undone." confirm="Delete account" keep="Keep my account">Delete my account</ConfirmButton>
+          </form>
           </div>
         </details>
       </section>

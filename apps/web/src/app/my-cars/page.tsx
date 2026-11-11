@@ -1,3 +1,4 @@
+import { ConfirmButton } from '@/components/confirm-button';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { formatDate } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -54,7 +55,9 @@ export default async function MyCars({ searchParams }: { searchParams: SP }) {
                   <Link href={`/v/${c.vehicleRef}`} className="btn btn-ghost"><Icon name="description" />Report</Link>
                   {c.status !== 'rejected' && (
                     <form action={removeCar}><input type="hidden" name="ref" value={c.vehicleRef} />
-                      <button className="btn btn-ghost"><Icon name="delete" />{c.status === 'pending' ? 'Cancel' : 'Not my car any more'}</button></form>
+                      <ConfirmButton className="btn btn-ghost" title={c.status === 'pending' ? 'Cancel your claim for this car?' : 'Remove this car from My cars?'}
+                        text={c.status === 'pending' ? 'SAZO stops checking your claim.' : 'It leaves My cars. Its SAZO records stay.'}
+                        confirm={c.status === 'pending' ? 'Cancel claim' : 'Remove car'} keep={c.status === 'pending' ? 'Keep my claim' : 'Keep it'}><Icon name="delete" />{c.status === 'pending' ? 'Cancel' : 'Not my car any more'}</ConfirmButton></form>
                   )}
                 </div>
               </li>

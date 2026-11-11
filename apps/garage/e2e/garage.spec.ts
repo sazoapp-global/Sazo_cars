@@ -185,6 +185,15 @@ test('no signal halfway through a job: everything is kept and syncs when the sig
   const draft = page.getByRole('button', { name: /UBR 404N/ });
   await expect(draft).toContainText('Saved on phone · will upload when online');
   await shot(page, '7-offline-home');
+  // Signing out would delete it from the phone, so the app asks first (D-170); staying keeps it.
+  await page.getByRole('button', { name: /^Your details, / }).click();
+  await page.getByRole('dialog', { name: 'Your details' }).getByRole('button', { name: 'Sign out' }).click();
+  const ask = page.getByRole('dialog', { name: 'Sign out with jobs not sent?' });
+  await expect(ask).toContainText('1 job is not sent yet. Signing out deletes it from this phone.');
+  await expect(ask.getByRole('button', { name: 'Stay signed in' })).toBeFocused();
+  await ask.getByRole('button', { name: 'Stay signed in' }).click();
+  await expect(ask).toBeHidden();
+  await expect(draft).toBeVisible();
 
   await context.setOffline(false);
   await expect(draft).toContainText('Saved to SAZO', { timeout: 20_000 });
