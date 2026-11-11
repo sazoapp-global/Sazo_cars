@@ -113,6 +113,7 @@ describe.skipIf(!base)('dealer selling: links, car page, enquiries, sale stages 
     expect(page).toMatchObject({ vehicleRef: carRef, askingPriceUgx: 48_000_000, specs: { make: 'Toyota', model: 'Noah', year: 2014, fuel: 'petrol' },
       photos: [photoId], seller: { kind: 'dealer', name: 'Naguru Auto Bond', whatsapp: '+256772700001' } });
     expect(page.questions).toHaveLength(7);
+    for (const q of page.questions) expect(Object.keys(q).sort()).toEqual(['headlineKey', 'question', 'status']);
     const text = JSON.stringify(page);
     for (const secret of ['keep quiet', '31000000', 'Naguru"', '400000', 'commission', 'cost', 'notes', 'yard']) expect(text).not.toContain(secret);
     const img = await http.get(`/v1/cars/${token}/photos/${photoId}`).expect(200);

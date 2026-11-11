@@ -110,6 +110,8 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     stockId = res.body.stockId;
     expect(res.body).toMatchObject({ vehicleRef: knownRef, status: 'in_stock', askingPriceUgx: 38_500_000, listedMileageKm: 131000, vehicle: { make: 'Toyota' } });
     expect(res.body.questions).toHaveLength(7);
+    // The dealer's own car carries the figures behind each finding (the exact mileage readings, say).
+    for (const q of res.body.questions) expect(q).toHaveProperty('params');
     expect((await http.post('/v1/dealer/stock').set(asStaff()).send({ vehicleRef: knownRef, askingPriceUgx: 1 }).expect(409)).body.code).toBe('already_in_stock');
 
     await http.patch(`/v1/dealer/stock/${stockId}`).set(asStaff()).send({ askingPriceUgx: 36_000_000 }).expect(200);

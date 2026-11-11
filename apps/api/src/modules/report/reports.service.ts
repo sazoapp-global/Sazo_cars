@@ -76,14 +76,17 @@ export class ReportsService {
     }));
   }
 
-  /** Public summary: one status + one headline per question. No details, figures, sources or valuation (P-002). */
-  async publicSummary(ref: string) {
+  /**
+   * Public summary: one status + one headline per question. No details, figures, sources or valuation (P-002).
+   * `figures` adds the numbers behind each headline (the mileage readings, say) for a business's own cars.
+   */
+  async publicSummary(ref: string, opts: { figures?: boolean } = {}) {
     const { id, card, snap } = await this.load(ref);
     return {
       vehicle: card,
       notices: await this.notices(id),
       statuses: await this.statuses(id),
-      questions: snap.questions.map((q) => ({ question: q.question, status: q.status, headlineKey: q.headlineKey })),
+      questions: snap.questions.map((q) => ({ question: q.question, status: q.status, headlineKey: q.headlineKey, ...(opts.figures ? { params: q.params } : {}) })),
       recordConfidence: snap.recordConfidence,
       asOf: snap.asOf,
       signInForDetails: true,

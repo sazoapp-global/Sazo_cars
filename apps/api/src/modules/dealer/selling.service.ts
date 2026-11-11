@@ -110,7 +110,8 @@ export class SellingService {
       listedMileageKm: view.listedMileageKm,
       tiktokUrl: d.tiktokUrl,
       photos: view.photos.map((p) => p.photoId),
-      questions: view.questions,
+      // The public link shows no figures (P-002).
+      questions: view.questions.map((q) => ({ question: q.question, status: q.status, headlineKey: q.headlineKey })),
       recordConfidence: view.recordConfidence,
       seller: broker ? { kind: 'broker' as const, name: broker.name, dealerName: link.showDealerName ? org?.tradingName ?? org?.legalName ?? null : null, whatsapp: broker.whatsapp }
         : { kind: 'dealer' as const, name: link.showDealerName ? org?.tradingName ?? org?.legalName ?? null : null, dealerName: null, whatsapp: settings.whatsappE164 },

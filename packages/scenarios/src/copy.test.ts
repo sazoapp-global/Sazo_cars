@@ -36,6 +36,13 @@ describe('report wording (P-006)', () => {
     }
   });
 
+  it('a wound back odometer names the exact readings, and never a made up 0 km', () => {
+    expect(headline('mileage.serious.decrease', { earlierKm: 152340, laterKm: 98120 }))
+      .toBe('A reading of 98,120 km came after an earlier reading of 152,340 km. The odometer may have been wound back.');
+    expect(headline('mileage.serious.decrease', {})).not.toMatch(/\d/);
+    expect(headline('mileage.attention.implausible_rate', {})).not.toMatch(/\d/);
+  });
+
   it('the public summary wording contains no figures (P-002)', () => {
     for (const key of ALL_HEADLINE_KEYS) {
       const text = summaryLine(key);

@@ -79,8 +79,10 @@ const HEADLINES: Record<string, Text> = {
   'damage.not_available.no_coverage': "We don't have police or insurance records that cover this car yet.",
   // Mileage
   'mileage.verified.consistent': (p) => `${plural(p.readings, 'reading rises', 'readings rise')} steadily over time.`,
-  'mileage.serious.decrease': (p) => `A reading of ${formatKm(p.laterKm)} came after an earlier reading of ${formatKm(p.earlierKm)}. The odometer may have been wound back.`,
-  'mileage.attention.implausible_rate': (p) => `About ${formatKm(p.kmPerYear)} a year, more than is usual for this kind of use.`,
+  'mileage.serious.decrease': (p) => (p.laterKm != null && p.earlierKm != null
+    ? `A reading of ${formatKm(p.laterKm)} came after an earlier reading of ${formatKm(p.earlierKm)}. The odometer may have been wound back.`
+    : 'A later mileage reading is lower than an earlier one. The odometer may have been wound back.'),
+  'mileage.attention.implausible_rate': (p) => (p.kmPerYear != null ? `About ${formatKm(p.kmPerYear)} a year, more than is usual for this kind of use.` : 'The car is driven more each year than is usual for this kind of use.'),
   'mileage.attention.odometer_replaced': (p) => `The odometer was replaced${p.replacedOn ? ` on ${formatDate(String(p.replacedOn))}` : ''}${p.estimatedTotalKm ? `; total distance is estimated at ${formatKm(p.estimatedTotalKm)}` : ''}.`,
   'mileage.attention.single_reading': 'Only one mileage reading is recorded, so we cannot check it against others.',
   'mileage.attention.short_history': 'Mileage readings cover only a short period.',

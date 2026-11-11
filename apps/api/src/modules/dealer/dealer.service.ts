@@ -458,7 +458,8 @@ export class DealerService {
 
   async view(r: StockRow, ctx?: { settings?: DealerSettings; photos?: { id: string; evidenceId: string; position: number; addedAt: Date }[]; costTotalUgx?: number }) {
     const v = r.vehicleId ? await this.registry.getVehicle(r.vehicleId) : undefined;
-    const summary = v ? await this.reports.publicSummary(v.publicRef).catch(() => undefined) : undefined;
+    // The dealer's own car: the figures behind each finding (the exact mileage readings, say).
+    const summary = v ? await this.reports.publicSummary(v.publicRef, { figures: true }).catch(() => undefined) : undefined;
     const settings = ctx?.settings ?? (await this.repo.settings(r.organisationId));
     const photos = ctx?.photos ?? (await this.repo.photos([r.id])).get(r.id) ?? [];
     const daysInStock = Math.max(0, daysBetween(r.receivedOn ?? new Date(r.listedAt), r.soldAt ? new Date(r.soldAt) : new Date()));
