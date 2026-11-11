@@ -170,3 +170,9 @@ section:is(.card, .border):not([class*='bg-primary']) > div:first-child > h2:fir
 }
 @keyframes confirm-in { from { opacity: 0; transform: scale(0.97); } }
 @keyframes confirm-up { from { transform: translateY(40px); opacity: 0; } }
+
+/* An open chat on a phone (D-174) has the whole screen, as on WhatsApp: the workspace strip steps aside and
+   the chat's own back arrow returns to the list. */
+@media (max-width: 1023px) {
+  body:has([data-chat-open]) [data-phone-strip] { display: none; }
+}

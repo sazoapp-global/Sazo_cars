@@ -143,7 +143,7 @@ export function PhoneStrip({ label, entries, business, badges = {}, tones = {} }
   useEffect(() => { current.current?.scrollIntoView({ block: 'nearest', inline: 'center' }); }, [active]);
   const links = [...entries.flatMap((e) => (isGroup(e) ? e.links : [e])), SETTINGS_LINK];
   return (
-    <div className="border-b-4 border-lime bg-primary text-white print:hidden lg:hidden">
+    <div data-phone-strip className="border-b-4 border-lime bg-primary text-white print:hidden lg:hidden">
       <p className="px-4 pt-3 text-[11px] font-bold uppercase tracking-wider text-white/70">{label}{business ? ` · ${business.name}` : ''}</p>
       <nav aria-label={label} className="flex gap-1 overflow-x-auto px-2 pb-2 pt-1">
         {links.map((l) => (

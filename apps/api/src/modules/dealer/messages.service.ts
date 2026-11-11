@@ -99,7 +99,10 @@ export class MessagesService {
     const c = await this.repo.brokerConversation(organisationId, actor.userId);
     if (c) return this.thread(actor, c);
     const o = await this.iam.organisation(organisationId);
-    return { conversationId: null, kind: 'broker' as const, organisationId, title: o?.tradingName ?? o?.legalName ?? '', members: await this.teamMembers(organisationId), messages: [], seenBy: [] };
+    const team = (await this.teamMembers(organisationId)).map((m) => ({ ...m, you: false }));
+    const me = (await this.iam.displayNames([actor.userId])).get(actor.userId) ?? '';
+    return { conversationId: null, kind: 'broker' as const, organisationId, title: o?.tradingName ?? o?.legalName ?? '', members: team,
+      people: [{ userId: actor.userId, name: me, role: 'Broker', you: true }, ...team], messages: [], seenBy: [] };
   }
 
   async brokerSend(actor: Actor, organisationId: string, body: string, stockId?: string) {
@@ -161,7 +164,13 @@ export class MessagesService {
     return {
       conversationId: c.id, kind: c.kind, organisationId: c.organisationId,
       title: c.kind === 'team' ? `${dealerName} team` : actor.userId === c.brokerUserId ? dealerName : brokerName!,
-      members: team,
+      /** The dealer's team (managers and sales staff); "you" marks the reader. */
+      members: team.map((m) => ({ ...m, you: m.userId === actor.userId })),
+      /** Everyone in the chat, for its details: the broker first in a broker's chat, then the team. */
+      people: [
+        ...(c.brokerUserId ? [{ userId: c.brokerUserId, name: brokerName!, role: 'Broker', you: c.brokerUserId === actor.userId }] : []),
+        ...team.map((m) => ({ ...m, you: m.userId === actor.userId })),
+      ],
       messages: rows.map((m) => ({
         id: m.id, mine: m.senderUserId === actor.userId, sender: people.get(m.senderUserId) ?? { name: 'Someone', role: '' },
         body: m.body, car: m.stockItemId ? cards.get(m.stockItemId) ?? null : null, createdAt: m.createdAt.toISOString(), seen: seenAt(m),

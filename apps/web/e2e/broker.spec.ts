@@ -117,8 +117,22 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await dealer.getByLabel('Message', { exact: true }).fill('Yes, Saturday from 10 is fine.');
   await dealer.getByRole('button', { name: 'Send' }).click();
   await expect(dealerThread.getByRole('listitem').last()).toContainText('Yes, Saturday from 10 is fine.');
+  // Chat details (D-174): who is in the chat, and the cars it is about.
+  await dealer.getByRole('link', { name: 'Chat details' }).click();
+  const details = dealer.getByRole('complementary', { name: 'Chat details' });
+  await expect(details).toContainText('In this chat');
+  await expect(details).toContainText('Broker');
+  await expect(details).toContainText('2016 Toyota Esquire');
+  await details.getByRole('link', { name: 'Close chat details' }).click();
+  await expect(details).toBeHidden();
   await a11y(dealer);
   await shot(dealer, 'dealer-messages');
+  // Back to the chats: the search finds a chat by what was written in it.
+  await dealer.getByRole('link', { name: 'Back to your chats' }).click();
+  await dealer.getByRole('searchbox').fill('Saturday from 10');
+  await expect(dealer.getByRole('navigation', { name: 'Conversations' }).getByRole('link')).toHaveCount(1);
+  await dealer.getByRole('searchbox').fill('nothing like this');
+  await expect(dealer.getByText('No chats match.')).toBeVisible();
   await broker.reload();
   await expect(brokerThread.getByRole('listitem').last()).toContainText('Yes, Saturday from 10 is fine.');
   await expect(brokerThread.getByRole('listitem').last()).toContainText('· Manager');

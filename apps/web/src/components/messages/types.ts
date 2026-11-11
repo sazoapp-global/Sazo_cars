@@ -7,7 +7,9 @@ export interface ConversationItem {
 export interface ThreadMessage { id: string; mine: boolean; sender: { name: string; role: string }; body: string; car: CarCard | null; createdAt: string; seen: boolean }
 export interface Thread {
   conversationId: string | null; kind: 'team' | 'broker'; organisationId: string; title: string;
-  members: { userId: string; name: string; role: string }[];
+  members: { userId: string; name: string; role: string; you: boolean }[];
+  /** Everyone in the chat, for its details. */
+  people: { userId: string; name: string; role: string; you: boolean }[];
   messages: ThreadMessage[]; seenBy: { name: string; you: boolean }[];
 }
 /** A car the writer may put in a message. */

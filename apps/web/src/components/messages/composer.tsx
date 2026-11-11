@@ -24,11 +24,11 @@ export function Composer({ action, hidden, cars, carsLabel }: {
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', esc); };
   }, [picking]);
   return (
-    <form action={action} className="border-t border-line p-3">
+    <form action={action} className="bg-soft px-3 py-2.5 md:px-4">
       {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       {car && <input type="hidden" name="stock" value={car.stockId} />}
       {car && (
-        <div className="mb-2 flex items-center gap-3 rounded-lg border border-line bg-soft p-2">
+        <div className="mb-2 flex items-center gap-3 rounded-lg bg-card p-2 shadow-sm">
           {car.photoUrl ? <img src={car.photoUrl} alt="" className="h-10 w-14 rounded object-cover" /> : <Icon name="directions_car" className="text-label" />}
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">{car.name}</p><p className="truncate text-xs text-muted">{car.detail}</p></div>
           <button type="button" onClick={() => setCar(undefined)} aria-label={`Take ${car.name} out of the message`} className="grid h-9 w-9 place-items-center rounded-lg text-muted hover:bg-card"><Icon name="close" size={18} /></button>
@@ -38,8 +38,8 @@ export function Composer({ action, hidden, cars, carsLabel }: {
         {cars.length > 0 && (
           <div ref={box} className="relative shrink-0">
             <button type="button" onClick={() => setPicking((p) => !p)} aria-expanded={picking} aria-controls={list}
-              className="flex h-12 items-center gap-1.5 rounded-lg border border-line-strong bg-card px-3 text-sm font-semibold text-primary-container hover:bg-soft">
-              <Icon name="directions_car" size={20} /><span className="max-sm:sr-only">Add a car</span>
+              className="grid h-11 w-11 place-items-center rounded-full text-primary-container hover:bg-card">
+              <Icon name="directions_car" size={24} /><span className="sr-only">Add a car</span>
             </button>
             {picking && (
               <div id={list} role="group" aria-label={carsLabel} className="absolute bottom-full left-0 z-40 mb-2 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[14px] border border-line bg-card p-1.5 shadow-xl">
@@ -56,9 +56,9 @@ export function Composer({ action, hidden, cars, carsLabel }: {
           </div>
         )}
         <label className="sr-only" htmlFor={`${list}-body`}>Message</label>
-        <textarea id={`${list}-body`} name="body" required maxLength={2000} rows={1} placeholder="Write a message"
+        <textarea id={`${list}-body`} name="body" required maxLength={2000} rows={1} placeholder="Type a message"
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
-          className="min-h-12 min-w-0 flex-1 resize-none rounded-lg border border-line-strong bg-card px-3 py-3 leading-snug" />
+          className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border-0 bg-card px-4 py-2.5 leading-snug shadow-sm" />
         <Send />
       </div>
     </form>
@@ -68,8 +68,8 @@ export function Composer({ action, hidden, cars, carsLabel }: {
 function Send() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} aria-label="Send" className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-primary-container text-white disabled:opacity-60">
-      <Icon name="send" size={22} />
+    <button type="submit" disabled={pending} aria-label="Send" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary-container text-white disabled:opacity-60">
+      <Icon name="send" size={20} />
     </button>
   );
 }

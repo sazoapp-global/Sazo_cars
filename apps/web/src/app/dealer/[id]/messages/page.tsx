@@ -11,7 +11,7 @@ import { sendDealerMessage } from './actions';
 
 export const metadata: Metadata = { title: 'Messages', robots: { index: false } };
 
-type SP = Promise<{ c?: string; error?: string }>;
+type SP = Promise<{ c?: string; error?: string; info?: string }>;
 
 /** Messages (D-173): the dealer's team among themselves, and with each broker who shares their cars. */
 export default async function DealerMessages({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
@@ -45,12 +45,9 @@ export default async function DealerMessages({ params, searchParams }: { params:
   return (
     <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role, approved }} business={{ name, approved }}
       person={me ? { name: me.displayName, role: manager ? 'Manager' : 'Sales' } : undefined}>
-      <div className={`mb-5 ${thread ? 'max-lg:hidden' : ''}`}>
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">Messages</h1>
-        <p className="mt-1 text-muted">{approved ? 'Talk with your team and the brokers who share your cars.' : 'Talk with your team. Brokers can write to you once SAZO has approved your business.'}</p>
-      </div>
       <MessagesView side="dealer" items={list} selected={sp.c === 'team' ? list.find((c) => c.kind === 'team')?.conversationId : sp.c}
         href={(k) => `/dealer/${id}/messages?c=${k}`} backHref={`/dealer/${id}/messages`} thread={thread} error={sp.error}
+        info={sp.c ? { open: sp.info === '1', openHref: `/dealer/${id}/messages?c=${sp.c}&info=1`, closeHref: `/dealer/${id}/messages?c=${sp.c}` } : undefined}
         photo={(c) => (c.photoId ? `/dealer/${id}/car/${c.stockId}/photo/${c.photoId}` : null)}
         composer={thread ? { action: sendDealerMessage, hidden: { org: id, conversation: thread.conversationId! }, cars, carsLabel: thread.kind === 'broker' ? 'Your cars open to brokers' : 'Your cars for sale' } : undefined} />
     </AppFrame>

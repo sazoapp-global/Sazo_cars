@@ -43,7 +43,7 @@ const INTRO: Record<Tab, string> = {
 const name = (s: BrokerCar['specs']) => [s.year, s.make, s.model].filter(Boolean).join(' ') || 'Car';
 const commissionText = (c: BrokerCar['commission']) => (c.kind === 'fixed' ? `${formatUgx(c.amountUgx, false)} commission` : `${c.percent}% of the selling price`);
 
-type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string; kind?: string; page?: string; d?: string }>;
+type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string; kind?: string; page?: string; d?: string; info?: string }>;
 
 export default async function Broker({ searchParams }: { searchParams: SP }) {
   if (!(await isSignedIn())) redirect('/sign-in?next=/broker');
@@ -68,7 +68,7 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
     // The broker's own workspace (11 Nov 2026): the four parts are side bar items, each with its own title.
     <AppFrame workspace="broker" viewer={{ platformRoles: me.platformRoles }} business={{ name: me.displayName, approved: true, badge: 'Approved broker' }}>
     <div className={`mx-auto space-y-5 ${tab === 'messages' ? '' : 'max-w-5xl'}`}>
-      <div className={tab === 'messages' && sp.d ? 'max-lg:hidden' : ''}>
+      <div className={tab === 'messages' ? 'hidden' : ''}>
         <h1 className="font-display text-3xl font-extrabold tracking-tight">{title}</h1>
         <p className="mt-1 text-muted">{INTRO[tab]}</p>
       </div>
@@ -87,14 +87,14 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
       {tab === 'links' && <Links page={sp.page} />}
       {tab === 'enquiries' && <Enquiries page={sp.page} />}
       {tab === 'commissions' && <Commissions page={sp.page} />}
-      {tab === 'messages' && <Messages dealer={sp.d} error={sp.error} />}
+      {tab === 'messages' && <Messages dealer={sp.d} error={sp.error} info={sp.info === '1'} />}
     </div>
     </AppFrame>
   );
 }
 
 /** Messages with dealers (D-173): the broker's own conversations, and the dealers they may write to. */
-async function Messages({ dealer, error }: { dealer?: string; error?: string }) {
+async function Messages({ dealer, error, info }: { dealer?: string; error?: string; info?: boolean }) {
   const valid = dealer && /^[0-9a-f-]{36}$/.test(dealer) ? dealer : undefined;
   // The open conversation first: opening it marks it read, so the list is up to date.
   const thread = valid ? await api<Thread>(`/broker/messages/${valid}`, { auth: true }).catch((e) => { if (e instanceof ApiError && e.status === 404) notFound(); throw e; }) : undefined;
@@ -111,6 +111,7 @@ async function Messages({ dealer, error }: { dealer?: string; error?: string }) 
   return (
     <MessagesView side="broker" items={list.conversations} start={list.dealers} selected={valid} thread={thread} error={error}
       href={(k) => `/broker?tab=messages&d=${k}`} backHref="/broker?tab=messages"
+      info={valid ? { open: !!info, openHref: `/broker?tab=messages&d=${valid}&info=1`, closeHref: `/broker?tab=messages&d=${valid}` } : undefined}
       photo={(c) => (c.photoId && c.inStock ? `/broker/car/${c.stockId}/photo/${c.photoId}` : null)}
       composer={valid && thread ? { action: sendBrokerMessage, hidden: { org: valid }, cars: options, carsLabel: `${thread.title}: cars open to brokers` } : undefined} />
   );
