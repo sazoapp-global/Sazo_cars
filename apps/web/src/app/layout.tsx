@@ -65,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <HideIn workspaces="all"><Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link></HideIn>
             )}
             {me && <HideIn workspaces="all"><Suspense><MySazo businesses={me.memberships.filter((m) => m.status === 'active' && !['rejected', 'suspended'].includes(m.organisationStatus))
-              .map((m) => ({ id: m.organisationId, name: m.organisationName, type: m.organisationType, status: m.organisationStatus }))} /></Suspense></HideIn>}
+              .map((m) => ({ id: m.organisationId, name: m.organisationName, type: m.organisationType, status: m.organisationStatus }))} broker={me.platformRoles.includes('broker')} /></Suspense></HideIn>}
             {me && <Suspense><Bell unread={unread} /></Suspense>}
             <HideIn workspaces="all"><ThemeToggle /></HideIn>
             {me ? (

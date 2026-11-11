@@ -14,7 +14,7 @@ export interface MyBusiness { id: string; name: string; type: string; status: st
 /** Where a business's own work is done: a dealer's console, otherwise its page (with the way into the phone app). */
 const businessHref = (b: MyBusiness) => b.type === 'dealer' ? `/dealer/${b.id}${b.status === 'approved' ? '/dashboard' : ''}` : `/business/${b.id}`;
 
-export function MySazo({ businesses = [] }: { businesses?: MyBusiness[] }) {
+export function MySazo({ businesses = [], broker = false }: { businesses?: MyBusiness[]; /** An approved broker (D-172): their pages are one click away. */ broker?: boolean }) {
   const pathname = usePathname() ?? '';
   const search = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -43,6 +43,7 @@ export function MySazo({ businesses = [] }: { businesses?: MyBusiness[] }) {
       {open && (
         <div id={id} role="group" aria-label="My SAZO" className="absolute right-0 top-full z-50 mt-2 w-64 rounded-[14px] border border-line bg-card p-2 shadow-xl">
           {MY_SAZO.map((l) => <Link key={l.key} href={l.href} className={item}><Icon name={l.icon as IconName} size={20} className="text-label" />{l.label}</Link>)}
+          {broker && <Link href="/broker" className={item}><Icon name="handshake" size={20} className="text-label" />Broker</Link>}
           {businesses.length > 0 && (
             <>
               <div className="my-1.5 h-px bg-line" />

@@ -3,6 +3,8 @@
 import { cookies, headers } from 'next/headers';
 import { ACCESS_COOKIE, REFRESH_COOKIE, api } from '@/lib/api';
 import { safeNext } from '@/lib/phone';
+import { accessOf, homeFor } from './access';
+import type { Me } from './types';
 
 export const DEVICE_COOKIE = 'sazo_dev';
 export const SECOND_STEP_COOKIE = 'sazo_2fa';
@@ -77,15 +79,12 @@ export async function afterLogin(r: LoginResult, next: string, remember = true):
   jar.delete(SECOND_STEP_COOKIE);
   jar.delete(SETUP_COOKIE);
   const auth = { headers: { Authorization: `Bearer ${r.accessToken}` } };
-  const me = await api<{ needsDetails: string[] }>('/me', auth).catch(() => undefined);
+  const me = await api<Me>('/me', auth).catch(() => undefined);
   // A brand-new account with nowhere particular to go: ask what brought them (the design's onboarding step).
-  // A dealer with nowhere particular to go lands in their dealer console (25 Oct 2026).
+  // Anyone else with nowhere particular to go lands in their own workspace for the role SAZO gave them
+  // (D-172): SAZO staff in the console, a dealer in its dashboard, a broker on their pages, and so on.
   let to = r.created && safeNext(next) === '/' ? '/welcome' : safeNext(next);
-  if (to === '/') {
-    const orgs = await api<{ id: string; type: string; status: string }[]>('/me/organisations', auth).catch(() => []);
-    const dealer = orgs.find((o) => o.type === 'dealer' && (o.status === 'approved' || o.status === 'pending_verification'));
-    if (dealer) to = `/dealer/${dealer.id}${dealer.status === 'approved' ? '/dashboard' : ''}`; // the dashboard once approved (D-146)
-  }
+  if (to === '/' && me) to = homeFor(accessOf(me));
   const then = me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(to)}` : to;
   if (r.backupCodes?.length) {
     // Shown once on the next page, then forgotten.

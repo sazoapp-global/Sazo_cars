@@ -12,7 +12,12 @@ test.beforeAll(() => createAdmin(ADMIN, 'Grace (SAZO admin)'));
 
 test('people who are not SAZO staff cannot open the console', async ({ page }) => {
   await signIn(page, `+2567040${stamp}`, 'Just A Buyer');
-  await expect(page).toHaveURL(/\/admin\/no-access/);
+  await expect(page).toHaveURL(/\/admin/);
+  await expect(page.getByRole('heading', { name: 'SAZO staff only' })).toBeVisible();
+  // Nothing of the console is drawn for them (D-172): no side bar, and a way to their own page instead.
+  await expect(page.getByRole('navigation', { name: 'SAZO console' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Go to the home page' })).toBeVisible();
+  await page.goto('/admin/organisations');
   await expect(page.getByRole('heading', { name: 'SAZO staff only' })).toBeVisible();
 });
 

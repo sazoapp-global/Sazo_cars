@@ -56,6 +56,13 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await expect(admin.getByRole('status')).toContainText('Approved');
 
   // The broker sees the car with its commission, never the dealer's costs, and makes a WhatsApp link.
+  // Once approved, the account has the broker role: logging in with no page in mind lands on the broker's pages (D-172).
+  const again = await (await browser.newContext()).newPage();
+  await signIn(again, BROKER);
+  await expect(again).toHaveURL(/\/broker$/);
+  await expect(again.getByRole('heading', { level: 1, name: 'Cars to share' })).toBeVisible();
+  await again.context().close();
+
   await broker.goto('/broker');
   // Brokers have their own workspace (11 Nov 2026): the four parts are side bar items, each page with its title.
   await expect(broker.getByRole('heading', { level: 1, name: 'Cars to share' })).toBeVisible();
