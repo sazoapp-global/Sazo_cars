@@ -19,11 +19,14 @@ import { SellingService } from './selling.service.js';
 import { DealerDashboardService } from './dashboard.service.js';
 import { DealerPaymentsController } from './payments.controller.js';
 import { PaymentsService } from './payments.service.js';
+import { BrokerMessagesController, DealerMessagesController } from './messages.controller.js';
+import { MessagesRepository } from './messages.repository.js';
+import { MessagesService } from './messages.service.js';
 
 @Module({
   imports: [IamModule, VehicleModule, IngestModule, ReportModule, ObservationsModule, NotifyModule, ReferenceModule],
-  controllers: [DealerController, ForSaleController, SellingController, DealerCommissionsController, PublicCarController, BrokerController, AdminBrokersController, DealerPaymentsController],
-  providers: [DealerRepository, DealerService, DealerImportService, SellingRepository, SellingService, BrokerService, PaymentsService, DealerDashboardService],
+  controllers: [DealerController, ForSaleController, SellingController, DealerCommissionsController, PublicCarController, BrokerController, AdminBrokersController, DealerPaymentsController, DealerMessagesController, BrokerMessagesController],
+  providers: [DealerRepository, DealerService, DealerImportService, SellingRepository, SellingService, BrokerService, PaymentsService, DealerDashboardService, MessagesRepository, MessagesService],
   exports: [PaymentsService],
 })
 export class DealerModule {}

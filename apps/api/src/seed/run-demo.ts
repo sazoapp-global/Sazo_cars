@@ -237,6 +237,17 @@ const bl = (await call(http.post(`/v1/broker/cars/${stock['toyota noah']}/links`
 await call(http.post(`/v1/cars/${bl.token}/enquiries`).send({ name: 'Moses Wanyama', phone: '+256752000555', consent: true, message: 'Saw it on TikTok' }));
 const noahLead = (await call(http.get('/v1/dealer/leads?stage=open').set(D()))).body.items.find((l: { customer: { name: string } }) => l.customer.name === 'Moses Wanyama');
 await call(http.patch(`/v1/dealer/leads/${noahLead.leadId}`).set(D()).send({ stage: 'completed', salePriceUgx: 43_000_000 }));
+// Messages (D-173): Ivan asks the dealer about a car he shares, the team answers, and the team talk among themselves.
+log('Messages between the dealer team and the broker…');
+const say = (path: string, t: Token, body: string, stockId?: string, org = false) =>
+  call(http.post(path).set(org ? D(t) : bearer(t)).send({ body, ...(stockId ? { stockId } : {}) }));
+await say(`/v1/broker/messages/${dealer}`, broker.token, 'Good morning. A customer of mine wants to see this one. Is it still here?', stock['toyota wish']);
+const withIvan = (await call(http.get('/v1/dealer/messages').set(D()))).body.items.find((c: { kind: string }) => c.kind === 'broker').conversationId as string;
+await say(`/v1/dealer/messages/${withIvan}`, dealerMgr.token, 'Good morning Ivan. Yes, it is here and ready for viewing.', undefined, true);
+await say(`/v1/dealer/messages/${withIvan}`, dealerSales.token, 'I can show it to them. Saturday from 10, or Monday after 2.', undefined, true);
+await say(`/v1/broker/messages/${dealer}`, broker.token, 'Saturday morning works for them. I will send the customer through my link.');
+await say('/v1/dealer/messages/team', dealerSales.token, 'The Noah buyer who came through Kato Ivan paid the deposit today.', undefined, true);
+await say('/v1/dealer/messages/team', dealerMgr.token, 'Thank you Ruth.', undefined, true);
 const waitingBroker = await person('Broker (waiting)', '+256700300002', 'Grace Atim');
 await call(http.post('/v1/broker/application').set(bearer(waitingBroker.token)).send({ nin: 'CF90004321ATIM', idPhotoEvidenceId: await upload(waitingBroker.token, 'official_document', await testPhoto('grace atim id')) }));
 

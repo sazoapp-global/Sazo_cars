@@ -21,14 +21,17 @@ export async function AppFrame({ workspace, viewer, org, business, person, badge
 }) {
   const ws = WORKSPACES[workspace];
   const entries = navFor(workspace, viewer, org);
-  const [unread, me, alerts] = await Promise.all([
+  const [unread, me, alerts, messages] = await Promise.all([
     api<{ unread: number }>('/me/announcements', { auth: true }).then((r) => r.unread).catch(() => 0),
     api<Me>('/me', { auth: true }).catch((e) => { unstable_rethrow(e); return undefined; }),
     // The dealer's Alerts count, red when anything needs acting on now, otherwise yellow (4 Nov 2026).
     workspace === 'dealer' && org ? alertsBadge(org, viewer.approved !== false).catch(() => undefined) : Promise.resolve(undefined),
+    // Unread messages (D-173), counted for this person: the dealer's team conversations, or the broker's own.
+    workspace === 'dealer' && org ? api<{ unread: number }>('/dealer/messages/unread', { auth: true, headers: { 'X-Organisation-Id': org } }).then((r) => r.unread).catch(() => 0)
+      : workspace === 'broker' ? api<{ unread: number }>('/broker/messages/unread', { auth: true }).then((r) => r.unread).catch(() => 0) : Promise.resolve(0),
   ]);
-  const all = { ...badges, notifications: unread, ...(alerts?.count ? { alerts: alerts.count } : {}) };
-  const tones = alerts?.tone ? { alerts: alerts.tone } : undefined;
+  const all = { ...badges, notifications: unread, ...(alerts?.count ? { alerts: alerts.count } : {}), ...(messages ? { messages } : {}) };
+  const tones: Record<string, 'red' | 'yellow' | 'lime'> = { ...(alerts?.tone ? { alerts: alerts.tone } : {}), messages: 'lime' };
   return (
     <>
       <Suspense>

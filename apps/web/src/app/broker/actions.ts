@@ -39,3 +39,20 @@ export async function stopBrokerLink(form: FormData) {
   if (UUID.test(link)) await api(`/broker/links/${link}`, { method: 'DELETE', auth: true }).catch(() => undefined);
   redirect('/broker?tab=links&done=That+link+no+longer+works.');
 }
+
+/** A message to a dealer (D-173): the API checks the broker may write to this dealer, and about this car. */
+export async function sendBrokerMessage(form: FormData) {
+  const org = String(form.get('org') ?? '').trim();
+  const body = String(form.get('body') ?? '').trim();
+  const stock = String(form.get('stock') ?? '').trim();
+  const to = `/broker?tab=messages&d=${encodeURIComponent(org)}`;
+  if (!body) redirect(`${to}&error=${encodeURIComponent('Write a message')}`);
+  let error: string | undefined;
+  try {
+    await api(`/broker/messages/${encodeURIComponent(org)}`, { method: 'POST', auth: true, body: { body, ...(stock ? { stockId: stock } : {}) } });
+  } catch (err) {
+    if (!(err instanceof ApiError)) throw err;
+    error = err.detail ?? 'The message was not sent. Try again.';
+  }
+  redirect(error ? `${to}&error=${encodeURIComponent(error)}` : to);
+}

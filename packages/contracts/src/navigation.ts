@@ -138,6 +138,7 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       { key: 'links', label: 'My links', short: 'Links', icon: 'add_link', href: '/broker?tab=links' },
       { key: 'enquiries', label: 'My customers', short: 'Customers', icon: 'forum', href: '/broker?tab=enquiries' },
       { key: 'commissions', label: 'My commission', short: 'Commission', icon: 'payments', href: '/broker?tab=commissions' },
+      { key: 'messages', label: 'Messages', short: 'Messages', icon: 'chat', href: '/broker?tab=messages' },
       NOTIFICATIONS,
     ],
   },
@@ -148,6 +149,8 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       { key: 'stock', label: 'Cars for sale', short: 'For sale', icon: 'storefront', href: '/dealer/{org}', alsoActive: ['/dealer/{org}/car/'] },
       // Alerts (4 Nov 2026): what needs the dealer, coloured red / yellow / green (D-111), off the Cars for sale page.
       { key: 'alerts', label: 'Alerts', short: 'Alerts', icon: 'warning', href: '/dealer/{org}/alerts' },
+      // Messages (D-173): the team among themselves, and with the brokers who share their cars.
+      { key: 'messages', label: 'Messages', short: 'Messages', icon: 'chat', href: '/dealer/{org}/messages' },
       NOTIFICATIONS,
       { key: 'import', label: 'Add many cars', short: 'Add many', icon: 'upload_file', href: '/dealer/{org}/import', rule: MANAGER_APPROVED },
       { key: 'enquiries', label: 'Enquiries', short: 'Enquiries', icon: 'forum', href: '/dealer/{org}/enquiries', rule: APPROVED },

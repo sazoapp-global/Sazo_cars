@@ -28,7 +28,7 @@ export interface RailProps {
   person?: { name: string; role: string };
   badges?: Record<string, number>;
   /** A coloured count instead of a plain number: red or yellow (the dealer's Alerts, D-111). */
-  tones?: Record<string, 'red' | 'yellow'>;
+  tones?: Record<string, 'red' | 'yellow' | 'lime'>;
 }
 
 const icon = (name: string) => name as IconName;
@@ -131,9 +131,9 @@ export function Rail({ label, entries, business, person, badges = {}, tones = {}
 
 /** Phones and small tablets: the same links as one scrolling strip, the current one in view. */
 /** An alerts count in its colour: red = act now, yellow = only "check soon" left. */
-function ToneCount({ n, tone }: { n: number; tone: 'red' | 'yellow' }) {
-  return <span className={`rounded-full px-2 text-xs font-extrabold leading-5 ${tone === 'red' ? 'bg-bad-text text-white' : 'bg-warn-line text-warn-text'}`}
-    aria-label={`${n} ${tone === 'red' ? 'need acting on now' : 'to check soon'}`}>{n > 99 ? '99+' : n}</span>;
+function ToneCount({ n, tone }: { n: number; tone: 'red' | 'yellow' | 'lime' }) {
+  return <span className={`rounded-full px-2 text-xs font-extrabold leading-5 ${tone === 'red' ? 'bg-bad-text text-white' : tone === 'lime' ? 'bg-lime text-ink' : 'bg-warn-line text-warn-text'}`}
+    aria-label={`${n} ${tone === 'red' ? 'need acting on now' : tone === 'lime' ? 'unread' : 'to check soon'}`}>{n > 99 ? '99+' : n}</span>;
 }
 
 export function PhoneStrip({ label, entries, business, badges = {}, tones = {} }: Pick<RailProps, 'label' | 'entries' | 'business' | 'badges' | 'tones'>) {

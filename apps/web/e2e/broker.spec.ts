@@ -94,9 +94,37 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await expect(broker.getByRole('heading', { level: 1, name: 'My customers' })).toBeVisible();
   await expect(broker.getByRole('listitem').filter({ hasText: 'Sarah Nambi' })).toContainText('Registered to you until');
 
-  // The dealer sees who brought her, completes the sale and approves the commission.
+  // Messages (D-173): the broker writes to the dealer about the car; the dealer's team reads and answers.
+  await menu.getByRole('link', { name: /^Messages/ }).click();
+  await expect(broker.getByRole('heading', { level: 1, name: 'Messages' })).toBeVisible();
+  await broker.getByRole('navigation', { name: 'Conversations' }).getByRole('link', { name: new RegExp(DEALER) }).click();
+  await broker.getByRole('button', { name: 'Add a car' }).click();
+  await broker.getByRole('group', { name: /cars open to brokers/ }).getByRole('button', { name: /2016 Toyota Esquire/ }).click();
+  await broker.getByLabel('Message', { exact: true }).fill('a customer of mine wants to see this one on Saturday. is that fine?');
+  await broker.getByRole('button', { name: 'Send' }).click();
+  const brokerThread = broker.getByRole('list', { name: 'Messages' });
+  await expect(brokerThread.getByRole('listitem').last()).toContainText('A customer of mine wants to see this one on Saturday. Is that fine?');
+  await expect(brokerThread.getByRole('listitem').last()).toContainText('2016 Toyota Esquire');
+  await a11y(broker);
+
   const dealer = await (await browser.newContext()).newPage();
-  await signIn(dealer, MANAGER, { next: `/dealer/${org}/enquiries` });
+  await signIn(dealer, MANAGER, { next: `/dealer/${org}/messages` });
+  await expect(dealer.getByRole('navigation', { name: 'Dealer' }).getByRole('link', { name: /^Messages/ })).toContainText('1');
+  await dealer.getByRole('navigation', { name: 'Conversations' }).getByRole('link', { name: /Broker/ }).click();
+  const dealerThread = dealer.getByRole('list', { name: 'Messages' });
+  await expect(dealerThread).toContainText('Is that fine?');
+  await expect(dealerThread.getByRole('listitem').last()).toContainText('· Broker');
+  await dealer.getByLabel('Message', { exact: true }).fill('Yes, Saturday from 10 is fine.');
+  await dealer.getByRole('button', { name: 'Send' }).click();
+  await expect(dealerThread.getByRole('listitem').last()).toContainText('Yes, Saturday from 10 is fine.');
+  await a11y(dealer);
+  await shot(dealer, 'dealer-messages');
+  await broker.reload();
+  await expect(brokerThread.getByRole('listitem').last()).toContainText('Yes, Saturday from 10 is fine.');
+  await expect(brokerThread.getByRole('listitem').last()).toContainText('· Manager');
+
+  // The dealer sees who brought her, completes the sale and approves the commission.
+  await dealer.goto(`/dealer/${org}/enquiries`);
   await dealer.getByRole('listitem').filter({ hasText: 'Sarah Nambi' }).getByRole('link').click();
   const lead = dealer.getByRole('region', { name: 'Enquiry from Sarah Nambi' });
   await expect(lead).toContainText('Brought by broker Ivan');

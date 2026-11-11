@@ -4,22 +4,24 @@ import { CAR_CATEGORY_LABELS, type CarCategory, KIND_LABELS, QUESTION_ORDER, QUE
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Icon } from '@/components/icon';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { PrintButton, ShareButtons } from '@/components/share-buttons';
 import { statusIcon } from '@/components/status';
 import { AppFrame } from '@/components/app-frame/app-frame';
-import { api, isSignedIn } from '@/lib/api';
+import { MessagesView } from '@/components/messages/messages-view';
+import type { CarOption, ConversationItem, Thread } from '@/components/messages/types';
+import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { Me, QuestionView, VehicleCard } from '@/lib/types';
-import { brokerLink, stopBrokerLink } from './actions';
+import { brokerLink, sendBrokerMessage, stopBrokerLink } from './actions';
 
 export const metadata: Metadata = { title: 'Brokers', robots: { index: false } };
 
 interface BrokerCar {
   stockId: string; vehicleRef: string; vehicle: VehicleCard | null; specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; kind?: VehicleKind | null; category?: CarCategory | null };
   askingPriceUgx: number; listedMileageKm: number | null; photos: string[]; commission: { kind: 'fixed'; amountUgx: number } | { kind: 'percent'; percent: number };
-  dealer: { name: string; district: string | null }; questions: QuestionView[]; listedAt: string;
+  dealer: { organisationId: string; name: string; district: string | null }; questions: QuestionView[]; listedAt: string;
 }
 interface BrokerLink { linkId: string; channel: string; createdAt: string; stockId: string; live: boolean; car: string | null }
 interface BrokerEnquiry { leadId: string; stage: string; createdAt: string; dealer: string | null; car: string | null; customer: { name: string | null; phone: string | null }; protectedUntil: string | null; waitingForDealerDecision: boolean; sharedWithAnotherBroker: boolean }
@@ -28,7 +30,7 @@ interface Commission { commissionId: string; status: string; amountUgx: number; 
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const STAGE: Record<string, string> = { enquiry: 'New enquiry', viewing: 'Viewing', negotiation: 'Negotiating', deposit: 'Deposit paid', handover: 'Handover', completed: 'Sold', lost: 'Lost' };
 const PAY: Record<string, string> = { on_hold: 'Waiting for the dealer to decide', pending: 'Waiting for approval', approved: 'Approved, not paid yet', paid: 'Paid', cancelled: 'Cancelled' };
-const TABS = [['cars', 'Cars to share'], ['links', 'My links'], ['enquiries', 'My customers'], ['commissions', 'My commission']] as const;
+const TABS = [['cars', 'Cars to share'], ['links', 'My links'], ['enquiries', 'My customers'], ['commissions', 'My commission'], ['messages', 'Messages']] as const;
 type Tab = (typeof TABS)[number][0];
 /** One line under each page's title. */
 const INTRO: Record<Tab, string> = {
@@ -36,11 +38,12 @@ const INTRO: Record<Tab, string> = {
   links: 'The links you made for cars. Stop one when you no longer want it used.',
   enquiries: 'Customers who came through your links, and where each one is.',
   commissions: 'What dealers owe you for the sales you brought.',
+  messages: 'Talk with the dealers whose cars you share.',
 };
 const name = (s: BrokerCar['specs']) => [s.year, s.make, s.model].filter(Boolean).join(' ') || 'Car';
 const commissionText = (c: BrokerCar['commission']) => (c.kind === 'fixed' ? `${formatUgx(c.amountUgx, false)} commission` : `${c.percent}% of the selling price`);
 
-type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string; kind?: string; page?: string }>;
+type SP = Promise<{ tab?: string; done?: string; error?: string; link?: string; ch?: string; car?: string; kind?: string; page?: string; d?: string }>;
 
 export default async function Broker({ searchParams }: { searchParams: SP }) {
   if (!(await isSignedIn())) redirect('/sign-in?next=/broker');
@@ -64,12 +67,12 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
   return (
     // The broker's own workspace (11 Nov 2026): the four parts are side bar items, each with its own title.
     <AppFrame workspace="broker" viewer={{ platformRoles: me.platformRoles }} business={{ name: me.displayName, approved: true, badge: 'Approved broker' }}>
-    <div className="mx-auto max-w-5xl space-y-5">
-      <div>
+    <div className={`mx-auto space-y-5 ${tab === 'messages' ? '' : 'max-w-5xl'}`}>
+      <div className={tab === 'messages' && sp.d ? 'max-lg:hidden' : ''}>
         <h1 className="font-display text-3xl font-extrabold tracking-tight">{title}</h1>
         <p className="mt-1 text-muted">{INTRO[tab]}</p>
       </div>
-      {notice}
+      {tab !== 'messages' && notice}
       {newLink && (
         <div className="rounded-lg border border-ok-line bg-ok-fill p-3" role="status">
           <p className="font-semibold text-ok-text">Your {CHANNELS.find(([k]) => k === sp.ch)?.[1] ?? ''} link is ready. Customers who ask through it are registered to you.</p>
@@ -84,8 +87,32 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
       {tab === 'links' && <Links page={sp.page} />}
       {tab === 'enquiries' && <Enquiries page={sp.page} />}
       {tab === 'commissions' && <Commissions page={sp.page} />}
+      {tab === 'messages' && <Messages dealer={sp.d} error={sp.error} />}
     </div>
     </AppFrame>
+  );
+}
+
+/** Messages with dealers (D-173): the broker's own conversations, and the dealers they may write to. */
+async function Messages({ dealer, error }: { dealer?: string; error?: string }) {
+  const valid = dealer && /^[0-9a-f-]{36}$/.test(dealer) ? dealer : undefined;
+  // The open conversation first: opening it marks it read, so the list is up to date.
+  const thread = valid ? await api<Thread>(`/broker/messages/${valid}`, { auth: true }).catch((e) => { if (e instanceof ApiError && e.status === 404) notFound(); throw e; }) : undefined;
+  const [list, cars] = await Promise.all([
+    api<{ conversations: ConversationItem[]; dealers: { organisationId: string; name: string; district: string | null }[] }>('/broker/messages', { auth: true }),
+    api<{ items: BrokerCar[] }>('/broker/cars', { auth: true }).then((r) => r.items).catch(() => [] as BrokerCar[]),
+  ]);
+  // Only this dealer's cars open to brokers can go in a message to them.
+  const options: CarOption[] = cars.filter((c) => c.dealer.organisationId === valid).map((c) => ({
+    stockId: c.stockId, name: name(c.specs),
+    detail: [c.specs.category ? CAR_CATEGORY_LABELS[c.specs.category as keyof typeof CAR_CATEGORY_LABELS] : null, formatUgx(c.askingPriceUgx, false)].filter(Boolean).join(' · '),
+    photoUrl: c.photos[0] ? `/broker/car/${c.stockId}/photo/${c.photos[0]}` : null,
+  }));
+  return (
+    <MessagesView side="broker" items={list.conversations} start={list.dealers} selected={valid} thread={thread} error={error}
+      href={(k) => `/broker?tab=messages&d=${k}`} backHref="/broker?tab=messages"
+      photo={(c) => (c.photoId && c.inStock ? `/broker/car/${c.stockId}/photo/${c.photoId}` : null)}
+      composer={valid && thread ? { action: sendBrokerMessage, hidden: { org: valid }, cars: options, carsLabel: `${thread.title}: cars open to brokers` } : undefined} />
   );
 }
 

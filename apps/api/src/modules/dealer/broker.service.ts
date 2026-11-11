@@ -64,7 +64,7 @@ export class BrokerService {
         specs: { make: v.vehicle?.make ?? d.make, model: v.vehicle?.model ?? d.model, year: v.vehicle?.year ?? d.modelYear, engineCc: d.engineCc, fuel: d.fuel, transmission: d.transmission, kind: d.kind ?? null, category: d.category ?? null },
         askingPriceUgx: v.askingPriceUgx, listedMileageKm: v.listedMileageKm, photos: v.photos.map((p) => p.photoId),
         commission: d.commissionKind === 'fixed' ? { kind: 'fixed' as const, amountUgx: d.commissionFixedUgx } : { kind: 'percent' as const, percent: d.commissionPercent },
-        dealer: { name: orgs.get(r.organisationId)!.name, district: orgs.get(r.organisationId)!.district },
+        dealer: { organisationId: r.organisationId, name: orgs.get(r.organisationId)!.name, district: orgs.get(r.organisationId)!.district },
         questions: v.questions, recordConfidence: v.recordConfidence, listedAt: v.listedAt,
       };
     });
