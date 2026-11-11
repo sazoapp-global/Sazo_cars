@@ -80,13 +80,13 @@ export function Rail({ label, entries, business, person, badges = {}, tones = {}
 
   return (
     <aside aria-label={`${label} menu`}
-      className="fixed bottom-0 left-0 top-0 z-30 hidden w-64 flex-col overflow-y-auto overscroll-contain border-r-4 border-lime bg-primary text-white print:!hidden lg:flex">
+      className="fixed bottom-0 left-0 top-0 z-30 hidden w-64 flex-col overflow-hidden border-r-4 border-lime bg-primary text-white print:!hidden lg:flex">
       <Link href="/" aria-label="SAZO home" className="flex h-12 shrink-0 items-center gap-2.5 border-b border-white/15 px-5">
         <Image src="/images/sazo-logo.webp" alt="" width={26} height={26} className="rounded-md" />
         <span className="font-display text-lg font-extrabold">SAZO</span>
         <span className="text-sm text-white/70">{label === 'SAZO console' ? 'Console' : label}</span>
       </Link>
-      <div className="border-b border-white/15 px-5 py-4">
+      <div className="shrink-0 border-b border-white/15 px-5 py-4">
         <p className="text-[11px] font-bold uppercase tracking-wider text-white/70">{label}</p>
         {business ? (
           <>
@@ -100,7 +100,8 @@ export function Rail({ label, entries, business, person, badges = {}, tones = {}
           </>
         )}
       </div>
-      <nav aria-label={label} className="flex flex-1 flex-col gap-1 p-3">
+      {/* Only the items scroll (11 Nov 2026): the name above and Settings and Sign out below stay put. */}
+      <nav aria-label={label} data-rail-items className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-3 [&>*]:shrink-0">
         {entries.map((e) => {
           if (!isGroup(e)) return link(e);
           const isOpen = open.has(e.key);
@@ -118,7 +119,7 @@ export function Rail({ label, entries, business, person, badges = {}, tones = {}
           );
         })}
       </nav>
-      <div className="space-y-1 border-t border-white/15 p-3">
+      <div className="shrink-0 space-y-1 border-t border-white/15 p-3">
         {link(SETTINGS_LINK)}
         <form action={signOut} data-clear-drafts>
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[15px] text-white/85 hover:bg-white/10"><Icon name="logout" size={20} className="text-white/75" />Sign out</button>

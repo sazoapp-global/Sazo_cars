@@ -176,3 +176,6 @@ section:is(.card, .border):not([class*='bg-primary']) > div:first-child > h2:fir
 @media (max-width: 1023px) {
   body:has([data-chat-open]) [data-phone-strip] { display: none; }
 }
+
+/* The side bar items scroll on their own (11 Nov 2026): a thin light bar on the navy. */
+[data-rail-items] { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.3) transparent; }
