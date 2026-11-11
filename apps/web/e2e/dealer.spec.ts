@@ -348,6 +348,28 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('status')).toContainText('Sam Sales can now sign in');
   await expect(dealer.getByRole('region', { name: 'Your team' })).toContainText('Sam Sales');
 
+  // A private chat with him (D-177): the new chat button at the bottom of Messages, then his name.
+  await dealer.getByRole('navigation', { name: 'Dealer' }).getByRole('link', { name: /^Messages/ }).click();
+  await dealer.getByRole('link', { name: 'New chat' }).click();
+  await expect(dealer.getByRole('heading', { level: 1, name: 'New chat' })).toBeVisible();
+  const team = dealer.getByRole('list', { name: 'Your team' });
+  await expect(team).toContainText(`${NAME} team`);
+  await dealer.getByLabel('Search your team').fill('sales');
+  await team.getByRole('button', { name: /Sam Sales|Sales Sam/ }).click();
+  await expect(dealer.getByText('Only you two see this chat')).toBeVisible();
+  await expect(dealer.getByText(/seen only by you and/)).toBeVisible();
+  await dealer.getByLabel('Message', { exact: true }).fill('welcome to the team, Sam.');
+  await dealer.getByRole('button', { name: 'Send' }).click();
+  await expect(dealer.getByRole('list', { name: 'Messages' }).getByRole('listitem').last()).toContainText('Welcome to the team, Sam.');
+  await a11y(dealer);
+  await dealer.getByRole('link', { name: 'Back to your chats' }).click();
+  const chats = dealer.getByRole('navigation', { name: 'Conversations' });
+  await expect(chats.getByRole('link', { name: /Your team · private/ })).toContainText('Welcome to the team, Sam.');
+  // Starting it again reopens the same chat.
+  await dealer.getByRole('link', { name: 'New chat' }).click();
+  await dealer.getByRole('list', { name: 'Your team' }).getByRole('link', { name: /Sam Sales|Sales Sam/ }).click();
+  await expect(dealer.getByRole('list', { name: 'Messages' })).toContainText('Welcome to the team, Sam.');
+
   // A car SAZO has never seen, by its plate only: it is added to SAZO, not refused (D-130).
   await dealer.goto(listUrl);
   await openAdd();

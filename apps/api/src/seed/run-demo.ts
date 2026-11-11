@@ -248,6 +248,11 @@ await say(`/v1/dealer/messages/${withIvan}`, dealerSales.token, 'I can show it t
 await say(`/v1/broker/messages/${dealer}`, broker.token, 'Saturday morning works for them. I will send the customer through my link.');
 await say('/v1/dealer/messages/team', dealerSales.token, 'The Noah buyer who came through Kato Ivan paid the deposit today.', undefined, true);
 await say('/v1/dealer/messages/team', dealerMgr.token, 'Thank you Ruth.', undefined, true);
+// A private chat between the manager and Ruth (D-177): only the two of them see it.
+const ruthId = (await call(http.get('/v1/me').set(bearer(dealerSales.token)))).body.id as string;
+const withRuth = (await call(http.post('/v1/dealer/messages/direct').set(D()).send({ userId: ruthId }))).body.conversationId as string;
+await say(`/v1/dealer/messages/${withRuth}`, dealerMgr.token, 'Ruth, can you call the Harrier buyer before Friday?', stock['toyota harrier'], true);
+await say(`/v1/dealer/messages/${withRuth}`, dealerSales.token, 'Yes. I will call the Harrier buyer in the morning.', undefined, true);
 const waitingBroker = await person('Broker (waiting)', '+256700300002', 'Grace Atim');
 await call(http.post('/v1/broker/application').set(bearer(waitingBroker.token)).send({ nin: 'CF90004321ATIM', idPhotoEvidenceId: await upload(waitingBroker.token, 'official_document', await testPhoto('grace atim id')) }));
 

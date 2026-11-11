@@ -38,6 +38,7 @@ describe.skipIf(!base)('messages between a dealer team and brokers (e2e)', () =>
   let quietOrg: string;
   let broker1: string;
   let broker2: string;
+  let privateChat: string;
 
   const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
   const as = (t: string, org = orgId) => ({ ...bearer(t), 'X-Organisation-Id': org });
@@ -178,6 +179,44 @@ describe.skipIf(!base)('messages between a dealer team and brokers (e2e)', () =>
     await http.post(`/v1/dealer/messages/${withBroker.conversationId}`).set(as(quietManager, quietOrg)).send({ body: 'Hello' }).expect(404);
   });
 
+  it('two members of the team have a private chat that no one else sees, not even another manager (D-177)', async () => {
+    await http.post('/v1/garage/staff').set(as(manager)).send({ phone: '+256772810004', displayName: 'Peter Second', role: 'org_manager' }).expect(201);
+    const peter = await signIn('+256772810004');
+    const lucy = (await http.get('/v1/me').set(bearer(staff)).expect(200)).body.id as string;
+    const people = (await http.get('/v1/dealer/messages/people').set(as(manager)).expect(200)).body;
+    expect(people.teamSize).toBe(3);
+    expect(people.people.map((p: { name: string; role: string }) => `${p.name} ${p.role}`).sort()).toEqual(['Lucy Sales Sales', 'Peter Second Manager']);
+    expect(people.people.every((p: { conversationId: string | null }) => p.conversationId === null)).toBe(true);
+
+    privateChat = (await http.post('/v1/dealer/messages/direct').set(as(manager)).send({ userId: lucy }).expect(201)).body.conversationId;
+    // Whoever starts it, a pair has one chat.
+    const me = (await http.get('/v1/me').set(bearer(manager)).expect(200)).body.id as string;
+    expect((await http.post('/v1/dealer/messages/direct').set(as(staff)).send({ userId: me }).expect(201)).body.conversationId).toBe(privateChat);
+    // Not with yourself, someone outside the team, or a broker.
+    expect((await http.post('/v1/dealer/messages/direct').set(as(manager)).send({ userId: me }).expect(422)).body.code).toBe('not_on_team');
+    const brokerId = (await http.get('/v1/me').set(bearer(broker1)).expect(200)).body.id as string;
+    await http.post('/v1/dealer/messages/direct').set(as(manager)).send({ userId: brokerId }).expect(422);
+
+    await http.post(`/v1/dealer/messages/${privateChat}`).set(as(manager)).send({ body: 'Lucy, can you call the Voxy buyer?', stockId: closedCar }).expect(201);
+    const lucyView = (await http.get(`/v1/dealer/messages/${privateChat}`).set(as(staff)).expect(200)).body;
+    expect(lucyView).toMatchObject({ kind: 'direct', title: 'Manager Joseph', role: 'Manager', closed: false });
+    expect(lucyView.people.map((p: { name: string; you: boolean }) => [p.name, p.you])).toEqual([['Manager Joseph', false], ['Lucy Sales', true]]);
+    expect(lucyView.messages[0]).toMatchObject({ mine: false, sender: { name: 'Manager Joseph', role: 'Manager' } });
+    const lucyList = (await http.get('/v1/dealer/messages').set(as(staff)).expect(200)).body.items;
+    expect(lucyList.find((c: { kind: string }) => c.kind === 'direct')).toMatchObject({ title: 'Manager Joseph', role: 'Manager' });
+
+    // The other manager sees neither the chat in the list nor the chat itself, and cannot write in it.
+    const peterList = (await http.get('/v1/dealer/messages').set(as(peter)).expect(200)).body.items;
+    expect(peterList.map((c: { kind: string }) => c.kind)).not.toContain('direct');
+    await http.get(`/v1/dealer/messages/${privateChat}`).set(as(peter)).expect(404);
+    await http.post(`/v1/dealer/messages/${privateChat}`).set(as(peter)).send({ body: 'Hello' }).expect(404);
+    expect((await http.get('/v1/dealer/messages/unread').set(as(peter)).expect(200)).body.unread).toBe(3); // the team's and the broker's, not the private one
+    // Nor does a broker, or another dealer.
+    await http.get(`/v1/dealer/messages/${privateChat}`).set(as(broker1)).expect(403);
+    const quietManager = await signIn('+256772810003');
+    await http.get(`/v1/dealer/messages/${privateChat}`).set(as(quietManager, quietOrg)).expect(404);
+  });
+
   it('staff who leave the team lose access at once', async () => {
     const lucy = (await http.get('/v1/me').set(bearer(staff)).expect(200)).body.id as string;
     await db.query(`UPDATE iam.memberships SET status = 'removed' WHERE organisation_id = $1 AND user_id = $2`, [orgId, lucy]);
@@ -186,6 +225,11 @@ describe.skipIf(!base)('messages between a dealer team and brokers (e2e)', () =>
     // Her messages stay, marked as someone who left the team.
     const team = (await http.get('/v1/dealer/messages/team').set(as(manager)).expect(200)).body;
     expect(team.messages[0].sender).toMatchObject({ name: 'Lucy Sales', role: 'Left the team' });
-    expect(team.members.map((m: { role: string }) => m.role)).toEqual(['Manager']);
+    expect(team.members.map((m: { role: string }) => m.role).sort()).toEqual(['Manager', 'Manager']);
+    // Her private chat stays for the manager, closed to new messages.
+    const chat = (await http.get(`/v1/dealer/messages/${privateChat}`).set(as(manager)).expect(200)).body;
+    expect(chat).toMatchObject({ closed: true, role: 'Left the team' });
+    expect(chat.messages).toHaveLength(1);
+    expect((await http.post(`/v1/dealer/messages/${privateChat}`).set(as(manager)).send({ body: 'Are you there?' }).expect(422)).body.code).toBe('person_left');
   });
 });

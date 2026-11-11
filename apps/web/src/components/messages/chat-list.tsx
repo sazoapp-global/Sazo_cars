@@ -2,9 +2,21 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Icon } from '@/components/icon';
+import type { TeamPerson } from './types';
 
 export interface ChatRow { key: string; href: string; title: string; label: string; group: 'team' | 'broker' | 'dealer'; last: string; when: string; unread: number; lime: boolean }
 export interface StartRow { key: string; href: string; title: string; detail: string | null }
+/** New chat (D-177): the button at the bottom right of the list, and the screen of the team it opens. */
+export interface NewChat {
+  open: boolean; openHref: string; closeHref: string;
+  team: { name: string; size: number; href: string };
+  people: TeamPerson[];
+  /** The address of a chat, before its id. */
+  chatHref: string;
+  /** Starts (or reopens) a private chat; the form sends `user` and the hidden fields. */
+  action: (form: FormData) => void | Promise<void>; hidden: Record<string, string>;
+  error?: string;
+}
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
@@ -13,7 +25,8 @@ const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2)
  * messages, and chips to show only unread chats, the team's or the brokers'. A broker also finds the dealers
  * they may start a chat with.
  */
-export function ChatList({ rows, start = [], chips }: { rows: ChatRow[]; start?: StartRow[]; chips: ('team' | 'broker')[] }) {
+export function ChatList({ rows, start = [], chips, newChat }: { rows: ChatRow[]; start?: StartRow[]; chips: ('team' | 'broker')[]; newChat?: NewChat }) {
+  if (newChat?.open) return <NewChatScreen {...newChat} />;
   const [q, setQ] = useState('');
   const [chip, setChip] = useState<'all' | 'unread' | 'team' | 'broker'>('all');
   const words = q.trim().toLowerCase();
@@ -76,6 +89,78 @@ export function ChatList({ rows, start = [], chips }: { rows: ChatRow[]; start?:
           </div>
         )}
       </nav>
+      {newChat && (
+        <Link href={newChat.openHref} aria-label="New chat" title="New chat"
+          className="fixed bottom-6 right-[18px] z-30 grid h-[60px] w-[60px] place-items-center rounded-[18px] bg-primary-container text-white shadow-[0_6px_18px_rgba(0,33,119,0.35)] hover:brightness-110 md:right-7 md:bottom-7">
+          <span className="relative grid">
+            <Icon name="chat" size={28} />
+            <span aria-hidden className="absolute -right-[9px] -top-[9px] grid h-5 w-5 place-items-center rounded-full border-2 border-primary-container bg-lime text-ink"><Icon name="add" size={14} /></span>
+          </span>
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/** New chat (D-177): the team's chat, then each other member of the team for a private chat. */
+function NewChatScreen({ closeHref, team, people, chatHref, action, hidden, error }: NewChat) {
+  const [q, setQ] = useState('');
+  const words = q.trim().toLowerCase();
+  const shown = people.filter((p) => !words || `${p.name} ${p.role}`.toLowerCase().includes(words));
+  const teamShown = !words || `${team.name} team everyone`.toLowerCase().includes(words);
+  const body = (title: string, sub: string) => (
+    <span className="min-w-0 flex-1 border-b border-line py-3.5 text-left">
+      <span className="block truncate text-[16px] font-bold">{title}</span>
+      <span className="block truncate text-sm text-muted">{sub}</span>
+    </span>
+  );
+  return (
+    <div className="min-h-[calc(100dvh-12rem)] bg-card lg:min-h-[calc(100dvh-3rem)]">
+      <div className="px-4 pt-5 md:px-8">
+        <div className="flex items-center gap-3">
+          <Link href={closeHref} aria-label="Back to your chats" className="-ml-2 grid h-10 w-10 place-items-center rounded-full hover:bg-soft"><Icon name="arrow_back" /></Link>
+          <h1 className="font-display text-2xl font-extrabold">New chat</h1>
+        </div>
+        <label className="mt-3 flex h-12 w-full items-center gap-2 rounded-full bg-soft px-4 text-muted focus-within:ring-2 focus-within:ring-primary-container">
+          <Icon name="search" size={20} />
+          <span className="sr-only">Search your team</span>
+          <input type="search" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your team by name or role"
+            className="h-full min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted" />
+        </label>
+        {error && <p role="alert" className="mt-3 rounded-lg bg-bad-fill px-4 py-2.5 text-sm font-semibold text-bad-text">{error}</p>}
+      </div>
+      <p className="px-4 pb-1 pt-5 text-[11px] font-bold uppercase tracking-wider text-label md:px-8">Your team</p>
+      <ul aria-label="Your team">
+        {teamShown && (
+          <li>
+            <Link href={team.href} className="flex items-center gap-4 px-4 hover:bg-soft md:px-8">
+              <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary-container text-white"><Icon name="group" size={24} /></span>
+              {body(`${team.name} team`, `Everyone on the team · ${team.size} ${team.size === 1 ? 'person' : 'people'}`)}
+            </Link>
+          </li>
+        )}
+        {shown.map((p) => (
+          <li key={p.userId}>
+            {p.conversationId ? (
+              <Link href={`${chatHref}${p.conversationId}`} className="flex items-center gap-4 px-4 hover:bg-soft md:px-8">
+                <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary-container text-[15px] font-extrabold text-white">{initials(p.name)}</span>
+                {body(p.name, `${p.role} · a private chat, only you two`)}
+              </Link>
+            ) : (
+              <form action={action}>
+                {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+                <input type="hidden" name="user" value={p.userId} />
+                <button type="submit" className="flex w-full items-center gap-4 px-4 hover:bg-soft md:px-8">
+                  <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary-container text-[15px] font-extrabold text-white">{initials(p.name)}</span>
+                  {body(p.name, `${p.role} · a private chat, only you two`)}
+                </button>
+              </form>
+            )}
+          </li>
+        ))}
+      </ul>
+      {!teamShown && shown.length === 0 && <p className="px-4 py-10 text-center text-muted md:px-8">No one on your team matches.</p>}
+      <p className="px-4 pb-8 pt-5 text-sm text-muted md:px-8">{people.length === 0 ? 'No one else is on your team yet. ' : ''}People you add under Team appear here.</p>
     </div>
   );
 }

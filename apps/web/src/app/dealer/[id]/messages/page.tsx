@@ -3,17 +3,17 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { AppFrame } from '@/components/app-frame/app-frame';
 import { MessagesView } from '@/components/messages/messages-view';
-import type { CarOption, ConversationItem, Thread } from '@/components/messages/types';
+import type { CarOption, ConversationItem, TeamPerson, Thread } from '@/components/messages/types';
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { Me, MyOrganisation, StockItem } from '@/lib/types';
 import { carName } from '../../labels';
-import { sendDealerMessage } from './actions';
+import { sendDealerMessage, startDirectChat } from './actions';
 
 export const metadata: Metadata = { title: 'Messages', robots: { index: false } };
 
-type SP = Promise<{ c?: string; error?: string; info?: string }>;
+type SP = Promise<{ c?: string; error?: string; info?: string; new?: string }>;
 
-/** Messages (D-173): the dealer's team among themselves, and with each broker who shares their cars. */
+/** Messages (D-173): the dealer's team among themselves (all together, or two in private: D-177), and with each broker who shares their cars. */
 export default async function DealerMessages({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -29,12 +29,14 @@ export default async function DealerMessages({ params, searchParams }: { params:
   const thread = sp.c
     ? await api<Thread>(`/dealer/messages/${encodeURIComponent(sp.c)}`, as).catch((e) => { if (e instanceof ApiError && e.status === 404) notFound(); throw e; })
     : undefined;
-  const [list, me, stock] = await Promise.all([
+  const [list, me, stock, team] = await Promise.all([
     api<{ items: ConversationItem[] }>('/dealer/messages', as).then((r) => r.items),
     api<Me>('/me', { auth: true }).catch(() => undefined),
     api<{ items: StockItem[] }>('/dealer/stock?status=in_stock', as).then((r) => r.items).catch(() => [] as StockItem[]),
+    thread ? undefined : api<{ teamSize: number; people: TeamPerson[] }>('/dealer/messages/people', as).catch(() => undefined),
   ]);
-  // In the team's conversation any car for sale; with a broker only the cars opened to brokers.
+  const base = `/dealer/${id}/messages`;
+  // In the team's conversation and a private chat any car for sale; with a broker only the cars opened to brokers.
   const cars: CarOption[] = stock
     .filter((c) => thread?.kind !== 'broker' || (c.details.openToBrokers && c.details.commissionKind && c.linked))
     .map((c) => ({
@@ -47,6 +49,11 @@ export default async function DealerMessages({ params, searchParams }: { params:
       person={me ? { name: me.displayName, role: manager ? 'Manager' : 'Sales' } : undefined}>
       <MessagesView side="dealer" items={list} selected={sp.c === 'team' ? list.find((c) => c.kind === 'team')?.conversationId : sp.c}
         href={(k) => `/dealer/${id}/messages?c=${k}`} backHref={`/dealer/${id}/messages`} thread={thread} error={sp.error}
+        newChat={team ? {
+          open: sp.new === '1', openHref: `${base}?new=1`, closeHref: base, error: sp.new === '1' ? sp.error : undefined,
+          team: { name, size: team.teamSize, href: `${base}?c=team` }, people: team.people,
+          chatHref: `${base}?c=`, action: startDirectChat, hidden: { org: id },
+        } : undefined}
         info={sp.c ? { open: sp.info === '1', openHref: `/dealer/${id}/messages?c=${sp.c}&info=1`, closeHref: `/dealer/${id}/messages?c=${sp.c}` } : undefined}
         photo={(c) => (c.photoId ? `/dealer/${id}/car/${c.stockId}/photo/${c.photoId}` : null)}
         composer={thread ? { action: sendDealerMessage, hidden: { org: id, conversation: thread.conversationId! }, cars, carsLabel: thread.kind === 'broker' ? 'Your cars open to brokers' : 'Your cars for sale' } : undefined} />

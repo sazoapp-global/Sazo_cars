@@ -5,15 +5,15 @@ import pg from 'pg';
 import type { Sql } from '../../platform/sql.js';
 import { DB_POOL } from '../../platform/tokens.js';
 
-export type ConversationKind = 'team' | 'broker';
-export interface ConversationRow { id: string; organisationId: string; kind: ConversationKind; brokerUserId: string | null; createdAt: Date; lastMessageAt: Date }
+export type ConversationKind = 'team' | 'broker' | 'direct';
+export interface ConversationRow { id: string; organisationId: string; kind: ConversationKind; brokerUserId: string | null; memberA: string | null; memberB: string | null; createdAt: Date; lastMessageAt: Date }
 export interface ConversationSummary extends ConversationRow {
   lastBody: string | null; lastSenderId: string | null; lastStockId: string | null; lastAt: Date | null; unread: number;
 }
 export interface MessageRow { id: string; conversationId: string; senderUserId: string; body: string; stockItemId: string | null; createdAt: Date }
 export interface ReadRow { userId: string; lastReadAt: Date }
 
-const CONV = `c.id, c.organisation_id AS "organisationId", c.kind, c.broker_user_id AS "brokerUserId", c.created_at AS "createdAt", c.last_message_at AS "lastMessageAt"`;
+const CONV = `c.id, c.organisation_id AS "organisationId", c.kind, c.broker_user_id AS "brokerUserId", c.member_a AS "memberA", c.member_b AS "memberB", c.created_at AS "createdAt", c.last_message_at AS "lastMessageAt"`;
 const MSG = `id, conversation_id AS "conversationId", sender_user_id AS "senderUserId", body, stock_item_id AS "stockItemId", created_at AS "createdAt"`;
 /** The latest message and the reader's unread count, for each conversation in a list. */
 const SUMMARY = `${CONV}, m.body AS "lastBody", m.sender_user_id AS "lastSenderId", m.stock_item_id AS "lastStockId", m.created_at AS "lastAt",
@@ -50,9 +50,20 @@ export class MessagesRepository {
       `SELECT ${CONV} FROM dealer.conversations c WHERE c.organisation_id = $1 AND c.kind = 'broker' AND c.broker_user_id = $2`, [organisationId, brokerUserId])).rows[0]!;
   }
 
-  /** A dealer's conversations, newest first, as one member of its team sees them. */
+  /** Two team members' private chat (D-177), made the first time either opens it. */
+  async openDirect(organisationId: string, one: string, other: string): Promise<ConversationRow> {
+    const [a, b] = [one, other].sort();
+    await this.pool.query(
+      `INSERT INTO dealer.conversations (organisation_id, kind, member_a, member_b) VALUES ($1, 'direct', $2, $3)
+       ON CONFLICT (organisation_id, member_a, member_b) WHERE kind = 'direct' DO NOTHING`, [organisationId, a, b]);
+    return (await this.pool.query<ConversationRow>(
+      `SELECT ${CONV} FROM dealer.conversations c WHERE c.organisation_id = $1 AND c.kind = 'direct' AND c.member_a = $2 AND c.member_b = $3`, [organisationId, a, b])).rows[0]!;
+  }
+
+  /** A dealer's conversations, newest first, as one member of its team sees them: private chats only their own. */
   async forDealer(organisationId: string, readerId: string): Promise<ConversationSummary[]> {
-    return (await this.pool.query<ConversationSummary>(`SELECT ${SUMMARY} WHERE c.organisation_id = $1 ORDER BY c.last_message_at DESC`, [organisationId, readerId])).rows;
+    return (await this.pool.query<ConversationSummary>(
+      `SELECT ${SUMMARY} WHERE c.organisation_id = $1 AND (c.kind <> 'direct' OR $2 IN (c.member_a, c.member_b)) ORDER BY c.last_message_at DESC`, [organisationId, readerId])).rows;
   }
 
   /** A broker's conversations with dealers, newest first. */

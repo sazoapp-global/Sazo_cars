@@ -6,8 +6,10 @@
 //     leave the team lose access at once; a dealer waiting for approval has only its team conversation.
 //   • a broker (the broker role): only their own conversation with each dealer. They may start one only with an
 //     approved dealer that has at least one car open to brokers.
-// A message may carry one of the dealer's cars: any car in stock in the team's conversation; with a broker,
-// only a car the dealer has opened to brokers.
+//   • a private chat (D-177): two members of the team, and no one else, not even other managers. Either may start
+//     it; a pair has one. When one leaves the team the chat stays for the other, closed to new messages.
+// A message may carry one of the dealer's cars: any car in stock in the team's conversation and in a private
+// chat; with a broker, only a car the dealer has opened to brokers.
 import { Inject, Injectable } from '@nestjs/common';
 import { tidySentence } from '@sazo/contracts';
 import { withTx } from '../../platform/sql.js';
@@ -18,7 +20,7 @@ import { DealerRepository } from './dealer.repository.js';
 import { DealerService } from './dealer.service.js';
 import { MessagesRepository, type ConversationRow, type ConversationSummary, type MessageRow } from './messages.repository.js';
 
-export type MessagesErrorCode = 'conversation_not_found' | 'dealer_not_open' | 'car_not_allowed' | 'not_approved';
+export type MessagesErrorCode = 'conversation_not_found' | 'dealer_not_open' | 'car_not_allowed' | 'not_approved' | 'person_left' | 'not_on_team';
 export class MessagesError extends Error {
   constructor(readonly code: MessagesErrorCode, message: string) { super(message); }
 }
@@ -44,30 +46,60 @@ export class MessagesService {
   async dealerList(actor: Actor, organisationId: string) {
     const org = await this.iam.organisation(organisationId);
     await this.repo.teamConversation(organisationId);
-    const rows = (await this.repo.forDealer(organisationId, actor.userId)).filter((c) => c.kind === 'team' || org?.status === 'approved');
+    const rows = (await this.repo.forDealer(organisationId, actor.userId)).filter((c) => c.kind !== 'broker' || org?.status === 'approved');
     return this.summaries(rows, actor, org?.tradingName ?? org?.legalName ?? '');
   }
 
   async dealerUnread(actor: Actor, organisationId: string): Promise<number> {
     const org = await this.iam.organisation(organisationId);
-    return (await this.repo.forDealer(organisationId, actor.userId)).filter((c) => c.kind === 'team' || org?.status === 'approved').reduce((n, c) => n + c.unread, 0);
+    return (await this.repo.forDealer(organisationId, actor.userId)).filter((c) => c.kind !== 'broker' || org?.status === 'approved').reduce((n, c) => n + c.unread, 0);
+  }
+
+  /** New chat (D-177): the team's chat and each other member of the team, with the private chat if there is one. */
+  async dealerPeople(actor: Actor, organisationId: string) {
+    const team = await this.teamMembers(organisationId);
+    const mine = (await this.repo.forDealer(organisationId, actor.userId)).filter((c) => c.kind === 'direct');
+    const chatWith = new Map(mine.map((c) => [c.memberA === actor.userId ? c.memberB! : c.memberA!, c.id]));
+    return {
+      teamSize: team.length,
+      people: team.filter((m) => m.userId !== actor.userId).map((m) => ({ ...m, conversationId: chatWith.get(m.userId) ?? null })),
+    };
+  }
+
+  /** Opens (or reopens) a private chat with another member of the team. */
+  async dealerStartDirect(actor: Actor, organisationId: string, userId: string) {
+    const team = await this.teamMembers(organisationId);
+    if (userId === actor.userId || !team.some((m) => m.userId === userId) || !team.some((m) => m.userId === actor.userId)) {
+      throw new MessagesError('not_on_team', 'Choose someone on your team');
+    }
+    return { conversationId: (await this.repo.openDirect(organisationId, actor.userId, userId)).id };
   }
 
   /** One conversation, opened by a member of the dealer's team. Opening it marks it read. */
   async dealerThread(actor: Actor, organisationId: string, conversationId: string) {
-    const c = await this.dealerConversation(organisationId, conversationId);
+    const c = await this.dealerConversation(actor, organisationId, conversationId);
     return this.thread(actor, c);
   }
 
   async dealerSend(actor: Actor, organisationId: string, conversationId: string, body: string, stockId?: string) {
-    const c = await this.dealerConversation(organisationId, conversationId);
+    const c = await this.dealerConversation(actor, organisationId, conversationId);
+    if (c.kind === 'direct') {
+      const other = c.memberA === actor.userId ? c.memberB! : c.memberA!;
+      if (!(await this.teamMembers(organisationId)).some((m) => m.userId === other)) {
+        const name = (await this.iam.displayNames([other])).get(other) ?? 'This person';
+        throw new MessagesError('person_left', `${name} has left the team, so this chat is closed`);
+      }
+    }
     if (stockId) await this.allowedCar(c, stockId);
     return this.send(actor, c, body, stockId);
   }
 
-  private async dealerConversation(organisationId: string, id: string): Promise<ConversationRow> {
+  private async dealerConversation(actor: Actor, organisationId: string, id: string): Promise<ConversationRow> {
     const c = id === 'team' ? await this.repo.teamConversation(organisationId) : await this.repo.conversation(id);
-    if (!c || c.organisationId !== organisationId) throw new MessagesError('conversation_not_found', 'This conversation was not found');
+    // A private chat is only for its two people: to anyone else it does not exist.
+    if (!c || c.organisationId !== organisationId || (c.kind === 'direct' && actor.userId !== c.memberA && actor.userId !== c.memberB)) {
+      throw new MessagesError('conversation_not_found', 'This conversation was not found');
+    }
     if (c.kind === 'broker' && (await this.iam.organisation(organisationId))?.status !== 'approved') {
       throw new MessagesError('not_approved', 'Brokers can write to you once SAZO has approved your business');
     }
@@ -132,8 +164,8 @@ export class MessagesService {
   private async allowedCar(c: ConversationRow, stockId: string) {
     const car = await this.stock.get(stockId);
     const ok = car && car.organisationId === c.organisationId && car.status === 'in_stock'
-      && (c.kind === 'team' || (car.openToBrokers && !!car.commissionKind && !!car.vehicleId));
-    if (!ok) throw new MessagesError('car_not_allowed', c.kind === 'team' ? 'Choose one of your cars for sale' : 'Choose a car this dealer has opened to brokers');
+      && (c.kind !== 'broker' || (car.openToBrokers && !!car.commissionKind && !!car.vehicleId));
+    if (!ok) throw new MessagesError('car_not_allowed', c.kind !== 'broker' ? 'Choose one of your cars for sale' : 'Choose a car this dealer has opened to brokers');
   }
 
   private async send(actor: Actor, c: ConversationRow, body: string, stockId?: string) {
@@ -161,6 +193,25 @@ export class MessagesService {
     const seenAt = (m: MessageRow) => reads.some((r) => r.userId !== m.senderUserId && r.lastReadAt >= m.createdAt);
     const last = rows.at(-1);
     const dealerName = o?.tradingName ?? o?.legalName ?? '';
+    if (c.kind === 'direct') {
+      // Only the two of them; one who has left the team shows as "Left the team" and the chat is closed.
+      const pair = [c.memberA!, c.memberB!];
+      const names = await this.iam.displayNames(pair.filter((id) => !people.has(id)));
+      for (const [id, name] of names) people.set(id, { name, role: 'Left the team' });
+      const other = pair.find((id) => id !== actor.userId)!;
+      const pairPeople = pair.map((id) => ({ userId: id, ...(people.get(id) ?? { name: 'Someone', role: '' }), you: id === actor.userId }))
+        .sort((a, b) => Number(a.you) - Number(b.you));
+      return {
+        conversationId: c.id, kind: c.kind, organisationId: c.organisationId, title: people.get(other)?.name ?? 'Someone',
+        role: people.get(other)?.role ?? '', closed: !team.some((m) => m.userId === other),
+        members: pairPeople, people: pairPeople,
+        messages: rows.map((m) => ({
+          id: m.id, mine: m.senderUserId === actor.userId, sender: people.get(m.senderUserId) ?? { name: 'Someone', role: '' },
+          body: m.body, car: m.stockItemId ? cards.get(m.stockItemId) ?? null : null, createdAt: m.createdAt.toISOString(), seen: seenAt(m),
+        })),
+        seenBy: last ? reads.filter((r) => r.userId !== last.senderUserId && r.lastReadAt >= last.createdAt).map((r) => ({ name: people.get(r.userId)?.name ?? '', you: r.userId === actor.userId })) : [],
+      };
+    }
     return {
       conversationId: c.id, kind: c.kind, organisationId: c.organisationId,
       title: c.kind === 'team' ? `${dealerName} team` : actor.userId === c.brokerUserId ? dealerName : brokerName!,
@@ -181,7 +232,8 @@ export class MessagesService {
   }
 
   private async summaries(rows: ConversationSummary[], actor: Actor, dealerName?: string) {
-    const names = await this.iam.displayNames(rows.flatMap((r) => [r.brokerUserId, r.lastSenderId]).filter((x): x is string => !!x));
+    const names = await this.iam.displayNames(rows.flatMap((r) => [r.brokerUserId, r.lastSenderId, r.memberA, r.memberB]).filter((x): x is string => !!x));
+    const team = new Map((dealerName !== undefined && rows[0] ? await this.teamMembers(rows[0].organisationId) : []).map((m) => [m.userId, m.role]));
     const orgs = new Map<string, string>();
     for (const id of new Set(rows.map((r) => r.organisationId))) {
       const o = await this.iam.organisation(id);
@@ -189,7 +241,10 @@ export class MessagesService {
     }
     return rows.map((r) => ({
       conversationId: r.id, kind: r.kind, organisationId: r.organisationId,
-      title: r.kind === 'team' ? `${dealerName ?? orgs.get(r.organisationId)} team` : actor.userId === r.brokerUserId ? orgs.get(r.organisationId)! : names.get(r.brokerUserId!) ?? 'Broker',
+      title: r.kind === 'team' ? `${dealerName ?? orgs.get(r.organisationId)} team`
+        : r.kind === 'direct' ? names.get(r.memberA === actor.userId ? r.memberB! : r.memberA!) ?? 'Someone'
+        : actor.userId === r.brokerUserId ? orgs.get(r.organisationId)! : names.get(r.brokerUserId!) ?? 'Broker',
+      ...(r.kind === 'direct' ? { role: team.get(r.memberA === actor.userId ? r.memberB! : r.memberA!) ?? 'Left the team' } : {}),
       last: r.lastAt ? { body: r.lastBody!, hasCar: !!r.lastStockId, sender: r.lastSenderId === actor.userId ? 'You' : names.get(r.lastSenderId!) ?? '', at: r.lastAt.toISOString() } : null,
       unread: r.unread,
     }));

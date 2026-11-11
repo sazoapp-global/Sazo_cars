@@ -22,3 +22,18 @@ export async function sendDealerMessage(form: FormData) {
   }
   redirect(error ? `${back}&error=${encodeURIComponent(error)}` : back);
 }
+
+/** New chat (D-177): opens (or reopens) a private chat with another member of the team. */
+export async function startDirectChat(form: FormData) {
+  const org = text(form, 'org');
+  const user = text(form, 'user');
+  let id: string | undefined;
+  let error: string | undefined;
+  try {
+    id = (await api<{ conversationId: string }>('/dealer/messages/direct', { method: 'POST', auth: true, headers: { 'X-Organisation-Id': org }, body: { userId: user } })).conversationId;
+  } catch (err) {
+    if (!(err instanceof ApiError)) throw err;
+    error = err.detail ?? 'The chat could not be started. Try again.';
+  }
+  redirect(id ? `/dealer/${org}/messages?c=${id}` : `/dealer/${org}/messages?new=1&error=${encodeURIComponent(error!)}`);
+}

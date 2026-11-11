@@ -5,7 +5,7 @@ import { CAR_CATEGORY_LABELS, KIND_LABELS, formatUgx, isCarCategory, isVehicleKi
 import Link from 'next/link';
 import { Icon } from '@/components/icon';
 import { AutoRefresh } from './auto-refresh';
-import { ChatList, type ChatRow } from './chat-list';
+import { ChatList, type ChatRow, type NewChat } from './chat-list';
 import { Composer } from './composer';
 import { ScrollToEnd } from './scroll-to-end';
 import type { CarCard, CarOption, ConversationItem, Thread } from './types';
@@ -79,6 +79,8 @@ export interface MessagesViewProps {
   /** The chat's details panel: open, and the addresses that open and close it. */
   info?: { open: boolean; openHref: string; closeHref: string };
   error?: string;
+  /** New chat (D-177): the button on the list and the screen it opens. */
+  newChat?: NewChat;
 }
 
 export function MessagesView(p: MessagesViewProps) {
@@ -91,15 +93,15 @@ export function MessagesView(p: MessagesViewProps) {
   );
 }
 
-function List({ items, start = [], href, side }: MessagesViewProps) {
+function List({ items, start = [], href, side, newChat }: MessagesViewProps) {
   const rows: ChatRow[] = items.map((c) => ({
     key: c.conversationId, href: href(side === 'broker' ? c.organisationId : c.conversationId), title: c.title,
-    label: c.kind === 'team' ? 'Your team' : side === 'dealer' ? 'Broker' : 'Dealer',
-    group: c.kind === 'team' ? 'team' : side === 'dealer' ? 'broker' : 'dealer',
+    label: c.kind === 'team' ? 'Your team' : c.kind === 'direct' ? 'Your team · private' : side === 'dealer' ? 'Broker' : 'Dealer',
+    group: c.kind === 'team' || c.kind === 'direct' ? 'team' : side === 'dealer' ? 'broker' : 'dealer',
     last: c.last ? `${c.last.sender === 'You' || c.kind === 'team' ? `${c.last.sender}: ` : ''}${c.last.body}` : 'No messages yet',
     when: c.last ? listWhen(c.last.at) : '', unread: c.unread, lime: side === 'dealer' && c.kind === 'broker',
   }));
-  return <ChatList rows={rows} chips={side === 'dealer' ? ['team', 'broker'] : []}
+  return <ChatList rows={rows} chips={side === 'dealer' ? ['team', 'broker'] : []} newChat={newChat}
     start={start.map((d) => ({ key: d.organisationId, href: href(d.organisationId), title: d.name, detail: d.district }))} />;
 }
 
@@ -119,14 +121,18 @@ function Chat({ thread, side, photo, composer, backHref, info, error }: Messages
           <Avatar name={thread.title} broker={brokerChat} size={42} />
           <span className="min-w-0 flex-1">
             <h1 className="truncate text-base font-bold">{thread.title}</h1>
-            <span className="block truncate text-[13px] text-muted">{subtitle}</span>
+            <span className="block truncate text-[13px] text-muted">
+              {thread.kind === 'direct' ? <>{thread.role} · <Icon name="lock" size={14} className="inline align-[-2px]" /> Only you two see this chat</> : subtitle}
+            </span>
           </span>
           {info && <Link href={info.open ? info.closeHref : info.openHref} aria-label="Chat details" aria-expanded={info.open} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-soft"><Icon name="info" /></Link>}
         </header>
         <ol id="thread-messages" aria-label="Messages" className="flex-1 space-y-2 px-3 py-4 md:px-10 lg:overflow-y-auto lg:px-14" style={WALLPAPER}>
           {thread.messages.length === 0 && (
             <li className="mx-auto mt-10 max-w-sm rounded-lg bg-card p-4 text-center text-sm text-muted shadow-sm">
-              {side === 'broker' ? 'Say what you need, and add a car if it is about one. The whole team at this dealer will see it.' : 'No messages yet.'}
+              {thread.kind === 'direct'
+                ? <><Icon name="lock" size={16} className="inline align-[-3px]" /> Messages here are seen only by you and {thread.title}, not by the rest of the team.</>
+                : side === 'broker' ? 'Say what you need, and add a car if it is about one. The whole team at this dealer will see it.' : 'No messages yet.'}
             </li>
           )}
           {thread.messages.map((m) => {
@@ -162,7 +168,9 @@ function Chat({ thread, side, photo, composer, backHref, info, error }: Messages
         <ScrollToEnd list="thread-messages" count={thread.messages.length} />
         <div className="sticky bottom-0 z-20 lg:static">
           {error && <p role="alert" className="border-t border-bad-line bg-bad-fill px-4 py-2.5 text-sm font-semibold text-bad-text">{error}</p>}
-          {composer && <Composer key={myLast} {...composer} />}
+          {thread.closed
+            ? <p className="border-t border-line bg-card px-4 py-3.5 text-center text-sm text-muted">{thread.title} has left the team, so this chat is closed.</p>
+            : composer && <Composer key={myLast} {...composer} />}
         </div>
       </section>
 
@@ -176,7 +184,7 @@ function Chat({ thread, side, photo, composer, backHref, info, error }: Messages
             <div className="flex flex-col items-center border-b border-line px-5 py-6 text-center">
               <Avatar name={thread.title} broker={brokerChat} size={84} />
               <p className="mt-3 text-xl font-extrabold">{thread.title}</p>
-              <p className="text-sm text-muted">{thread.kind === 'team' ? 'Your team' : brokerChat ? 'Approved broker' : 'Dealer'}</p>
+              <p className="text-sm text-muted">{thread.kind === 'team' ? 'Your team' : thread.kind === 'direct' ? `${thread.role} · a private chat` : brokerChat ? 'Approved broker' : 'Dealer'}</p>
             </div>
             <div className="border-b border-line px-5 py-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-label">In this chat</p>

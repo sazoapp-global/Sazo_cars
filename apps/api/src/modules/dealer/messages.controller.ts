@@ -25,7 +25,7 @@ function id(v: string, allowTeam = false): string {
 async function handle<T>(fn: () => Promise<T>): Promise<T> {
   try { return await fn(); } catch (err) {
     if (err instanceof MessagesError) {
-      const status = ({ conversation_not_found: 404, dealer_not_open: 404, car_not_allowed: 422, not_approved: 403 } as const)[err.code];
+      const status = ({ conversation_not_found: 404, dealer_not_open: 404, car_not_allowed: 422, not_approved: 403, person_left: 422, not_on_team: 422 } as const)[err.code];
       throw new Problem(status, err.code, ({ 404: 'Not found', 422: 'Unprocessable', 403: 'Forbidden' } as const)[status], err.message);
     }
     throw err;
@@ -49,6 +49,20 @@ export class DealerMessagesController {
   @Get('unread')
   async unread(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId?: string) {
     return { unread: await this.messages.dealerUnread(actor, await this.org(actor, orgId)) };
+  }
+
+  /** GET /v1/dealer/messages/people: New chat (D-177), the other members of the team. */
+  @Get('people')
+  async people(@CurrentActor() actor: Actor, @Headers('x-organisation-id') orgId?: string) {
+    return this.messages.dealerPeople(actor, await this.org(actor, orgId));
+  }
+
+  /** POST /v1/dealer/messages/direct { userId }: open (or reopen) a private chat with a member of the team. */
+  @Post('direct')
+  async direct(@CurrentActor() actor: Actor, @Body() body: unknown, @Headers('x-organisation-id') orgId?: string) {
+    const org = await this.org(actor, orgId);
+    const b = parse(z.object({ userId: Uuid }).strict(), body);
+    return handle(() => this.messages.dealerStartDirect(actor, org, b.userId));
   }
 
   /** GET /v1/dealer/messages/:id (or "team"): one conversation; opening it marks it read. */
