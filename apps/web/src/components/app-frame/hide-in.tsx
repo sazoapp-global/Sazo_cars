@@ -28,5 +28,5 @@ export function FooterGate({ children }: { children: React.ReactNode }) {
   const path = usePathname() ?? '';
   const ws = workspaceOf(path);
   const businessPage = /^\/business\/(?!register(\/|$))[^/]+/.test(path);
-  return (ws && (ws.key === 'console' || ws.key === 'dealer')) || businessPage ? null : <>{children}</>;
+  return (ws && (ws.key === 'console' || ws.key === 'dealer' || ws.key === 'broker')) || businessPage ? null : <>{children}</>;
 }

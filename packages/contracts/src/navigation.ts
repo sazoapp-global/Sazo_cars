@@ -4,7 +4,7 @@
 // switch these modules per role.
 // Hiding a link is a convenience only: the API checks every action again.
 
-export type WorkspaceKey = 'console' | 'dealer' | 'garage' | 'inspect';
+export type WorkspaceKey = 'console' | 'dealer' | 'broker' | 'garage' | 'inspect';
 
 /** Who may see an entry. Every listed condition must hold; an empty rule means everyone in the workspace. */
 export interface NavRule {
@@ -127,6 +127,18 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       NOTIFICATIONS,
       { key: 'concerns', label: 'Report a problem', short: 'Report', icon: 'flag', href: '#/concerns' },
       { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '#/staff', rule: MANAGER },
+    ],
+  },
+  // A broker's work (11 Nov 2026): what were the four tabs on /broker are now its side bar. People who are not
+  // brokers yet apply at /become-a-broker, outside this workspace.
+  broker: {
+    key: 'broker', label: 'Broker', paths: ['/broker'],
+    entries: [
+      { key: 'cars', label: 'Cars to share', short: 'Cars', icon: 'storefront', href: '/broker' },
+      { key: 'links', label: 'My links', short: 'Links', icon: 'add_link', href: '/broker?tab=links' },
+      { key: 'enquiries', label: 'My customers', short: 'Customers', icon: 'forum', href: '/broker?tab=enquiries' },
+      { key: 'commissions', label: 'My commission', short: 'Commission', icon: 'payments', href: '/broker?tab=commissions' },
+      NOTIFICATIONS,
     ],
   },
   dealer: {

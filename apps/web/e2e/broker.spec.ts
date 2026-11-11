@@ -57,6 +57,13 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
 
   // The broker sees the car with its commission, never the dealer's costs, and makes a WhatsApp link.
   await broker.goto('/broker');
+  // Brokers have their own workspace (11 Nov 2026): the four parts are side bar items, each page with its title.
+  await expect(broker.getByRole('heading', { level: 1, name: 'Cars to share' })).toBeVisible();
+  // On a phone (as here) the side bar is the strip of links under the top bar.
+  const menu = broker.getByRole('navigation', { name: 'Broker' });
+  await expect(broker.getByText(/^Broker · /)).toBeVisible();
+  for (const item of ['Cars to share', 'My links', 'My customers', 'My commission', 'Notifications']) await expect(menu.getByRole('link', { name: new RegExp(`^${item}`) })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'Cars to share' })).toHaveAttribute('aria-current', 'page');
   const card = broker.getByRole('listitem').filter({ hasText: '2016 Toyota Esquire' }).filter({ hasText: DEALER });
   await expect(card).toContainText('UGX 450,000 commission');
   await a11y(broker);
@@ -76,7 +83,8 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await buyer.getByRole('button', { name: 'Send' }).click();
   await expect(buyer.getByRole('status')).toContainText('Ivan Kato will contact you');
 
-  await broker.getByRole('link', { name: 'My customers' }).click();
+  await menu.getByRole('link', { name: 'My customers' }).click();
+  await expect(broker.getByRole('heading', { level: 1, name: 'My customers' })).toBeVisible();
   await expect(broker.getByRole('listitem').filter({ hasText: 'Sarah Nambi' })).toContainText('Registered to you until');
 
   // The dealer sees who brought her, completes the sale and approves the commission.

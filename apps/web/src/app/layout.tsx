@@ -60,7 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <WorkspaceName />
             {/* Workspaces have the garage app's compact top bar: no site links, the online badge instead. */}
             <div className="flex-1 md:ml-8"><HideIn workspaces="all"><MainNav /></HideIn></div>
-            <ShowIn workspaces={['console', 'dealer']}><OnlineStatus /></ShowIn>
+            <ShowIn workspaces={['console', 'dealer', 'broker']}><OnlineStatus /></ShowIn>
             {me && (me.platformRoles.includes('sazo_admin') || me.platformRoles.includes('sazo_reviewer')) && (
               <HideIn workspaces="all"><Link href="/admin" className="hidden text-sm font-semibold text-primary-container hover:underline sm:inline">Admin</Link></HideIn>
             )}

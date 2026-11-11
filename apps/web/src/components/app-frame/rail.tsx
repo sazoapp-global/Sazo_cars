@@ -24,7 +24,7 @@ export interface RailProps {
   label: string;
   entries: NavEntry[];
   /** The business whose workspace this is, when there is one. */
-  business?: { name: string; approved: boolean };
+  business?: { name: string; approved: boolean; /** The lime badge's words, "Approved by SAZO" unless given. */ badge?: string };
   person?: { name: string; role: string };
   badges?: Record<string, number>;
   /** A coloured count instead of a plain number: red or yellow (the dealer's Alerts, D-111). */
@@ -91,7 +91,7 @@ export function Rail({ label, entries, business, person, badges = {}, tones = {}
         {business ? (
           <>
             <p className="truncate font-display text-lg font-bold leading-snug">{business.name}</p>
-            {business.approved && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-[11px] font-bold text-ink"><Icon name="verified_user" size={12} />Approved by SAZO</span>}
+            {business.approved && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-[11px] font-bold text-ink"><Icon name="verified_user" size={12} />{business.badge ?? 'Approved by SAZO'}</span>}
           </>
         ) : person && (
           <>

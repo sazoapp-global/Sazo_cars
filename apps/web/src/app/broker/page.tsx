@@ -9,10 +9,10 @@ import { Icon } from '@/components/icon';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { PrintButton, ShareButtons } from '@/components/share-buttons';
 import { statusIcon } from '@/components/status';
+import { AppFrame } from '@/components/app-frame/app-frame';
 import { api, isSignedIn } from '@/lib/api';
-import type { QuestionView, VehicleCard } from '@/lib/types';
-import { applyBroker, brokerLink, stopBrokerLink } from './actions';
-import { PICTURE_ACCEPT } from '@/lib/upload-types';
+import type { Me, QuestionView, VehicleCard } from '@/lib/types';
+import { brokerLink, stopBrokerLink } from './actions';
 
 export const metadata: Metadata = { title: 'Brokers', robots: { index: false } };
 
@@ -28,7 +28,15 @@ interface Commission { commissionId: string; status: string; amountUgx: number; 
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const STAGE: Record<string, string> = { enquiry: 'New enquiry', viewing: 'Viewing', negotiation: 'Negotiating', deposit: 'Deposit paid', handover: 'Handover', completed: 'Sold', lost: 'Lost' };
 const PAY: Record<string, string> = { on_hold: 'Waiting for the dealer to decide', pending: 'Waiting for approval', approved: 'Approved, not paid yet', paid: 'Paid', cancelled: 'Cancelled' };
-const TABS = [['cars', 'Cars to share', 'storefront'], ['links', 'My links', 'add_link'], ['enquiries', 'My customers', 'forum'], ['commissions', 'My commission', 'payments']] as const;
+const TABS = [['cars', 'Cars to share'], ['links', 'My links'], ['enquiries', 'My customers'], ['commissions', 'My commission']] as const;
+type Tab = (typeof TABS)[number][0];
+/** One line under each page's title. */
+const INTRO: Record<Tab, string> = {
+  cars: 'Cars dealers have opened to brokers. Share them, and follow the customers you bring and your commission.',
+  links: 'The links you made for cars. Stop one when you no longer want it used.',
+  enquiries: 'Customers who came through your links, and where each one is.',
+  commissions: 'What dealers owe you for the sales you brought.',
+};
 const name = (s: BrokerCar['specs']) => [s.year, s.make, s.model].filter(Boolean).join(' ') || 'Car';
 const commissionText = (c: BrokerCar['commission']) => (c.kind === 'fixed' ? `${formatUgx(c.amountUgx, false)} commission` : `${c.percent}% of the selling price`);
 
@@ -43,57 +51,24 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
     {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
   </>;
 
-  if (!status.isBroker) {
-    const profile = await api<{ progress: { percent: number } }>('/me/profile', { auth: true });
-    const a = status.application;
-    return (
-      <div className="mx-auto max-w-2xl space-y-5 px-4 py-8 md:px-8">
-        <div>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight">Become a broker</h1>
-          <p className="mt-2 text-muted">Share cars from approved dealers with your buyers. Customers who ask through your link are registered to you, and you can follow your commission here. Dealers set the commission for each car; SAZO keeps the record, it does not pay it.</p>
-        </div>
-        {notice}
-        {a?.status === 'pending' ? (
-          <p className="card p-4"><strong>SAZO is checking your ID.</strong> You applied on {formatDate(a.createdAt)}. You will see the result here.</p>
-        ) : profile.progress.percent < 100 ? (
-          <div className="card p-4">
-            <p><strong>First, finish your profile</strong> ({profile.progress.percent}% done): your details, a confirmed phone and email, and a password.</p>
-            <p className="mt-3"><Link href="/account" className="btn btn-primary">Finish your profile</Link></p>
-          </div>
-        ) : (
-          <section className="card p-4 md:p-5" aria-labelledby="apply">
-            {a?.status === 'rejected' && <p className="mb-3 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm text-warn-text">Your last application was not approved: {a.decisionReason}. You can apply again.</p>}
-            <h2 id="apply" className="font-display text-lg font-bold">Your National ID</h2>
-            <p className="mt-1 text-sm text-muted">A SAZO administrator checks that the ID matches your name. Your ID number is kept encrypted and is never shown to dealers or buyers.</p>
-            <form action={applyBroker} className="mt-3 grid gap-3">
-              <div><label htmlFor="nin" className="label">National ID number (NIN)</label><input id="nin" name="nin" required className="field sazo-id" autoCapitalize="characters" autoComplete="off" placeholder="CM12345678ABCD" /></div>
-              <div><label htmlFor="idPhoto" className="label">Photo of your National ID</label>
-                <input id="idPhoto" name="idPhoto" type="file" required accept={PICTURE_ACCEPT} capture="environment" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
-              <div><button className="btn btn-primary"><Icon name="badge" />Send for checking</button></div>
-            </form>
-          </section>
-        )}
-      </div>
-    );
-  }
+  // Not a broker yet (11 Nov 2026): the application has its own page, outside the broker workspace.
+  if (!status.isBroker) redirect(`/become-a-broker${sp.done || sp.error ? `?${new URLSearchParams({ ...(sp.done ? { done: sp.done } : {}), ...(sp.error ? { error: sp.error } : {}) })}` : ''}`);
 
-  const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab! : 'cars';
+  const tab: Tab = TABS.find(([k]) => k === sp.tab)?.[0] ?? 'cars';
   const h = await headers();
   const origin = `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host')}`;
   const newLink = sp.link && /^[A-Za-z0-9_-]{20,40}$/.test(sp.link) ? `${origin}/c/${sp.link}` : undefined;
 
+  const me = await api<Me>('/me', { auth: true });
+  const [, title] = TABS.find(([k]) => k === tab)!;
   return (
-    <div className="mx-auto max-w-5xl space-y-5 px-4 py-8 md:px-8">
+    // The broker's own workspace (11 Nov 2026): the four parts are side bar items, each with its own title.
+    <AppFrame workspace="broker" viewer={{ platformRoles: me.platformRoles }} business={{ name: me.displayName, approved: true, badge: 'Approved broker' }}>
+    <div className="mx-auto max-w-5xl space-y-5">
       <div>
-        <h1 className="font-display text-3xl font-extrabold tracking-tight">Broker</h1>
-        <p className="mt-1 text-muted">Cars dealers have opened to brokers. Share them, and follow the customers you bring and your commission.</p>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight">{title}</h1>
+        <p className="mt-1 text-muted">{INTRO[tab]}</p>
       </div>
-      <nav aria-label="Broker sections" className="flex flex-wrap gap-2">
-        {TABS.map(([k, label, icon]) => (
-          <Link key={k} href={`/broker?tab=${k}`} aria-current={tab === k ? 'page' : undefined}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-semibold ${tab === k ? 'border-primary-container bg-primary-container text-white' : 'border-line-strong bg-white'}`}><Icon name={icon} size={16} />{label}</Link>
-        ))}
-      </nav>
       {notice}
       {newLink && (
         <div className="rounded-lg border border-ok-line bg-ok-fill p-3" role="status">
@@ -110,6 +85,7 @@ export default async function Broker({ searchParams }: { searchParams: SP }) {
       {tab === 'enquiries' && <Enquiries page={sp.page} />}
       {tab === 'commissions' && <Commissions page={sp.page} />}
     </div>
+    </AppFrame>
   );
 }
 

@@ -16,7 +16,7 @@ import { PanelHost, PhoneStrip, Rail } from './rail';
 
 export async function AppFrame({ workspace, viewer, org, business, person, badges, children }: {
   workspace: WorkspaceKey; viewer: Viewer; org?: string;
-  business?: { name: string; approved: boolean }; person?: { name: string; role: string };
+  business?: { name: string; approved: boolean; badge?: string }; person?: { name: string; role: string };
   badges?: Record<string, number>; children: React.ReactNode;
 }) {
   const ws = WORKSPACES[workspace];
