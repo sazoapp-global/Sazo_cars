@@ -14,14 +14,19 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
   const next = safeNext(sp.next);
   if (await isSignedIn()) redirect(next);
   const forBusiness = next.startsWith('/business');
+  const forBroker = next.startsWith('/become-a-broker');
   const notice = sp.google === 'expired' ? <p role="alert" className="mt-5 rounded-lg border border-warn-line bg-warn-fill p-3 text-sm font-semibold text-warn-text">That took too long. Try Google again.</p>
-    : forBusiness ? (
+    : forBroker ? (
+      <p role="status" className="mt-5 rounded-lg border border-line bg-surface-low p-3 text-sm font-semibold">
+        To apply as a broker, first create your own SAZO account. Next you send your National ID for SAZO to check. Already have an account? <Link href={`/sign-in?next=${encodeURIComponent(next)}`} className="link">Log in</Link>
+      </p>
+    ) : forBusiness ? (
       <p role="status" className="mt-5 rounded-lg border border-line bg-surface-low p-3 text-sm font-semibold">
         To register your business, first create your own SAZO account. You will be the business&apos;s manager. Already have an account? <Link href={`/sign-in?next=${encodeURIComponent(next)}`} className="link">Log in</Link>
       </p>
     ) : null;
   return (
-    <AuthPage notice={notice} forBusiness={forBusiness}>
+    <AuthPage notice={notice} forBusiness={forBusiness || forBroker}>
       <SignUpPanel next={next} google={await googleEnabled()} />
     </AuthPage>
   );

@@ -84,7 +84,15 @@ export async function afterLogin(r: LoginResult, next: string, remember = true):
   // Anyone else with nowhere particular to go lands in their own workspace for the role SAZO gave them
   // (D-172): SAZO staff in the console, a dealer in its dashboard, a broker on their pages, and so on.
   let to = r.created && safeNext(next) === '/' ? '/welcome' : safeNext(next);
-  if (to === '/' && me) to = homeFor(accessOf(me));
+  if (to === '/' && me) {
+    const access = accessOf(me);
+    // Someone who applied to be a broker and is waiting for SAZO lands on the application (12 Nov 2026).
+    if (!access.broker && homeFor(access) === '/') {
+      const b = await api<{ application: { status: string } | null }>('/broker/application', auth).catch(() => undefined);
+      access.brokerApplying = b?.application?.status === 'pending';
+    }
+    to = homeFor(access);
+  }
   const then = me?.needsDetails.length ? `/account/complete?next=${encodeURIComponent(to)}` : to;
   if (r.backupCodes?.length) {
     // Shown once on the next page, then forgotten.

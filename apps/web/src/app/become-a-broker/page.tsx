@@ -15,7 +15,8 @@ export const metadata: Metadata = { title: 'Become a broker', robots: { index: f
 type SP = Promise<{ done?: string; error?: string }>;
 
 export default async function BecomeABroker({ searchParams }: { searchParams: SP }) {
-  if (!(await isSignedIn())) redirect('/sign-in?next=/become-a-broker');
+  // Someone new starts by creating an account (12 Nov 2026); the page says why, and has a Log in link.
+  if (!(await isSignedIn())) redirect('/sign-up?next=/become-a-broker');
   const sp = await searchParams;
   const status = await api<{ isBroker: boolean; application: { status: string; decisionReason: string | null; createdAt: string } | null }>('/broker/application', { auth: true });
   if (status.isBroker) redirect('/broker');

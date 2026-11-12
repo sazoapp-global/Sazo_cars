@@ -43,6 +43,12 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await broker.getByLabel('Photo of your National ID').setInputFiles({ name: 'id.png', mimeType: 'image/png', buffer: testPhoto(`national id ${stamp}`) });
   await broker.getByRole('button', { name: 'Send for checking' }).click();
   await expect(broker.getByText('SAZO is checking your ID.')).toBeVisible();
+  // While SAZO checks, logging in with no page in mind lands on the application, not the home page (12 Nov 2026).
+  const waiting = await (await browser.newContext()).newPage();
+  await signIn(waiting, BROKER);
+  await expect(waiting).toHaveURL(/\/become-a-broker$/);
+  await expect(waiting.getByText('SAZO is checking your ID.')).toBeVisible();
+  await waiting.context().close();
 
   // A SAZO admin compares the ID number with the photo and approves.
   const admin = await (await browser.newContext()).newPage();

@@ -1,20 +1,39 @@
 'use client';
+import Link from 'next/link';
 import { useActionState } from 'react';
+import { Icon, type IconName } from '@/components/icon';
 import { registerBusiness, type RegisterState } from '../actions';
 
-const TYPES = [
-  { v: 'garage', label: 'Garage', hint: 'Servicing and repairs. The garage app is ready.' },
-  { v: 'dealer', label: 'Car dealer', hint: 'List your cars for sale and send buyers report links.' },
-  { v: 'inspector', label: 'Independent inspector', hint: 'Record inspections in the SAZO phone app.' },
-  { v: 'inspection_centre', label: 'Inspection centre', hint: 'Record inspections in the SAZO phone app.' },
+const TYPES: { v: string; label: string; hint: string; icon: IconName; not: string }[] = [
+  { v: 'garage', label: 'Garage', hint: 'Servicing and repairs. The garage app is ready.', icon: 'handyman', not: 'Not a garage?' },
+  { v: 'dealer', label: 'Car dealer', hint: 'List your cars for sale and send buyers report links.', icon: 'storefront', not: 'Not a car dealer?' },
+  { v: 'inspector', label: 'Independent inspector', hint: 'Record inspections in the SAZO phone app.', icon: 'fact_check', not: 'Not an inspector?' },
+  { v: 'inspection_centre', label: 'Inspection centre', hint: 'Record inspections in the SAZO phone app.', icon: 'checklist', not: 'Not an inspection centre?' },
 ];
 const DISTRICTS = ['Kampala', 'Wakiso', 'Mukono', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu', 'Mbale', 'Masaka', 'Lira', 'Arua', 'Fort Portal', 'Hoima', 'Kabale', 'Soroti'];
 
-export function RegisterForm({ defaultType = 'garage' }: { defaultType?: string }) {
+/**
+ * `fixed`: the type from the card's button on the Business page (12 Nov 2026). It is shown, not chosen again, so
+ * the person becomes the manager of the kind of business they clicked; "Choose another type" goes back to the cards.
+ * Without it (the "Register your business" button) the four types are offered.
+ */
+export function RegisterForm({ defaultType = 'garage', fixed }: { defaultType?: string; fixed?: string }) {
   const [state, action, pending] = useActionState<RegisterState, FormData>(registerBusiness, {});
   const f = state.fields ?? {};
+  const kind = TYPES.find((t) => t.v === fixed);
   return (
     <form action={action} data-draft="business-register" className="mt-6 space-y-5">
+      {kind ? (
+        <div>
+          <input type="hidden" name="type" value={kind.v} />
+          <p className="label">Your business</p>
+          <div className="flex items-center gap-3 rounded-lg border-2 border-primary-container bg-soft p-3">
+            <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-container text-white"><Icon name={kind.icon} size={22} /></span>
+            <span><span className="block font-semibold">{kind.label}</span><span className="text-sm text-muted">{kind.hint}</span></span>
+          </div>
+          <p className="mt-2 text-sm text-muted">{kind.not} <Link href="/business#who" className="link">Choose another type</Link></p>
+        </div>
+      ) : (
       <fieldset>
         <legend className="label">What does your business do?</legend>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -26,6 +45,7 @@ export function RegisterForm({ defaultType = 'garage' }: { defaultType?: string 
           ))}
         </div>
       </fieldset>
+      )}
       <div><label htmlFor="legalName" className="label">Registered business name *</label>
         <input id="legalName" name="legalName" required minLength={2} maxLength={200} defaultValue={f.legalName} className="field" placeholder="e.g. Ntinda Auto Clinic Ltd" /></div>
       <div><label htmlFor="tradingName" className="label">Name customers know you by</label>

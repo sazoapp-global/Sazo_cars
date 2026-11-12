@@ -14,6 +14,9 @@ describe('where a person lands after logging in (D-172)', () => {
     expect(home([], [m('g1', 'garage', 'approved', 'active', 'mechanic')])).toBe('/business/g1');
     expect(home([], [m('i1', 'inspection_centre', 'approved')])).toBe('/business/i1');
     expect(home([])).toBe('/');
+    // A broker waiting for SAZO's check lands on the application, which says SAZO is checking the ID.
+    expect(homeFor({ ...accessOf({ platformRoles: [], memberships: [] }), brokerApplying: true })).toBe('/become-a-broker');
+    expect(homeFor({ ...accessOf({ platformRoles: [], memberships: [m('d2', 'dealer', 'pending_verification')] }), brokerApplying: true })).toBe('/dealer/d2');
   });
   it('picks one when a person has several roles: staff, approved dealer, broker, waiting dealer, workshop', () => {
     expect(home(['broker', 'sazo_admin'], [m('d1', 'dealer', 'approved')])).toBe('/admin');

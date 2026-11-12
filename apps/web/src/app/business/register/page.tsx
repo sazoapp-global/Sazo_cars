@@ -8,6 +8,12 @@ export const metadata: Metadata = { title: 'Register your business' };
 
 const TYPES = ['garage', 'dealer', 'inspector', 'inspection_centre'];
 
+// The title follows the card's button on the Business page (12 Nov 2026).
+const TITLES: Record<string, string> = {
+  dealer: 'Register your car dealership', garage: 'Register your garage',
+  inspector: 'Register as an inspector', inspection_centre: 'Register your inspection centre',
+};
+
 export default async function Register({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
   const t = (await searchParams).type;
   const type = t && TYPES.includes(t) ? t : undefined;
@@ -17,9 +23,9 @@ export default async function Register({ searchParams }: { searchParams: Promise
   if (me?.needsDetails.length) redirect(`/account/complete?next=${encodeURIComponent(here)}`);
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-8">
-      <h1 className="font-display text-2xl font-bold">Register your business</h1>
+      <h1 className="font-display text-2xl font-bold">{type ? TITLES[type] : 'Register your business'}</h1>
       <p className="mt-1 text-muted">SAZO checks every business before it can add to vehicle histories. It usually takes a few working days.</p>
-      <RegisterForm defaultType={type} />
+      <RegisterForm defaultType={type} fixed={type} />
     </div>
   );
 }

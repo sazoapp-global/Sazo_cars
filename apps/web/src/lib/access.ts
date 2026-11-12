@@ -18,6 +18,8 @@ export interface Access {
   broker: boolean;
   /** Businesses the person works in now: an active membership of a business that is not rejected or suspended. */
   workplaces: Workplace[];
+  /** Applied to be a broker and waiting for SAZO's check (12 Nov 2026). */
+  brokerApplying?: boolean;
 }
 
 const STAFF_ROLES = ['sazo_admin', 'sazo_reviewer'];
@@ -41,7 +43,9 @@ export function accessOf(me: Pick<Me, 'platformRoles' | 'memberships'>): Access 
  *   3. a broker                        the broker's own pages
  *   4. a dealer waiting for approval   its cars for sale (prepared privately until approval)
  *   5. a garage or inspection centre   its page, with the way into the SAZO Garage app
- *   6. everyone else (buyers, owners)  the home page
+ *   6. a broker waiting for approval   the broker application, which says SAZO is checking the ID
+ *   7. everyone else                   the home page: a normal user (buyers, owners), the role every new
+ *                                      account has; sign-up alone gives no other role (12 Nov 2026)
  */
 export function homeFor(a: Access): string {
   if (a.staff) return '/admin';
@@ -53,5 +57,6 @@ export function homeFor(a: Access): string {
   if (waiting) return `/dealer/${waiting.id}`;
   const workshop = a.workplaces.find((w) => ['garage', 'inspector', 'inspection_centre'].includes(w.type));
   if (workshop) return `/business/${workshop.id}`;
+  if (a.brokerApplying) return '/become-a-broker';
   return '/';
 }

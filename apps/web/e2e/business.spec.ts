@@ -28,6 +28,11 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   const dealers = owner.getByRole('article', { name: 'Car dealers' });
   await expect(dealers.getByRole('link', { name: 'Register as broker' })).toHaveAttribute('href', '/become-a-broker');
   await expect(dealers.getByRole('link', { name: 'Register as broker' })).toBeInViewport();
+  // Not logged in, Register as broker starts with Create account, saying why (12 Nov 2026).
+  await dealers.getByRole('link', { name: 'Register as broker' }).click();
+  await expect(owner).toHaveURL(/\/sign-up\?next=(%2F|\/)become-a-broker/);
+  await expect(owner.getByText('To apply as a broker, first create your own SAZO account.')).toBeVisible();
+  await owner.goto('/business');
   await owner.getByRole('link', { name: 'Register your business' }).first().click();
   // A new business starts on Create Account, with a note saying why; the card back to this page is left off (28 Oct 2026).
   await expect(owner).toHaveURL(/sign-up/);
@@ -36,6 +41,13 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await signIn(owner, OWNER, { name: 'Joseph Owner', next: '/business/register' });
 
   await expect(owner.getByRole('heading', { name: 'Register your business' })).toBeVisible();
+  await expect(owner.getByRole('radio')).toHaveCount(4);
+  // From a card's button the type is fixed (12 Nov 2026): the garage owner becomes the manager of a garage.
+  await owner.goto('/business#who');
+  await owner.getByRole('article', { name: 'Garages & service centres' }).getByRole('link', { name: 'Register as garage' }).click();
+  await expect(owner.getByRole('heading', { name: 'Register your garage' })).toBeVisible();
+  await expect(owner.getByRole('radio')).toHaveCount(0);
+  await expect(owner.getByText('Not a garage?')).toBeVisible();
   await a11y(owner);
   await owner.getByLabel('Registered business name *').fill(`${NAME} Ltd`);
   await owner.getByLabel('Name customers know you by').fill(NAME);
