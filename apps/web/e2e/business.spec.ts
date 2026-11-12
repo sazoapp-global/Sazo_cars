@@ -16,6 +16,13 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await a11y(owner);
   // Inspection centres have their own way in (28 Oct 2026).
   await expect(owner.getByRole('link', { name: 'Register as inspection centre' })).toHaveAttribute('href', '/business/register?type=inspection_centre');
+  // Brokers (12 Nov 2026): the strip's button lands on the cards, where the Car dealers card has "Register as broker".
+  await owner.getByRole('region', { name: 'Are you a car broker?' }).getByRole('link', { name: 'Brokers' }).click();
+  await expect(owner).toHaveURL(/#who$/);
+  await expect(owner.getByRole('heading', { name: 'One platform. Many businesses.' })).toBeInViewport();
+  const dealers = owner.getByRole('article', { name: 'Car dealers' });
+  await expect(dealers.getByRole('link', { name: 'Register as broker' })).toHaveAttribute('href', '/become-a-broker');
+  await expect(dealers.getByRole('link', { name: 'Register as broker' })).toBeInViewport();
   await owner.getByRole('link', { name: 'Register your business' }).first().click();
   // A new business starts on Create Account, with a note saying why; the card back to this page is left off (28 Oct 2026).
   await expect(owner).toHaveURL(/sign-up/);

@@ -20,9 +20,11 @@ const CHAIN: { icon: IconName; title: string; text: string; highlight?: boolean 
   { icon: 'key', title: 'Buyer', text: 'Buys with a clearer picture', highlight: true },
 ];
 
-const READY: { icon: IconName; title: string; tag: string; text: string; can: string[]; where: string; type: string; popular?: boolean; also?: { label: string; type: string } }[] = [
+const READY: { icon: IconName; title: string; tag: string; text: string; can: string[]; where: string; type: string; popular?: boolean; also?: { label: string; href: string } }[] = [
   {
     icon: 'storefront', title: 'Car dealers', tag: 'Sell with more confidence', type: 'dealer', where: 'Dealer workspace on this website',
+    // Brokers apply as a person, not a business (D-127), so their button opens the broker application (12 Nov 2026).
+    also: { label: 'Register as broker', href: '/become-a-broker' },
     text: 'List the cars on your yard and send each buyer a link to the car’s check.',
     can: ['List cars with asking price and mileage', 'Share a buyer link for any car', 'Record a sale', 'See which cars have questions in their history'],
   },
@@ -33,7 +35,7 @@ const READY: { icon: IconName; title: string; tag: string; text: string; can: st
   },
   {
     icon: 'fact_check', title: 'Inspectors & inspection centres', tag: 'Inspections buyers can rely on', type: 'inspector', where: 'SAZO Inspect app (inspection checklist)',
-    also: { label: 'Register as inspection centre', type: 'inspection_centre' },
+    also: { label: 'Register as inspection centre', href: '/business/register?type=inspection_centre' },
     text: 'A step-by-step checklist: identity, mileage, paint thickness, structure, tyres and battery.',
     can: ['Work through the checklist on your phone', 'Photos of the car and any damage', 'Paint readings panel by panel', 'Your inspections appear in buyers’ reports'],
   },
@@ -133,7 +135,8 @@ export default async function Business() {
             <h2 id="brokers" className="font-display text-xl font-bold">Are you a car broker?</h2>
             <p className="text-muted">Share cars from approved dealers with your buyers, keep the customers you bring, and follow your commission. You need your National ID.</p>
           </div>
-          <Link href="/broker" className="btn btn-ghost bg-white"><Icon name="handshake" />Brokers</Link>
+          {/* Straight to the cards for registering (12 Nov 2026), where "Register as broker" sits on the Car dealers card. */}
+          <a href="#who" className="btn btn-ghost bg-white"><Icon name="handshake" />Brokers</a>
         </div>
       </section>
 
@@ -159,7 +162,7 @@ export default async function Business() {
         <div className="mx-auto max-w-[1280px] px-4 py-14 md:px-8 lg:px-12">
           <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div><p className="text-[11px] font-bold uppercase tracking-wider text-label">Ready today</p>
-              <h2 id="who" className="font-display text-3xl font-extrabold text-ink">One platform. Many businesses.</h2></div>
+              <h2 id="who" className="scroll-mt-40 font-display text-3xl font-extrabold text-ink">One platform. Many businesses.</h2></div>
             <p className="max-w-sm text-muted">Three workspaces are open now. More are planned.</p>
           </div>
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -177,7 +180,7 @@ export default async function Business() {
                 </div>
                 <p className="mt-3 text-xs text-muted"><Icon name="smart_display" size={14} className="mr-1 inline align-[-2px]" />{b.where}</p>
                 <Link href={`/business/register?type=${b.type}`} className={`btn mt-auto ${b.popular ? 'btn-primary' : 'btn-ghost'} mt-4 w-full`}>Register as {b.title.toLowerCase().replace(/ &.*/, '').replace(/s$/, '')}<Icon name="arrow_forward" size={18} /></Link>
-                {b.also && <Link href={`/business/register?type=${b.also.type}`} className="btn btn-ghost mt-2 w-full">{b.also.label}<Icon name="arrow_forward" size={18} /></Link>}
+                {b.also && <Link href={b.also.href} className="btn btn-ghost mt-2 w-full">{b.also.label}<Icon name="arrow_forward" size={18} /></Link>}
               </article>
             ))}
           </div>
