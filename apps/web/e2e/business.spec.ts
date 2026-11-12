@@ -12,6 +12,11 @@ test.beforeAll(() => createAdmin(ADMIN, 'Ruth (SAZO reviewer)'));
 
 test('register a garage, send documents, get approved', async ({ browser }) => {
   const owner = await (await browser.newContext()).newPage();
+  // The log-in page's "Garage, dealership or inspector?" card goes straight to the cards for registering (12 Nov 2026).
+  await owner.goto('/sign-in');
+  await owner.getByRole('link', { name: /Garage, dealership or inspector\?/ }).click();
+  await expect(owner).toHaveURL(/\/business#who$/);
+  await expect(owner.getByRole('article', { name: 'Car dealers' }).getByRole('link', { name: 'Register as broker' })).toBeInViewport();
   await owner.goto('/business');
   await a11y(owner);
   // Inspection centres have their own way in (28 Oct 2026).

@@ -87,7 +87,8 @@ export async function AuthPage({ children, notice, forBusiness = false }: { chil
             {notice}
             {children}
             {!forBusiness && (
-              <Link href="/business" className="mt-6 flex items-center gap-3 rounded-xl border border-soft-3 bg-soft p-4 hover:border-primary-container">
+              // Straight to the cards for registering (12 Nov 2026), not the top of the Business page.
+              <Link href="/business#who" className="mt-6 flex items-center gap-3 rounded-xl border border-soft-3 bg-soft p-4 hover:border-primary-container">
               <Icon name="storefront" size={24} className="shrink-0 text-primary-container" />
               <span className="flex-1"><span className="block text-sm font-bold text-ink">Garage, dealership or inspector?</span>
                 <span className="block text-sm text-muted">Register your business and record history on SAZO.</span></span>
