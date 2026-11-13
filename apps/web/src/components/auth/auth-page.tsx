@@ -44,7 +44,7 @@ export async function AuthPage({ children, notice, forBusiness = false }: { chil
 
           <div className="card mt-8 p-4">
             <div className="relative aspect-[16/8] overflow-hidden rounded-xl bg-soft">
-              <Image src="/images/studio-suv.webp" alt="A crossover car in a studio (illustration)" fill sizes="(min-width: 1024px) 640px, 100vw" className="object-cover" />
+              <Image src="/images/studio-harrier.webp" alt="A white Toyota Harrier in a showroom (illustration)" fill sizes="(min-width: 1024px) 640px, 100vw" className="object-cover" />
               <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-label">Illustration</span>
               {preview?.vehicle.currentPlate && (
                 <span className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-ink/85 px-2 py-1.5 text-white backdrop-blur">
