@@ -112,14 +112,15 @@ export default async function Business() {
 
       {/* already registered */}
       <section className="border-y border-line bg-white" aria-labelledby="have-account">
-        <div className="mx-auto flex max-w-[1280px] flex-col gap-3 px-4 py-6 md:flex-row md:items-center md:justify-between md:px-8 lg:px-12">
+        <div className="mx-auto flex max-w-[1280px] flex-col gap-3 px-4 py-6 md:flex-row md:items-center md:justify-between md:gap-8 md:px-8 lg:px-12">
           <div>
             <h2 id="have-account" className="font-display text-xl font-bold">Already registered?</h2>
             <p className="text-muted">{signedIn
               ? 'Your businesses are in your account: check approval, send documents or open your workspace.'
               : 'Log in to see your business, send documents or open your workspace. Mechanics and inspectors log in on the phone app.'}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          {/* One above the other, the same width and lined up (13 Nov 2026); full width on a phone. */}
+          <div className="grid w-full shrink-0 gap-2 md:w-[260px] [&>*]:w-full [&>*]:justify-center">
             {signedIn
               ? <Link href="/account" className="btn btn-primary"><Icon name="person" />Your businesses</Link>
               : <Link href="/sign-in?next=/account" className="btn btn-primary"><Icon name="person" />Log in</Link>}
