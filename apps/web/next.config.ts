@@ -5,6 +5,9 @@ const config: NextConfig = {
   // The Next.js developer button (the "N" in the corner of `npm run dev`) covered buttons on the pages (13 Nov 2026).
   // Build and run-time errors are still shown while developing.
   devIndicators: false,
+  // Opening `npm run dev` from a phone on the same Wi-Fi, at the computer's address (for example http://192.168.1.20:3001).
+  // Only these private home and office network addresses; it has no effect on the real site (13 Nov 2026).
+  allowedDevOrigins: ['192.168.*.*', '10.*.*.*', '172.*.*.*'],
   reactStrictMode: true,
   // PDF files (pdfkit reads its font files at run time) and picture conversion (sharp) run as plain Node packages.
   serverExternalPackages: ['pdfkit', 'sharp'],
