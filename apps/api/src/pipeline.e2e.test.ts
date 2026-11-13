@@ -107,7 +107,7 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
   });
 
   it('a replayed submission (same Idempotency-Key, same body) is stored once (X5)', async () => {
-    const body = { schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZSU60-0071234' }, records: [
+    const body = { schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'AXUH80-0071234' }, records: [
       { type: 'service_performed', attributes: { items: ['wiper_blades'] }, time: { at: '2026-09-30T10:00:00Z', precision: 'day' } }] }] };
     const key = '0192a000-0000-7000-8000-0000000000aa';
     const first = await request(app.getHttpServer()).post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', key).set('X-Source-Code', 'RENT').send(body).expect(202);
@@ -252,7 +252,7 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
 
     // The registry records the owner's phone; it goes to the private store, not into the record or the raw copy.
     await http.post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000dd').set('X-Source-Code', 'REG')
-      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZSU60-0071234' }, records: [
+      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'AXUH80-0071234' }, records: [
         { type: 'ownership_transferred', attributes: { ownerPhone: OWNER }, time: { at: '2025-01-15T00:00:00Z', precision: 'day' } }] }] }).expect(202);
     const db = new pg.Client({ connectionString: url.toString() });
     await db.connect();
@@ -292,7 +292,7 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
 
     // Sold: the registry records a new owner → the old owner's claim ends.
     await http.post('/v1/ingest/submissions').set(auth).set('Idempotency-Key', '0192a000-0000-7000-8000-0000000000ee').set('X-Source-Code', 'REG')
-      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'ZSU60-0071234' }, records: [
+      .send({ schemaVersion: 1, items: [{ identifiers: { chassisNumber: 'AXUH80-0071234' }, records: [
         { type: 'ownership_transferred', attributes: { ownerPhone: '+256772440033' }, time: { at: '2026-09-01T00:00:00Z', precision: 'day' } }] }] }).expect(202);
     expect((await http.get('/v1/me/cars').set(owner).expect(200)).body.items).toEqual([]);
   });

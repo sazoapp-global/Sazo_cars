@@ -39,6 +39,9 @@ export const MODEL_SPECS: ModelSpec[] = [
   car('Toyota', 'Caldina', 'station_wagon', ['AZT241', 'ZZT241', 'ST215'], { engineCc: 1998, seats: 5, doors: 5, cylinders: 4, powerHp: 150, fuelKmPerL: 13.0, drive: '2wd' }),
   // SUVs
   car('Toyota', 'Harrier', 'suv', ['ZSU60', 'ZSU65', 'AVU65', 'ACU30', 'MCU30', 'GSU30'], { engineCc: 1986, seats: 5, doors: 5, cylinders: 4, powerHp: 151, fuelKmPerL: 15.2, drive: '2wd' }),
+  // The fourth generation hybrid (from June 2020), sold in Japan as the Harrier Hybrid: Toyota's catalogue gives 2,487 cc
+  // (A25A-FXS), 22.3 km/L (WLTC, front wheel drive AXUH80) and five seats; AXUH85 is the E-Four. Power is the system output.
+  car('Toyota', 'Harrier Hybrid', 'suv', ['AXUH80', 'AXUH85'], { engineCc: 2487, seats: 5, doors: 5, cylinders: 4, powerHp: 218, fuelKmPerL: 22.3, drive: '2wd' }, 2020),
   car('Toyota', 'RAV4', 'suv', ['ACA31', 'ACA36', 'ACA21', 'MXAA54'], { engineCc: 1998, seats: 5, doors: 5, cylinders: 4, powerHp: 150, fuelKmPerL: 13.2, drive: '4wd' }),
   car('Toyota', 'Land Cruiser Prado', 'suv', ['TRJ150', 'GRJ150', 'GDJ150', 'KDJ120', 'TRJ120'], { engineCc: 2693, seats: 7, doors: 5, cylinders: 4, powerHp: 161, fuelKmPerL: 9.0, drive: '4wd' }),
   car('Toyota', 'Prado', 'suv', ['TRJ150', 'GRJ150', 'GDJ150', 'KDJ120', 'TRJ120'], { engineCc: 2693, seats: 7, doors: 5, cylinders: 4, powerHp: 161, fuelKmPerL: 9.0, drive: '4wd' }),

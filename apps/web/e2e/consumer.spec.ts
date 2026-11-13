@@ -23,7 +23,7 @@ test('search by plate lands on the public summary — statuses only, no figures'
   await page.getByLabel('Number plate, VIN or chassis number').fill('ubj214k');
   await page.getByRole('button', { name: 'Check this car' }).click();
   await expect(page).toHaveURL(/\/v\/SZV-/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('2016 Toyota Harrier');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('2020 Toyota Harrier');
   await expect(page.getByRole('article')).toHaveCount(7); // the seven questions
   await expect(page.getByText('Mileage readings rise steadily over time.')).toBeVisible();
   // No figures in the public summary (P-002).

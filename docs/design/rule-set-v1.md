@@ -293,7 +293,7 @@ base   = 95 if a passing inspection in the last 12 months, else 85
 
 | # | I | C | D | M | P | L | V | Record confidence | Health | Check |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S01 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | High | 88 (95 −5 mileage −2 age) | ✅ |
+| S01 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | High | 95 (a 2020 car at 68,400 km: no mileage or age deduction) | ✅ |
 | S02 | ✓ | – | ✓ | – | – | ✓ | ✓ | Insufficient | Insufficient history | ✅ |
 | S03 | ✓ | ! (1 service in 36 mo) | ✓ | ✗ | ✓ | ✓ | ✓ | Low | **49** (85 −20 mileage −8 care −5 km −3 age) | ✅ tested |
 | S04 | ✓ | ✓ | ✓ | ✗ | ! | ✓ | ✓ | Low | **54** | ✅ tested |

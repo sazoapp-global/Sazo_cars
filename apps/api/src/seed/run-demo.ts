@@ -166,7 +166,7 @@ interface CarSpec {
   category?: 'new';
 }
 const cars: CarSpec[] = [
-  { ids: { plate: 'UBJ 214K' }, price: 78_000_000, make: 'toyota', model: 'harrier', year: 2015, colour: 'pearl white', stage: 'at_yard', yard: 'Kisementi yard', received: -21, photos: 5,
+  { ids: { plate: 'UBJ 214K' }, price: 78_000_000, make: 'toyota', model: 'harrier', year: 2020, colour: 'pearl white', stage: 'at_yard', yard: 'Kisementi yard', received: -21, photos: 5,
     costs: [['purchase', 14_200, 'USD', 3_720], ['freight_insurance', 1_350, 'USD', 3_720], ['customs_taxes', 17_400_000, 'UGX'], ['clearing_agent', 850_000, 'UGX']], brokers: 'fixed' },
   { ids: { plate: 'UBK 482M' }, price: 38_500_000, make: 'toyota', model: 'premio', year: 2016, colour: 'silver', stage: 'at_yard', yard: 'Kisementi yard', received: -40, photos: 4,
     costs: [['purchase', 23_000_000, 'UGX'], ['inspection_repairs', 1_200_000, 'UGX']], brokers: 'percent' },

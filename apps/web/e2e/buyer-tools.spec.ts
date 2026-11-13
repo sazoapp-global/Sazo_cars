@@ -19,7 +19,7 @@ test('save, compare, share and stop sharing', async ({ page, browser }) => {
   await page.getByRole('group', { name: 'My SAZO' }).getByRole('link', { name: 'Saved cars' }).click();
   await expect(page.getByRole('heading', { name: 'Saved cars' })).toBeVisible();
   await a11y(page);
-  await page.getByRole('checkbox', { name: /Compare 2016 Toyota Harrier/ }).check();
+  await page.getByRole('checkbox', { name: /Compare 2020 Toyota Harrier/ }).check();
   await page.getByRole('checkbox', { name: /Compare 2015 Toyota RAV4/ }).check();
   await page.getByRole('button', { name: 'Compare selected' }).click();
   await expect(page.getByRole('heading', { name: 'Compare cars' })).toBeVisible();
@@ -32,7 +32,7 @@ test('save, compare, share and stop sharing', async ({ page, browser }) => {
   await page.getByRole('link', { name: 'Compare', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Compare cars' });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('listitem').filter({ hasText: '2016 Toyota Harrier' })).toBeVisible();
+  await expect(dialog.getByRole('listitem').filter({ hasText: '2020 Toyota Harrier' })).toBeVisible();
   const plate = dialog.getByLabel('Number plate, VIN or chassis number');
   await plate.fill('UBZ 000Z');
   await dialog.getByRole('button', { name: 'Add', exact: true }).click();
@@ -54,7 +54,7 @@ test('save, compare, share and stop sharing', async ({ page, browser }) => {
 
   const stranger = await (await browser.newContext()).newPage();
   await stranger.goto(url);
-  await expect(stranger.getByRole('heading', { level: 1, name: '2016 Toyota Harrier' })).toBeVisible();
+  await expect(stranger.getByRole('heading', { level: 1, name: '2020 Toyota Harrier' })).toBeVisible();
   await expect(stranger.getByText(/a copy frozen on/)).toBeVisible();
   await expect(stranger.getByRole('button', { name: 'Save as PDF' })).toBeVisible();
   await a11y(stranger);

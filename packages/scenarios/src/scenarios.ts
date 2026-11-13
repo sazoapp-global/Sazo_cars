@@ -9,18 +9,21 @@ const scenarios: Scenario[] = [];
 const add = (s: Scenario) => scenarios.push(s);
 
 // S01 — Clean, complete history
+// The car in the home and log-in pictures (D-180, D-181): a fourth generation Toyota Harrier Hybrid G (AXUH80, sold from
+// June 2020), pearl white. Its spec follows Toyota's catalogue: 2,487 cc A25A-FXS hybrid, electric CVT, front wheel drive.
+// Sold at auction in Japan in 2023, imported through Mombasa, serviced about every six months since.
 {
-  const v = new VehicleBuilder('S01').ident('chassis_number', 'ZSU60-0071234');
-  v.add('AUC', '2020-02-14', 'auction_sale', { auctionGrade: '4.5', exportMileage: { value: 41200, unit: 'km' } });
-  v.add('CUS', '2020-04-02', 'import_recorded', { originCountry: 'JP', port: 'Mombasa' });
-  v.add('CUS', '2020-04-02', 'customs_cleared', {});
-  v.add('REG', '2020-04-20', 'registration_issued', { plate: 'UBJ 214K' });
-  v.add('REG', '2020-04-20', 'spec_declared', spec('Toyota', 'Harrier', 2016, 'pearl white', { engineCc: 2000, fuel: 'petrol', transmission: 'cvt' }));
-  for (const [d, km] of [['2020-09-10', 44900], ['2021-09-12', 58300], ['2022-09-14', 69800], ['2023-11-02', 80100], ['2024-10-08', 91500], ['2025-09-15', 102600]] as const) v.service('GAR-NSA', d, km);
+  const v = new VehicleBuilder('S01').ident('chassis_number', 'AXUH80-0071234');
+  v.add('AUC', '2023-02-14', 'auction_sale', { auctionGrade: '4.5', exportMileage: { value: 31200, unit: 'km' } });
+  v.add('CUS', '2023-04-02', 'import_recorded', { originCountry: 'JP', port: 'Mombasa' });
+  v.add('CUS', '2023-04-02', 'customs_cleared', {});
+  v.add('REG', '2023-04-20', 'registration_issued', { plate: 'UBJ 214K' });
+  v.add('REG', '2023-04-20', 'spec_declared', spec('Toyota', 'Harrier', 2020, 'pearl white', { engineCc: 2487, fuel: 'hybrid', transmission: 'cvt' }));
+  for (const [d, km] of [['2023-09-12', 36900], ['2024-03-14', 43200], ['2024-09-10', 49600], ['2025-03-12', 55800], ['2025-09-15', 62100], ['2026-03-10', 68400]] as const) v.service('GAR-NSA', d, km);
   v.confirmAllGarageVisits();
   v.add('INSP', '2026-06-10', 'inspection_result', { passed: true, structuralFindings: false, tyresPercent: 60, batteryOk: true, observedColour: 'pearl white' });
   add({ id: 'S01', title: 'Clean, complete history', vehicle: v.build(), comparablesCount: 17,
-    expected: { questions: q('✓✓✓✓✓✓✓'), recordConfidence: 'high', health: 88, noFlags: true } });
+    expected: { questions: q('✓✓✓✓✓✓✓'), recordConfidence: 'high', health: 95, noFlags: true } });
 }
 
 // S02 — Thin history (pre-2015 import not covered by customs)

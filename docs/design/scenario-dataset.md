@@ -73,7 +73,7 @@ The comparables set holds about 200 fictional sales of common models (Premio, Ha
 
 | # | Plate | Vehicle (fictional) | Story | Mainly tests |
 |---|---|---|---|---|
-| S01 | UBJ 214K | 2016 Toyota Harrier | Clean, complete history | The "gold standard" happy path |
+| S01 | UBJ 214K | 2020 Toyota Harrier Hybrid | Clean, complete history | The "gold standard" happy path |
 | S02 | UAX 553F | 2010 Toyota Premio | Only a registration record | Thin data never looks good |
 | S03 | UBC 718P | 2015 Toyota RAV4 | Mileage rolled back locally | `mileage_decrease`, open conflict |
 | S04 | UBE 260R | 2012 Toyota Mark X | Clocked before import | Export mileage vs local reading |
@@ -106,17 +106,19 @@ The comparables set holds about 200 fictional sales of common models (Premio, Ha
 
 Each scenario lists the observations in event-time order: **date · source · type · key values · evidence**. It then gives the **expected outcome**.
 
-### S01: Clean, complete history (2016 Toyota Harrier, UBJ 214K, chassis ZSU60-0071234)
+### S01: Clean, complete history (2020 Toyota Harrier Hybrid G, UBJ 214K, chassis AXUH80-0071234)
+The car in the home and log-in pictures (13 Nov 2026): a fourth generation Harrier (AXUH80, sold from June 2020). Its spec follows Toyota's catalogue: 2,487 cc A25A-FXS hybrid, electric CVT, front wheel drive.
+
 | Date | Source | Observation | Evidence |
 |---|---|---|---|
-| 14 Feb 2020 | AUC | `auction_sale` grade 4.5, export mileage 41,200 km | auction sheet |
-| 02 Apr 2020 | CUS | `import_recorded` origin Japan, via Mombasa; `customs_cleared` | customs entry |
-| 20 Apr 2020 | REG | `registration_issued` UBJ 214K; `spec_declared` pearl white, 2.0L petrol, CVT | — |
-| 2020–2026 | GAR-NSA | 6× `service_performed` + `odometer_reading` (44,900 → 58,300 → 69,800 → 80,100 → 91,500 → 102,600) | odometer photos; owner confirmed ×6 |
+| 14 Feb 2023 | AUC | `auction_sale` grade 4.5, export mileage 31,200 km | auction sheet |
+| 02 Apr 2023 | CUS | `import_recorded` origin Japan, via Mombasa; `customs_cleared` | customs entry |
+| 20 Apr 2023 | REG | `registration_issued` UBJ 214K; `spec_declared` pearl white, 2.5L hybrid, CVT | — |
+| 2023–2026 | GAR-NSA | 6× `service_performed` + `odometer_reading`, about every six months (36,900 → 43,200 → 49,600 → 55,800 → 62,100 → 68,400) | odometer photos; owner confirmed ×6 |
 | 10 Jun 2026 | INSP | `inspection_result` pass; no structural findings; tyres 60%; battery good | inspection report |
 | — | POL, LIEN, INS-N | no records (covered) | — |
 
-**Expected:** I ✓ · C ✓ · D ✓ · M ✓ · P ✓ · L ✓ · V ✓ (17 comps) · **Record confidence: High** · Health ≈ 85–90 · no flags.
+**Expected:** I ✓ · C ✓ · D ✓ · M ✓ · P ✓ · L ✓ · V ✓ (17 comps) · **Record confidence: High** · Health ≈ 95 · no flags.
 
 ### S02: Thin history (2010 Toyota Premio, UAX 553F, chassis NZT260-3024411)
 | Date | Source | Observation |

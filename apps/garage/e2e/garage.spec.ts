@@ -71,7 +71,7 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await page.getByRole('button', { name: 'New job' }).click();
   await page.getByLabel('Number plate').fill('ubj 214k');
   await page.getByRole('button', { name: 'Find' }).click();
-  await expect(page.getByText('2016 Toyota Harrier')).toBeVisible();
+  await expect(page.getByText('2020 Toyota Harrier')).toBeVisible();
   await shot(page, '1-car');
   await page.getByRole('button', { name: 'Yes, this is the car' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
