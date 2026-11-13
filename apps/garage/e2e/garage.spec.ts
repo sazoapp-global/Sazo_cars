@@ -85,9 +85,9 @@ test('record a service with an odometer photo and send it', async ({ page }) => 
   await page.getByLabel('Odometer reading').fill('10500');
   await expect(page.getByRole('alert')).toContainText('Lower than the last reading SAZO has');
   await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
-  await page.getByLabel('Odometer reading').fill('110500');
+  await page.getByLabel('Odometer reading').fill('74500');
   await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByLabel('Odometer reading')).toHaveValue('110,500');
+  await expect(page.getByLabel('Odometer reading')).toHaveValue('74,500');
   await page.locator('input[type=file]').setInputFiles({ name: 'odo.png', mimeType: 'image/png', buffer: testPhoto('garage.spec.ts odo.png 1') });
   await expect(page.getByAltText(/Odometer photo/)).toBeVisible();
   await shot(page, '3-mileage');
