@@ -21,9 +21,9 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await a11y(owner);
   // Inspection centres have their own way in (28 Oct 2026).
   await expect(owner.getByRole('link', { name: 'Register as inspection centre' })).toHaveAttribute('href', '/business/register?type=inspection_centre');
-  // Brokers (12 Nov 2026): the strip's button lands on the cards, where the Car dealers card has "Register as broker".
-  await owner.getByRole('region', { name: 'Are you a car broker?' }).getByRole('link', { name: 'Brokers' }).click();
-  await expect(owner).toHaveURL(/#who$/);
+  // Brokers register from the Car dealers card (D-178); the separate broker strip is gone (13 Nov 2026).
+  await expect(owner.getByRole('heading', { name: 'Are you a car broker?' })).toHaveCount(0);
+  await owner.goto('/business#who');
   await expect(owner.getByRole('heading', { name: 'One platform. Many businesses.' })).toBeInViewport();
   const dealers = owner.getByRole('article', { name: 'Car dealers' });
   await expect(dealers.getByRole('link', { name: 'Register as broker' })).toHaveAttribute('href', '/become-a-broker');
