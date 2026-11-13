@@ -149,10 +149,11 @@ export default async function Business() {
       {/* who it's for */}
       <section className="bg-soft/60" aria-labelledby="who">
         <div className="mx-auto max-w-[1280px] px-4 py-14 md:px-8 lg:px-12">
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div><p className="text-[11px] font-bold uppercase tracking-wider text-label">Ready today</p>
-              <h2 id="who" className="scroll-mt-40 font-display text-3xl font-extrabold text-ink">One platform. Many businesses.</h2></div>
-            <p className="max-w-sm text-muted">Three workspaces are open now. More are planned.</p>
+          {/* The heading and its sentence together on the left (13 Nov 2026). */}
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-label">Ready today</p>
+            <h2 id="who" className="scroll-mt-40 font-display text-3xl font-extrabold text-ink">One platform. Many businesses.</h2>
+            <p className="mt-1.5 max-w-2xl text-muted">Three workspaces are open now. More are planned.</p>
           </div>
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             {READY.map((b) => (
