@@ -77,7 +77,8 @@ export default async function Business() {
     <>
       {/* hero */}
       <section className="overflow-hidden bg-gradient-to-b from-soft to-surface">
-        <div className="mx-auto grid max-w-[1280px] items-center gap-10 px-4 py-10 md:px-8 md:py-16 lg:grid-cols-2 lg:px-12">
+        {/* More room under the navigation bar (13 Nov 2026). */}
+        <div className="mx-auto grid max-w-[1280px] items-center gap-10 px-4 pb-10 pt-14 md:px-8 md:pb-16 md:pt-24 lg:grid-cols-2 lg:px-12">
           <div>
             <span className="chip border-soft-3 bg-white text-primary-container"><Icon name="workspace_premium" size={14} />Built for people who work with cars</span>
             <h1 className="mt-4 font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-ink md:text-5xl">

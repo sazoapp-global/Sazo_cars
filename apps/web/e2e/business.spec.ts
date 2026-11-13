@@ -19,6 +19,16 @@ test('register a garage, send documents, get approved', async ({ browser }) => {
   await expect(owner.getByRole('article', { name: 'Car dealers' }).getByRole('link', { name: 'Register as broker' })).toBeInViewport();
   await owner.goto('/business');
   await a11y(owner);
+  // The phone menu dims the page behind it; tapping the page or Escape closes it (13 Nov 2026).
+  const menu = owner.getByRole('button', { name: 'Menu' });
+  await menu.click();
+  await expect(owner.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await expect(owner.locator('[data-menu-shade]')).toBeVisible();
+  await owner.locator('[data-menu-shade]').click({ position: { x: 20, y: 300 } });
+  await expect(owner.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
+  await menu.click();
+  await owner.keyboard.press('Escape');
+  await expect(owner.locator('[data-menu-shade]')).toHaveCount(0);
   // Inspection centres have their own way in (28 Oct 2026).
   await expect(owner.getByRole('link', { name: 'Register as inspection centre' })).toHaveAttribute('href', '/business/register?type=inspection_centre');
   // Brokers register from the Car dealers card (D-178); the separate broker strip is gone (13 Nov 2026).
