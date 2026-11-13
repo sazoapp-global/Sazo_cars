@@ -52,7 +52,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
           <div className="relative">
             <div className="card overflow-hidden !rounded-3xl p-3 shadow-[0_20px_25px_-5px_rgba(11,19,43,0.08),0_8px_10px_-6px_rgba(11,19,43,0.04)]">
               <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-soft">
-                <Image src="/images/studio-harrier.webp" alt="A white Toyota Harrier in a showroom (illustration)" fill sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" priority />
+                <Image src="/images/harrier-showroom.webp" alt="A white Toyota Harrier in a showroom (illustration)" fill sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" priority />
                 <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-label">Illustration</span>
               </div>
               {preview && (
