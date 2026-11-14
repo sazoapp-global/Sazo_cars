@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { Icon } from '@/components/icon';
 
 /**
  * Photos a person sent (14 Nov 2026): small blurred previews in the card, so there is a photo to see at a glance
