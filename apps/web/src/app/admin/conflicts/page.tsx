@@ -1,5 +1,6 @@
 import { Pager, pageHref, paginate } from '@/components/pager';
 import Link from 'next/link';
+import { Icon } from '@/components/icon';
 import type { Conflict } from '@/lib/types';
 import { adminFetch, requireStaff } from '../guard';
 import { CHECK, CONFLICT_STATUS, TOPIC, day } from '../labels';
@@ -42,7 +43,7 @@ export default async function Conflicts({ searchParams }: { searchParams: SP }) 
                   <td className="p-3">{c.openedByCheck ? CHECK[c.openedByCheck] ?? c.openedByCheck : 'Not recorded'}</td>
                   <td className="p-3">{CONFLICT_STATUS[c.status] ?? c.status}</td>
                   <td className="p-3 whitespace-nowrap">{day(c.openedAt)}</td>
-                  <td className="p-3"><Link className="link" href={`/admin/conflicts/${c.conflictId}`}>Review</Link></td>
+                  <td className="p-3 text-right">{/* A button, not an underlined link (14 Nov 2026). */}<Link className="btn btn-ghost min-h-9 whitespace-nowrap px-3.5 py-1.5 text-sm" href={`/admin/conflicts/${c.conflictId}`}>Review<Icon name="arrow_forward" size={18} /></Link></td>
                 </tr>
               ))}
             </tbody>
