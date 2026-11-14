@@ -68,8 +68,16 @@ test('phone match, garage visits, and a logbook claim a reviewer rejects', async
   await admin.getByRole('listitem').filter({ hasText: 'Claimant Brian' }).getByRole('link').click();
   const claim = admin.getByRole('region', { name: 'Details' });
   await expect(claim).toBeVisible();
-  const photo = await admin.request.get(await claim.getByRole('link', { name: 'photo 1' }).getAttribute('href') as string);
+  // The car with its report (14 Nov 2026), and the logbook blurred until opened inside the card.
+  await expect(claim.getByRole('link', { name: 'View car report' })).toHaveAttribute('href', /\/admin\/cars\//);
+  await claim.getByRole('button', { name: 'View logbook photo 1' }).click();
+  const opened = claim.getByRole('img', { name: 'Logbook photo 1' });
+  await expect(opened).toBeVisible();
+  await a11y(admin);
+  const photo = await admin.request.get(await opened.getAttribute('src') as string);
   expect(photo.headers()['content-type']).toBe('image/jpeg');
+  await claim.getByRole('button', { name: 'Close' }).click();
+  await expect(opened).toHaveCount(0);
   await claim.getByLabel(/Reason/).fill('The name on the logbook is not yours');
   await claim.getByRole('button', { name: 'Reject' }).click();
   await expect(admin.getByRole('status')).toContainText('Rejected');
