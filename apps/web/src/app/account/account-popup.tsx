@@ -4,24 +4,29 @@
 import { useState, useTransition } from 'react';
 import { signOut } from '@/app/sign-in/actions';
 import { Icon } from '@/components/icon';
+import { pictureUrl } from '@/components/avatar';
 import { Facts, Popup } from '@/components/popup';
 import { myAccount, type MyAccount } from './popup-actions';
 
 const ROLE: Record<string, string> = { org_manager: 'Manager', org_staff: 'Staff', partner_operator: 'Data entry' };
 const ORG_STATUS: Record<string, string> = { pending_verification: 'Waiting for SAZO approval', approved: 'Approved', rejected: 'Not approved', suspended: 'Suspended' };
 
-export function AccountPopup({ displayName, initials }: { displayName: string; initials: string }) {
+export function AccountPopup({ displayName, initials, photoId }: { displayName: string; initials: string; photoId?: string | null }) {
+  // Your photo (D-186) in place of your initials, when you have one.
+  const circle = (big = false) => photoId
+    ? <img src={pictureUrl(photoId)} alt="" aria-hidden className={`avatar object-cover !p-0 ${big ? '!size-12' : ''}`} />
+    : <span className={`avatar ${big ? '!size-12 text-lg' : ''}`} aria-hidden>{initials}</span>;
   const [a, setA] = useState<MyAccount | null | undefined>();
   const [pending, start] = useTransition();
   const load = () => start(async () => setA(await myAccount()));
   return (
     <Popup title="Your details" onOpen={load} buttonLabel={`Your details, ${displayName}`}
       buttonClassName="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 text-sm font-semibold hover:bg-soft sm:pr-3"
-      button={<><span className="avatar" aria-hidden>{initials}</span><span className="hidden max-w-[10rem] truncate sm:inline">{displayName}</span></>}>
+      button={<>{circle()}<span className="hidden max-w-[10rem] truncate sm:inline">{displayName}</span></>}>
       {pending || a === undefined ? <div className="skeleton h-40" /> : a === null ? <p>Could not load your account. Try again.</p> : (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <span className="avatar !size-12 text-lg" aria-hidden>{a.initials}</span>
+            {circle(true)}
             <div className="min-w-0"><p className="font-display text-lg font-bold">{a.name}</p><p className="text-sm text-muted">{a.progress.percent}% of your profile done</p></div>
           </div>
           <Facts rows={[

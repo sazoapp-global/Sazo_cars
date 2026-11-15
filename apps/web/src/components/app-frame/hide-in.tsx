@@ -8,6 +8,8 @@ import { usePathname } from 'next/navigation';
 // and a client part it uses must be one the page already loads. The root layout loads this file on every page.
 export { Flash } from '@/components/flash';
 export { ConfirmButton } from '@/components/confirm-button';
+// The photo picker in Your details (D-186), for the same reason.
+export { PictureForm } from '@/components/picture-form';
 
 export function HideIn({ workspaces, children }: { workspaces: WorkspaceKey[] | 'all'; children: React.ReactNode }) {
   const ws = workspaceOf(usePathname() ?? '');

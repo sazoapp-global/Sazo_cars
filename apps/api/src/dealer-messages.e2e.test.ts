@@ -217,6 +217,46 @@ describe.skipIf(!base)('messages between a dealer team and brokers (e2e)', () =>
     await http.get(`/v1/dealer/messages/${privateChat}`).set(as(quietManager, quietOrg)).expect(404);
   });
 
+  it('a manager adds, changes and removes the logo, every change kept; people in a business and brokers add a photo (D-186)', async () => {
+    const pic = async (seed: string) => ({ image: (await testPhoto(seed, { width: 120, height: 120 })).toString('base64'), mime: 'image/jpeg' });
+    // Only a manager of the business.
+    await http.put(`/v1/organisations/${orgId}/logo`).set(bearer(staff)).send(await pic('logo one')).expect(404);
+    expect((await http.put(`/v1/organisations/${orgId}/logo`).set(bearer(manager)).send({ image: Buffer.from('not a picture at all').toString('base64'), mime: 'image/png' }).expect(422)).body.code).toBe('not_a_picture');
+    const first = (await http.put(`/v1/organisations/${orgId}/logo`).set(bearer(manager)).send(await pic('logo one')).expect(200)).body.logoId;
+    const second = (await http.put(`/v1/organisations/${orgId}/logo`).set(bearer(manager)).send(await pic('logo two')).expect(200)).body.logoId;
+    expect(second).not.toBe(first);
+    // Anyone may fetch a logo by its id (it shows on shared car pages); the old one stays for the record.
+    const got = await http.get(`/v1/pictures/${second}`).expect(200);
+    expect(got.headers['content-type']).toBe('image/jpeg');
+    await http.get(`/v1/pictures/${first}`).expect(200);
+    // The team and the broker see it: on /me, the chat list, the chat itself and the dealers a broker may write to.
+    expect((await http.get('/v1/me').set(bearer(staff)).expect(200)).body.memberships.find((m: { organisationId: string }) => m.organisationId === orgId).logoId).toBe(second);
+    const brokerChats = (await http.get('/v1/broker/messages').set(bearer(broker1)).expect(200)).body;
+    expect(brokerChats.conversations.find((c: { organisationId: string }) => c.organisationId === orgId).pictureId).toBe(second);
+    expect((await http.get(`/v1/broker/messages/${orgId}`).set(bearer(broker1)).expect(200)).body.pictureId).toBe(second);
+    // A photo: the broker sets one; the team sees it on the broker's chat.
+    const photo = (await http.put('/v1/me/photo').set(bearer(broker1)).send(await pic('ivan')).expect(200)).body.photoId;
+    const team = (await http.get('/v1/dealer/messages').set(as(manager)).expect(200)).body.items;
+    expect(team.find((c: { kind: string; title: string }) => c.kind === 'broker' && /Ivan/.test(c.title)).pictureId).toBe(photo);
+    expect((await http.get('/v1/me').set(bearer(broker1)).expect(200)).body.photoId).toBe(photo);
+    // Removing a photo deletes it; it can no longer be fetched.
+    await http.delete('/v1/me/photo').set(bearer(broker1)).expect(200);
+    await http.get(`/v1/pictures/${photo}`).expect(404);
+    // Buyers and other people who are not in a business or a broker cannot add one.
+    const buyer = await signIn('+256772810099', 'Paul Buyer');
+    expect((await http.put('/v1/me/photo').set(bearer(buyer)).send(await pic('paul')).expect(403)).body.code).toBe('photo_not_allowed');
+    // Removing the logo is recorded too; the history names who made each change.
+    await http.delete(`/v1/organisations/${orgId}/logo`).set(bearer(manager)).expect(200);
+    await http.delete(`/v1/organisations/${orgId}/logo`).set(bearer(manager)).expect(409);
+    const history = (await http.get(`/v1/organisations/${orgId}/logo/history`).set(bearer(manager)).expect(200)).body.items;
+    expect(history.map((h: { change: string; by: string }) => [h.change, h.by])).toEqual([['removed', 'Manager Joseph'], ['changed', 'Manager Joseph'], ['added', 'Manager Joseph']]);
+    expect((await http.get('/v1/me').set(bearer(staff)).expect(200)).body.memberships.find((m: { organisationId: string }) => m.organisationId === orgId).logoId).toBeNull();
+    const audit = (await db.query(`SELECT action FROM iam.audit_entries WHERE target_id = $1 AND action LIKE 'organisation.logo%' ORDER BY at`, [orgId])).rows.map((r) => r.action);
+    expect(audit).toEqual(['organisation.logo_added', 'organisation.logo_changed', 'organisation.logo_removed']);
+    // The record can't be rewritten.
+    await expect(db.query(`DELETE FROM iam.organisation_logos WHERE organisation_id = $1`, [orgId])).rejects.toThrow();
+  });
+
   it('staff who leave the team lose access at once', async () => {
     const lucy = (await http.get('/v1/me').set(bearer(staff)).expect(200)).body.id as string;
     await db.query(`UPDATE iam.memberships SET status = 'removed' WHERE organisation_id = $1 AND user_id = $2`, [orgId, lucy]);

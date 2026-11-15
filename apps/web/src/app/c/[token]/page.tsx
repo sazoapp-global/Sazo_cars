@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/icon';
 import { StatusChip } from '@/components/status';
 import { ApiError, api } from '@/lib/api';
@@ -16,7 +17,7 @@ interface CarPage {
   vehicleRef: string; vehicle: VehicleCard | null;
   specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; colour: string | null; category?: CarCategory | null };
   askingPriceUgx: number; listedMileageKm: number | null; tiktokUrl: string | null; photos: string[]; questions: QuestionView[]; recordConfidence: RecordConfidence | null;
-  seller: { kind: 'dealer' | 'broker'; name: string | null; dealerName: string | null; whatsapp: string | null };
+  seller: { kind: 'dealer' | 'broker'; name: string | null; dealerName: string | null; whatsapp: string | null; pictureId?: string | null };
 }
 
 const FUEL: Record<string, string> = { petrol: 'Petrol', diesel: 'Diesel', hybrid: 'Hybrid', electric: 'Electric', lpg: 'Gas (LPG)', other: 'Other fuel' };
@@ -69,7 +70,11 @@ export default async function CarForSale({ params, searchParams }: { params: Pro
       )}
 
       <section aria-labelledby="car-name">
-        <p className="text-sm font-semibold uppercase tracking-wide text-label">{car.seller.kind === 'broker' ? `Shared by ${sellerName}` : car.seller.name ? `For sale at ${car.seller.name}` : 'For sale'}</p>
+        {/* The dealer's logo, or the broker's photo, beside who is selling (D-186). */}
+        <div className="mb-2 flex items-center gap-2.5">
+          {car.seller.pictureId && <Avatar name={sellerName ?? ''} pictureId={car.seller.pictureId} size={40} logo={car.seller.kind === 'dealer'} />}
+          <p className="text-sm font-semibold uppercase tracking-wide text-label">{car.seller.kind === 'broker' ? `Shared by ${sellerName}` : car.seller.name ? `For sale at ${car.seller.name}` : 'For sale'}</p>
+        </div>
         {/* D-163: buyers see whether the car is new, imported used or Ugandan used. */}
         {s.category && <p className="chip mb-2 w-fit border-primary-container bg-soft text-primary-container">{CAR_CATEGORY_LABELS[s.category]}</p>}
         <h1 id="car-name" className="font-display text-3xl font-extrabold tracking-tight">{name}</h1>

@@ -61,6 +61,16 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('heading', { name: 'Notifications', level: 1 })).toBeVisible();
   await expect(menu).toBeVisible();
   await dealer.goto(businessUrl);
+  // The logo (D-186): picked, it is saved at once and shows in the side bar; each change is listed with who made it.
+  const logoCard = dealer.getByRole('region', { name: 'Logo' });
+  await logoCard.locator('input[type=file]').setInputFiles('public/images/sazo-logo.webp');
+  await expect(dealer.getByRole('status')).toContainText('Logo saved');
+  await expect(logoCard).toContainText('Logo added by');
+  // On a phone the logo shows in the strip at the top, and large on the card.
+  await expect(dealer.locator('[data-phone-strip] img[src^="/pictures/"]')).toBeVisible();
+  await expect.poll(() => logoCard.locator('img[src^="/pictures/"]').first().evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+  await a11y(dealer);
+  await shot(dealer, 'dealer-logo');
   await dealer.getByRole('link', { name: 'Open your cars for sale' }).click();
   await expect(dealer.getByRole('heading', { name: `${NAME}: cars for sale` })).toBeVisible();
   // Approved: the car added while waiting has joined SAZO by itself, and the rest of the console is open.
@@ -77,6 +87,13 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('contentinfo')).toHaveCount(0);
   await menu.getByRole('link', { name: 'Settings' }).last().click();
   await expect(dealer.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  // A photo for people in a business (D-186): it replaces the initials at once.
+  await dealer.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: /^Your details/ }).click();
+  await dealer.locator('input[type=file][name=photo]').setInputFiles('public/images/mechanic.webp');
+  await expect(dealer.getByRole('status')).toContainText('Photo saved');
+  await expect(dealer.getByRole('button', { name: 'Change photo' })).toBeVisible();
+  await expect(dealer.getByRole('button', { name: /^Your details/ }).locator('img[src^="/pictures/"]')).toBeAttached();
+  await dealer.getByRole('link', { name: 'Back', exact: true }).click();
   await dealer.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: /^Appearance/ }).click();
   await dealer.getByRole('button', { name: 'Appearance: Same as device' }).click();
   await dealer.getByRole('group', { name: 'Appearance' }).getByRole('button', { name: 'Dark' }).click();

@@ -69,7 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {me && <Suspense><Bell unread={unread} /></Suspense>}
             <HideIn workspaces="all"><ThemeToggle /></HideIn>
             {me ? (
-              <AccountPopup displayName={me.displayName} initials={me.initials} />
+              <AccountPopup displayName={me.displayName} initials={me.initials} photoId={me.photoId} />
             ) : (
               <>
                 <Link href="/sign-in" className="px-2 text-sm font-semibold text-ink hover:text-primary-container">Log in</Link>

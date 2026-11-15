@@ -239,6 +239,48 @@ export class IamService {
     };
   }
 
+  // Logos and photos (D-186) ---------------------------------------------------------------------------------
+
+  logoIds(organisationIds: string[]) { return this.repo.logoIds(organisationIds); }
+  photoIds(userIds: string[]) { return this.repo.photoIds(userIds); }
+  picture(id: string) { return this.repo.picture(id); }
+
+  /** A manager adds, changes or removes the business's logo. No check by SAZO; every change is kept. */
+  async setLogo(actor: Actor, organisationId: string, picture: { bytes: Buffer; mime: string } | null): Promise<{ logoId: string | null } | 'no_logo'> {
+    return withTx(this.pool, async (tx) => {
+      const had = (await this.repo.logoIds([organisationId])).has(organisationId);
+      if (!picture && !had) return 'no_logo' as const;
+      const id = await this.repo.addLogo(tx, organisationId, actor.userId, picture);
+      await this.repo.audit(tx, { actorUserId: actor.userId, organisationId, action: !picture ? 'organisation.logo_removed' : had ? 'organisation.logo_changed' : 'organisation.logo_added',
+        targetType: 'organisation', targetId: organisationId, details: { logoId: id } });
+      return { logoId: picture ? id : null };
+    });
+  }
+
+  /** Every change to the logo, newest first, with who made it. */
+  async logoHistory(organisationId: string) {
+    const rows = await this.repo.logoHistory(organisationId);
+    const names = await this.repo.displayNames([...new Set(rows.map((r) => r.setBy))]);
+    return rows.map((r, i) => ({
+      logoId: r.hasPicture ? r.id : null,
+      change: !r.hasPicture ? 'removed' as const : rows[i + 1]?.hasPicture ? 'changed' as const : 'added' as const,
+      by: names.get(r.setBy) ?? 'Someone', at: r.createdAt.toISOString(),
+    }));
+  }
+
+  /** Personal photos are for people who work in a business and for brokers (D-186). */
+  canHavePhoto(actor: Actor): boolean {
+    return actor.platformRoles.includes('broker') || actor.memberships.some((m) => m.status === 'active');
+  }
+
+  async setPhoto(actor: Actor, picture: { bytes: Buffer; mime: string } | null): Promise<{ photoId: string | null }> {
+    return withTx(this.pool, async (tx) => {
+      const photoId = await this.repo.setPhoto(tx, actor.userId, picture);
+      await this.repo.audit(tx, { actorUserId: actor.userId, action: picture ? 'user.photo_changed' : 'user.photo_removed', targetType: 'user', targetId: actor.userId });
+      return { photoId };
+    });
+  }
+
   async anonymise(actor: Actor): Promise<void> {
     await this.audit({ actor, action: 'account.delete', targetType: 'user', targetId: actor.userId });
     await this.repo.anonymise(actor.userId);

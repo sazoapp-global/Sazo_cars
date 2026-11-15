@@ -15,6 +15,7 @@ import { loadSettings, loadYourData } from '@/app/account/settings-actions';
 // and the other Settings forms failed there with "Server Action was not found".
 import * as settingsFormActions from '@/app/account/actions';
 export const SETTINGS_FORM_ACTIONS = settingsFormActions;
+import { Avatar } from '@/components/avatar';
 import { Icon, type IconName } from '@/components/icon';
 import { NotificationsView } from '@/components/notifications/notifications-view';
 import { ThemeChoice } from '@/components/theme/theme-choice';
@@ -24,7 +25,7 @@ export interface RailProps {
   label: string;
   entries: NavEntry[];
   /** The business whose workspace this is, when there is one. */
-  business?: { name: string; approved: boolean; /** The lime badge's words, "Approved by SAZO" unless given. */ badge?: string };
+  business?: { name: string; approved: boolean; /** The lime badge's words, "Approved by SAZO" unless given. */ badge?: string; /** The business's logo (D-186). */ logoId?: string | null };
   person?: { name: string; role: string };
   badges?: Record<string, number>;
   /** A coloured count instead of a plain number: red or yellow (the dealer's Alerts, D-111). */
@@ -89,10 +90,13 @@ export function Rail({ label, entries, business, person, badges = {}, tones = {}
       <div className="shrink-0 border-b border-white/15 px-5 py-4">
         <p className="text-[11px] font-bold uppercase tracking-wider text-white/70">{label}</p>
         {business ? (
-          <>
-            <p className="truncate font-display text-lg font-bold leading-snug">{business.name}</p>
-            {business.approved && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-[11px] font-bold text-ink"><Icon name="verified_user" size={12} />{business.badge ?? 'Approved by SAZO'}</span>}
-          </>
+          <div className="flex items-center gap-3">
+            {business.logoId && <Avatar name={business.name} pictureId={business.logoId} size={44} logo className="ring-2 ring-white" />}
+            <div className="min-w-0">
+              <p className="truncate font-display text-lg font-bold leading-snug">{business.name}</p>
+              {business.approved && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-lime px-2 py-0.5 text-[11px] font-bold text-ink"><Icon name="verified_user" size={12} />{business.badge ?? 'Approved by SAZO'}</span>}
+            </div>
+          </div>
         ) : person && (
           <>
             <p className="truncate font-display text-lg font-bold leading-snug">{person.name}</p>
@@ -145,7 +149,9 @@ export function PhoneStrip({ label, entries, business, badges = {}, tones = {} }
   const links = [...entries.flatMap((e) => (isGroup(e) ? e.links : [e])), SETTINGS_LINK];
   return (
     <div data-phone-strip className="border-b-4 border-lime bg-primary text-white print:hidden lg:hidden">
-      <p className="px-4 pt-3 text-[11px] font-bold uppercase tracking-wider text-white/70">{label}{business ? ` · ${business.name}` : ''}</p>
+      <p className="flex items-center gap-2 px-4 pt-3 text-[11px] font-bold uppercase tracking-wider text-white/70">
+        {business?.logoId && <Avatar name={business.name} pictureId={business.logoId} size={22} logo />}{label}{business ? ` · ${business.name}` : ''}
+      </p>
       <nav aria-label={label} className="flex gap-1 overflow-x-auto px-2 pb-2 pt-1">
         {links.map((l) => (
           <Link key={l.key} href={href(l)} ref={active === l.key ? current : undefined} aria-current={active === l.key ? 'page' : undefined}

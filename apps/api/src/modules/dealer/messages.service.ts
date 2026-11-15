@@ -62,7 +62,8 @@ export class MessagesService {
     const chatWith = new Map(mine.map((c) => [c.memberA === actor.userId ? c.memberB! : c.memberA!, c.id]));
     return {
       teamSize: team.length,
-      people: team.filter((m) => m.userId !== actor.userId).map((m) => ({ ...m, conversationId: chatWith.get(m.userId) ?? null })),
+      people: await this.iam.photoIds(team.map((m) => m.userId)).then((photos) => team.filter((m) => m.userId !== actor.userId)
+        .map((m) => ({ ...m, pictureId: photos.get(m.userId) ?? null, conversationId: chatWith.get(m.userId) ?? null }))),
     };
   }
 
@@ -123,9 +124,10 @@ export class MessagesService {
     const open = await this.dealersOpenToBrokers();
     const started = new Set(rows.map((r) => r.organisationId));
     const conversations = await this.summaries(rows, actor);
+    const logos = await this.iam.logoIds(open);
     const dealers = await Promise.all(open.filter((id) => !started.has(id)).map(async (id) => {
       const o = await this.iam.organisation(id);
-      return { organisationId: id, name: o?.tradingName ?? o?.legalName ?? '', district: o?.district ?? null };
+      return { organisationId: id, name: o?.tradingName ?? o?.legalName ?? '', district: o?.district ?? null, pictureId: logos.get(id) ?? null };
     }));
     return { conversations, dealers: dealers.sort((a, b) => a.name.localeCompare(b.name)) };
   }
@@ -140,10 +142,12 @@ export class MessagesService {
     const c = await this.repo.brokerConversation(organisationId, actor.userId);
     if (c) return this.thread(actor, c);
     const o = await this.iam.organisation(organisationId);
-    const team = (await this.teamMembers(organisationId)).map((m) => ({ ...m, you: false }));
+    const members = await this.teamMembers(organisationId);
+    const [logos, photos] = await Promise.all([this.iam.logoIds([organisationId]), this.iam.photoIds([actor.userId, ...members.map((m) => m.userId)])]);
+    const team = members.map((m) => ({ ...m, you: false, pictureId: photos.get(m.userId) ?? null }));
     const me = (await this.iam.displayNames([actor.userId])).get(actor.userId) ?? '';
-    return { conversationId: null, kind: 'broker' as const, organisationId, title: o?.tradingName ?? o?.legalName ?? '', members: team,
-      people: [{ userId: actor.userId, name: me, role: 'Broker', you: true }, ...team], messages: [], seenBy: [] };
+    return { conversationId: null, kind: 'broker' as const, organisationId, title: o?.tradingName ?? o?.legalName ?? '', pictureId: logos.get(organisationId) ?? null, members: team,
+      people: [{ userId: actor.userId, name: me, role: 'Broker', you: true, pictureId: photos.get(actor.userId) ?? null }, ...team], messages: [], seenBy: [] };
   }
 
   async brokerSend(actor: Actor, organisationId: string, body: string, stockId?: string) {
@@ -202,16 +206,22 @@ export class MessagesService {
     const seenAt = (m: MessageRow) => reads.some((r) => r.userId !== m.senderUserId && r.lastReadAt >= m.createdAt);
     const last = rows.at(-1);
     const dealerName = o?.tradingName ?? o?.legalName ?? '';
+    // Logos and photos (D-186): the business's logo, and each person's photo.
+    const [logo, photos] = await Promise.all([
+      this.iam.logoIds([c.organisationId]).then((m) => m.get(c.organisationId) ?? null),
+      this.iam.photoIds([...new Set([...people.keys(), c.memberA, c.memberB].filter((x): x is string => !!x))]),
+    ]);
+    const withPhoto = <T extends { userId: string }>(m: T) => ({ ...m, pictureId: photos.get(m.userId) ?? null });
     if (c.kind === 'direct') {
       // Only the two of them; one who has left the team shows as "Left the team" and the chat is closed.
       const pair = [c.memberA!, c.memberB!];
       const names = await this.iam.displayNames(pair.filter((id) => !people.has(id)));
       for (const [id, name] of names) people.set(id, { name, role: 'Left the team' });
       const other = pair.find((id) => id !== actor.userId)!;
-      const pairPeople = pair.map((id) => ({ userId: id, ...(people.get(id) ?? { name: 'Someone', role: '' }), you: id === actor.userId }))
+      const pairPeople = pair.map((id) => withPhoto({ userId: id, ...(people.get(id) ?? { name: 'Someone', role: '' }), you: id === actor.userId }))
         .sort((a, b) => Number(a.you) - Number(b.you));
       return {
-        conversationId: c.id, kind: c.kind, organisationId: c.organisationId, title: people.get(other)?.name ?? 'Someone',
+        conversationId: c.id, kind: c.kind, organisationId: c.organisationId, title: people.get(other)?.name ?? 'Someone', pictureId: photos.get(other) ?? null,
         role: people.get(other)?.role ?? '', closed: !team.some((m) => m.userId === other),
         members: pairPeople, people: pairPeople,
         messages: rows.map((m) => ({
@@ -224,12 +234,14 @@ export class MessagesService {
     return {
       conversationId: c.id, kind: c.kind, organisationId: c.organisationId,
       title: c.kind === 'team' ? `${dealerName} team` : actor.userId === c.brokerUserId ? dealerName : brokerName!,
+      /** The chat's picture: the dealer's logo, or the broker's photo when the dealer's team reads it. */
+      pictureId: c.kind === 'broker' && actor.userId !== c.brokerUserId ? photos.get(c.brokerUserId!) ?? null : logo,
       /** The dealer's team (managers and sales staff); "you" marks the reader. */
-      members: team.map((m) => ({ ...m, you: m.userId === actor.userId })),
+      members: team.map((m) => withPhoto({ ...m, you: m.userId === actor.userId })),
       /** Everyone in the chat, for its details: the broker first in a broker's chat, then the team. */
       people: [
-        ...(c.brokerUserId ? [{ userId: c.brokerUserId, name: brokerName!, role: 'Broker', you: c.brokerUserId === actor.userId }] : []),
-        ...team.map((m) => ({ ...m, you: m.userId === actor.userId })),
+        ...(c.brokerUserId ? [withPhoto({ userId: c.brokerUserId, name: brokerName!, role: 'Broker', you: c.brokerUserId === actor.userId })] : []),
+        ...team.map((m) => withPhoto({ ...m, you: m.userId === actor.userId })),
       ],
       messages: rows.map((m) => ({
         id: m.id, mine: m.senderUserId === actor.userId, sender: people.get(m.senderUserId) ?? { name: 'Someone', role: '' },
@@ -248,8 +260,15 @@ export class MessagesService {
       const o = await this.iam.organisation(id);
       orgs.set(id, o?.tradingName ?? o?.legalName ?? '');
     }
+    const other = (r: ConversationSummary) => r.kind === 'direct' ? (r.memberA === actor.userId ? r.memberB! : r.memberA!) : r.brokerUserId;
+    const [logos, photos] = await Promise.all([
+      this.iam.logoIds([...new Set(rows.map((r) => r.organisationId))]),
+      this.iam.photoIds(rows.map(other).filter((x): x is string => !!x)),
+    ]);
     return rows.map((r) => ({
       conversationId: r.id, kind: r.kind, organisationId: r.organisationId,
+      /** The chat's picture (D-186): the other person's photo, or the dealer's logo for the team's chat and for a broker. */
+      pictureId: r.kind === 'team' || actor.userId === r.brokerUserId ? logos.get(r.organisationId) ?? null : photos.get(other(r)!) ?? null,
       title: r.kind === 'team' ? `${dealerName ?? orgs.get(r.organisationId)} team`
         : r.kind === 'direct' ? names.get(r.memberA === actor.userId ? r.memberB! : r.memberA!) ?? 'Someone'
         : actor.userId === r.brokerUserId ? orgs.get(r.organisationId)! : names.get(r.brokerUserId!) ?? 'Broker',

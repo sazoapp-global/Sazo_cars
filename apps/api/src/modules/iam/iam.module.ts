@@ -8,11 +8,12 @@ import { IamRepository } from './iam.repository.js';
 import { IamService } from './iam.service.js';
 import { BrokersService } from './brokers.service.js';
 import { IdentityService } from './identity.service.js';
+import { PicturesController } from './pictures.controller.js';
 import { OrganisationsController } from './organisations.controller.js';
 
 @Module({
   imports: [NotifyModule],
-  controllers: [AuthController, OrganisationsController],
+  controllers: [AuthController, OrganisationsController, PicturesController],
   providers: [IamRepository, IdentityService, AuthService, IamService, BrokersService, { provide: APP_GUARD, useClass: AuthGuard }],
   exports: [AuthService, IamService, BrokersService, IdentityService],
 })

@@ -163,7 +163,7 @@ describe.skipIf(!base)('brokers: identity check, marketplace, protection, decisi
     const l1 = (await http.post(`/v1/broker/cars/${openFixed}/links`).set(bearer(broker1)).send({ channel: 'tiktok' }).expect(201)).body;
     b1Token = l1.token;
     const page = (await http.get(`/v1/cars/${b1Token}`).expect(200)).body;
-    expect(page.seller).toEqual({ kind: 'broker', name: 'Ivan Kato', dealerName: null, whatsapp: '+256772800021' });
+    expect(page.seller).toEqual({ kind: 'broker', name: 'Ivan Kato', dealerName: null, whatsapp: '+256772800021', pictureId: null });
     await http.post(`/v1/cars/${b1Token}/enquiries`).send({ name: 'Peter Mugisha', phone: '+256701111222', consent: true }).expect(201);
     // The same customer later comes through the dealer's own WhatsApp link about another car.
     const dl = (await http.post(`/v1/dealer/stock/${openPercent}/links`).set(as(staff)).send({ channel: 'whatsapp' }).expect(201)).body;

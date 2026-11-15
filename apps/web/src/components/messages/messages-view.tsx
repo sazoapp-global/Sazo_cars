@@ -3,6 +3,7 @@
 // in that same space, with a back arrow to the list and (i) for the chat's details.
 import { CAR_CATEGORY_LABELS, KIND_LABELS, formatUgx, isCarCategory, isVehicleKind } from '@sazo/contracts';
 import Link from 'next/link';
+import { Avatar as Picture } from '@/components/avatar';
 import { Icon } from '@/components/icon';
 import { AutoRefresh } from './auto-refresh';
 import { ChatList, type ChatRow, type NewChat } from './chat-list';
@@ -24,7 +25,6 @@ function listWhen(iso: string) {
   const l = dayLabel(iso);
   return l === 'Today' ? clock(iso) : l === 'Yesterday' ? l : new Date(iso).toLocaleDateString('en-GB', { timeZone: ZONE, day: 'numeric', month: 'short' });
 }
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
 /** Each writer's name keeps one colour in a chat, as on WhatsApp; brokers are always green. */
 const NAME_COLOURS = ['#0033aa', '#7c3aed', '#b45309', '#0f766e', '#be185d', '#1d4ed8'];
@@ -37,13 +37,9 @@ function nameColour(name: string, role: string) {
 /** The chat's soft dotted background. */
 const WALLPAPER = { backgroundColor: 'var(--color-soft)', backgroundImage: 'radial-gradient(color-mix(in srgb, var(--color-primary-container) 9%, transparent) 1.2px, transparent 1.2px)', backgroundSize: '18px 18px' };
 
-function Avatar({ name, broker, size = 44 }: { name: string; broker?: boolean; size?: number }) {
-  return (
-    <span aria-hidden style={{ width: size, height: size, fontSize: size > 40 ? 15 : 12 }}
-      className={`grid shrink-0 place-items-center rounded-full font-extrabold ${broker ? 'bg-lime text-ink' : 'bg-primary-container text-white'}`}>
-      {initials(name)}
-    </span>
-  );
+/** A photo or logo when there is one (D-186), otherwise initials: brokers' in lime, the dealer's team navy. */
+function Avatar({ name, broker, size = 44, pictureId, logo }: { name: string; broker?: boolean; size?: number; pictureId?: string | null; logo?: boolean }) {
+  return <Picture name={name} pictureId={pictureId} size={size} tone={broker ? 'lime' : 'navy'} logo={logo} />;
 }
 
 const carKind = (car: CarCard) => [car.category && isCarCategory(car.category) ? CAR_CATEGORY_LABELS[car.category] : null, car.kind && isVehicleKind(car.kind) ? KIND_LABELS[car.kind] : null].filter(Boolean).join(' · ');
@@ -66,7 +62,7 @@ function Car({ car, photo }: { car: CarCard; photo: (c: CarCard) => string | nul
 export interface MessagesViewProps {
   items: ConversationItem[];
   /** Dealers a broker may start a chat with. */
-  start?: { organisationId: string; name: string; district: string | null }[];
+  start?: { organisationId: string; name: string; district: string | null; pictureId?: string | null }[];
   /** The address of a chat (and of a dealer to start one with). */
   href: (key: string) => string;
   selected?: string;
@@ -100,13 +96,16 @@ function List({ items, start = [], href, side, newChat }: MessagesViewProps) {
     group: c.kind === 'team' || c.kind === 'direct' ? 'team' : side === 'dealer' ? 'broker' : 'dealer',
     last: c.last ? `${c.last.sender === 'You' || c.kind === 'team' ? `${c.last.sender}: ` : ''}${c.last.body}` : 'No messages yet',
     when: c.last ? listWhen(c.last.at) : '', unread: c.unread, lime: side === 'dealer' && c.kind === 'broker',
+    pictureId: c.pictureId ?? null, logo: c.kind === 'team' || side === 'broker',
   }));
   return <ChatList rows={rows} chips={side === 'dealer' ? ['team', 'broker'] : []} newChat={newChat}
-    start={start.map((d) => ({ key: d.organisationId, href: href(d.organisationId), title: d.name, detail: d.district }))} />;
+    start={start.map((d) => ({ key: d.organisationId, href: href(d.organisationId), title: d.name, detail: d.district, pictureId: d.pictureId ?? null }))} />;
 }
 
 function Chat({ thread, side, photo, composer, backHref, info, error }: MessagesViewProps & { thread: Thread }) {
   const brokerChat = side === 'dealer' && thread.kind === 'broker';
+  // The chat's picture is the dealer's logo in the team's chat and for a broker; otherwise a person's photo.
+  const logo = thread.kind === 'team' || side === 'broker';
   const subtitle = brokerChat
     ? `Broker · ${['you', ...thread.members.filter((m) => !m.you).map((m) => m.name)].join(', ').replace(/, ([^,]*)$/, ' and $1')} see this chat`
     : thread.members.map((m) => `${m.name} (${m.role.toLowerCase()})`).join(', ');
@@ -118,7 +117,7 @@ function Chat({ thread, side, photo, composer, backHref, info, error }: Messages
       <section aria-label={thread.title} className={`flex min-w-0 flex-1 flex-col ${info?.open ? 'max-lg:hidden' : ''}`}>
         <header className="sticky top-16 z-20 flex items-center gap-3 border-b border-line bg-card px-3 py-2.5 lg:static md:px-4">
           <Link href={backHref} aria-label="Back to your chats" className="grid h-10 w-10 shrink-0 place-items-center rounded-full hover:bg-soft"><Icon name="arrow_back" /></Link>
-          <Avatar name={thread.title} broker={brokerChat} size={42} />
+          <Avatar name={thread.title} broker={brokerChat} size={42} pictureId={thread.pictureId} logo={logo} />
           <span className="min-w-0 flex-1">
             <h1 className="truncate text-base font-bold">{thread.title}</h1>
             <span className="block truncate text-[13px] text-muted">
@@ -182,7 +181,7 @@ function Chat({ thread, side, photo, composer, backHref, info, error }: Messages
           </div>
           <div className="overflow-y-auto">
             <div className="flex flex-col items-center border-b border-line px-5 py-6 text-center">
-              <Avatar name={thread.title} broker={brokerChat} size={84} />
+              <Avatar name={thread.title} broker={brokerChat} size={84} pictureId={thread.pictureId} logo={logo} />
               <p className="mt-3 text-xl font-extrabold">{thread.title}</p>
               <p className="text-sm text-muted">{thread.kind === 'team' ? 'Your team' : thread.kind === 'direct' ? `${thread.role} · a private chat` : brokerChat ? 'Approved broker' : 'Dealer'}</p>
             </div>
@@ -191,7 +190,7 @@ function Chat({ thread, side, photo, composer, backHref, info, error }: Messages
               <ul className="mt-2 space-y-3">
                 {thread.people.map((m) => (
                   <li key={m.userId} className="flex items-center gap-3">
-                    <Avatar name={m.name} broker={m.role === 'Broker'} size={38} />
+                    <Avatar name={m.name} broker={m.role === 'Broker'} size={38} pictureId={m.pictureId} />
                     <span><span className="block font-semibold">{m.name}{m.you ? ' (you)' : ''}</span><span className="block text-xs text-muted">{m.role}</span></span>
                   </li>
                 ))}

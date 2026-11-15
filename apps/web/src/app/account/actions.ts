@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ACCESS_COOKIE, ApiError, REFRESH_COOKIE, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
+import { PictureProblem, squarePicture } from '@/lib/picture';
 
 const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 /**
@@ -88,4 +89,23 @@ export async function deleteAccount(form: FormData) {
   jar.delete(ACCESS_COOKIE);
   jar.delete(REFRESH_COOKIE);
   redirect('/?deleted=1');
+}
+
+/** Your photo (D-186): made square and small here, then kept by SAZO. People in a business and brokers. */
+export async function setPhoto(form: FormData) {
+  const file = form.get('photo');
+  if (!(file instanceof File) || file.size === 0) back(form, { error: 'Choose a photo.' });
+  try {
+    const pic = await squarePicture(file as File, 'photo');
+    await api('/me/photo', { method: 'PUT', auth: true, body: pic });
+  } catch (err) { back(form, { error: err instanceof PictureProblem ? err.message : why(err, 'Could not save your photo.') }); }
+  revalidatePath('/', 'layout');
+  back(form, { done: 'Photo saved. Your team and the brokers you chat with see it.' });
+}
+
+/** Back to your initials. SAZO deletes the photo. */
+export async function removePhoto(form: FormData) {
+  try { await api('/me/photo', { method: 'DELETE', auth: true }); } catch (err) { back(form, { error: why(err, 'Could not remove your photo.') }); }
+  revalidatePath('/', 'layout');
+  back(form, { done: 'Photo removed.' });
 }

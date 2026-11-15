@@ -4,11 +4,17 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Icon, type IconName } from '@/components/icon';
 import { api, isSignedIn } from '@/lib/api';
-import type { MyOrganisation } from '@/lib/types';
-import { sendDocuments, sendIdentity } from '../actions';
+import type { Me, MyOrganisation } from '@/lib/types';
+import { removeLogo, sendDocuments, sendIdentity, setLogo } from '../actions';
+import { Avatar } from '@/components/avatar';
+import { PictureForm } from '@/components/picture-form';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 
 export const metadata: Metadata = { title: 'Your business' };
+
+interface LogoChange { logoId: string | null; change: 'added' | 'changed' | 'removed'; by: string; at: string }
+const CHANGE = { added: 'Logo added by', changed: 'Logo changed by', removed: 'Logo removed by' } as const;
+const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { timeZone: 'Africa/Kampala', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 interface IdentityCheck { status: 'pending' | 'approved' | 'rejected'; decisionReason: string | null }
 
@@ -20,12 +26,17 @@ export default async function BusinessStatus({ params, searchParams }: { params:
   const { id } = await params;
   const sp = await searchParams;
   if (!(await isSignedIn())) redirect(`/sign-in?next=/business/${id}`);
-  const [orgs, identity] = await Promise.all([
+  const [orgs, identity, me] = await Promise.all([
     api<MyOrganisation[]>('/me/organisations', { auth: true }),
     api<{ check: IdentityCheck | null }>('/me/identity', { auth: true }).then((r) => r.check).catch(() => null),
+    api<Me>('/me', { auth: true }).catch(() => undefined),
   ]);
   const org = orgs.find((o) => o.id === id);
   if (!org) notFound();
+  // The logo (D-186): managers change it; every change is kept, with who made it and when.
+  const logoId = me?.memberships.find((m) => m.organisationId === id)?.logoId ?? null;
+  const logoManager = org.role === 'org_manager' && org.status !== 'rejected' && org.status !== 'suspended';
+  const history = logoManager ? await api<{ items: LogoChange[] }>(`/organisations/${id}/logo/history`, { auth: true }).then((r) => r.items).catch(() => [] as LogoChange[]) : [];
   const name = org.tradingName ?? org.legalName;
   const pending = org.status === 'pending_verification';
   // A dealer's page sits inside the dealer console (its layout adds the side bar): it uses the whole width (28 Oct 2026).
@@ -40,7 +51,10 @@ export default async function BusinessStatus({ params, searchParams }: { params:
       {sp.new && <p role="status" className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{name} is registered. Next: send your documents and your National ID.</p>}
       {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
-      <h1 className="font-display text-2xl font-bold">{name}</h1>
+      <div className="flex items-center gap-3">
+        {logoId && <Avatar name={name} pictureId={logoId} size={48} logo />}
+        <h1 className="font-display text-2xl font-bold">{name}</h1>
+      </div>
       <ol className="card flex flex-col gap-3 p-4 sm:flex-row sm:justify-between" aria-label="Approval progress">
         {steps.map((s) => (
           <li key={s.label} className={`flex items-center gap-2 font-semibold ${s.state === 'later' ? 'text-label' : s.state === 'now' ? 'text-warn-text' : org.status === 'rejected' || org.status === 'suspended' ? 'text-bad-text' : 'text-ok-text'}`}>
@@ -55,6 +69,35 @@ export default async function BusinessStatus({ params, searchParams }: { params:
           <p className="font-semibold text-warn-text">SAZO asked:</p>
           <p className="mt-1">“{org.infoRequested}”</p>
         </div>
+      )}
+
+      {logoManager && (
+        <section id="logo" className="card scroll-mt-24 p-4 xl:col-span-2" aria-labelledby="logo-h">
+          <h2 id="logo-h" className="font-display text-lg font-semibold">Logo</h2>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <Avatar name={name} pictureId={logoId} size={88} logo />
+            <div className="min-w-[220px] flex-1">
+              <p className="font-semibold">Shows instead of your initials: in your side bar, your chats with brokers, the list of dealers brokers see, and the car pages you share.</p>
+              <p className="mt-1 text-sm text-muted">JPG, PNG or WebP, up to 8 MB. SAZO fits it into a square on white. Only managers can change it.</p>
+            </div>
+            <PictureForm field="logo" has={!!logoId} chooseLabel="Add your logo" changeLabel="Change logo" action={setLogo} remove={removeLogo} hidden={{ id: org.id }}
+              removeTitle="Remove your logo?" removeText="Your initials show again. SAZO keeps the old logo on record." />
+          </div>
+          {history.length > 0 && (
+            <>
+              <h3 className="mt-4 text-xs font-extrabold uppercase tracking-wider text-label">Changes</h3>
+              <ul className="mt-1 divide-y divide-line text-sm">
+                {history.slice(0, 10).map((h, i) => (
+                  <li key={i} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
+                    <span className="flex items-center gap-2">{h.logoId ? <Avatar name={name} pictureId={h.logoId} size={24} logo /> : <Icon name="delete" size={20} className="text-muted" />}{CHANGE[h.change]} <b>{h.by}</b></span>
+                    <span className="text-muted">{when(h.at)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-muted">SAZO keeps every logo you have used, with who changed it and when.</p>
+            </>
+          )}
+        </section>
       )}
 
       {pending && org.role === 'org_manager' && (

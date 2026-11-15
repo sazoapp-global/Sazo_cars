@@ -6,6 +6,7 @@ import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import type { Actor } from './actor.js';
 import { CurrentActor, Public, RequirePermission } from './auth.guard.js';
 import { AuthError, AuthService, type LoginContext } from './auth.service.js';
+import { IamService } from './iam.service.js';
 
 const Phone = z.string().regex(/^\+[1-9][0-9]{7,14}$/, 'Use international format, e.g. +256772123456');
 const Password = z.string().min(1).max(128);
@@ -39,7 +40,7 @@ const ctxOf = (ua: string | undefined, ip: string | undefined, deviceToken?: str
 
 @Controller()
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly auth: AuthService, @Inject(APP_CONFIG) private readonly cfg: AppConfig) {}
+  constructor(@Inject(AuthService) private readonly auth: AuthService, @Inject(APP_CONFIG) private readonly cfg: AppConfig, @Inject(IamService) private readonly iam: IamService) {}
 
   /** POST /v1/auth/signup/email — create an account with email and password (D-100). Logs in at once; a link confirms the email. */
   @Public()
@@ -250,10 +251,14 @@ export class AuthController {
   @Get('me')
   async me(@CurrentActor() actor: Actor) {
     const d = await this.auth.summary(actor.userId);
+    const [photos, logos] = await Promise.all([this.iam.photoIds([actor.userId]), this.iam.logoIds(actor.memberships.map((m) => m.organisationId))]);
     return {
       id: actor.userId,
       displayName: actor.displayName,
       initials: d.initials,
+      /** Your photo and each business's logo (D-186): ids for GET /v1/pictures/:id, or null. */
+      photoId: photos.get(actor.userId) ?? null,
+      canHavePhoto: this.iam.canHavePhoto(actor),
       needsDetails: d.needsDetails,
       platformRoles: actor.platformRoles,
       memberships: actor.memberships.map((m) => ({
@@ -263,6 +268,7 @@ export class AuthController {
         organisationStatus: m.organisationStatus,
         role: m.role,
         status: m.status,
+        logoId: logos.get(m.organisationId) ?? null,
       })),
     };
   }

@@ -102,6 +102,8 @@ export class SellingService {
     const settings = await this.stock.settings(link.organisationId);
     const broker = link.brokerUserId && brokerContact ? await brokerContact(link.brokerUserId) : undefined;
     const d = view.details;
+    // The dealer's logo beside its name (D-186). Not on a broker's link: people's photos stay inside SAZO.
+    const pictureId = !broker && link.showDealerName ? (await this.iam.logoIds([link.organisationId])).get(link.organisationId) ?? null : null;
     return {
       vehicleRef: view.vehicleRef!,
       vehicle: view.vehicle,
@@ -114,8 +116,8 @@ export class SellingService {
       // The public link shows no figures (P-002).
       questions: view.questions.map((q) => ({ question: q.question, status: q.status, headlineKey: q.headlineKey })),
       recordConfidence: view.recordConfidence,
-      seller: broker ? { kind: 'broker' as const, name: broker.name, dealerName: link.showDealerName ? org?.tradingName ?? org?.legalName ?? null : null, whatsapp: broker.whatsapp }
-        : { kind: 'dealer' as const, name: link.showDealerName ? org?.tradingName ?? org?.legalName ?? null : null, dealerName: null, whatsapp: settings.whatsappE164 },
+      seller: broker ? { kind: 'broker' as const, name: broker.name, dealerName: link.showDealerName ? org?.tradingName ?? org?.legalName ?? null : null, whatsapp: broker.whatsapp, pictureId: null }
+        : { kind: 'dealer' as const, name: link.showDealerName ? org?.tradingName ?? org?.legalName ?? null : null, dealerName: null, whatsapp: settings.whatsappE164, pictureId },
     };
   }
 

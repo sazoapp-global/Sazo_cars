@@ -102,8 +102,10 @@ export interface Me {
   initials: string;
   /** Details an older account must still give before using SAZO (D-101). */
   needsDetails: string[];
+  /** Your photo (D-186), and whether you may add one (people in a business and brokers). */
+  photoId?: string | null; canHavePhoto?: boolean;
   platformRoles: string[];
-  memberships: { organisationId: string; organisationName: string; organisationType: string; organisationStatus: string; role: string; status: string }[];
+  memberships: { organisationId: string; organisationName: string; organisationType: string; organisationStatus: string; role: string; status: string; logoId?: string | null }[];
 }
 
 export interface AttestationView {

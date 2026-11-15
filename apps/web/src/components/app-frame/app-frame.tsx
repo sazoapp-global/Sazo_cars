@@ -30,20 +30,22 @@ export async function AppFrame({ workspace, viewer, org, business, person, badge
     workspace === 'dealer' && org ? api<{ unread: number }>('/dealer/messages/unread', { auth: true, headers: { 'X-Organisation-Id': org } }).then((r) => r.unread).catch(() => 0)
       : workspace === 'broker' ? api<{ unread: number }>('/broker/messages/unread', { auth: true }).then((r) => r.unread).catch(() => 0) : Promise.resolve(0),
   ]);
+  // The business's logo (D-186), from the person's own memberships.
+  const shown = business ? { ...business, logoId: me?.memberships.find((m) => m.organisationId === org)?.logoId ?? null } : undefined;
   const all = { ...badges, notifications: unread, ...(alerts?.count ? { alerts: alerts.count } : {}), ...(messages ? { messages } : {}) };
   const tones: Record<string, 'red' | 'yellow' | 'lime'> = { ...(alerts?.tone ? { alerts: alerts.tone } : {}), messages: 'lime' };
   return (
     <>
       <Suspense>
-        <Rail label={ws.label} entries={entries} business={business} person={person} badges={all} tones={tones} />
-        <PhoneStrip label={ws.label} entries={entries} business={business} badges={all} tones={tones} />
+        <Rail label={ws.label} entries={entries} business={shown} person={person} badges={all} tones={tones} />
+        <PhoneStrip label={ws.label} entries={entries} business={shown} badges={all} tones={tones} />
       </Suspense>
       <div data-workspace-frame className="min-w-0 lg:pl-64">
         <div className="sticky top-0 z-30 hidden h-12 items-center gap-4 border-b border-line bg-card px-6 print:!hidden lg:flex">
           <p className="min-w-0 flex-1 truncate text-xs text-muted">Testing: records are simulated, not real cars.</p>
           <OnlineStatus />
           <Suspense><Bell unread={unread} /></Suspense>
-          {me && <AccountPopup displayName={me.displayName} initials={me.initials} />}
+          {me && <AccountPopup displayName={me.displayName} initials={me.initials} photoId={me.photoId} />}
         </div>
         {/* The whole space beside the side bar (28 Oct 2026): pages lay themselves out in columns, not a centred strip. */}
         <div className="w-full space-y-6 px-4 py-6 md:px-8 md:py-8">

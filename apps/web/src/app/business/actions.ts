@@ -2,6 +2,8 @@
 import { redirect } from 'next/navigation';
 import { ApiError, api } from '@/lib/api';
 import { toE164 } from '@/lib/phone';
+import { revalidatePath } from 'next/cache';
+import { PictureProblem, squarePicture } from '@/lib/picture';
 import { UnreadablePicture, filesFrom, isPicture, isPictureOrPdf, uploadEvidence } from '@/lib/upload';
 
 export type RegisterState = { error?: string; fields?: Record<string, string> };
@@ -62,4 +64,31 @@ export async function sendIdentity(form: FormData): Promise<void> {
     back('error=' + encodeURIComponent(err instanceof UnreadablePicture ? err.message : err instanceof ApiError && err.detail ? err.detail : 'Your ID could not be sent. Please try again.'));
   }
   back('done=' + encodeURIComponent('Your National ID was sent. SAZO checks it with your business.'));
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The business's logo (D-186): a manager adds or changes it; it shows at once and the change is kept on record. */
+export async function setLogo(form: FormData): Promise<void> {
+  const id = String(form.get('id') ?? '');
+  if (!UUID.test(id)) redirect('/account');
+  const back = (q: Record<string, string>) => redirect(`/business/${id}?${new URLSearchParams(q)}#logo`);
+  const file = form.get('logo');
+  if (!(file instanceof File) || file.size === 0) back({ error: 'Choose a picture of your logo.' });
+  try {
+    await api(`/organisations/${id}/logo`, { method: 'PUT', auth: true, body: await squarePicture(file as File, 'logo') });
+  } catch (err) {
+    back({ error: err instanceof PictureProblem ? err.message : err instanceof ApiError && err.detail ? err.detail : 'The logo could not be saved. Please try again.' });
+  }
+  revalidatePath('/', 'layout');
+  back({ done: 'Logo saved. It shows on your side bar, your chats with brokers and the car pages you share.' });
+}
+
+export async function removeLogo(form: FormData): Promise<void> {
+  const id = String(form.get('id') ?? '');
+  if (!UUID.test(id)) redirect('/account');
+  try { await api(`/organisations/${id}/logo`, { method: 'DELETE', auth: true }); }
+  catch (err) { redirect(`/business/${id}?error=${encodeURIComponent(err instanceof ApiError && err.detail ? err.detail : 'The logo could not be removed.')}#logo`); }
+  revalidatePath('/', 'layout');
+  redirect(`/business/${id}?done=${encodeURIComponent('Logo removed. SAZO keeps it on record.')}#logo`);
 }

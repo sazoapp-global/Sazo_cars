@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Avatar } from '@/components/avatar';
 import { Icon } from '@/components/icon';
 import type { TeamPerson } from './types';
 
-export interface ChatRow { key: string; href: string; title: string; label: string; group: 'team' | 'broker' | 'dealer'; last: string; when: string; unread: number; lime: boolean }
-export interface StartRow { key: string; href: string; title: string; detail: string | null }
+export interface ChatRow { key: string; href: string; title: string; label: string; group: 'team' | 'broker' | 'dealer'; last: string; when: string; unread: number; lime: boolean; pictureId?: string | null; logo?: boolean }
+export interface StartRow { key: string; href: string; title: string; detail: string | null; pictureId?: string | null }
 /** New chat (D-177): the button at the bottom right of the list, and the screen of the team it opens. */
 export interface NewChat {
   open: boolean; openHref: string; closeHref: string;
@@ -18,7 +19,6 @@ export interface NewChat {
   error?: string;
 }
 
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
 
 /**
  * The chats (D-174, 11 Nov 2026): the whole space beside the side bar, with a search across the names and
@@ -54,7 +54,7 @@ export function ChatList({ rows, start = [], chips, newChat }: { rows: ChatRow[]
           {shown.map((r) => (
             <li key={r.key}>
               <Link href={r.href} className="flex items-center gap-4 px-4 hover:bg-soft md:px-8">
-                <span aria-hidden className={`grid h-12 w-12 shrink-0 place-items-center rounded-full text-[15px] font-extrabold ${r.lime ? 'bg-lime text-ink' : 'bg-primary-container text-white'}`}>{initials(r.title)}</span>
+                <Avatar name={r.title} pictureId={r.pictureId} size={48} tone={r.lime ? 'lime' : 'navy'} logo={r.logo} />
                 <span className="flex min-w-0 flex-1 items-center gap-3 border-b border-line py-3.5">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[16px] font-bold">{r.title}</span>
@@ -80,7 +80,7 @@ export function ChatList({ rows, start = [], chips, newChat }: { rows: ChatRow[]
               {startShown.map((s) => (
                 <li key={s.key}>
                   <Link href={s.href} className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-soft">
-                    <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary-container text-xs font-extrabold text-white">{initials(s.title)}</span>
+                    <Avatar name={s.title} pictureId={s.pictureId} size={40} logo />
                     <span className="min-w-0"><span className="block truncate font-semibold">{s.title}</span>{s.detail && <span className="block text-xs text-muted">{s.detail}</span>}</span>
                   </Link>
                 </li>
@@ -143,7 +143,7 @@ function NewChatScreen({ closeHref, team, people, chatHref, action, hidden, erro
           <li key={p.userId}>
             {p.conversationId ? (
               <Link href={`${chatHref}${p.conversationId}`} className="flex items-center gap-4 px-4 hover:bg-soft md:px-8">
-                <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary-container text-[15px] font-extrabold text-white">{initials(p.name)}</span>
+                <Avatar name={p.name} pictureId={p.pictureId} size={48} />
                 {body(p.name, `${p.role} · a private chat, only you two`)}
               </Link>
             ) : (
@@ -151,7 +151,7 @@ function NewChatScreen({ closeHref, team, people, chatHref, action, hidden, erro
                 {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
                 <input type="hidden" name="user" value={p.userId} />
                 <button type="submit" className="flex w-full items-center gap-4 px-4 hover:bg-soft md:px-8">
-                  <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary-container text-[15px] font-extrabold text-white">{initials(p.name)}</span>
+                  <Avatar name={p.name} pictureId={p.pictureId} size={48} />
                   {body(p.name, `${p.role} · a private chat, only you two`)}
                 </button>
               </form>

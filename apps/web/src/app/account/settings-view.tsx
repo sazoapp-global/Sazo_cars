@@ -1,4 +1,4 @@
-import { ConfirmButton, Flash } from '@/components/app-frame/hide-in';
+import { ConfirmButton, Flash, PictureForm } from '@/components/app-frame/hide-in';
 // Account settings (D-102): used by the Settings panel inside any page and by /account. Every form carries
 // `back`, the address to return to, so a change keeps you on the page you opened Settings from.
 import { unstable_rethrow } from 'next/navigation';
@@ -11,7 +11,8 @@ import { api } from '@/lib/api';
 import { deviceName, localPhone } from '@/lib/phone';
 import type { Me } from '@/lib/types';
 import { signOut } from '../sign-in/actions';
-import { confirmPhone, deleteAccount, rename, sendPhoneCode, setEmail, setPassword, setTexts, signOutDevice, signOutOthers } from './actions';
+import { confirmPhone, deleteAccount, removePhoto, rename, sendPhoneCode, setEmail, setPassword, setPhoto, setTexts, signOutDevice, signOutOthers } from './actions';
+import { Avatar } from '@/components/avatar';
 
 const ORG_STATUS: Record<string, string> = { pending_verification: 'Waiting for SAZO approval', approved: 'Approved', rejected: 'Not approved', suspended: 'Suspended' };
 type Profile = {
@@ -100,6 +101,17 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
     details: (
       <section className="card leading-relaxed md:!p-6 space-y-3 p-5" aria-labelledby="details">
         <h2 id="details" className="font-display text-lg font-semibold">Your details</h2>
+        {me.canHavePhoto && (
+          <div className="flex flex-wrap items-center gap-4 border-b border-line pb-4">
+            <Avatar name={profile.displayName ?? ''} pictureId={me.photoId} size={72} />
+            <div className="min-w-[200px] flex-1">
+              <p className="font-semibold">Your photo</p>
+              <p className="text-sm text-muted">Your team and the brokers you chat with see it. Without one, they see your initials.</p>
+            </div>
+            <PictureForm field="photo" has={!!me.photoId} chooseLabel="Add a photo" changeLabel="Change photo" action={setPhoto} remove={removePhoto} hidden={{ back: here }}
+              removeTitle="Remove your photo?" removeText="SAZO deletes it, and people see your initials again." />
+          </div>
+        )}
         <form action={rename} data-draft="settings-names" className="space-y-3"><input type="hidden" name="back" value={here} />
           <div className="grid gap-3 sm:grid-cols-3">
             <div><label htmlFor="surname" className="label">Surname</label>
@@ -272,7 +284,7 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
     <div className="space-y-4">
       {!inPanel && (
         <div className="flex items-center gap-3">
-          <span className="avatar avatar-lg" aria-hidden>{profile.initials}</span>
+          {me.photoId ? <Avatar name={profile.displayName ?? ''} pictureId={me.photoId} size={56} /> : <span className="avatar avatar-lg" aria-hidden>{profile.initials}</span>}
           <div><h1 className="font-display text-2xl font-bold">{profile.displayName}</h1><p className="text-sm text-muted">Settings</p></div>
         </div>
       )}

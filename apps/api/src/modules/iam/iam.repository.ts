@@ -152,6 +152,52 @@ export class IamRepository {
     return new Map(rows.map((r) => [r.id, r.display_name]));
   }
 
+  // Logos and photos (D-186) ---------------------------------------------------------------------------------
+
+  /** Each business's logo now (the newest row, when it has a picture): business id → picture id. */
+  async logoIds(organisationIds: string[]): Promise<Map<string, string>> {
+    if (!organisationIds.length) return new Map();
+    const { rows } = await this.pool.query<{ org: string; id: string }>(
+      `SELECT org, id FROM (SELECT DISTINCT ON (organisation_id) organisation_id AS org, id, bytes IS NOT NULL AS has
+         FROM iam.organisation_logos WHERE organisation_id = ANY($1) ORDER BY organisation_id, created_at DESC, id DESC) x WHERE has`, [organisationIds]);
+    return new Map(rows.map((r) => [r.org, r.id]));
+  }
+
+  /** Each person's photo: user id → picture id. */
+  async photoIds(userIds: string[]): Promise<Map<string, string>> {
+    if (!userIds.length) return new Map();
+    const { rows } = await this.pool.query<{ user_id: string; id: string }>(`SELECT user_id, id FROM iam.user_photos WHERE user_id = ANY($1)`, [userIds]);
+    return new Map(rows.map((r) => [r.user_id, r.id]));
+  }
+
+  async addLogo(sql: Sql, organisationId: string, setBy: string, picture: { bytes: Buffer; mime: string } | null): Promise<string> {
+    const { rows: [r] } = await sql.query<{ id: string }>(
+      `INSERT INTO iam.organisation_logos (organisation_id, bytes, mime, set_by) VALUES ($1, $2, $3, $4) RETURNING id`,
+      [organisationId, picture?.bytes ?? null, picture?.mime ?? null, setBy]);
+    return r!.id;
+  }
+
+  /** Every change to a business's logo, newest first. */
+  async logoHistory(organisationId: string): Promise<{ id: string; hasPicture: boolean; setBy: string; createdAt: Date }[]> {
+    const { rows } = await this.pool.query<{ id: string; has: boolean; set_by: string; created_at: Date }>(
+      `SELECT id, bytes IS NOT NULL AS has, set_by, created_at FROM iam.organisation_logos WHERE organisation_id = $1 ORDER BY created_at DESC, id DESC LIMIT 100`, [organisationId]);
+    return rows.map((r) => ({ id: r.id, hasPicture: r.has, setBy: r.set_by, createdAt: r.created_at }));
+  }
+
+  async setPhoto(sql: Sql, userId: string, picture: { bytes: Buffer; mime: string } | null): Promise<string | null> {
+    await sql.query(`DELETE FROM iam.user_photos WHERE user_id = $1`, [userId]);
+    if (!picture) return null;
+    return (await sql.query<{ id: string }>(`INSERT INTO iam.user_photos (user_id, bytes, mime) VALUES ($1, $2, $3) RETURNING id`, [userId, picture.bytes, picture.mime])).rows[0]!.id;
+  }
+
+  /** A logo (any a business has used) or a person's current photo, by its id. */
+  async picture(id: string): Promise<{ bytes: Buffer; mime: string } | undefined> {
+    const { rows: [r] } = await this.pool.query<{ bytes: Buffer; mime: string }>(
+      `SELECT bytes, mime FROM iam.organisation_logos WHERE id = $1 AND bytes IS NOT NULL
+       UNION ALL SELECT bytes, mime FROM iam.user_photos WHERE id = $1`, [id]);
+    return r;
+  }
+
   /** First names only (public review authors): the stored first name, or the first word of older display names. */
   async firstNames(userIds: string[]): Promise<Map<string, string>> {
     if (!userIds.length) return new Map();
@@ -231,6 +277,7 @@ export class IamRepository {
       `UPDATE iam.users SET status = 'deleted', deleted_at = now(), display_name = 'Deleted account', phone_e164 = NULL, email = NULL, email_verified_at = NULL,
               surname = NULL, first_name = NULL, middle_name = NULL, gender = NULL, dob_ciphertext = NULL, dob_key_version = NULL WHERE id = $1`, [userId]);
     await this.pool.query(`DELETE FROM iam.auth_identities WHERE user_id = $1 AND provider IN ('password', 'google')`, [userId]);
+    await this.pool.query(`DELETE FROM iam.user_photos WHERE user_id = $1`, [userId]);
     await this.pool.query(`UPDATE iam.email_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL`, [userId]);
     await this.forgetDevices(userId);
     await this.pool.query(`UPDATE iam.memberships SET status = 'removed' WHERE user_id = $1`, [userId]);
