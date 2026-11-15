@@ -41,6 +41,15 @@ export class MessagesRepository {
       `SELECT ${CONV} FROM dealer.conversations c WHERE c.organisation_id = $1 AND c.kind = 'broker' AND c.broker_user_id = $2`, [organisationId, brokerUserId])).rows[0];
   }
 
+  /** Whether a broker brought this dealer a buyer, shares its cars, or already talks with it (D-185). */
+  async brokerWorksWith(organisationId: string, brokerUserId: string): Promise<boolean> {
+    const { rowCount } = await this.pool.query(
+      `SELECT 1 FROM dealer.leads WHERE organisation_id = $1 AND (broker_user_id = $2 OR split_broker_user_id = $2)
+       UNION SELECT 1 FROM dealer.car_links WHERE organisation_id = $1 AND broker_user_id = $2
+       UNION SELECT 1 FROM dealer.conversations WHERE organisation_id = $1 AND kind = 'broker' AND broker_user_id = $2`, [organisationId, brokerUserId]);
+    return (rowCount ?? 0) > 0;
+  }
+
   /** A dealer and a broker's conversation, made when the first message is sent. */
   async openBrokerConversation(organisationId: string, brokerUserId: string, sql: Sql = this.pool): Promise<ConversationRow> {
     await sql.query(

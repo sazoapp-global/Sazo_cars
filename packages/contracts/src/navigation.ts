@@ -154,7 +154,8 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       NOTIFICATIONS,
       { key: 'import', label: 'Add many cars', short: 'Add many', icon: 'upload_file', href: '/dealer/{org}/import', rule: MANAGER_APPROVED },
       { key: 'enquiries', label: 'Enquiries', short: 'Enquiries', icon: 'forum', href: '/dealer/{org}/enquiries', rule: APPROVED },
-      { key: 'payments', label: 'Payments', short: 'Payments', icon: 'savings', href: '/dealer/{org}/payments', rule: MANAGER_APPROVED },
+      // Managers see every sale; a salesperson the sales they made, and records their payments (D-185).
+      { key: 'payments', label: 'Payments', short: 'Payments', icon: 'savings', href: '/dealer/{org}/payments', rule: APPROVED },
       { key: 'commissions', label: 'Commission', short: 'Commission', icon: 'payments', href: '/dealer/{org}/commissions', rule: MANAGER_APPROVED },
       { key: 'sold', label: 'Sold', short: 'Sold', icon: 'sell', href: '/dealer/{org}?show=sold', rule: APPROVED },
       { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '/dealer/{org}/team', rule: MANAGER_APPROVED },

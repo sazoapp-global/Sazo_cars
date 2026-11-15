@@ -164,8 +164,23 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await dealer.getByRole('link', { name: 'Commission' }).first().click();
   const crow = dealer.getByRole('listitem').filter({ hasText: 'Ivan' });
   await expect(crow).toContainText('UGX 450,000');
+  // Due at the buyer's first payment (D-185): until then there is nothing to approve.
+  await expect(crow).toContainText('Due at the buyer’s first payment');
   await a11y(dealer);
-  await crow.getByRole('link').click();
+  // How she pays: cash, recorded under Payments. The sale names Ivan, with his commission and a Message button.
+  await dealer.goto(`/dealer/${org}/payments?add=${car.stockId}`);
+  await expect(dealer.getByRole('main')).toContainText('Ivan brought this buyer');
+  await dealer.getByRole('button', { name: 'Save' }).click();
+  await expect(dealer.getByRole('status')).toContainText('Payment record saved');
+  const brought = dealer.getByRole('region', { name: /Ivan/ });
+  await expect(brought).toContainText('Brought by a broker');
+  await expect(brought).toContainText('Waiting for a manager to approve');
+  await a11y(dealer);
+  await shot(dealer, 'dealer-payments-broker');
+  await brought.getByRole('button', { name: 'Message' }).click();
+  await expect(dealer).toHaveURL(/messages\?c=/);
+  await dealer.goto(`/dealer/${org}/commissions`);
+  await dealer.getByRole('listitem').filter({ hasText: 'Ivan' }).getByRole('link').click();
   await dealer.getByRole('region', { name: /Commission for Ivan/ }).getByRole('button', { name: 'Approve' }).click();
   await expect(dealer.getByRole('status')).toContainText('Commission approved');
   await shot(dealer, 'dealer-commission');

@@ -17,7 +17,7 @@ import { localPhone } from '@/lib/phone';
 import type { CostEntry, Me, MyOrganisation, StockItem } from '@/lib/types';
 import { shareReport } from '../../../../buyer-actions';
 import { addCost, addPhotos, changePrice, createLink, linkCar, removePhoto, removeStock, revokeLink, reverseCost, setBrokerTerms, updateCar } from '../../../actions';
-import { SaleForm, type BuyerChoice } from '../../../sale-form';
+import { SaleForm, type BrokerChoice, type BuyerChoice } from '../../../sale-form';
 import { BondClock, COSTS, CUSTOMS, FUELS, GEARS, STAGES, StockAge, carName, costLabel, stageLabel } from '../../../labels';
 import { PICTURE_ACCEPT } from '@/lib/upload-types';
 import { KindField, MoreDetails } from '../../../car-kind-fields';
@@ -57,16 +57,19 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const manager = org.role === 'org_manager';
   const c = await api<StockItem>(`/dealer/stock/${car}`, as).catch((err) => { if (err instanceof ApiError && err.status === 404) notFound(); throw err; });
-  const [costs, me, links, leads] = await Promise.all([
+  const selling = approved && c.status === 'in_stock';
+  const [costs, me, links, leads, brokers] = await Promise.all([
     manager ? api<{ totalUgx: number; entries: CostEntry[] }>(`/dealer/stock/${car}/costs`, as).catch(() => undefined) : Promise.resolve(undefined),
     api<Me>('/me', { auth: true }).catch(() => undefined),
     c.linked && c.status === 'in_stock' ? api<{ items: CarLink[] }>(`/dealer/stock/${car}/links`, as).then((r) => r.items).catch(() => []) : Promise.resolve([] as CarLink[]),
-    manager && approved && c.status === 'in_stock'
-      ? api<{ items: { leadId: string; stockId: string | null; stage: string; customer: { name: string | null; phone: string | null } }[] }>('/dealer/leads?stage=open', as).then((r) => r.items).catch(() => [])
+    selling
+      ? api<{ items: { leadId: string; stockId: string | null; stage: string; broker: string | null; customer: { name: string | null; phone: string | null } }[] }>('/dealer/leads?stage=open', as).then((r) => r.items).catch(() => [])
       : Promise.resolve([]),
+    // Brokers the sale can name (D-185).
+    selling ? api<{ items: BrokerChoice[] }>('/dealer/brokers', as).then((r) => r.items).catch(() => [] as BrokerChoice[]) : Promise.resolve([] as BrokerChoice[]),
   ]);
   // The buyer is usually someone who asked about this car (D-146).
-  const buyers: BuyerChoice[] = leads.filter((l) => l.stockId === car).map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null }));
+  const buyers: BuyerChoice[] = leads.filter((l) => l.stockId === car).map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null, broker: l.broker }));
   const name = org.tradingName ?? org.legalName;
   const h = await headers();
   const siteOrigin = `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host')}`;
@@ -197,7 +200,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           {approved && (
             <Popup title="Mark as sold" button="Mark as sold" buttonClassName="btn btn-ghost w-full bg-white">
               <p className="mb-3 text-sm text-muted">{title} · asking {formatUgx(c.askingPriceUgx, false)}</p>
-              <SaleForm org={id} carId={c.stockId} askingPriceUgx={c.askingPriceUgx} today={today} manager={manager} buyers={buyers} mode="sell" />
+              <SaleForm org={id} carId={c.stockId} askingPriceUgx={c.askingPriceUgx} today={today} buyers={buyers} brokers={brokers} mode="sell" />
             </Popup>
           )}
           <form action={removeStock}>{hidden}<ConfirmButton className="btn btn-ghost w-full bg-white" label={`Remove ${title} without a sale`}

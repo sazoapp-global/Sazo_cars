@@ -22,7 +22,7 @@ export interface LeadRow {
   stage: LeadStage; consentToContact: boolean; message: string | null; salePriceUgx: number | null; createdBy: string | null; createdAt: Date; updatedAt: Date; closedAt: Date | null;
   protectedUntil: Date | null; earlierLeadId: string | null; needsDecision: boolean; splitBrokerUserId: string | null; splitPercent: number | null;
 }
-export type CommissionStatus = 'on_hold' | 'pending' | 'approved' | 'paid' | 'cancelled';
+export type CommissionStatus = 'awaiting_payment' | 'on_hold' | 'pending' | 'approved' | 'paid' | 'cancelled';
 export interface CommissionRow {
   id: string; organisationId: string; leadId: string; stockItemId: string; brokerUserId: string; kind: 'fixed' | 'percent'; percent: number | null; salePriceUgx: number;
   sharePercent: number; amountUgx: number; status: CommissionStatus; paidReference: string | null; createdAt: Date; updatedAt: Date;
@@ -181,6 +181,42 @@ export class SellingRepository {
        RETURNING ${COMMISSION_COLS}`,
       [c.organisationId, c.leadId, c.stockItemId, c.brokerUserId, c.kind, c.percent, c.salePriceUgx, c.sharePercent, c.amountUgx, c.status])).rows[0]!;
     return { row, before };
+  }
+
+  /** Brokers who already work with this dealer: shared one of its cars, brought a customer, or chat with it. */
+  async brokersOf(organisationId: string): Promise<Set<string>> {
+    const { rows } = await this.pool.query<{ id: string }>(
+      `SELECT broker_user_id AS id FROM dealer.car_links WHERE organisation_id = $1 AND broker_user_id IS NOT NULL
+       UNION SELECT broker_user_id FROM dealer.leads WHERE organisation_id = $1 AND broker_user_id IS NOT NULL
+       UNION SELECT broker_user_id FROM dealer.conversations WHERE organisation_id = $1 AND kind = 'broker'`, [organisationId]);
+    return new Set(rows.map((r) => r.id));
+  }
+
+  /** The phone hash an enquiry was registered under (kept out of LEAD_COLS on purpose). */
+  async phoneHashOf(sql: Sql, leadId: string): Promise<Buffer | undefined> {
+    return (await sql.query<{ h: Buffer }>(`SELECT phone_hash AS h FROM dealer.leads WHERE id = $1`, [leadId])).rows[0]?.h;
+  }
+
+  /** The car a buyer bought, and the broker named at the sale (D-185). */
+  async setSaleOnLead(sql: Sql, id: string, l: { stockItemId: string; brokerUserId?: string | null; protectedUntil?: Date | null; earlierLeadId?: string | null; needsDecision?: boolean }) {
+    await sql.query(
+      `UPDATE dealer.leads SET stock_item_id = $2,
+              broker_user_id = CASE WHEN $3 THEN $4 ELSE broker_user_id END, protected_until = CASE WHEN $3 THEN $5 ELSE protected_until END,
+              earlier_lead_id = CASE WHEN $3 THEN $6 ELSE earlier_lead_id END, needs_decision = CASE WHEN $3 THEN $7 ELSE needs_decision END
+        WHERE id = $1`,
+      [id, l.stockItemId, l.brokerUserId !== undefined, l.brokerUserId ?? null, l.protectedUntil ?? null, l.earlierLeadId ?? null, l.needsDecision ?? false]);
+  }
+
+  /** Whether the buyer of a car has paid anything yet (the deposit, or the price in cash). */
+  async firstPaymentMade(sql: Sql, stockItemId: string): Promise<boolean> {
+    return (await sql.query(
+      `SELECT 1 FROM dealer.payments p JOIN dealer.payment_plans pp ON pp.id = p.plan_id
+        WHERE pp.stock_item_id = $1 GROUP BY pp.id HAVING sum(p.amount_ugx) > 0`, [stockItemId])).rowCount! > 0;
+  }
+
+  /** Commissions on a car still waiting for the buyer's first payment. */
+  async awaitingPayment(sql: Sql, stockItemId: string): Promise<CommissionRow[]> {
+    return (await sql.query<CommissionRow>(`SELECT ${COMMISSION_COLS} FROM dealer.commissions WHERE stock_item_id = $1 AND status = 'awaiting_payment' FOR UPDATE`, [stockItemId])).rows;
   }
 
   /** Change a commission's status only if it is still `from` (two people acting at once cannot both win). */

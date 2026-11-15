@@ -37,3 +37,19 @@ export async function startDirectChat(form: FormData) {
   }
   redirect(id ? `/dealer/${org}/messages?c=${id}` : `/dealer/${org}/messages?new=1&error=${encodeURIComponent(error!)}`);
 }
+
+/** Message the broker who brought a buyer (D-185), from the sale under Payments. */
+export async function messageBroker(form: FormData) {
+  const org = text(form, 'org');
+  const user = text(form, 'user');
+  const plan = text(form, 'plan');
+  let id: string | undefined;
+  let error: string | undefined;
+  try {
+    id = (await api<{ conversationId: string }>('/dealer/messages/broker', { method: 'POST', auth: true, headers: { 'X-Organisation-Id': org }, body: { userId: user } })).conversationId;
+  } catch (err) {
+    if (!(err instanceof ApiError)) throw err;
+    error = err.detail ?? 'The chat could not be opened. Try again.';
+  }
+  redirect(id ? `/dealer/${org}/messages?c=${id}` : `/dealer/${org}/payments?plan=${encodeURIComponent(plan)}&error=${encodeURIComponent(error!)}`);
+}

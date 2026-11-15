@@ -2,7 +2,7 @@
 // opens beside the list with what is wrong and where to fix it (the fix itself where the console can do it there).
 // Colours as agreed for alerts (D-111): red = act now, yellow = check soon, green "All clear" when there is nothing.
 // Built from what the console already holds; nothing is stored, so an alert goes away by itself once dealt with.
-// Money alerts are for managers only (D-146): the payments list refuses everyone else.
+// Money alerts: managers see every sale, salespeople the sales they made (D-185).
 import { QUESTION_TITLES, formatDate, formatUgx, headline } from '@sazo/contracts';
 import { cache } from 'react';
 import type { IconName } from '@/components/icon';

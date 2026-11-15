@@ -19,7 +19,7 @@ interface Commission {
   commissionId: string; leadId: string; stockId: string; broker: string; status: string; kind: 'fixed' | 'percent'; percent: number | null; salePriceUgx: number;
   sharePercent: number; amountUgx: number; paidReference: string | null; createdAt: string;
 }
-const STATUS: Record<string, string> = { on_hold: 'On hold: decide who brought the customer', pending: 'Waiting for your approval', approved: 'Approved, not paid', paid: 'Paid', cancelled: 'Cancelled' };
+const STATUS: Record<string, string> = { awaiting_payment: 'Due at the buyer’s first payment', on_hold: 'On hold: decide who brought the customer', pending: 'Waiting for your approval', approved: 'Approved, not paid', paid: 'Paid', cancelled: 'Cancelled' };
 
 type SP = Promise<{ done?: string; error?: string; item?: string; page?: string }>;
 
@@ -63,7 +63,7 @@ export default async function Commissions({ params, searchParams }: { params: Pr
                     <button className="btn btn-primary !min-h-10 shrink-0">Mark paid</button>
                   </form>
                 )}
-                {['on_hold', 'pending', 'approved'].includes(c.status) && (
+                {['awaiting_payment', 'on_hold', 'pending', 'approved'].includes(c.status) && (
                   <details><summary className="btn btn-ghost !min-h-10 cursor-pointer list-none">Cancel</summary>
                     <form action={commissionAction} className="mt-2 flex gap-2">{hidden(c)}<input type="hidden" name="action" value="cancel" />
                       <label htmlFor={`why-${c.commissionId}`} className="sr-only">Why is it cancelled?</label>
@@ -83,12 +83,13 @@ export default async function Commissions({ params, searchParams }: { params: Pr
       person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined}>
       <div>
         <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">Broker commission</h1>
-        <p className="mt-1 max-w-2xl text-muted">Worked out when a sale a broker brought is completed, from the car&apos;s commission at that moment. SAZO keeps the record; you pay the broker directly.</p>
+        <p className="mt-1 max-w-2xl text-muted">Worked out when a sale a broker brought is completed, from the car&apos;s commission at that moment. It is due once the buyer makes the first payment. SAZO keeps the record; you pay the broker directly.</p>
       </div>
       {sp.done && <Flash className="rounded-lg border border-ok-line bg-ok-fill p-3 font-semibold text-ok-text">{sp.done}</Flash>}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
       <NumberStrip cells={[
         { label: 'To approve', value: formatUgx(sum(['pending'])) },
+        { label: 'Waiting for the first payment', value: formatUgx(sum(['awaiting_payment'])) },
         { label: 'On hold', value: formatUgx(sum(['on_hold'])) },
         { label: 'Approved, not paid', value: formatUgx(sum(['approved'])) },
         { label: 'Paid', value: formatUgx(sum(['paid'])) },

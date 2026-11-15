@@ -126,7 +126,7 @@ export class BrokerService {
       };
     }));
     const sum = (s: string[]) => items.filter((i) => s.includes(i.status)).reduce((n, i) => n + i.amountUgx, 0);
-    return { items, totals: { waiting: sum(['on_hold', 'pending']), approved: sum(['approved']), paid: sum(['paid']) } };
+    return { items, totals: { waiting: sum(['awaiting_payment', 'on_hold', 'pending']), approved: sum(['approved']), paid: sum(['paid']) } };
   }
 }
 

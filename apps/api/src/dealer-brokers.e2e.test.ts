@@ -215,7 +215,12 @@ describe.skipIf(!base)('brokers: identity check, marketplace, protection, decisi
   it('a completed broker sale gives a fixed commission, approved then marked paid; the broker’s statement shows it', async () => {
     await http.patch(`/v1/dealer/leads/${peterLead}`).set(as(staff)).send({ stage: 'completed', salePriceUgx: 48_000_000 }).expect(200);
     const c = (await http.get('/v1/dealer/commissions').set(as(manager)).expect(200)).body.items.find((x: { broker: string }) => x.broker === 'Ivan');
-    expect(c).toMatchObject({ status: 'pending', kind: 'fixed', amountUgx: 500_000, salePriceUgx: 48_000_000, sharePercent: 100 });
+    // Due at the buyer's first payment (D-185): it waits until the price is paid in cash, then goes for approval.
+    expect(c).toMatchObject({ status: 'awaiting_payment', kind: 'fixed', amountUgx: 500_000, salePriceUgx: 48_000_000, sharePercent: 100 });
+    expect((await http.post(`/v1/dealer/commissions/${c.commissionId}/approve`).set(as(manager)).send({}).expect(409)).body.code).toBe('commission_state');
+    expect((await http.get('/v1/broker/commissions').set(bearer(broker1)).expect(200)).body.items[0]).toMatchObject({ status: 'awaiting_payment' });
+    await http.post(`/v1/dealer/stock/${openFixed}/payment-plan`).set(as(staff)).send({ buyer: { leadId: peterLead }, kind: 'cash', paidAtSale: { method: 'cash' } }).expect(201);
+    expect((await http.get('/v1/dealer/commissions').set(as(manager)).expect(200)).body.items.find((x: { commissionId: string }) => x.commissionId === c.commissionId).status).toBe('pending');
     expect((await http.post(`/v1/dealer/commissions/${c.commissionId}/paid`).set(as(manager)).send({ note: 'MTN 12345' }).expect(409)).body.code).toBe('commission_state');
     await http.post(`/v1/dealer/commissions/${c.commissionId}/approve`).set(as(manager)).send({}).expect(200);
     const paid = (await http.post(`/v1/dealer/commissions/${c.commissionId}/paid`).set(as(manager)).send({ note: 'MTN mobile money 12345' }).expect(200)).body;
@@ -226,7 +231,7 @@ describe.skipIf(!base)('brokers: identity check, marketplace, protection, decisi
     expect(statement.items[0]).toMatchObject({ status: 'paid', amountUgx: 500_000, dealer: 'Kyambogo Bond', car: expect.stringContaining('Voxy') });
     expect((await http.get('/v1/broker/commissions').set(bearer(broker2)).expect(200)).body.items).toHaveLength(1); // Grace's cancelled one
     const events = await db.query(`SELECT to_status FROM dealer.commission_events WHERE commission_id = $1 ORDER BY at`, [c.commissionId]);
-    expect(events.rows.map((r) => r.to_status)).toEqual(['pending', 'approved', 'paid']);
+    expect(events.rows.map((r) => r.to_status)).toEqual(['awaiting_payment', 'pending', 'approved', 'paid']);
     // The broker's link stops once the car is sold; another dealer cannot touch these commissions.
     await http.get(`/v1/cars/${b1Token}`).expect(410);
     const other = await signIn('+256772800099', 'Other Dealer');
@@ -260,6 +265,37 @@ describe.skipIf(!base)('brokers: identity check, marketplace, protection, decisi
     await http.patch(`/v1/dealer/leads/${zed.leadId}`).set(as(staff)).send({ stage: 'completed', salePriceUgx: 59_000_000 }).expect(200);
     const comms = (await http.get('/v1/dealer/commissions').set(as(manager)).expect(200)).body.items.filter((c: { stockId: string }) => c.stockId === carB);
     expect(comms.map((c: { broker: string; sharePercent: number; amountUgx: number; status: string }) => [c.broker, c.sharePercent, c.amountUgx, c.status]).sort())
-      .toEqual([['Grace', 60, 360_000, 'pending'], ['Ivan', 40, 240_000, 'pending']]);
+      .toEqual([['Grace', 60, 360_000, 'awaiting_payment'], ['Ivan', 40, 240_000, 'awaiting_payment']]);
+  });
+
+  it('the person who sold the car names the broker who brought a walk-in buyer; the commission is due at the first payment (D-185)', async () => {
+    const add = async (chassis: string, price: number, details: object) =>
+      (await http.post('/v1/dealer/stock').set(as(manager)).send({ chassisNumber: chassis, askingPriceUgx: price, details }).expect(201)).body.stockId as string;
+    const car = await add('ZRR80-0555999', 61_000_000, { make: 'Toyota', model: 'Noah', commissionKind: 'percent', commissionPercent: 2 });
+    await http.post(`/v1/dealer/stock/${car}/sold`).set(as(staff)).send({ salePriceUgx: 60_000_000 }).expect(200);
+    // The brokers to choose from: approved ones, those who already work with this dealer first.
+    const list = (await http.get('/v1/dealer/brokers').set(as(staff)).expect(200)).body.items;
+    expect(list.map((b: { name: string; worksWithYou: boolean }) => b.worksWithYou)).toEqual([...list.map((b: { worksWithYou: boolean }) => b.worksWithYou)].sort((a, b) => Number(b) - Number(a)));
+    const ivan = list.find((b: { name: string }) => /Ivan/.test(b.name));
+    expect(ivan).toMatchObject({ worksWithYou: true });
+    // Not someone who is not an approved broker.
+    const me = (await http.get('/v1/me').set(bearer(staff)).expect(200)).body.id;
+    const plan = { buyer: { name: 'Walk In Buyer', phone: '+256772800777' }, kind: 'instalments', depositUgx: 0, months: 6, firstDueOn: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10) };
+    expect((await http.post(`/v1/dealer/stock/${car}/payment-plan`).set(as(staff)).send({ ...plan, brokerUserId: me }).expect(404)).body.code).toBe('broker_not_found');
+    const d = (await http.post(`/v1/dealer/stock/${car}/payment-plan`).set(as(staff)).send({ ...plan, brokerUserId: ivan.userId }).expect(201)).body;
+    expect(d.broker).toMatchObject({ userId: ivan.userId, commission: { amountUgx: 1_200_000, status: 'awaiting_payment' } });
+    expect((await http.get('/v1/broker/commissions').set(bearer(broker1)).expect(200)).body.items.find((x: { car: string }) => /Noah/.test(x.car))).toMatchObject({ status: 'awaiting_payment' });
+    // The salesperson records the first payment; the commission goes to a manager to approve.
+    await http.post(`/v1/dealer/payments/${d.planId}/payments`).set(as(staff)).send({ amountUgx: 10_000_000, method: 'cash', paidOn: new Date().toISOString().slice(0, 10) }).expect(201);
+    expect((await http.get(`/v1/dealer/payments/${d.planId}`).set(as(staff)).expect(200)).body.broker.commission.status).toBe('pending');
+    // The salesperson can message the broker from the sale; not someone who never worked with the dealer.
+    const conv = (await http.post('/v1/dealer/messages/broker').set(as(staff)).send({ userId: ivan.userId }).expect(201)).body.conversationId;
+    expect((await http.get(`/v1/dealer/messages/${conv}`).set(as(staff)).expect(200)).body.kind).toBe('broker');
+    await http.post('/v1/dealer/messages/broker').set(as(staff)).send({ userId: me }).expect(404);
+    // Another broker cannot be named on a buyer who came through Ivan's link.
+    const car2 = await add('ZRR80-0555998', 55_000_000, { make: 'Toyota', model: 'Noah', commissionKind: 'fixed', commissionFixedUgx: 300_000 });
+    await http.post(`/v1/dealer/stock/${car2}/sold`).set(as(manager)).send({ salePriceUgx: 54_000_000 }).expect(200);
+    const grace = list.find((b: { name: string }) => /Grace/.test(b.name));
+    expect((await http.post(`/v1/dealer/stock/${car2}/payment-plan`).set(as(manager)).send({ buyer: { leadId: peterLead }, kind: 'cash', paidAtSale: { method: 'cash' }, brokerUserId: grace.userId }).expect(409)).body.code).toBe('broker_conflict');
   });
 });

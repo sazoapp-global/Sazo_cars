@@ -75,6 +75,15 @@ export class MessagesService {
     return { conversationId: (await this.repo.openDirect(organisationId, actor.userId, userId)).id };
   }
 
+  /**
+   * Message a broker from a sale (D-185): open (or reopen) the dealer's conversation with a broker who brought
+   * the dealer a buyer or shares the dealer's cars. Other brokers write first, from their side.
+   */
+  async dealerStartBroker(actor: Actor, organisationId: string, brokerUserId: string) {
+    if (!(await this.repo.brokerWorksWith(organisationId, brokerUserId))) throw new MessagesError('conversation_not_found', 'This broker has not worked with you yet');
+    return { conversationId: (await this.repo.openBrokerConversation(organisationId, brokerUserId)).id };
+  }
+
   /** One conversation, opened by a member of the dealer's team. Opening it marks it read. */
   async dealerThread(actor: Actor, organisationId: string, conversationId: string) {
     const c = await this.dealerConversation(actor, organisationId, conversationId);

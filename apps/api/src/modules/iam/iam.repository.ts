@@ -137,6 +137,15 @@ export class IamRepository {
     return rows;
   }
 
+  /** Approved brokers who can be named on a sale (D-185): the broker role, an active account. Surname first. */
+  async approvedBrokers(userIds?: string[]): Promise<{ userId: string; name: string }[]> {
+    const { rows } = await this.pool.query<{ userId: string; name: string }>(
+      `SELECT u.id AS "userId", u.display_name AS name FROM iam.users u
+         JOIN iam.platform_role_assignments a ON a.user_id = u.id JOIN iam.roles r ON r.id = a.role_id AND r.code = 'broker'
+        WHERE u.status = 'active' AND u.deleted_at IS NULL AND ($1::uuid[] IS NULL OR u.id = ANY($1)) ORDER BY u.display_name`, [userIds ?? null]);
+    return rows;
+  }
+
   async displayNames(userIds: string[]): Promise<Map<string, string>> {
     if (!userIds.length) return new Map();
     const { rows } = await this.pool.query<{ id: string; display_name: string }>('SELECT id, display_name FROM iam.users WHERE id = ANY($1)', [userIds]);

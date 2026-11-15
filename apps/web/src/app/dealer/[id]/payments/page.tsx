@@ -13,7 +13,8 @@ import { localPhone } from '@/lib/phone';
 import type { Me, MyOrganisation } from '@/lib/types';
 import { correctPayment, recordPayment } from '../../actions';
 import { DashCard, METHOD, Pill, longDate, shortDate } from '../../dashboard-bits';
-import { SaleForm, type BuyerChoice } from '../../sale-form';
+import { SaleForm, type BrokerChoice, type BuyerChoice } from '../../sale-form';
+import { messageBroker } from '../messages/actions';
 import { Pager, pageHref, paginate } from '@/components/pager';
 import { BackButton } from '@/components/back-button';
 
@@ -35,12 +36,19 @@ interface Detail extends Item {
   reminders: boolean; buyer: { name: string | null; phone: string | null };
   schedule: { seq: number; dueOn: string; amountUgx: number; paidUgx: number; owingUgx: number; status: string; daysLate: number }[];
   payments: Payment[];
+  /** The broker who brought the buyer and their commission (D-185). */
+  broker: { userId: string; name: string; commission: { amountUgx: number; status: string } | null } | null;
 }
 interface Receipt {
   receiptNo: string; paidOn: string; amountUgx: number; method: string; reference: string | null; note: string | null;
   dealer: { name: string; phone: string | null }; buyer: { name: string | null; phone: string | null }; car: Car; priceUgx: number; balanceAfterUgx: number;
 }
-interface Lead { leadId: string; stockId: string | null; customer: { name: string | null; phone: string | null }; open: boolean; stage: string }
+interface Lead { leadId: string; stockId: string | null; broker: string | null; customer: { name: string | null; phone: string | null }; open: boolean; stage: string }
+/** Where a broker's commission stands, as the commissions page says it. */
+const COMMISSION: Record<string, string> = {
+  awaiting_payment: 'Due at the buyer’s first payment', on_hold: 'On hold: a manager decides who brought the buyer', pending: 'Waiting for a manager to approve',
+  approved: 'Approved, not paid yet', paid: 'Paid', cancelled: 'Cancelled',
+};
 
 type SP = Promise<{ show?: string; sort?: string; within?: string; plan?: string; add?: string; receipt?: string; done?: string; error?: string; page?: string; sch?: string; pr?: string; up?: string }>;
 const full = (n: number) => formatUgx(n, false);
@@ -58,7 +66,7 @@ function whenText(i: Item): string {
   return i.next.daysUntil === 0 ? 'Due today' : `In ${plural(i.next.daysUntil, 'day')}`;
 }
 
-/** Payments for cars sold (D-146): records only; managers only. A sale opens with its plan beside the side bar. */
+/** Payments for cars sold (D-146): records only. Managers see every sale, a salesperson their own (D-185). A sale opens with its plan beside the side bar. */
 export default async function DealerPayments({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SP }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -66,7 +74,6 @@ export default async function DealerPayments({ params, searchParams }: { params:
   const org = (await api<MyOrganisation[]>('/me/organisations', { auth: true })).find((o) => o.id === id);
   if (!org || org.type !== 'dealer') notFound();
   if (org.status !== 'approved') redirect(`/dealer/${id}`);
-  if (org.role !== 'org_manager') redirect(`/dealer/${id}/dashboard?error=managers_only`);
   const as = { auth: true, headers: { 'X-Organisation-Id': id } };
   const show = FILTERS.some(([k]) => k === sp.show) ? sp.show! : 'owing';
   const sort = SORTS.some(([k]) => k === sp.sort) ? sp.sort! : defaultSort(show);
@@ -91,7 +98,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
   );
   const frame = (children: React.ReactNode) => (
     <AppFrame workspace="dealer" org={id} viewer={{ platformRoles: [], orgRole: org.role, approved: true }} business={{ name: org.tradingName ?? org.legalName, approved: true }}
-      person={me ? { name: me.displayName, role: 'Manager' } : undefined} badges={list.summary.lateBuyers ? { payments: list.summary.lateBuyers } : {}}>
+      person={me ? { name: me.displayName, role: org.role === 'org_manager' ? 'Manager' : 'Sales' } : undefined} badges={list.summary.lateBuyers ? { payments: list.summary.lateBuyers } : {}}>
       {children}
     </AppFrame>
   );
@@ -99,9 +106,12 @@ export default async function DealerPayments({ params, searchParams }: { params:
   // A sold car without a payment record: say how it is paid for.
   const adding = sp.add && UUID.test(sp.add) ? list.unplanned.find((u) => u.car.stockId === sp.add) : undefined;
   if (adding) {
-    const leads = (await api<{ items: Lead[] }>('/dealer/leads', as).catch(() => ({ items: [] as Lead[] }))).items;
+    const [leads, brokers] = await Promise.all([
+      api<{ items: Lead[] }>('/dealer/leads', as).then((r) => r.items).catch(() => [] as Lead[]),
+      api<{ items: BrokerChoice[] }>('/dealer/brokers', as).then((r) => r.items).catch(() => [] as BrokerChoice[]),
+    ]);
     const buyers: BuyerChoice[] = leads.filter((l) => l.stockId === adding.car.stockId && l.stage !== 'lost')
-      .map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null }));
+      .map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null, broker: l.broker }));
     return frame(
       <>
         <p><BackButton href={base} /></p>
@@ -109,7 +119,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
         <section aria-labelledby="add-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
           <h1 id="add-h" className="font-display text-2xl font-bold">How is {carTitle(adding.car)} paid for?</h1>
           <p className="mb-4 mt-1 text-sm text-muted">Sold on {longDate(adding.soldOn)}.</p>
-          <SaleForm org={id} carId={adding.car.stockId} salePriceUgx={adding.salePriceUgx} today={today()} manager buyers={buyers} mode="plan" />
+          <SaleForm org={id} carId={adding.car.stockId} salePriceUgx={adding.salePriceUgx} today={today()} buyers={buyers} brokers={brokers} mode="plan" />
         </section>
       </>,
     );
@@ -162,6 +172,22 @@ export default async function DealerPayments({ params, searchParams }: { params:
             {d.kind === 'cash' ? ', cash.' : `, ${d.depositUgx ? 'a deposit and ' : ''}${d.months} monthly payments.`}
           </p>
         </div>
+        {d.broker && (
+          <section aria-labelledby="brk-h" className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-line bg-card p-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-soft text-primary-container"><Icon name="handshake" /></span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-label">Brought by a broker</p>
+                <h2 id="brk-h" className="font-bold">{d.broker.name}</h2>
+                <p className="text-sm text-muted">{d.broker.commission ? `Commission ${full(d.broker.commission.amountUgx)} · ${COMMISSION[d.broker.commission.status] ?? d.broker.commission.status}` : 'No commission on this car. A manager sets it on the car.'}</p>
+              </div>
+            </div>
+            <form action={messageBroker}>
+              <input type="hidden" name="org" value={id} /><input type="hidden" name="user" value={d.broker.userId} /><input type="hidden" name="plan" value={d.planId} />
+              <button className="btn btn-ghost !min-h-10"><Icon name="chat" />Message</button>
+            </form>
+          </section>
+        )}
         <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
           <section aria-labelledby="plan-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">

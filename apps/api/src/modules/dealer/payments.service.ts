@@ -15,6 +15,7 @@ import { VehicleRegistry } from '../vehicle/index.js';
 import { DealerRepository } from './dealer.repository.js';
 import { DealerError, DealerService } from './dealer.service.js';
 import { SellingRepository } from './selling.repository.js';
+import { SellingService } from './selling.service.js';
 
 export type PayMethod = 'cash' | 'mtn_momo' | 'airtel_money' | 'bank';
 export const PAY_METHODS: PayMethod[] = ['cash', 'mtn_momo', 'airtel_money', 'bank'];
@@ -27,6 +28,8 @@ const DUE_SOON_DAYS = 7;
 
 export interface NewPlan {
   buyer: { leadId: string } | { name: string; phone: string };
+  /** The broker who brought the buyer, named at the sale (D-185). */
+  brokerUserId?: string | null;
   kind: 'cash' | 'instalments';
   /** Instalments: paid at the sale, counted as payment 0. */
   depositUgx?: number;
@@ -41,7 +44,7 @@ export interface NewPlan {
 
 interface PlanRow {
   id: string; organisationId: string; stockItemId: string; leadId: string | null; partyId: string; kind: 'cash' | 'instalments';
-  priceUgx: number; depositUgx: number; months: number | null; reminders: boolean; createdAt: Date; soldOn: string;
+  priceUgx: number; depositUgx: number; months: number | null; reminders: boolean; createdAt: Date; soldOn: string; soldBy: string | null;
 }
 interface InstalmentRow { seq: number; dueOn: string; amountUgx: number }
 interface PaymentRow {
@@ -51,6 +54,7 @@ interface PaymentRow {
 
 const PLAN_COLS = `p.id, p.organisation_id AS "organisationId", p.stock_item_id AS "stockItemId", p.lead_id AS "leadId", p.party_id AS "partyId",
   p.kind, p.price_ugx::float8 AS "priceUgx", p.deposit_ugx::float8 AS "depositUgx", p.months, p.reminders, p.created_at AS "createdAt",
+  s.sold_by_user_id AS "soldBy",
   to_char((s.sold_at AT TIME ZONE 'Africa/Kampala')::date, 'YYYY-MM-DD') AS "soldOn"`;
 
 /** Today in Kampala, as YYYY-MM-DD. */
@@ -120,6 +124,7 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
     @Inject(DealerService) private readonly dealer: DealerService,
     @Inject(DealerRepository) private readonly stockRepo: DealerRepository,
     @Inject(SellingRepository) private readonly leads: SellingRepository,
+    @Inject(SellingService) private readonly selling: SellingService,
     @Inject(PartiesService) private readonly parties: PartiesService,
     @Inject(NotificationsService) private readonly notify: NotificationsService,
     @Inject(IamService) private readonly iam: IamService,
@@ -143,9 +148,15 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
 
   // ---------- reading
 
-  private async plan(organisationId: string, planId: string, sql: Sql = this.pool): Promise<PlanRow> {
+  private async soldBy(stockItemId: string, userId: string): Promise<boolean> {
+    return (await this.pool.query(`SELECT 1 FROM dealer.stock_items WHERE id = $1 AND sold_by_user_id = $2`, [stockItemId, userId])).rowCount === 1;
+  }
+
+  /** `soldBy`: a salesperson sees only the sales they made (D-185). */
+  private async plan(organisationId: string, planId: string, sql: Sql = this.pool, soldBy?: string): Promise<PlanRow> {
     const { rows: [p] } = await sql.query<PlanRow>(
-      `SELECT ${PLAN_COLS} FROM dealer.payment_plans p JOIN dealer.stock_items s ON s.id = p.stock_item_id WHERE p.id = $1 AND p.organisation_id = $2`, [planId, organisationId]);
+      `SELECT ${PLAN_COLS} FROM dealer.payment_plans p JOIN dealer.stock_items s ON s.id = p.stock_item_id
+        WHERE p.id = $1 AND p.organisation_id = $2 AND ($3::uuid IS NULL OR s.sold_by_user_id = $3)`, [planId, organisationId, soldBy ?? null]);
     if (!p) throw new DealerError('plan_not_found', 'No such sale in your payments');
     return p;
   }
@@ -193,10 +204,10 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   /** Managers' list: every sale with a payment record, the sold cars without one, and the totals for the cards. */
-  async list(organisationId: string, filter: PaymentsShow = 'all', today = kampalaToday(), o: { within?: number; sort?: PaymentsSort } = {}) {
+  async list(organisationId: string, filter: PaymentsShow = 'all', today = kampalaToday(), o: { within?: number; sort?: PaymentsSort; soldBy?: string } = {}) {
     const { rows: plans } = await this.pool.query<PlanRow>(
       `SELECT ${PLAN_COLS} FROM dealer.payment_plans p JOIN dealer.stock_items s ON s.id = p.stock_item_id
-        WHERE p.organisation_id = $1 ORDER BY s.sold_at DESC`, [organisationId]);
+        WHERE p.organisation_id = $1 AND ($2::uuid IS NULL OR s.sold_by_user_id = $2) ORDER BY s.sold_at DESC`, [organisationId, o.soldBy ?? null]);
     const ids = plans.map((p) => p.id);
     const [inst, pays] = await Promise.all([this.instalments(ids), this.payments(ids)]);
     const all = await Promise.all(plans.map(async (p) => {
@@ -207,8 +218,8 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
     const received = [...pays.values()].flat().filter((x) => x.paidOn.startsWith(month));
     const { rows: unplanned } = await this.pool.query<{ id: string; soldOn: string; salePriceUgx: number }>(
       `SELECT s.id, to_char((s.sold_at AT TIME ZONE 'Africa/Kampala')::date, 'YYYY-MM-DD') AS "soldOn", s.sale_price_ugx::float8 AS "salePriceUgx"
-         FROM dealer.stock_items s WHERE s.organisation_id = $1 AND s.status = 'sold'
-          AND NOT EXISTS (SELECT 1 FROM dealer.payment_plans p WHERE p.stock_item_id = s.id) ORDER BY s.sold_at DESC LIMIT 50`, [organisationId]);
+         FROM dealer.stock_items s WHERE s.organisation_id = $1 AND s.status = 'sold' AND ($2::uuid IS NULL OR s.sold_by_user_id = $2)
+          AND NOT EXISTS (SELECT 1 FROM dealer.payment_plans p WHERE p.stock_item_id = s.id) ORDER BY s.sold_at DESC LIMIT 50`, [organisationId, o.soldBy ?? null]);
     return {
       summary: {
         owedUgx: all.reduce((n, x) => n + x.balanceUgx, 0),
@@ -227,9 +238,9 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   /** One sale: the plan with each payment's status, the payments received and the buyer. */
-  async detail(organisationId: string, planId: string, today = kampalaToday()) {
-    const p = await this.plan(organisationId, planId);
-    const [inst, pays, person] = await Promise.all([this.instalments([p.id]), this.payments([p.id]), this.parties.reveal(p.partyId)]);
+  async detail(organisationId: string, planId: string, today = kampalaToday(), soldBy?: string) {
+    const p = await this.plan(organisationId, planId, this.pool, soldBy);
+    const [inst, pays, person, broker] = await Promise.all([this.instalments([p.id]), this.payments([p.id]), this.parties.reveal(p.partyId), this.broker(p.leadId)]);
     const i = inst.get(p.id) ?? [];
     const ps = pays.get(p.id) ?? [];
     const corrected = new Set(ps.map((x) => x.correctsPaymentId).filter(Boolean));
@@ -238,9 +249,20 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
       reminders: p.reminders,
       car: await this.car(organisationId, p.stockItemId),
       buyer: { name: person?.name ?? null, phone: person?.phone ?? null },
+      broker,
       schedule: allocate(i, ps.reduce((n, x) => n + x.amountUgx, 0), today),
       payments: ps.map((x) => ({ ...x, createdAt: new Date(x.createdAt).toISOString(), corrected: corrected.has(x.id) })),
     };
+  }
+
+  /** The broker who brought this buyer, and where their commission stands (D-185). */
+  private async broker(leadId: string | null) {
+    if (!leadId) return null;
+    const lead = await this.leads.lead(leadId);
+    if (!lead?.brokerUserId) return null;
+    const [names, commissions] = await Promise.all([this.iam.displayNames([lead.brokerUserId]), this.leads.commissionsForLead(this.pool, leadId)]);
+    const c = commissions.find((x) => x.brokerUserId === lead.brokerUserId);
+    return { userId: lead.brokerUserId, name: names.get(lead.brokerUserId) ?? 'Broker', commission: c ? { amountUgx: c.amountUgx, status: c.status } : null };
   }
 
   // ---------- writing
@@ -253,9 +275,10 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   /** Set up how a sold car is paid for. Whatever was paid at the sale is recorded (and receipted) at once. */
-  async createPlan(actor: Actor, organisationId: string, stockItemId: string, n: NewPlan): Promise<string> {
+  async createPlan(actor: Actor, organisationId: string, stockItemId: string, n: NewPlan, soldBy?: string): Promise<string> {
     const car = await this.dealer.get(organisationId, stockItemId);
     if (car.status !== 'sold' || !car.salePriceUgx || !car.soldAt) throw new DealerError('not_sold', 'Mark the car as sold first');
+    if (soldBy && !(await this.soldBy(stockItemId, soldBy))) throw new DealerError('stock_not_found', 'Only the person who sold this car, or a manager, records how it is paid');
     const price = car.salePriceUgx;
     const soldOn = kampalaToday(new Date(car.soldAt));
     let partyId: string;
@@ -297,6 +320,10 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
       }
       let rec: { id: string; receiptNo: string } | undefined;
       if (n.paidAtSale && atSale > 0) rec = await this.insertPayment(tx, organisationId, id, actor.userId, { amountUgx: atSale, method: n.paidAtSale.method, paidOn: soldOn, reference: n.paidAtSale.reference });
+      // The buyer's enquiry is completed with this car, and a broker named at the sale is credited (D-185).
+      const credited = await this.selling.creditSale(tx, actor, organisationId, { stockItemId, salePriceUgx: price, brokerUserId: n.brokerUserId ?? null,
+        ...('leadId' in n.buyer ? { leadId: n.buyer.leadId } : { partyId, phone: n.buyer.phone }) });
+      if (credited && credited !== leadId) await tx.query(`UPDATE dealer.payment_plans SET lead_id = $2 WHERE id = $1`, [id, credited]);
       await this.iam.audit({ actor, organisationId, action: 'dealer.payment_plan_created', targetType: 'dealer_payment_plan', targetId: id, details: { kind: n.kind } }, tx);
       return { planId: id, receipt: rec };
     });
@@ -315,9 +342,9 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   /** A payment received. It can't be more than what is still owed. The buyer gets an SMS receipt. */
-  async recordPayment(actor: Actor, organisationId: string, planId: string, p: { amountUgx: number; method: PayMethod; paidOn: string; reference?: string; note?: string }) {
+  async recordPayment(actor: Actor, organisationId: string, planId: string, p: { amountUgx: number; method: PayMethod; paidOn: string; reference?: string; note?: string }, soldBy?: string) {
     const r = await withTx(this.pool, async (tx) => {
-      const plan = await this.plan(organisationId, planId, tx);
+      const plan = await this.plan(organisationId, planId, tx, soldBy);
       await tx.query(`SELECT 1 FROM dealer.payment_plans WHERE id = $1 FOR UPDATE`, [planId]); // one payment at a time per sale
       if (p.paidOn < plan.soldOn) throw new DealerError('plan_invalid', 'A payment cannot be before the sale');
       const { rows: [s] } = await tx.query<{ paid: number }>(`SELECT COALESCE(sum(amount_ugx), 0)::float8 AS paid FROM dealer.payments WHERE plan_id = $1`, [planId]);
@@ -325,6 +352,7 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
       if (balance <= 0) throw new DealerError('fully_paid', 'This car is already paid in full');
       if (p.amountUgx > balance) throw new DealerError('more_than_owed', `That is more than the UGX ${fmt(balance)} still owed`);
       const rec = await this.insertPayment(tx, organisationId, planId, actor.userId, p);
+      await this.selling.paymentReceived(tx, actor, organisationId, plan.stockItemId); // a broker's commission is due at the first payment
       await this.iam.audit({ actor, organisationId, action: 'dealer.payment_recorded', targetType: 'dealer_payment_plan', targetId: planId, details: { receipt: rec.receiptNo } }, tx);
       return rec;
     });
@@ -333,9 +361,9 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   /** A mistake: the payment stays on record and a correction takes its amount back off. */
-  async correctPayment(actor: Actor, organisationId: string, planId: string, paymentId: string, reason: string) {
+  async correctPayment(actor: Actor, organisationId: string, planId: string, paymentId: string, reason: string, soldBy?: string) {
     return withTx(this.pool, async (tx) => {
-      await this.plan(organisationId, planId, tx);
+      await this.plan(organisationId, planId, tx, soldBy);
       const { rows: [x] } = await tx.query<{ amount: number; method: string; receiptNo: string }>(
         `SELECT amount_ugx::float8 AS amount, method, receipt_no AS "receiptNo" FROM dealer.payments WHERE id = $1 AND plan_id = $2`, [paymentId, planId]);
       if (!x) throw new DealerError('payment_not_found', 'No such payment');
@@ -350,8 +378,8 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
   }
 
   /** One payment, for its printed receipt. */
-  async receipt(organisationId: string, planId: string, paymentId: string) {
-    const d = await this.detail(organisationId, planId);
+  async receipt(organisationId: string, planId: string, paymentId: string, soldBy?: string) {
+    const d = await this.detail(organisationId, planId, undefined, soldBy);
     const x = d.payments.find((y) => y.id === paymentId);
     if (!x) throw new DealerError('payment_not_found', 'No such payment');
     const paidUpTo = d.payments.filter((y) => y.createdAt <= x.createdAt).reduce((n, y) => n + y.amountUgx, 0);

@@ -97,7 +97,8 @@ describe.skipIf(!base)('dealer dashboard and payments (e2e)', () => {
     const plan = { buyer: { name: 'moses tumusiime', phone: '+256772810101' }, kind: 'cash', paidAtSale: { method: 'cash' } };
     expect((await http.post(`/v1/dealer/stock/${cars.wish}/payment-plan`).set(as(manager)).send(plan).expect(409)).body.code).toBe('not_sold');
     await http.post(`/v1/dealer/stock/${cars.wish}/sold`).set(as(manager)).send({ salePriceUgx: 21_000_000, soldOn: today }).expect(200);
-    await http.post(`/v1/dealer/stock/${cars.wish}/payment-plan`).set(as(staff)).send(plan).expect(403); // money is for managers
+    // A salesperson records how their own sales are paid (D-185); this one a manager made.
+    expect((await http.post(`/v1/dealer/stock/${cars.wish}/payment-plan`).set(as(staff)).send(plan).expect(404)).body.code).toBe('stock_not_found');
     const d = (await http.post(`/v1/dealer/stock/${cars.wish}/payment-plan`).set(as(manager)).send(plan).expect(201)).body;
     expect(d).toMatchObject({ kind: 'cash', priceUgx: 21_000_000, paidUgx: 21_000_000, balanceUgx: 0, state: 'paid', buyer: { name: 'Moses Tumusiime', phone: '+256772810101' } });
     expect(d.payments).toHaveLength(1);
@@ -179,7 +180,11 @@ describe.skipIf(!base)('dealer dashboard and payments (e2e)', () => {
     const s = (await http.get('/v1/dealer/dashboard').set(as(staff)).expect(200)).body;
     expect(s).toMatchObject({ manager: false, soldThisMonth: { cars: 2 }, mySales: { thisMonth: 1, thisYear: 1 } });
     expect(JSON.stringify(s)).not.toMatch(/valueUgx|owedUgx|payments|commissions|50500000/);
-    await http.get('/v1/dealer/payments').set(as(staff)).expect(403);
+    // A salesperson sees only the sales they made (D-185): the Forester, still to be set up.
+    const mine = (await http.get('/v1/dealer/payments?show=all').set(as(staff)).expect(200)).body;
+    expect(mine.items).toHaveLength(0);
+    expect(mine.unplanned.map((u: { car: { name: string } }) => u.car.name)).toEqual(['Subaru Forester']);
+    await http.get(`/v1/dealer/payments/${premio}`).set(as(staff)).expect(404);
 
     const list = (await http.get('/v1/dealer/payments?show=all').set(as(manager)).expect(200)).body;
     expect(list.summary).toMatchObject({ owedUgx: 30_000_000, owingSales: 1, lateBuyers: 1, receivedThisMonthCount: 2 });

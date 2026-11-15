@@ -1,10 +1,12 @@
 'use client';
-// Selling a car (D-146): the price and date, and for managers how the buyer pays: cash in full, or a deposit and
-// monthly instalments. Shown in a pop-up over the car or the payments page.
+// Selling a car (D-146): the price and date, and how the buyer pays: cash in full, or a deposit and monthly
+// instalments. Shown in a pop-up over the car or the payments page. Since D-185 (15 Nov 2026) whoever sells the car
+// records how it is paid, and names the broker who brought the buyer, if any.
 import { useState } from 'react';
 import { addPaymentPlan, sellCar } from './actions';
 
-export interface BuyerChoice { leadId: string; name: string; phone: string | null }
+export interface BuyerChoice { leadId: string; name: string; phone: string | null; broker?: string | null }
+export interface BrokerChoice { userId: string; name: string; worksWithYou: boolean }
 
 const METHODS: [string, string][] = [['cash', 'Cash'], ['mtn_momo', 'MTN MoMo'], ['airtel_money', 'Airtel Money'], ['bank', 'Bank']];
 const num = (s: string) => Number(s.replace(/[^\d]/g, '')) || 0;
@@ -37,10 +39,10 @@ function Chips({ name, options, value, onChange, label }: { name: string; option
 
 /**
  * `mode="sell"`: the car is in stock (price and date first). `mode="plan"`: the car was sold before; only how it is
- * paid for. `manager` false: sales staff record the price and date only (money is for managers).
+ * paid for. `brokers`: approved brokers the sale can name, those who work with the dealer first.
  */
-export function SaleForm({ org, carId, askingPriceUgx, salePriceUgx, today, manager, buyers, mode }: {
-  org: string; carId: string; askingPriceUgx?: number; salePriceUgx?: number; today: string; manager: boolean; buyers: BuyerChoice[]; mode: 'sell' | 'plan';
+export function SaleForm({ org, carId, askingPriceUgx, salePriceUgx, today, buyers, brokers, mode }: {
+  org: string; carId: string; askingPriceUgx?: number; salePriceUgx?: number; today: string; buyers: BuyerChoice[]; brokers: BrokerChoice[]; mode: 'sell' | 'plan';
 }) {
   const [price, setPrice] = useState(salePriceUgx ? String(salePriceUgx) : '');
   const [kind, setKind] = useState('cash');
@@ -49,6 +51,10 @@ export function SaleForm({ org, carId, askingPriceUgx, salePriceUgx, today, mana
   const [months, setMonths] = useState('12');
   const [soldOn, setSoldOn] = useState(today);
   const [method, setMethod] = useState('cash');
+  const [viaBroker, setViaBroker] = useState('no');
+  const [broker, setBroker] = useState('');
+  const chosen = buyers.find((b) => b.leadId === buyer);
+  const brokerName = brokers.find((b) => b.userId === broker)?.name;
   const p = num(price);
   const d = num(deposit);
   const m = Math.max(0, Math.min(120, num(months)));
@@ -71,9 +77,7 @@ export function SaleForm({ org, carId, askingPriceUgx, salePriceUgx, today, mana
         </div>
       )}
       {mode === 'plan' && salePriceUgx && <p className="text-sm">Sold for <b>{ugx(salePriceUgx)}</b>.</p>}
-      {!manager ? (
-        <p className="text-sm text-muted">A manager records how the buyer pays, under Payments.</p>
-      ) : (
+      {(
         <>
           <div>
             <label htmlFor="sale-buyer" className="label">Buyer</label>
@@ -87,6 +91,23 @@ export function SaleForm({ org, carId, askingPriceUgx, salePriceUgx, today, mana
               <div><label htmlFor="buyer-name" className="label">Buyer&apos;s name</label><input id="buyer-name" name="buyerName" required autoComplete="off" className="field" /></div>
               <div><label htmlFor="buyer-phone" className="label">Buyer&apos;s phone</label><input id="buyer-phone" name="buyerPhone" required type="tel" inputMode="tel" placeholder="0772 123 456" className="field" /></div>
             </div>
+          )}
+          {chosen?.broker ? (
+            <p className="rounded-lg bg-soft p-3 text-sm"><b>{chosen.broker}</b> brought this buyer. Their commission is due at the buyer&apos;s first payment, then a manager approves it.</p>
+          ) : brokers.length > 0 && (
+            <>
+              <Chips name="viaBroker" label="Did a broker bring this buyer?" value={viaBroker} onChange={setViaBroker} options={[['no', 'No'], ['yes', 'Yes, a broker']]} />
+              {viaBroker === 'yes' && (
+                <div>
+                  <label htmlFor="sale-broker" className="label">Broker</label>
+                  <select id="sale-broker" name="broker" required value={broker} onChange={(e) => setBroker(e.target.value)} className="field">
+                    <option value="" disabled>Choose the broker</option>
+                    {brokers.map((b) => <option key={b.userId} value={b.userId}>{b.name}{b.worksWithYou ? ' · works with you' : ''}</option>)}
+                  </select>
+                  {brokerName && <p className="mt-1.5 text-sm text-muted">{brokerName} sees this sale under their commission. Commission is due at the buyer&apos;s first payment, then a manager approves it.</p>}
+                </div>
+              )}
+            </>
           )}
           <Chips name="kind" label="How is the buyer paying?" value={kind} onChange={setKind} options={[['cash', 'Cash, in full'], ['instalments', 'Instalments']]} />
           {kind === 'instalments' && (

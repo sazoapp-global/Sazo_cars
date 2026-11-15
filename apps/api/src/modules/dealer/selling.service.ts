@@ -16,7 +16,8 @@ import { DealerError, DealerService } from './dealer.service.js';
 import { OPEN_STAGES, SellingRepository, type LeadRow, type LeadSource, type LeadStage, type LinkChannel, type LinkRow } from './selling.repository.js';
 
 export type SellingErrorCode = 'link_not_found' | 'car_not_available' | 'car_not_linked' | 'lead_not_found' | 'stage_conflict' | 'sale_price_required'
-  | 'lead_closed' | 'consent_required' | 'too_many' | 'stock_not_found' | 'no_decision_needed' | 'commission_not_found' | 'commission_state' | 'split_needs_two_brokers';
+  | 'lead_closed' | 'consent_required' | 'too_many' | 'stock_not_found' | 'no_decision_needed' | 'commission_not_found' | 'commission_state' | 'split_needs_two_brokers'
+  | 'broker_not_found' | 'broker_conflict';
 export class SellingError extends Error {
   constructor(readonly code: SellingErrorCode, message: string) {
     super(message);
@@ -227,7 +228,8 @@ export class SellingService {
     const shares = new Map<string, number>();
     if (lead.brokerUserId) shares.set(lead.brokerUserId, lead.splitBrokerUserId ? lead.splitPercent ?? 50 : 100);
     if (lead.splitBrokerUserId) shares.set(lead.splitBrokerUserId, 100 - (lead.splitPercent ?? 50));
-    const status = lead.needsDecision ? 'on_hold' as const : 'pending' as const;
+    // Due at the buyer's first payment (D-185): until then it waits; a disputed customer waits for the dealer's decision.
+    const status = lead.needsDecision ? 'on_hold' as const : await this.repo.firstPaymentMade(tx, lead.stockItemId) ? 'pending' as const : 'awaiting_payment' as const;
     const current = await this.repo.commissionsForLead(tx, lead.id);
     for (const existing of current) {
       if (!shares.has(existing.brokerUserId) && existing.status !== 'cancelled' && existing.status !== 'paid') {
@@ -242,6 +244,54 @@ export class SellingService {
       const { row, before } = await this.repo.upsertCommission(tx, { organisationId: lead.organisationId, leadId: lead.id, stockItemId: lead.stockItemId, brokerUserId: broker,
         kind: terms.kind, percent: terms.kind === 'percent' ? terms.percent : null, salePriceUgx: lead.salePriceUgx, sharePercent: share, amountUgx: amount, status });
       await this.repo.commissionEvent(tx, { organisationId: lead.organisationId, commissionId: row.id, fromStatus: before?.status ?? null, toStatus: row.status, amountUgx: amount, note: why, actorUserId: actor.userId });
+    }
+  }
+
+  /**
+   * The sale of a car to a buyer (D-185): the buyer's enquiry is completed with the car and the price, and a broker
+   * named at the sale is credited through the usual claim rules (an earlier broker's protected customer goes to the
+   * dealer to decide). A walk-in buyer gets an enquiry when a broker is named or already protects them. Returns the
+   * enquiry, if any. Runs inside the sale's own transaction.
+   */
+  async creditSale(tx: Sql, actor: Actor, organisationId: string, sale: { stockItemId: string; salePriceUgx: number; leadId?: string; partyId?: string; phone?: string; brokerUserId?: string | null }): Promise<string | null> {
+    if (sale.brokerUserId && !(await this.iam.isApprovedBroker(sale.brokerUserId))) throw new SellingError('broker_not_found', 'Choose an approved broker');
+    let lead: LeadRow | undefined;
+    if (sale.leadId) {
+      lead = await this.repo.lead(sale.leadId, tx);
+      if (!lead || lead.organisationId !== organisationId) throw new SellingError('lead_not_found', 'No such enquiry');
+      if (sale.brokerUserId && lead.brokerUserId && lead.brokerUserId !== sale.brokerUserId) {
+        throw new SellingError('broker_conflict', 'This buyer came through another broker. Leave the broker out here, and settle who brought them on the enquiry.');
+      }
+      const credit = sale.brokerUserId && !lead.brokerUserId ? await this.credit(tx, organisationId, (await this.repo.phoneHashOf(tx, lead.id))!, sale.brokerUserId) : undefined;
+      await this.repo.setSaleOnLead(tx, lead.id, { stockItemId: sale.stockItemId, ...(credit ?? {}) });
+    } else {
+      const phoneHash = this.parties.phoneHash(sale.phone!);
+      const credit = await this.credit(tx, organisationId, phoneHash, sale.brokerUserId ?? null);
+      if (!credit.brokerUserId) return null;
+      lead = await this.repo.insertLead(tx, { organisationId, stockItemId: sale.stockItemId, partyId: sale.partyId!, phoneHash, source: sale.brokerUserId ? 'broker' : 'walk_in',
+        carLinkId: null, consentToContact: false, message: null, createdBy: actor.userId, ...credit });
+    }
+    if (lead.stage !== 'completed') {
+      await this.repo.setStage(tx, lead.id, lead.stage, 'completed', sale.salePriceUgx);
+      await this.repo.event(tx, { organisationId, leadId: lead.id, kind: 'stage', fromStage: lead.stage, toStage: 'completed', note: sale.brokerUserId ? 'Sold; broker named at the sale' : 'Sold', actorUserId: actor.userId });
+    }
+    const done = (await this.repo.lead(lead.id, tx))!;
+    await this.workOutCommissions(tx, actor, done, sale.brokerUserId ? 'Sale completed; broker named at the sale' : 'Sale completed');
+    return lead.id;
+  }
+
+  /** Approved brokers a sale can name (D-185), those who already work with this dealer first. Surname first. */
+  async brokersForSale(organisationId: string) {
+    const [all, known] = await Promise.all([this.iam.approvedBrokers(), this.repo.brokersOf(organisationId)]);
+    return all.map((b) => ({ ...b, worksWithYou: known.has(b.userId) })).sort((a, b) => Number(b.worksWithYou) - Number(a.worksWithYou) || a.name.localeCompare(b.name));
+  }
+
+  /** The buyer's first payment (D-185): commissions waiting for it go to a manager to approve. */
+  async paymentReceived(tx: Sql, actor: Actor, organisationId: string, stockItemId: string) {
+    if (!(await this.repo.firstPaymentMade(tx, stockItemId))) return;
+    for (const c of await this.repo.awaitingPayment(tx, stockItemId)) {
+      await this.repo.setCommissionStatus(tx, c.id, 'awaiting_payment', 'pending', null);
+      await this.repo.commissionEvent(tx, { organisationId, commissionId: c.id, fromStatus: 'awaiting_payment', toStatus: 'pending', amountUgx: c.amountUgx, note: 'First payment received', actorUserId: actor.userId });
     }
   }
 

@@ -65,6 +65,14 @@ export class DealerMessagesController {
     return handle(() => this.messages.dealerStartDirect(actor, org, b.userId));
   }
 
+  /** POST /v1/dealer/messages/broker { userId }: open the conversation with a broker who worked with the dealer (D-185). */
+  @Post('broker')
+  async broker(@CurrentActor() actor: Actor, @Body() body: unknown, @Headers('x-organisation-id') orgId?: string) {
+    const org = await this.org(actor, orgId);
+    const b = parse(z.object({ userId: Uuid }).strict(), body);
+    return handle(() => this.messages.dealerStartBroker(actor, org, b.userId));
+  }
+
   /** GET /v1/dealer/messages/:id (or "team"): one conversation; opening it marks it read. */
   @Get(':id')
   async thread(@CurrentActor() actor: Actor, @Param('id') convId: string, @Headers('x-organisation-id') orgId?: string) {

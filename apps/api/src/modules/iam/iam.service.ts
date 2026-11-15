@@ -147,6 +147,14 @@ export class IamService {
     return this.repo.firstNames([...new Set(userIds)]);
   }
 
+  approvedBrokers(): Promise<{ userId: string; name: string }[]> {
+    return this.repo.approvedBrokers();
+  }
+
+  async isApprovedBroker(userId: string): Promise<boolean> {
+    return (await this.repo.approvedBrokers([userId])).length > 0;
+  }
+
   displayNames(userIds: string[]): Promise<Map<string, string>> {
     return this.repo.displayNames([...new Set(userIds)]);
   }

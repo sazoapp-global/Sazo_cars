@@ -29,7 +29,7 @@ interface Commission { commissionId: string; status: string; amountUgx: number; 
 
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const STAGE: Record<string, string> = { enquiry: 'New enquiry', viewing: 'Viewing', negotiation: 'Negotiating', deposit: 'Deposit paid', handover: 'Handover', completed: 'Sold', lost: 'Lost' };
-const PAY: Record<string, string> = { on_hold: 'Waiting for the dealer to decide', pending: 'Waiting for approval', approved: 'Approved, not paid yet', paid: 'Paid', cancelled: 'Cancelled' };
+const PAY: Record<string, string> = { awaiting_payment: 'Due at the buyer’s first payment', on_hold: 'Waiting for the dealer to decide', pending: 'Waiting for approval', approved: 'Approved, not paid yet', paid: 'Paid', cancelled: 'Cancelled' };
 const TABS = [['cars', 'Cars to share'], ['links', 'My links'], ['enquiries', 'My customers'], ['commissions', 'My commission'], ['messages', 'Messages']] as const;
 type Tab = (typeof TABS)[number][0];
 /** One line under each page's title. */

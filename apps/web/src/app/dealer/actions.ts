@@ -444,6 +444,11 @@ function planFrom(form: FormData, fail: (msg: string) => never): Record<string, 
     reminders: form.get('reminders') === 'on',
     paidAtSale: { method, ...(text(form, 'reference') ? { reference: text(form, 'reference') } : {}) },
   };
+  // The broker who brought the buyer (D-185), when the seller said a broker did.
+  if (text(form, 'viaBroker') === 'yes') {
+    if (!UUID.test(text(form, 'broker'))) fail('Choose the broker who brought the buyer.');
+    plan.brokerUserId = text(form, 'broker');
+  }
   if (kind === 'instalments') {
     const months = digits(text(form, 'months'));
     if (!months || months > 120) fail('Enter the number of monthly payments (1 to 120).');
@@ -456,7 +461,7 @@ function planFrom(form: FormData, fail: (msg: string) => never): Record<string, 
   return plan;
 }
 
-/** Sell a car: the sale, then (managers) how it is paid for. Opens the payments of the car afterwards. */
+/** Sell a car: the sale, then how it is paid for and who brought the buyer. Opens the payments of the car afterwards. */
 export async function sellCar(form: FormData) {
   const { org, car } = ids(form);
   const price = digits(text(form, 'price'));
@@ -477,7 +482,7 @@ export async function sellCar(form: FormData) {
   toPayments(org, { plan: planId, done: 'Sale recorded. The buyer gets an SMS receipt for what they paid.' });
 }
 
-/** How an already sold car is paid for (a sale recorded before, or by sales staff). */
+/** How an already sold car is paid for (a sale recorded before this was asked at the sale). */
 export async function addPaymentPlan(form: FormData) {
   const { org, car } = ids(form);
   const fail = (error: string): never => toPayments(org, { error, add: car });
