@@ -9,7 +9,7 @@ export const CONFLICT_STATUS: Record<string, string> = {
 export const CHECK: Record<string, string> = {
   mileage_decrease: 'A later reading is lower', implausible_mileage_rate: 'Too much distance per year', undeclared_engine_change: 'Engine number changed without a record',
   plate_vin_mismatch: 'Plate and chassis disagree', cloned_plate_suspected: 'Plate on two vehicles', identity_collision: 'Records point to different cars',
-  spec_mismatch: 'Specification differs', date_impossible: 'Impossible date', duplicate_suspected: 'Possible duplicate vehicle',
+  spec_mismatch: 'Specification differs', disputed_attestation: 'The owner disputed a garage record', date_impossible: 'Impossible date', duplicate_suspected: 'Possible duplicate vehicle',
 };
 
 /** One record in plain words for reviewers (they may see full attributes; never internal ids). */

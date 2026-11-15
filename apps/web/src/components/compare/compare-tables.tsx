@@ -18,8 +18,8 @@ export function CompareMatrix({ c }: { c: Comparison }) {
     <section aria-labelledby="matrix">
       <h2 id="matrix" className="font-display text-2xl font-extrabold text-primary-container md:text-3xl">The 7 buyer questions</h2>
       <p className="mt-1 text-muted">What the records say for each car, question by question.</p>
-      <div tabIndex={0} role="region" aria-label="The 7 buyer questions, side by side (scrolls sideways on small screens)" className="mt-5 overflow-x-auto rounded-[14px] border border-line bg-white focus-visible:outline-2 focus-visible:outline-primary-container">
-        <table className="w-full min-w-[720px] text-left text-sm">
+      <div tabIndex={0} role="region" aria-label="The 7 buyer questions, side by side" className="mt-5 overflow-x-auto rounded-[14px] border border-line bg-white focus-visible:outline-2 focus-visible:outline-primary-container">
+        <table className="stack-table stack-blocks w-full min-w-[720px] text-left text-sm">
           <caption className="sr-only">Seven buyer questions compared across {c.vehicles.length} cars</caption>
           <thead className="bg-soft">
             <tr>
@@ -35,7 +35,7 @@ export function CompareMatrix({ c }: { c: Comparison }) {
           <tbody className="divide-y divide-line">
             <Row label="Vehicle Health" sub="Condition the records suggest">
               {c.vehicles.map((v) => (
-                <td key={v.vehicle.vehicleRef} className="p-4 align-top">
+                <td key={v.vehicle.vehicleRef} data-label={vehicleName(v.vehicle)} className="p-4 align-top">
                   {v.health.insufficient ? <span className="font-semibold text-na-text">Insufficient history</span> : (
                     <><span className="font-display text-2xl font-extrabold">{v.health.score}</span><span className="text-muted"> / 100</span>
                       {v.health.deductions.length > 0 && <span className="block text-xs text-muted">{v.health.deductions.map((d) => HEALTH_FACTORS[d.key]).join(', ')}</span>}</>
@@ -45,7 +45,7 @@ export function CompareMatrix({ c }: { c: Comparison }) {
             </Row>
             <Row label="Record Confidence" sub="How complete the history is">
               {c.vehicles.map((v) => (
-                <td key={v.vehicle.vehicleRef} className="p-4 align-top"><span className="font-semibold">{CONFIDENCE_LABELS[v.recordConfidence.level]}</span>
+                <td key={v.vehicle.vehicleRef} data-label={vehicleName(v.vehicle)} className="p-4 align-top"><span className="font-semibold">{CONFIDENCE_LABELS[v.recordConfidence.level]}</span>
                   <span className="block text-xs text-muted">{v.recordConfidence.records} records · {v.recordConfidence.sources} sources</span></td>
               ))}
             </Row>
@@ -86,8 +86,8 @@ export function CompareDetails({ c }: { c: Comparison }) {
           <section aria-labelledby="about-cars">
             <h2 id="about-cars" className="font-display text-2xl font-extrabold text-primary-container md:text-3xl">About these cars</h2>
             <p className="mt-1 text-muted">A maker&apos;s figure is published for the model, not measured on the car.</p>
-            <div tabIndex={0} role="region" aria-label="Car details, side by side (scrolls sideways on small screens)" className="mt-5 overflow-x-auto rounded-[14px] border border-line bg-white focus-visible:outline-2 focus-visible:outline-primary-container">
-              <table className="w-full min-w-[720px] text-left text-sm">
+            <div tabIndex={0} role="region" aria-label="Car details, side by side" className="mt-5 overflow-x-auto rounded-[14px] border border-line bg-white focus-visible:outline-2 focus-visible:outline-primary-container">
+              <table className="stack-table stack-blocks w-full min-w-[720px] text-left text-sm">
                 <caption className="sr-only">Car details compared across {c.vehicles.length} cars</caption>
                 <thead className="bg-soft"><tr>
                   <th scope="col" className="w-60 p-4 text-[11px] font-bold uppercase tracking-wider text-label">Detail</th>
@@ -99,7 +99,7 @@ export function CompareDetails({ c }: { c: Comparison }) {
                       <th scope="row" className="p-4 align-top font-display font-bold">{DETAIL_LABELS[k]}</th>
                       {c.vehicles.map((v) => {
                         const d = v.about?.details.find((x) => x.key === k);
-                        return <td key={v.vehicle.vehicleRef} className="p-4 align-top">{d ? <><span className="font-semibold">{detailValue(k, d.value)}</span>
+                        return <td key={v.vehicle.vehicleRef} data-label={vehicleName(v.vehicle)} className="p-4 align-top">{d ? <><span className="font-semibold">{detailValue(k, d.value)}</span>
                           <span className="block text-xs text-muted">{DETAIL_SOURCE_LABELS[d.source]}</span></> : <span className="text-muted">Not recorded</span>}</td>;
                       })}
                     </tr>
@@ -125,10 +125,10 @@ function Row({ label, sub, children }: { label: string; sub: string; children: R
 
 function Cell({ v, q }: { v: FullReport; q: string }) {
   const a = v.questions.find((x) => x.question === q);
-  if (!a) return <td className="p-4 align-top text-muted">Not recorded</td>;
+  if (!a) return <td data-label={vehicleName(v.vehicle)} className="p-4 align-top text-muted">Not recorded</td>;
   const km = v.facts.find((f) => f.key === 'current_mileage_km');
   return (
-    <td className="p-4 align-top">
+    <td data-label={vehicleName(v.vehicle)} className="p-4 align-top">
       <StatusChip status={a.status} label={statusLabel(q, a.status)} />
       {q === 'mileage' && km && <p className="mt-2 font-display text-lg font-extrabold">{factValue(km.key, km.value)}</p>}
       {q === 'valuation' && v.valuation.range && <p className="mt-2 font-display text-lg font-extrabold">{formatUgx(v.valuation.range.lowUgx)} to {formatUgx(v.valuation.range.highUgx)}</p>}

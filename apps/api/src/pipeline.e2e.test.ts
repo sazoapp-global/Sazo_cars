@@ -220,6 +220,9 @@ describe.skipIf(!base)('full pipeline with all scenario vehicles (e2e)', () => {
     // The clone's own identity conflict closes by itself once the cause is gone.
     const after = await request(app.getHttpServer()).get('/v1/admin/conflicts').query({ topic: 'identity', status: 'auto_resolved' }).set(auth).expect(200);
     expect(after.body.items.map((c: { vehicleRef: string }) => c.vehicleRef)).toContain(ref('S08b'));
+    // The All tab (15 Nov 2026): every status, the resolved and the closed ones too.
+    const all = await request(app.getHttpServer()).get('/v1/admin/conflicts').query({ topic: 'identity', status: 'all' }).set(auth).expect(200);
+    expect(all.body.items.map((c: { status: string }) => c.status)).toEqual(expect.arrayContaining(['resolved', 'auto_resolved']));
   });
 
   it('X1: retiring the simulated lien feed excludes its records without deleting them', async () => {

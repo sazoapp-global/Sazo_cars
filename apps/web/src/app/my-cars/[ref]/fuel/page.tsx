@@ -55,16 +55,16 @@ export default async function FuelLog({ params, searchParams }: { params: Promis
           <h2 id="fills" className="sr-only">Your fill-ups</h2>
           {log.items.length === 0 ? <p className="text-muted">No fill-ups yet. Start with a full tank.</p> : (
             <div className="card overflow-x-auto p-0">
-              <table className="w-full text-sm">
+              <table className="stack-table w-full text-sm">
                 <thead><tr className="text-left text-muted"><th className="px-4 py-2">Date</th><th>Litres</th><th>Mileage</th><th>Full tank</th><th>km per litre</th><th><span className="sr-only">Remove</span></th></tr></thead>
                 <tbody>
                   {paginate(log.items, sp.page).items.map((f) => (
                     <tr key={f.id} className="border-t border-line">
-                      <td className="px-4 py-2">{formatDate(f.filledOn)}</td>
-                      <td className="tabular-nums">{n(f.litres, 2)}</td>
-                      <td className="tabular-nums">{f.odometerKm.toLocaleString('en-GB')} km</td>
-                      <td>{f.fullTank ? 'Yes' : 'No'}</td>
-                      <td className="tabular-nums">{f.kmPerL !== null ? n(f.kmPerL) : <span className="text-muted">·</span>}</td>
+                      <td data-label="Date" className="px-4 py-2">{formatDate(f.filledOn)}</td>
+                      <td data-label="Litres" className="tabular-nums">{n(f.litres, 2)}</td>
+                      <td data-label="Mileage" className="tabular-nums">{f.odometerKm.toLocaleString('en-GB')} km</td>
+                      <td data-label="Full tank">{f.fullTank ? 'Yes' : 'No'}</td>
+                      <td data-label="km per litre" className="tabular-nums">{f.kmPerL !== null ? n(f.kmPerL) : <span className="text-muted">·</span>}</td>
                       <td className="pr-3 text-right">
                         <form action={removeFillup}><input type="hidden" name="ref" value={ref} /><input type="hidden" name="id" value={f.id} />
                           <ConfirmButton className="link text-sm" label={`Remove the fill-up of ${formatDate(f.filledOn)}`} icon="local_gas_station"

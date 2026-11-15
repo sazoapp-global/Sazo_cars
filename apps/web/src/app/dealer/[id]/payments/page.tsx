@@ -188,18 +188,18 @@ export default async function DealerPayments({ params, searchParams }: { params:
               )}
             </div>
             <div className="mt-2 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="stack-table w-full text-sm">
                 <thead><tr className="border-b border-line text-left text-[11px] uppercase tracking-wider text-label">
                   <th className="py-2 pr-2">Payment</th><th className="py-2 pr-2">Due</th><th className="py-2 pr-2 text-right">Amount</th><th className="py-2 pr-2 text-right">Paid</th><th className="py-2">Status</th>
                 </tr></thead>
                 <tbody>
                   {paginate(d.schedule, sp.sch).items.map((s) => (
                     <tr key={s.seq} className="border-b border-line last:border-0">
-                      <td className="py-2 pr-2">{s.seq === 0 ? (d.kind === 'cash' ? 'Full price' : 'Deposit') : s.seq}</td>
-                      <td className="py-2 pr-2 whitespace-nowrap">{longDate(s.dueOn)}</td>
-                      <td className="py-2 pr-2 text-right tabular-nums">{formatUgx(s.amountUgx)}</td>
-                      <td className="py-2 pr-2 text-right tabular-nums">{s.paidUgx ? formatUgx(s.paidUgx) : ''}</td>
-                      <td className="py-2"><Pill state={s.status} text={s.status === 'late' ? `${s.paidUgx ? 'Part paid, ' : ''}${s.daysLate} days late` : undefined} /></td>
+                      <td data-label="Payment" className="py-2 pr-2">{s.seq === 0 ? (d.kind === 'cash' ? 'Full price' : 'Deposit') : s.seq}</td>
+                      <td data-label="Due" className="py-2 pr-2 whitespace-nowrap">{longDate(s.dueOn)}</td>
+                      <td data-label="Amount" className="py-2 pr-2 text-right tabular-nums">{formatUgx(s.amountUgx)}</td>
+                      <td data-label="Paid" className="py-2 pr-2 text-right tabular-nums">{s.paidUgx ? formatUgx(s.paidUgx) : ''}</td>
+                      <td data-label="Status" className="py-2"><Pill state={s.status} text={s.status === 'late' ? `${s.paidUgx ? 'Part paid, ' : ''}${s.daysLate} days late` : undefined} /></td>
                     </tr>
                   ))}
                 </tbody>

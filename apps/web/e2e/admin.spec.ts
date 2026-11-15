@@ -91,9 +91,13 @@ test('settle a cloned plate: the genuine car keeps it', async ({ page, request }
   const genuine = search.matches.find((m: { currentPlate: string }) => m.currentPlate === 'UAX 123A').vehicleRef as string;
 
   await signIn(page, ADMIN);
-  await page.goto('/admin/conflicts?topic=identity');
+  // Status tabs and topic chips (15 Nov 2026); on a phone each conflict is a card.
+  await page.goto('/admin/conflicts');
+  await expect(page.getByRole('navigation', { name: 'Status' }).getByRole('link', { name: /Needs action/ })).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('navigation', { name: 'Topic' }).getByRole('link', { name: 'Identity' }).click();
+  await expect(page).toHaveURL(/topic=identity/);
   await a11y(page);
-  await page.getByRole('row').filter({ hasText: genuine }).getByRole('link', { name: 'Review' }).first().click();
+  await page.getByRole('list', { name: 'Conflicts' }).getByRole('listitem').filter({ hasText: genuine }).getByRole('link', { name: /^Review/ }).first().click();
   await expect(page.getByText('Disputed plate on this vehicle')).toBeVisible();
   await shot(page, 'admin-conflict');
   await a11y(page);

@@ -35,10 +35,10 @@ export class TrustAdminController {
   @Get('conflicts')
   @RequirePermission('conflict.review')
   async list(@Query('status') status?: string, @Query('topic') topic?: string, @Query('limit') limit?: string) {
-    const s = status === undefined ? undefined : Status.safeParse(status);
+    const s = status === undefined || status === 'all' ? undefined : Status.safeParse(status);
     const t = topic === undefined ? undefined : Topic.safeParse(topic);
     if ((s && !s.success) || (t && !t.success)) throw badRequest('invalid_query', 'Unknown status or topic');
-    const items = await this.conflicts.list({ status: s?.data, topic: t?.data, limit: Math.min(Math.max(Number(limit) || 50, 1), 200) });
+    const items = await this.conflicts.list({ status: status === 'all' ? 'all' : s?.data, topic: t?.data, limit: Math.min(Math.max(Number(limit) || 50, 1), 200) });
     return { items, nextCursor: null };
   }
 

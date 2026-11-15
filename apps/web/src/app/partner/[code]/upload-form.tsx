@@ -31,12 +31,12 @@ export function UploadForm({ source, domain }: { source: string; domain: string 
           )}
           {problems.length > 0 && (
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="stack-table w-full text-left text-sm">
                 <thead className="text-[11px] uppercase tracking-wider text-label"><tr><th className="py-1 pr-3">Row</th><th className="py-1 pr-3">Result</th><th className="py-1">Why</th></tr></thead>
                 <tbody className="divide-y divide-line">
                   {problems.slice(0, 200).map((r) => (
-                    <tr key={r.row}><td className="py-1.5 pr-3 tabular-nums">{r.row}</td><td className={`py-1.5 pr-3 font-semibold ${CLS[r.status]}`}>{LABEL[r.status]}</td>
-                      <td className="py-1.5 break-words">{r.message ?? (r.vehicleRef ? <Link className="link" href={`/partner/${source}/cars/${r.vehicleRef}`}>{r.vehicleRef}</Link> : '')}</td></tr>
+                    <tr key={r.row}><td data-label="Row" className="py-1.5 pr-3 tabular-nums">{r.row}</td><td data-label="Result" className={`py-1.5 pr-3 font-semibold ${CLS[r.status]}`}>{LABEL[r.status]}</td>
+                      <td data-label="Why" className="py-1.5 break-words">{r.message ?? (r.vehicleRef ? <Link className="link" href={`/partner/${source}/cars/${r.vehicleRef}`}>{r.vehicleRef}</Link> : '')}</td></tr>
                   ))}
                 </tbody>
               </table>

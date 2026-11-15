@@ -22,13 +22,13 @@ export default async function SubmissionPage({ params, searchParams }: { params:
       <h1 className="mt-2 font-display text-2xl font-bold">Submission</h1>
       <p className="sazo-id text-sm text-muted">{s.submissionId}</p>
       <div className="card mt-4 overflow-x-auto">
-        <table className="w-full min-w-[520px] text-left text-sm">
+        <table className="stack-table w-full min-w-[520px] text-left text-sm">
           <thead className="border-b border-line text-[11px] uppercase tracking-wider text-label"><tr><th className="p-3">#</th><th className="p-3">Result</th><th className="p-3">Vehicle</th><th className="p-3">Why</th></tr></thead>
           <tbody className="divide-y divide-line">
             {paginate(s.items, sp.page).items.map((i) => (
-              <tr key={i.sequence}><td className="p-3 tabular-nums">{i.sequence}</td><td className="p-3 font-semibold">{LABEL[i.status] ?? i.status}</td>
-                <td className="p-3">{i.vehicleRef ? <Link className="link sazo-id" href={`/partner/${code}/cars/${i.vehicleRef}`}>{i.vehicleRef}</Link> : 'Not recorded'}</td>
-                <td className="p-3">{i.errors.map((e) => e.message).join('; ') || 'Not recorded'}</td></tr>
+              <tr key={i.sequence}><td data-label="#" className="p-3 tabular-nums">{i.sequence}</td><td data-label="Result" className="p-3 font-semibold">{LABEL[i.status] ?? i.status}</td>
+                <td data-label="Vehicle" className="p-3">{i.vehicleRef ? <Link className="link sazo-id" href={`/partner/${code}/cars/${i.vehicleRef}`}>{i.vehicleRef}</Link> : 'Not recorded'}</td>
+                <td data-label="Why" className="p-3">{i.errors.map((e) => e.message).join('; ') || 'Not recorded'}</td></tr>
             ))}
           </tbody>
         </table>

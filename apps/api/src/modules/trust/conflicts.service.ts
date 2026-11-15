@@ -68,10 +68,11 @@ export class ConflictsService {
     };
   }
 
-  async list(filter: { status?: ConflictStatus; topic?: string; limit?: number }) {
+  /** No status: the ones needing action (open or being reviewed); `all`: every status (15 Nov 2026). */
+  async list(filter: { status?: ConflictStatus | 'all'; topic?: string; limit?: number }) {
     const { rows } = await this.pool.query<ConflictRow>(
-      `${SELECT} WHERE status = ANY($1) AND ($2::text IS NULL OR topic = $2) ORDER BY opened_at, id LIMIT $3`,
-      [filter.status ? [filter.status] : ACTIVE, filter.topic ?? null, filter.limit ?? 50],
+      `${SELECT} WHERE ($1::text[] IS NULL OR status = ANY($1)) AND ($2::text IS NULL OR topic = $2) ORDER BY opened_at, id LIMIT $3`,
+      [filter.status === 'all' ? null : filter.status ? [filter.status] : ACTIVE, filter.topic ?? null, filter.limit ?? 50],
     );
     return Promise.all(rows.map((r) => this.view(r)));
   }

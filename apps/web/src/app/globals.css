@@ -179,3 +179,26 @@ section:is(.card, .border):not([class*='bg-primary']) > div:first-child > h2:fir
 
 /* The side bar items scroll on their own (11 Nov 2026): a thin light bar on the navy. */
 [data-rail-items] { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.3) transparent; }
+
+/*
+ * Tables on phones (15 Nov 2026): below 768 px each row is a card and each value is labelled by its column
+ * (the td's data-label), instead of a table that scrolls sideways. The headings stay for screen readers.
+ */
+@media (max-width: 767px) {
+  table.stack-table { min-width: 0 !important; border-collapse: separate; }
+  table.stack-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table.stack-table, table.stack-table tbody, table.stack-table tr, table.stack-table td, table.stack-table tbody th { display: block; width: 100%; }
+  table.stack-table tbody { display: grid; gap: 10px; padding: 10px; }
+  table.stack-table tbody tr { border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-card); padding: 10px 14px; }
+  table.stack-table tbody th { padding: 2px 0 6px !important; font-weight: 700; text-align: left; }
+  table.stack-table td { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 0 !important; text-align: right !important; white-space: normal !important; }
+  table.stack-table td + td { border-top: 1px solid var(--color-line); }
+  table.stack-table td[data-label]::before { content: attr(data-label); flex-shrink: 0; text-align: left; font-size: 13px; font-weight: 600; color: var(--color-muted); }
+  table.stack-table td:empty { display: none; }
+}
+@media (max-width: 767px) {
+  /* Longer answers (the comparison): the label above the value, not beside it. */
+  table.stack-table.stack-blocks td { display: block; text-align: left !important; }
+  table.stack-table.stack-blocks td[data-label]::before { display: block; margin-bottom: 4px; }
+  table.stack-table.stack-blocks tbody tr[class*="bg-warn"] { background: var(--color-warn-fill); }
+}
