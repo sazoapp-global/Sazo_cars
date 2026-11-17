@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
@@ -9,6 +10,10 @@ const config: NextConfig = {
   // Only these private home and office network addresses; it has no effect on the real site (13 Nov 2026).
   allowedDevOrigins: ['192.168.*.*', '10.*.*.*', '172.*.*.*'],
   reactStrictMode: true,
+  // The project's root is the repository (the workspace with apps/ and packages/), never a folder above it. Without
+  // this, a stray package.json in a parent folder (such as your user folder) made Next.js warn on every
+  // `npm run dev` (17 Nov 2026).
+  turbopack: { root: path.join(__dirname, '../..') },
   // PDF files (pdfkit reads its font files at run time) and picture conversion (sharp) run as plain Node packages.
   serverExternalPackages: ['pdfkit', 'sharp'],
   // Businesses upload verification documents (up to 8 MB) through a server action.
