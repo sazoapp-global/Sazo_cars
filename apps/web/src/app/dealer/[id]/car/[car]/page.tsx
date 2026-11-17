@@ -123,7 +123,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
           <p className="mt-1 text-sm">Anyone with this link can see this car&apos;s SAZO report for 30 days, without signing in. It is a copy frozen today. Owners&apos; names and garage costs are never included.</p>
           <p className="sazo-id mt-3 break-all rounded-lg bg-card p-3 text-sm normal-case tracking-normal">{`${siteOrigin}/shared/${sp.report}`}</p>
           <div className="mt-3"><ShareButtons url={`${siteOrigin}/shared/${sp.report}`} title="SAZO vehicle report" /></div>
-          <p className="mt-2 text-sm"><Link href="/shares" className="link">All links you have shared</Link></p>
+          <p className="mt-2 text-sm"><Link href="/shares" className="btn-soft">All links you have shared<Icon name="arrow_forward" /></Link></p>
         </section>
       )}
       {sp.error && <p role="alert" className="rounded-lg border border-bad-line bg-bad-fill p-3 font-semibold text-bad-text">{sp.error}</p>}
@@ -146,7 +146,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
                   </li>
                 ))}
               </ul>
-              {live && <form action={removePhoto} className="mt-2">{hidden}<input type="hidden" name="photo" value={c.photos[0]!.photoId} /><ConfirmButton className="link text-xs" title="Remove the main photo?" text="Buyers and brokers stop seeing it." confirm="Remove photo">Remove the main photo</ConfirmButton></form>}
+              {live && <form action={removePhoto} className="mt-2">{hidden}<input type="hidden" name="photo" value={c.photos[0]!.photoId} /><ConfirmButton className="btn-soft btn-soft-bad" title="Remove the main photo?" text="Buyers and brokers stop seeing it." confirm="Remove photo"><Icon name="delete" />Remove the main photo</ConfirmButton></form>}
             </>
           ) : <div className="grid aspect-[4/3] place-items-center rounded-lg bg-soft text-label"><Icon name="directions_car" size={56} /></div>}
           {live && c.photos.length < 12 && (
@@ -178,7 +178,7 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
             <section className="rounded-[14px] border border-line p-4 md:p-5" aria-labelledby="cost-sum-h">
               <h2 id="cost-sum-h" className="flex items-center gap-2 font-display text-lg font-bold"><Icon name="receipt_long" />Costs so far</h2>
               <p className="mt-2 font-display text-2xl font-extrabold tabular-nums">{formatUgx(costs.totalUgx)}</p>
-              <p className="text-sm"><a href="#costs" className="link">See every cost</a></p>
+              <p className="text-sm"><a href="#costs" className="btn-soft">See every cost<Icon name="arrow_forward" /></a></p>
             </section>
           )}
         </div>
@@ -233,14 +233,14 @@ export default async function DealerCar({ params, searchParams }: { params: Prom
               {paginate(links, sp.lp).items.map((l) => (
                 <li key={l.linkId} className="flex flex-wrap items-center justify-between gap-2 py-2">
                   <span>{channelLabel(l.channel)} link, made {formatDate(l.createdAt)}{l.showDealerName ? '' : ', without your name'}</span>
-                  <form action={revokeLink}>{hidden}<input type="hidden" name="link" value={l.linkId} /><ConfirmButton className="link text-sm" icon="link_off"
-                    title="Stop this buyer link?" text="Buyers who open it will see it has stopped." confirm="Stop link" keep="Keep the link">Stop this link</ConfirmButton></form>
+                  <form action={revokeLink}>{hidden}<input type="hidden" name="link" value={l.linkId} /><ConfirmButton className="btn-soft btn-soft-bad" icon="link_off"
+                    title="Stop this buyer link?" text="Buyers who open it will see it has stopped." confirm="Stop link" keep="Keep the link"><Icon name="link_off" />Stop this link</ConfirmButton></form>
                 </li>
               ))}
             </ul>
           )}
           <Pager paged={paginate(links, sp.lp)} href={(n) => `${pageHref(`/dealer/${id}/car/${car}`, {}, 'lp')(n)}#share`} noun="links" label="Pages of links" scroll={false} />
-          <p className="mt-3 text-sm"><Link href={`/dealer/${id}/enquiries`} className="link">See enquiries</Link></p>
+          <p className="mt-3 text-sm"><Link href={`/dealer/${id}/enquiries`} className="btn-soft">See enquiries<Icon name="arrow_forward" /></Link></p>
         </Section>
       )}
 

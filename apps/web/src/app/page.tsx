@@ -129,7 +129,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
                 <p className="text-[11px] font-bold uppercase tracking-wider text-label">Typical market price</p>
                 <p className="mt-1 font-display text-lg font-bold text-primary">See the estimated price range</p>
                 <p className="text-sm text-muted">From comparable sales of similar cars in Uganda, adjusted for this car’s history. Free. Just log in.</p>
-                <Link href={`/sign-in?next=/v/${preview.vehicle.vehicleRef}`} className="link mt-2 inline-block text-sm">Log in to see the price</Link>
+                <Link href={`/sign-in?next=/v/${preview.vehicle.vehicleRef}`} className="btn-soft mt-2"><Icon name="lock" />Log in to see the price</Link>
               </div>
             </div>
           </div>

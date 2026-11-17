@@ -78,8 +78,8 @@ export default async function VehiclePage({ params, searchParams }: Props) {
           )}
           links={(
             <>
-              <Link href={`/v/${ref}/timeline`} className="link">Timeline</Link>
-              <Link href={`/v/${ref}/evidence`} className="link">Evidence</Link>
+              <Link href={`/v/${ref}/timeline`} className="btn-soft"><Icon name="timeline" />Timeline</Link>
+              <Link href={`/v/${ref}/evidence`} className="btn-soft"><Icon name="description" />Evidence</Link>
             </>
           )}
         />

@@ -63,6 +63,14 @@
   .chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; padding: 3px 10px; border: 1px solid; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
   .chip-class { color: #0f3ab0; background: var(--color-soft); border-color: var(--color-soft-3); text-transform: none; letter-spacing: 0; font-weight: 600; }
   .link { color: var(--color-primary-container); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  /* Actions that used to be underlined links (D-189): a soft pill with an icon. Links inside sentences stay .link.
+     Red for actions that remove or stop something. */
+  .btn-soft { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 14px; border-radius: 9999px; border: 1px solid var(--color-soft-3); background: var(--color-soft); color: var(--color-primary-container); font-weight: 700; font-size: 14px; line-height: 1.2; text-decoration: none; white-space: nowrap; cursor: pointer; }
+  .btn-soft:hover:not(:disabled) { background: var(--color-soft-3); }
+  .btn-soft:disabled { opacity: 0.6; cursor: default; }
+  .btn-soft > svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .btn-soft-bad { border-color: var(--color-bad-line); background: var(--color-bad-fill); color: var(--color-bad-text); }
+  .btn-soft-bad:hover:not(:disabled) { background: var(--color-bad-line); }
   /* The initials circle (D-103): first letter of surname + first name. */
   .avatar { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 9999px; background: var(--color-primary-container); color: #fff; font-weight: 700; font-size: 13px; letter-spacing: 0.02em; }
   .avatar-lg { width: 56px; height: 56px; font-size: 20px; }

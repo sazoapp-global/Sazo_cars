@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { resetPassword, type ResetState } from './actions';
+import { Icon } from '@/components/icon';
 
 export function ResetForm({ token }: { token: string }) {
   const [state, action, pending] = useActionState<ResetState, FormData>(resetPassword, { step: 'start' });
@@ -12,7 +13,7 @@ export function ResetForm({ token }: { token: string }) {
       <div role="alert" className="mt-6 rounded-lg border border-warn-line bg-warn-fill p-4 text-sm text-warn-text">
         <p className="font-semibold">Your account has no phone number.</p>
         <p className="mt-1">A reset needs a code texted to your phone, so it can&apos;t be done from this link. Log in another way (phone code or Google) and add a phone in Settings, or contact SAZO support.</p>
-        <p className="mt-3"><Link href="/sign-in" className="link">Back to log in</Link> · <Link href="/help" className="link">Contact SAZO support</Link></p>
+        <p className="mt-3 flex flex-wrap gap-2"><Link href="/sign-in" className="btn-soft"><Icon name="arrow_back" />Back to log in</Link><Link href="/help" className="btn-soft"><Icon name="help_center" />Contact SAZO support</Link></p>
       </div>
     );
   }

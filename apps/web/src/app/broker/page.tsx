@@ -175,8 +175,8 @@ async function Links({ page }: { page?: string }) {
       {paginate(items, page).items.map((l) => (
         <li key={l.linkId} className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm">
           <span><strong>{l.car ?? 'Car'}</strong>. {CHANNELS.find(([k]) => k === l.channel)?.[1]} link, made {formatDate(l.createdAt)}{l.live ? '' : '. The car is no longer for sale'}</span>
-          <form action={stopBrokerLink}><input type="hidden" name="link" value={l.linkId} /><ConfirmButton className="link text-sm" icon="link_off"
-            title="Stop this link?" text="Buyers who open it will see it has stopped." confirm="Stop link" keep="Keep the link">Stop this link</ConfirmButton></form>
+          <form action={stopBrokerLink}><input type="hidden" name="link" value={l.linkId} /><ConfirmButton className="btn-soft btn-soft-bad" icon="link_off"
+            title="Stop this link?" text="Buyers who open it will see it has stopped." confirm="Stop link" keep="Keep the link"><Icon name="link_off" />Stop this link</ConfirmButton></form>
         </li>
       ))}
     </ul>

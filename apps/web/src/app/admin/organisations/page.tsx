@@ -7,6 +7,7 @@ import { decideOrganisation } from '../actions';
 import { Back, PersonLink, PersonView, Row, Rows, withQuery } from '../rows';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
+import { Icon } from '@/components/icon';
 
 const STATUSES = [['pending_verification', 'Waiting'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['suspended', 'Suspended']] as const;
 interface Manager { userId: string; name: string; identity: 'approved' | 'pending' | 'missing'; nin?: string; idPhotoEvidenceId?: string }
@@ -54,7 +55,7 @@ export default async function Organisations({ searchParams }: { searchParams: SP
                 <PersonLink href={withQuery(path, q, { person: m.userId })} name={m.name} />
                 <span className={ID_STATE[m.identity][1]}>{ID_STATE[m.identity][0]}</span>
                 {m.nin && <span className="sazo-id">NIN {m.nin}</span>}
-                {m.idPhotoEvidenceId && <a className="link" href={`/admin/files/${m.idPhotoEvidenceId}`} target="_blank" rel="noreferrer">ID photo</a>}
+                {m.idPhotoEvidenceId && <a className="btn-soft" href={`/admin/files/${m.idPhotoEvidenceId}`} target="_blank" rel="noreferrer"><Icon name="open_in_new" />ID photo</a>}
               </li>
             ))}
           </ul>

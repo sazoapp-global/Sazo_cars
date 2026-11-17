@@ -5,6 +5,7 @@ import { decideConcern } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
 import { Back, PersonView, Row, Rows, carHref, withQuery } from '../rows';
+import { Icon } from '@/components/icon';
 
 export const metadata = { title: 'Reported problems' };
 const STATUSES = [['open', 'Waiting'], ['upheld', 'Upheld'], ['dismissed', 'Dismissed']] as const;
@@ -29,7 +30,7 @@ export default async function Concerns({ searchParams }: { searchParams: SP }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`chip ${c.severity === 'serious' ? 'border-bad-line bg-bad-fill text-bad-text' : 'border-warn-line bg-warn-fill text-warn-text'}`}>{c.severity}</span>
                 <span className="sazo-id font-bold">{c.plate}</span>
-                {c.vehicleRef ? <a href={carHref(c.vehicleRef, withQuery(PATH, Q, {}))} className="link text-sm">report {c.vehicleRef}</a> : <span className="text-sm text-warn-text">Not matched to a car yet</span>}
+                {c.vehicleRef ? <a href={carHref(c.vehicleRef, withQuery(PATH, Q, {}))} className="btn-soft">Report {c.vehicleRef}<Icon name="arrow_forward" /></a> : <span className="text-sm text-warn-text">Not matched to a car yet</span>}
                 <span className="text-sm text-muted">{formatDate(c.createdAt)}</span>
               </div>
               <h1 className="mt-1 font-display text-2xl font-bold">{CONCERNS[c.category].label}</h1>

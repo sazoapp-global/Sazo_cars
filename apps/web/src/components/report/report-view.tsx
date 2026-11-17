@@ -143,7 +143,7 @@ function InspectionMini({ x }: { x: LatestInspection | null }) {
           </>
         )}
       </div>
-      {x && <a href="#q-damage" className="link shrink-0 text-sm">Details</a>}
+      {x && <a href="#q-damage" className="btn-soft shrink-0">Details<Icon name="arrow_forward" /></a>}
     </div>
   );
 }

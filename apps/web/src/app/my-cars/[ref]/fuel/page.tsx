@@ -67,8 +67,8 @@ export default async function FuelLog({ params, searchParams }: { params: Promis
                       <td data-label="km per litre" className="tabular-nums">{f.kmPerL !== null ? n(f.kmPerL) : <span className="text-muted">·</span>}</td>
                       <td className="pr-3 text-right">
                         <form action={removeFillup}><input type="hidden" name="ref" value={ref} /><input type="hidden" name="id" value={f.id} />
-                          <ConfirmButton className="link text-sm" label={`Remove the fill-up of ${formatDate(f.filledOn)}`} icon="local_gas_station"
-                            title="Remove this fill-up?" text={`The fill-up of ${formatDate(f.filledOn)} comes off your fuel log.`} confirm="Remove">Remove</ConfirmButton></form>
+                          <ConfirmButton className="btn-soft btn-soft-bad" label={`Remove the fill-up of ${formatDate(f.filledOn)}`} icon="local_gas_station"
+                            title="Remove this fill-up?" text={`The fill-up of ${formatDate(f.filledOn)} comes off your fuel log.`} confirm="Remove"><Icon name="delete" />Remove</ConfirmButton></form>
                       </td>
                     </tr>
                   ))}

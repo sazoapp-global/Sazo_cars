@@ -4,6 +4,7 @@ import { decideIdentity } from '../actions';
 import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
 import { Back, PersonLink, PersonView, Row, Rows, withQuery } from '../rows';
+import { Icon } from '@/components/icon';
 
 interface Check {
   checkId: string; userId: string; createdAt: string; idPhotoEvidenceId: string; nin: string;
@@ -39,7 +40,7 @@ export default async function IdentityChecks({ searchParams }: { searchParams: S
                 <dt className="text-muted">Manager of</dt><dd>{c.businesses.length ? c.businesses.map((b) => b.name).join(', ') : 'No business yet'}</dd>
                 <dt className="text-muted">Sent</dt><dd>{formatDate(c.createdAt)}</dd>
               </dl>
-              <p className="mt-2"><a href={`/admin/files/${c.idPhotoEvidenceId}`} target="_blank" rel="noopener noreferrer" className="link text-sm">Open the ID photo</a></p>
+              <p className="mt-2"><a href={`/admin/files/${c.idPhotoEvidenceId}`} target="_blank" rel="noopener noreferrer" className="btn-soft"><Icon name="open_in_new" />Open the ID photo</a></p>
               <form action={decideIdentity} className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
                 <input type="hidden" name="id" value={c.checkId} />
                 <div><label htmlFor={`r-${c.checkId}`} className="label">Reason</label><input id={`r-${c.checkId}`} name="reason" required minLength={3} className="field" placeholder="ID number and photo match" /></div>

@@ -107,7 +107,7 @@ export default async function CarForSale({ params, searchParams }: { params: Pro
             </li>
           ))}
         </ul>
-        <p className="mt-3"><Link href={`/v/${car.vehicleRef}`} className="link">See the SAZO report for this car</Link></p>
+        <p className="mt-3"><Link href={`/v/${car.vehicleRef}`} className="btn-soft">See the SAZO report for this car<Icon name="arrow_forward" /></Link></p>
       </section>
 
       <section className="rounded-[14px] border border-line bg-soft/50 p-4 md:p-5" aria-labelledby="ask">

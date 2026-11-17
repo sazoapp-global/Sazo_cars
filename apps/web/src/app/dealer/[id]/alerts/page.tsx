@@ -179,7 +179,7 @@ function Detail({ a, org, base, back, plan }: { a: DealerAlert; org: string; bas
             <li className="flex gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-soft font-bold text-primary-container">1</span>
               <div><p className="font-semibold">Check the car against its logbook</p><p className="text-sm text-muted">Match the chassis number, engine number and both plates.</p></div></li>
             <li className="flex gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-soft font-bold text-primary-container">2</span>
-              <div><p className="font-semibold">See the records behind this finding</p><p className="text-sm"><Link href={`${car}?tab=report&view=records`} className="link">Open the records</Link> (they open here, in your console)</p></div></li>
+              <div><p className="font-semibold">See the records behind this finding</p><p className="text-sm"><Link href={`${car}?tab=report&view=records`} className="btn-soft">Open the records<Icon name="arrow_forward" /></Link> (they open here, in your console)</p></div></li>
             <li className="flex gap-3"><span className="grid size-7 shrink-0 place-items-center rounded-full bg-soft font-bold text-primary-container">3</span>
               <div><p className="font-semibold">Tell buyers before they pay</p><p className="text-sm text-muted">Buyers already see the same finding on the car’s report.</p></div></li>
           </ol>
@@ -199,7 +199,7 @@ function Detail({ a, org, base, back, plan }: { a: DealerAlert; org: string; bas
             <div className="flex items-end"><button className="btn btn-primary w-full">Save</button></div>
           </form>
           <ul className="mt-3 space-y-1 text-sm text-on-surface"><li>Car released or tax paid? Change the customs status.</li><li>Customs gave you more time? Enter the extension.</li></ul>
-          <p className="mt-3 text-sm"><Link href={`${car}#bond`} className="link">All the details of this car’s customs bond</Link></p>
+          <p className="mt-3 text-sm"><Link href={`${car}#bond`} className="btn-soft">All the details of this car’s customs bond<Icon name="arrow_forward" /></Link></p>
           {goesAway()}
         </>
       )}
@@ -215,7 +215,7 @@ function Detail({ a, org, base, back, plan }: { a: DealerAlert; org: string; bas
             <div><label htmlFor="al-ref" className="label">Reference (optional)</label><input id="al-ref" name="reference" maxLength={80} placeholder="MoMo ID, bank slip" className="field" /></div>
             <div className="flex flex-wrap gap-2 sm:col-span-2"><button className="btn btn-primary">Record the payment</button>{call}</div>
           </form>
-          <p className="mt-3 text-sm"><Link href={`/dealer/${org}/payments?plan=${a.planId}`} className="link">The whole instalment plan for this sale</Link></p>
+          <p className="mt-3 text-sm"><Link href={`/dealer/${org}/payments?plan=${a.planId}`} className="btn-soft">The whole instalment plan for this sale<Icon name="arrow_forward" /></Link></p>
           {goesAway(a.kind === 'late' ? 'Once the late amount is paid the alert goes away by itself.' : undefined)}
         </>
       )}
@@ -247,7 +247,7 @@ function Detail({ a, org, base, back, plan }: { a: DealerAlert; org: string; bas
             <div><label htmlFor="al-note" className="label">Note</label><input id="al-note" name="note" maxLength={500} placeholder="Called, coming Saturday" className="field" /></div>
             <div className="flex items-end"><button className="btn btn-ghost w-full">Save note</button></div>
           </form>
-          <div className="mt-3 flex flex-wrap items-center gap-3">{call}<Link href={`/dealer/${org}/enquiries?open=${a.leadId}`} className="link text-sm">The whole enquiry</Link></div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">{call}<Link href={`/dealer/${org}/enquiries?open=${a.leadId}`} className="btn-soft">The whole enquiry<Icon name="arrow_forward" /></Link></div>
           {goesAway('Once you move the enquiry on from New enquiry the alert goes away by itself.')}
         </>
       )}

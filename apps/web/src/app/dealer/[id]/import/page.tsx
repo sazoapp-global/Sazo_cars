@@ -102,7 +102,7 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
                     {res?.error && <p className="mt-1 text-bad-text">{res.error}</p>}
                   </div>
                   <div className="text-right">
-                    {res?.stockId ? <Link href={`/dealer/${id}/car/${res.stockId}`} className="link font-semibold">Added: open</Link>
+                    {res?.stockId ? <Link href={`/dealer/${id}/car/${res.stockId}`} className="btn-soft">Added: open<Icon name="arrow_forward" /></Link>
                       : <span className={`chip ${ok ? 'border-ok-line bg-ok-fill text-ok-text' : 'border-bad-line bg-bad-fill text-bad-text'}`}>{ok ? 'Ready' : 'Needs fixing'}</span>}
                   </div>
                 </li>
@@ -110,7 +110,7 @@ export default async function ImportCars({ params, searchParams }: { params: Pro
             })}
           </ul>
           <Pager paged={paginate(checked.rows, sp.page)} href={pageHref(`/dealer/${id}/import`, { file: sp.file })} noun="rows" scroll={false} />
-          <p className="mt-3"><Link href={`/dealer/${id}/import`} className="link text-sm">Check another file</Link></p>
+          <p className="mt-3"><Link href={`/dealer/${id}/import`} className="btn-soft"><Icon name="upload_file" />Check another file</Link></p>
         </section>
       )}
     </AppFrame>

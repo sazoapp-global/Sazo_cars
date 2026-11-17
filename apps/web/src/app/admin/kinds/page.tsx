@@ -6,6 +6,7 @@ import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
 import { pageHref, paginate } from '@/components/pager';
 import { Back, Row, Rows, carHref, withQuery } from '../rows';
+import { Icon } from '@/components/icon';
 
 type Source = 'registry' | 'inspector' | 'garage' | 'dealer' | 'owner' | 'admin' | 'record' | string;
 interface Car { vehicleRef: string; plate?: string; make?: string; model?: string; year?: number }
@@ -49,7 +50,7 @@ export default async function Kinds({ searchParams }: { searchParams: Promise<Aw
               <ul className="text-sm">{disagree.candidates.map((c, i) => <li key={i}>{SOURCE[c.source] ?? c.source} says <strong>{KIND_LABELS[c.kind]}</strong></li>)}</ul>
             </>
           )}
-          <p><a href={carHref(one.vehicleRef, withQuery(PATH, Q, {}))} className="link text-sm">Open the car&apos;s records</a></p>
+          <p><a href={carHref(one.vehicleRef, withQuery(PATH, Q, {}))} className="btn-soft">Open the car&apos;s records<Icon name="arrow_forward" /></a></p>
           <form action={decideKind} className="space-y-3">
             <input type="hidden" name="ref" value={one.vehicleRef} />
             <input type="hidden" name="back" value={withQuery(PATH, Q, { item: undefined })} />

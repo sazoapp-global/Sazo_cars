@@ -60,7 +60,7 @@ export default async function Welcome() {
                 </li>
               ))}
             </ul>
-            <p className="mt-6"><Link href="/" className="link">Skip for now</Link></p>
+            <p className="mt-6"><Link href="/" className="btn-soft">Skip for now<Icon name="arrow_forward" /></Link></p>
           </div>
 
           <aside className="space-y-4">

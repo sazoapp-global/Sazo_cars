@@ -138,7 +138,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
 
   if (plan) {
     const d = await api<Detail>(`/dealer/payments/${plan}`, as).catch(() => undefined);
-    if (!d) return frame(<><p><Link href={base} className="link text-sm">All payments</Link></p><p>This sale was not found.</p></>);
+    if (!d) return frame(<><p><Link href={base} className="btn-soft"><Icon name="arrow_back" />All payments</Link></p><p>This sale was not found.</p></>);
     const back = <p><BackButton href={base} /></p>;
 
     const receiptId = sp.receipt && UUID.test(sp.receipt) ? sp.receipt : undefined;
@@ -307,7 +307,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
                           <span className="block text-xs text-muted no-underline">{shortDate(p.paidOn)} · Receipt {p.receiptNo}{p.reference ? ` · ${p.reference}` : ''}</span>
                           {p.note && <span className="block text-xs text-muted">{p.note}</span>}
                         </div>
-                        <Link href={`${base}?plan=${d.planId}&receipt=${p.id}`} className="link shrink-0 text-xs">Receipt</Link>
+                        <Link href={`${base}?plan=${d.planId}&receipt=${p.id}`} className="btn-soft shrink-0"><Icon name="receipt_long" />Receipt</Link>
                       </div>
                       {p.method !== 'correction' && !p.corrected && (
                         <details className="mt-1">

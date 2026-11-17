@@ -54,7 +54,7 @@ export function NotificationsView() {
         ))}
       </ul>
       <ButtonPager paged={paginate(items, String(page))} onPage={setPage} noun="messages" />
-      {unread.length > 0 && <button type="button" onClick={() => markRead(unread)} disabled={pending} className="link text-sm font-semibold">{pending ? 'Marking…' : 'Mark all as read'}</button>}
+      {unread.length > 0 && <button type="button" onClick={() => markRead(unread)} disabled={pending} className="btn-soft"><Icon name="done_all" />{pending ? 'Marking…' : 'Mark all as read'}</button>}
       <NoticeDialog notice={open} onClose={() => setOpen(undefined)} />
     </div>
   );

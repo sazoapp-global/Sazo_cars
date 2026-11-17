@@ -36,7 +36,7 @@ export function ConfirmPhoneForm({ initial }: { initial: SignUpPhoneState }) {
         </>
       )}
       <div className="text-center text-sm">
-        <button type="submit" name="intent" value="later" className="link" formNoValidate disabled={pending}>Do it later</button>
+        <button type="submit" name="intent" value="later" className="btn-soft" formNoValidate disabled={pending}>Do it later<Icon name="arrow_forward" /></button>
         <p className="text-muted">You will be asked for it the next time you log in.</p>
       </div>
     </form>

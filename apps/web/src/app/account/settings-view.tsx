@@ -50,7 +50,7 @@ function ProfileLine({ items, href }: { items: Profile['progress']['items']; hre
             <p className={`mt-2.5 leading-snug ${n === at ? 'font-extrabold text-primary' : 'font-semibold text-on-surface/70'}`}>
               <span className="sm:hidden">{SHORT[it.key] ?? it.label}</span><span className="max-sm:hidden">{it.label}</span>
             </p>
-            {n === at && <Link href={href(it.key)} className="link mt-1 inline-block text-sm">Do this next</Link>}
+            {n === at && <Link href={href(it.key)} className="btn-soft mt-1">Do this next<Icon name="arrow_forward" /></Link>}
           </li>
         ))}
       </ol>

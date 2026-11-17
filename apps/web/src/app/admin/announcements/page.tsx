@@ -6,6 +6,7 @@ import { adminFetch, requireStaff } from '../guard';
 import { Forbidden, Notice, type SP } from '../notice';
 import { pageHref, paginate } from '@/components/pager';
 import { Back, Row, Rows, withQuery } from '../rows';
+import { Icon } from '@/components/icon';
 
 interface Announcement { id: string; audience: string; title: string; body: string; createdAt: string; withdrawnAt: string | null; reads: number }
 
@@ -30,7 +31,7 @@ export default async function Announcements({ searchParams }: { searchParams: SP
                   </div>
                   <p className="mt-1 whitespace-pre-line text-sm">{a.body}</p>
                   {a.withdrawnAt ? <p className="mt-2 text-sm font-semibold text-muted">Withdrawn {formatDate(a.withdrawnAt)}</p> : (
-                    <form action={withdrawAnnouncement} className="mt-2"><input type="hidden" name="id" value={a.id} /><ConfirmButton className="link text-sm" icon="campaign" title="Withdraw this announcement?" text="People stop seeing it in SAZO." confirm="Withdraw" keep="Keep it">Withdraw</ConfirmButton></form>
+                    <form action={withdrawAnnouncement} className="mt-2"><input type="hidden" name="id" value={a.id} /><ConfirmButton className="btn-soft btn-soft-bad" icon="campaign" title="Withdraw this announcement?" text="People stop seeing it in SAZO." confirm="Withdraw" keep="Keep it"><Icon name="delete" />Withdraw</ConfirmButton></form>
                   )}
         </section>
       </>

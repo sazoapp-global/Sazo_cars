@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 import { Alert, PhoneInput } from '@/components/auth/auth-bits';
 import { addPhone, type AddPhoneState } from '../actions';
+import { Icon } from '@/components/icon';
 
 export function AddPhoneForm() {
   const [state, action, pending] = useActionState<AddPhoneState, FormData>(addPhone, { step: 'phone' });
@@ -34,7 +35,7 @@ export function AddPhoneForm() {
           </div>
         </>
       )}
-      <p className="text-center text-sm"><Link href="/sign-in" className="link">Start again</Link></p>
+      <p className="text-center text-sm"><Link href="/sign-in" className="btn-soft"><Icon name="arrow_back" />Start again</Link></p>
     </form>
   );
 }

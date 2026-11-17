@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { uploadCsv, type UploadState } from '../actions';
+import { Icon } from '@/components/icon';
 
 const LABEL: Record<string, string> = { accepted: 'Added', needs_review: 'SAZO will check', rejected: 'Not accepted', invalid: 'Not sent' };
 const CLS: Record<string, string> = { accepted: 'text-ok-text', needs_review: 'text-warn-text', rejected: 'text-bad-text', invalid: 'text-bad-text' };
@@ -16,7 +17,7 @@ export function UploadForm({ source, domain }: { source: string; domain: string 
         <input type="hidden" name="source" value={source} />
         <input type="hidden" name="domain" value={domain} />
         <p className="text-sm text-muted">One row per record. Columns: <code className="font-mono text-[0.9em]">vin, chassis_number, plate</code> (at least one), <code className="font-mono text-[0.9em]">record_type</code>, <code className="font-mono text-[0.9em]">date</code> (YYYY-MM-DD), then the details. Lists use <strong>;</strong> between items. Up to 5,000 rows. Sending the same file twice does not create duplicates.</p>
-        <a className="link text-sm" href={`/partner/${source}/template.csv`} download>Download the template for this source</a>
+        <a className="btn-soft" href={`/partner/${source}/template.csv`} download><Icon name="download" />Download the template for this source</a>
         <div><label htmlFor="file" className="label">CSV file</label>
           <input id="file" name="file" type="file" accept=".csv,text/csv" required className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-soft-3 file:px-4 file:py-3 file:font-semibold file:text-primary" /></div>
         <button className="btn btn-primary" disabled={pending}>{pending ? 'Checking and sending…' : 'Upload'}</button>

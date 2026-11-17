@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Icon } from '@/components/icon';
 
 /**
  * Photos a person sent (14 Nov 2026): small blurred previews in the card, so there is a photo to see at a glance
@@ -29,8 +30,8 @@ export function PhotoPreviews({ ids, title, noun }: { ids: string[]; title: stri
           <figcaption className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
             <span className="font-bold">{noun} {open + 1} of {ids.length}</span>
             <span className="flex gap-3.5 text-sm font-semibold">
-              <a href={src(ids[open]!)} target="_blank" rel="noopener noreferrer" className="link">Open full size</a>
-              <button type="button" onClick={() => setOpen(undefined)} className="link">Close</button>
+              <a href={src(ids[open]!)} target="_blank" rel="noopener noreferrer" className="btn-soft"><Icon name="open_in_new" />Open full size</a>
+              <button type="button" onClick={() => setOpen(undefined)} className="btn-soft"><Icon name="close" />Close</button>
             </span>
           </figcaption>
           <img src={src(ids[open]!)} alt={`${noun} ${open + 1}`} className="block max-h-[520px] w-full rounded-lg bg-white object-contain" />

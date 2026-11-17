@@ -4,6 +4,7 @@ import { adminFetch, requireStaff } from '../guard';
 import { decideBroker } from '../actions';
 import { Forbidden, Notice, type SP } from '../notice';
 import { Back, PersonView, Row, Rows, withQuery } from '../rows';
+import { Icon } from '@/components/icon';
 
 interface Application {
   applicationId: string; status: string; decisionReason: string | null; createdAt: string; idPhotoEvidenceId: string; nin: string;
@@ -33,7 +34,7 @@ export default async function Brokers({ searchParams }: { searchParams: SP }) {
                 <dt className="text-muted">Gender</dt><dd>{a.person.gender === 'female' ? 'Female' : a.person.gender === 'male' ? 'Male' : 'Not given'}</dd>
                 <dt className="text-muted">Applied</dt><dd>{formatDate(a.createdAt)}</dd>
               </dl>
-              <p className="mt-2"><a href={`/admin/files/${a.idPhotoEvidenceId}`} target="_blank" rel="noopener noreferrer" className="link text-sm">Open the ID photo</a></p>
+              <p className="mt-2"><a href={`/admin/files/${a.idPhotoEvidenceId}`} target="_blank" rel="noopener noreferrer" className="btn-soft"><Icon name="open_in_new" />Open the ID photo</a></p>
               <form action={decideBroker} className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
                 <input type="hidden" name="id" value={a.applicationId} />
                 <div><label htmlFor={`r-${a.applicationId}`} className="label">Reason</label><input id={`r-${a.applicationId}`} name="reason" required minLength={3} className="field" placeholder="ID number and photo match" /></div>
