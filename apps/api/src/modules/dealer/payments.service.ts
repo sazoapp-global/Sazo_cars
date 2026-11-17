@@ -90,7 +90,12 @@ export function allocate(instalments: InstalmentRow[], paidTotal: number, today:
       : i.dueOn < today ? 'late'
       : paid > 0 ? 'part_paid'
       : daysBetween(today, i.dueOn) <= DUE_SOON_DAYS ? 'due_soon' : 'coming';
-    return { seq: i.seq, dueOn: i.dueOn, amountUgx: i.amountUgx, paidUgx: paid, owingUgx: owing, status, daysLate: status === 'late' ? daysBetween(i.dueOn, today) : 0 };
+    return {
+      seq: i.seq, dueOn: i.dueOn, amountUgx: i.amountUgx, paidUgx: paid, owingUgx: owing, status,
+      daysLate: status === 'late' ? daysBetween(i.dueOn, today) : 0,
+      /** Days until it is due, worked out from today each time: 0 once paid in full or from the due date on (D-187). */
+      daysLeft: owing === 0 ? 0 : Math.max(0, daysBetween(today, i.dueOn)),
+    };
   });
 }
 

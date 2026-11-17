@@ -40,6 +40,8 @@ describe('payment plan arithmetic', () => {
     ], 13, '2026-07-15');
     expect(rows.map((r) => [r.status, r.paidUgx])).toEqual([['paid', 10], ['late', 3], ['due_soon', 0], ['coming', 0]]);
     expect(rows[1]!.daysLate).toBe(13);
+    // Days left (D-187): 0 once paid in full or past the due date, otherwise counted from today.
+    expect(rows.map((r) => r.daysLeft)).toEqual([0, 0, 5, 48]);
   });
 });
 

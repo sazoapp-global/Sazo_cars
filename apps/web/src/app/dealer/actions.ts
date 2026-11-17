@@ -522,9 +522,10 @@ export async function correctPayment(form: FormData) {
   const plan = text(form, 'plan');
   const payment = text(form, 'payment');
   if (!UUID.test(org) || !UUID.test(plan) || !UUID.test(payment)) redirect('/business');
-  if (text(form, 'reason').length < 3) toPayments(org, { plan, error: 'Say why the payment is being corrected.' });
+  // Back to the Payments received tab, where the correction was made (D-187).
+  if (text(form, 'reason').length < 3) toPayments(org, { plan, tab: 'received', error: 'Say why the payment is being corrected.' });
   try {
     await api(`/dealer/payments/${plan}/payments/${payment}/correct`, { method: 'POST', ...asDealer(org), body: { reason: text(form, 'reason') } });
-  } catch (err) { toPayments(org, { plan, error: reason(err, 'Could not correct the payment.') }); }
-  toPayments(org, { plan, done: 'Payment corrected. Both stay on record.' });
+  } catch (err) { toPayments(org, { plan, tab: 'received', error: reason(err, 'Could not correct the payment.') }); }
+  toPayments(org, { plan, tab: 'received', done: 'Payment corrected. Both stay on record.' });
 }

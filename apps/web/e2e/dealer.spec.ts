@@ -291,9 +291,21 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await expect(dealer.getByRole('status')).toContainText('Sale recorded');
   await expect(dealer.getByRole('heading', { name: /UBA 905T/ })).toBeVisible();
   await expect(dealer.getByRole('main')).toContainText('Sold to Sarah Kemigisha');
-  await expect(dealer.getByRole('main')).toContainText('UGX 18M still owed');
+  // The sale's tabs (D-187): the plan first, with what each payment is, what was paid, what is left and the days left.
+  const saleTabs = dealer.getByRole('navigation', { name: 'This sale' });
+  await expect(saleTabs.getByRole('link', { name: /^Plan/ })).toHaveAttribute('aria-current', 'page');
+  const deposit = dealer.getByRole('row').filter({ hasText: 'Deposit' });
+  await expect(deposit).toContainText('5,000,000');
+  await expect(deposit).toContainText('0 days');
+  await expect(deposit).toContainText('Paid');
+  await expect(dealer.getByRole('row').nth(2)).toContainText('10 days'); // payment 1 (the header row first, then the deposit)
   await a11y(dealer);
   await shot(dealer, 'dealer-payments-car');
+  await saleTabs.getByRole('link', { name: /^Balance/ }).click();
+  await expect(dealer).toHaveURL(/tab=balance/);
+  await expect(dealer.getByRole('main')).toContainText('UGX 18M still owed');
+  await a11y(dealer);
+  await saleTabs.getByRole('link', { name: /^Plan/ }).click();
   // A payment, with its receipt.
   await dealer.getByRole('button', { name: 'Record a payment' }).click();
   const pay = dealer.getByRole('dialog', { name: 'Record a payment' });
@@ -302,7 +314,14 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await pay.getByLabel('How was it paid?').selectOption('cash');
   await pay.getByRole('button', { name: 'Save and send receipt' }).click();
   await expect(dealer.getByRole('status')).toContainText('Receipt R-0002 was sent to the buyer by SMS');
-  await expect(dealer.getByRole('main')).toContainText('UGX 17M still owed');
+  // Part of payment 1 is paid: yellow Part paid, with what is left of it.
+  const first = dealer.getByRole('row').nth(2);
+  await expect(first).toContainText('Part paid');
+  await expect(first).toContainText('2,000,000');
+  await expect(dealer.getByRole('navigation', { name: 'This sale' }).getByRole('link', { name: /^Balance/ })).toContainText('UGX 17M');
+  await saleTabs.getByRole('link', { name: /^Received/ }).click();
+  await expect(dealer.getByRole('heading', { name: 'Payments received' })).toBeVisible();
+  await a11y(dealer);
   await dealer.getByRole('link', { name: 'Receipt' }).first().click();
   await expect(dealer.getByRole('heading', { name: 'R-0002' })).toBeVisible();
   await expect(dealer.getByRole('main')).toContainText('UGX 1,000,000');

@@ -34,7 +34,7 @@ interface List {
 interface Payment { id: string; amountUgx: number; method: string; paidOn: string; reference: string | null; receiptNo: string; note: string | null; corrected: boolean; correctsPaymentId: string | null }
 interface Detail extends Item {
   reminders: boolean; buyer: { name: string | null; phone: string | null };
-  schedule: { seq: number; dueOn: string; amountUgx: number; paidUgx: number; owingUgx: number; status: string; daysLate: number }[];
+  schedule: { seq: number; dueOn: string; amountUgx: number; paidUgx: number; owingUgx: number; status: string; daysLate: number; daysLeft: number }[];
   payments: Payment[];
   /** The broker who brought the buyer and their commission (D-185). */
   broker: { userId: string; name: string; commission: { amountUgx: number; status: string } | null } | null;
@@ -50,7 +50,7 @@ const COMMISSION: Record<string, string> = {
   approved: 'Approved, not paid yet', paid: 'Paid', cancelled: 'Cancelled',
 };
 
-type SP = Promise<{ show?: string; sort?: string; within?: string; plan?: string; add?: string; receipt?: string; done?: string; error?: string; page?: string; sch?: string; pr?: string; up?: string }>;
+type SP = Promise<{ show?: string; sort?: string; within?: string; plan?: string; add?: string; receipt?: string; tab?: string; done?: string; error?: string; page?: string; sch?: string; pr?: string; up?: string }>;
 const full = (n: number) => formatUgx(n, false);
 const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
 const carTitle = (c: Car) => `${c.name}${c.plate ? ` · ${c.plate}` : ''}`;
@@ -59,6 +59,16 @@ const SORTS: [string, string][] = [['due', 'Next due date'], ['late', 'Days late
 const WITHIN = ['7', '14', '30'];
 const defaultSort = (show: string) => (show === 'paid' || show === 'all' ? 'sold' : 'due');
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+/**
+ * An instalment's status (D-187): Paid (green) when paid in full, Part paid (yellow) when some of it is paid,
+ * Not paid (red) when its due date passed with nothing paid, otherwise Due soon or Coming. How late it is shows
+ * under Days left. All worked out by SAZO from the plan and the payments each time the page opens.
+ */
+function instalmentPill(s: { status: string; paidUgx: number; owingUgx: number }): { state: string; text?: string } {
+  if (s.owingUgx === 0) return { state: 'paid' };
+  if (s.paidUgx > 0) return { state: 'part_paid' };
+  return s.status === 'late' ? { state: 'late', text: 'Not paid' } : { state: s.status };
+}
 /** "In 4 days", "Due today", "16 days late" */
 function whenText(i: Item): string {
   if (!i.next) return '';
@@ -136,7 +146,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
       if (r) {
         return frame(
           <>
-            <p className="print:hidden"><BackButton href={`${base}?plan=${plan}`} /></p>
+            <p className="print:hidden"><BackButton href={`${base}?plan=${plan}&tab=received`} /></p>
             <article aria-labelledby="rc-h" className="max-w-xl rounded-[14px] border border-line bg-card p-6">
               <div className="flex items-start justify-between gap-3">
                 <div><p className="text-xs font-bold uppercase tracking-wider text-label">Receipt</p><h1 id="rc-h" className="font-display text-2xl font-extrabold">{r.receiptNo}</h1></div>
@@ -161,6 +171,14 @@ export default async function DealerPayments({ params, searchParams }: { params:
     }
 
     const latePay = d.schedule.filter((s) => s.status === 'late');
+    // The sale's three tabs (D-187): each has its own address, so Back and refreshing keep the tab.
+    const tab = sp.tab === 'balance' || sp.tab === 'received' ? sp.tab : 'plan';
+    const tabHref = (t: string) => `${base}?plan=${d.planId}${t === 'plan' ? '' : `&tab=${t}`}`;
+    const TABS: { key: string; label: string; short: string; extra: string }[] = [
+      { key: 'plan', label: d.kind === 'cash' ? 'Payment' : 'Instalment plan', short: d.kind === 'cash' ? 'Payment' : 'Plan', extra: plural(d.schedule.length, 'payment') },
+      { key: 'balance', label: 'Balance', short: 'Balance', extra: d.balanceUgx ? formatUgx(d.balanceUgx) : 'Paid in full' },
+      { key: 'received', label: 'Payments received', short: 'Received', extra: plural(d.payments.length, 'payment') },
+    ];
     return frame(
       <>
         {back}
@@ -188,8 +206,26 @@ export default async function DealerPayments({ params, searchParams }: { params:
             </form>
           </section>
         )}
-        <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-          <section aria-labelledby="plan-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
+        {/* A phone: three equal buttons. A laptop or tablet: tabs, as on the Conflicts page. */}
+        <nav aria-label="This sale" className="grid grid-cols-3 gap-1 rounded-[14px] border border-line bg-card p-1 sm:hidden">
+          {TABS.map((t) => (
+            <Link key={t.key} href={tabHref(t.key)} aria-current={tab === t.key ? 'page' : undefined} scroll={false}
+              className={`rounded-[10px] px-1 py-2 text-center text-sm leading-tight ${tab === t.key ? 'bg-primary-container font-extrabold text-white' : 'font-semibold text-ink'}`}>
+              {t.short}<span className={`block text-[11px] font-bold ${tab === t.key ? 'text-white/85' : 'text-muted'}`}>{t.extra}</span>
+            </Link>
+          ))}
+        </nav>
+        <nav aria-label="This sale" className="hidden overflow-x-auto border-b border-line sm:flex">
+          {TABS.map((t) => (
+            <Link key={t.key} href={tabHref(t.key)} aria-current={tab === t.key ? 'page' : undefined} scroll={false}
+              className={`mr-5 shrink-0 whitespace-nowrap border-b-[3px] px-1 py-2.5 ${tab === t.key ? 'border-primary-container font-extrabold text-primary-container' : 'border-transparent font-semibold text-muted hover:text-ink'}`}>
+              {t.label}
+              {t.key !== 'plan' && <span className={`ml-1.5 rounded-full px-2 py-px text-xs ${tab === t.key ? 'bg-primary-container text-white' : 'bg-soft text-muted'}`}>{t.key === 'received' ? d.payments.length : t.extra}</span>}
+            </Link>
+          ))}
+        </nav>
+        <div>
+          {tab === 'plan' && <section aria-labelledby="plan-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id="plan-h" className="font-display text-lg font-bold">{d.kind === 'cash' ? 'Payment' : 'Instalment plan'}</h2>
               {d.balanceUgx > 0 && (
@@ -216,26 +252,28 @@ export default async function DealerPayments({ params, searchParams }: { params:
             <div className="mt-2 overflow-x-auto">
               <table className="stack-table w-full text-sm">
                 <thead><tr className="border-b border-line text-left text-[11px] uppercase tracking-wider text-label">
-                  <th className="py-2 pr-2">Payment</th><th className="py-2 pr-2">Due</th><th className="py-2 pr-2 text-right">Amount</th><th className="py-2 pr-2 text-right">Paid</th><th className="py-2">Status</th>
+                  <th className="py-2 pr-3">Payment</th><th className="py-2 pr-3">Due</th><th className="py-2 pr-3 text-right">Instalment (UGX)</th>
+                  <th className="py-2 pr-3 text-right">Amount paid (UGX)</th><th className="py-2 pr-3 text-right">Balance (UGX)</th><th className="py-2 pr-3">Days left</th><th className="py-2">Status</th>
                 </tr></thead>
                 <tbody>
                   {paginate(d.schedule, sp.sch).items.map((s) => (
                     <tr key={s.seq} className="border-b border-line last:border-0">
                       <td data-label="Payment" className="py-2 pr-2">{s.seq === 0 ? (d.kind === 'cash' ? 'Full price' : 'Deposit') : s.seq}</td>
                       <td data-label="Due" className="py-2 pr-2 whitespace-nowrap">{longDate(s.dueOn)}</td>
-                      <td data-label="Amount" className="py-2 pr-2 text-right tabular-nums">{formatUgx(s.amountUgx)}</td>
-                      <td data-label="Paid" className="py-2 pr-2 text-right tabular-nums">{s.paidUgx ? formatUgx(s.paidUgx) : ''}</td>
-                      <td data-label="Status" className="py-2"><Pill state={s.status} text={s.status === 'late' ? `${s.paidUgx ? 'Part paid, ' : ''}${s.daysLate} days late` : undefined} /></td>
+                      <td data-label="Instalment (UGX)" className="py-2 pr-3 text-right tabular-nums">{s.amountUgx.toLocaleString('en-US')}</td>
+                      <td data-label="Amount paid (UGX)" className="py-2 pr-3 text-right tabular-nums">{s.paidUgx.toLocaleString('en-US')}</td>
+                      <td data-label="Balance (UGX)" className={`py-2 pr-3 text-right tabular-nums ${s.owingUgx ? 'font-bold' : ''}`}>{s.owingUgx.toLocaleString('en-US')}</td>
+                      <td data-label="Days left" className="py-2 pr-3 whitespace-nowrap">{s.status === 'late' ? <b className="text-bad-text">{plural(s.daysLate, 'day')} late</b> : plural(s.daysLeft, 'day')}</td>
+                      <td data-label="Status" className="py-2"><Pill {...instalmentPill(s)} /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <Pager paged={paginate(d.schedule, sp.sch)} href={pageHref(base, { plan }, 'sch')} noun="payments in the plan" label="Pages of the plan" scroll={false} />
-          </section>
+          </section>}
 
-          <div className="space-y-4">
-            <section aria-labelledby="bal-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
+          {tab === 'balance' && <section aria-labelledby="bal-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
               <h2 id="bal-h" className="font-display text-lg font-bold">Balance</h2>
               <p className="mt-1 font-display text-3xl font-extrabold tabular-nums">{formatUgx(d.balanceUgx)} <span className="text-sm font-semibold text-muted">{d.balanceUgx ? 'still owed' : 'paid in full'}</span></p>
               <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-soft-3" role="progressbar" aria-label="Paid so far" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round((d.paidUgx / d.priceUgx) * 100)}>
@@ -250,9 +288,9 @@ export default async function DealerPayments({ params, searchParams }: { params:
                 {d.kind === 'instalments' && <div className="flex justify-between py-1.5"><dt>Reminders by SMS</dt><dd className="font-semibold">{d.reminders ? 'On' : 'Off'}</dd></div>}
               </dl>
               {d.kind === 'instalments' && <p className="mt-2 text-xs text-muted">On the car&apos;s SAZO report: <b>&ldquo;Balance still owed to a dealer: {d.balanceUgx ? 'yes' : 'no'}&rdquo;</b>. No amounts or names.</p>}
-            </section>
+            </section>}
 
-            <section aria-labelledby="rec-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
+            {tab === 'received' && <section aria-labelledby="rec-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
               <h2 id="rec-h" className="font-display text-lg font-bold">Payments received</h2>
               {d.payments.length === 0 ? <p className="mt-2 text-sm text-muted">None yet.</p> : (<>
                 <ul className="mt-1 divide-y divide-line">
@@ -281,10 +319,9 @@ export default async function DealerPayments({ params, searchParams }: { params:
                     </li>
                   ))}
                 </ul>
-                <Pager paged={paginate(d.payments, sp.pr)} href={pageHref(base, { plan }, 'pr')} noun="payments received" label="Pages of payments received" scroll={false} />
+                <Pager paged={paginate(d.payments, sp.pr)} href={pageHref(base, { plan, tab: 'received' }, 'pr')} noun="payments received" label="Pages of payments received" scroll={false} />
               </>)}
-            </section>
-          </div>
+            </section>}
         </div>
       </>,
     );
