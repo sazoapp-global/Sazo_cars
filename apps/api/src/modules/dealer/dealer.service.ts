@@ -437,13 +437,14 @@ export class DealerService {
       orgs.set(id, { name: o?.tradingName ?? o?.legalName ?? '', approved: o?.status === 'approved' });
     }
     const out = [];
+    const logos = await this.iam.logoIds([...orgs.keys()]);
     for (const r of rows) {
       if (!orgs.get(r.organisationId)?.approved) continue;
       const v = await this.registry.getVehicle(r.vehicleId!);
       if (!v) continue;
       const summary = await this.reports.publicSummary(v.publicRef).catch(() => undefined);
       out.push({ vehicleRef: v.publicRef, vehicle: summary?.vehicle ?? null, askingPriceUgx: r.askingPriceUgx, listedMileageKm: r.listedMileageKm, category: r.category ?? null,
-        dealerName: orgs.get(r.organisationId)!.name, listedAt: new Date(r.listedAt).toISOString() });
+        dealerName: orgs.get(r.organisationId)!.name, dealerLogoId: logos.get(r.organisationId) ?? null, listedAt: new Date(r.listedAt).toISOString() });
       if (out.length >= limit) break;
     }
     return out;

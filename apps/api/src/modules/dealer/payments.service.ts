@@ -391,7 +391,9 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
     const org = await this.iam.organisation(organisationId);
     return {
       receiptNo: x.receiptNo, paidOn: x.paidOn, amountUgx: x.amountUgx, method: x.method, reference: x.reference, note: x.note,
-      dealer: { name: org?.tradingName ?? org?.legalName ?? 'Dealer', phone: (await this.stockRepo.settings(organisationId)).whatsappE164 },
+      // The dealer's logo on the receipt, on screen and printed (D-188).
+      dealer: { name: org?.tradingName ?? org?.legalName ?? 'Dealer', phone: (await this.stockRepo.settings(organisationId)).whatsappE164,
+        logoId: (await this.iam.logoIds([organisationId])).get(organisationId) ?? null },
       buyer: d.buyer, car: d.car, priceUgx: d.priceUgx, balanceAfterUgx: Math.max(0, d.priceUgx - paidUpTo),
     };
   }

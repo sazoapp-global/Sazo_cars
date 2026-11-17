@@ -324,6 +324,8 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await a11y(dealer);
   await dealer.getByRole('link', { name: 'Receipt' }).first().click();
   await expect(dealer.getByRole('heading', { name: 'R-0002' })).toBeVisible();
+  // The dealer's logo (added above) is on the receipt, which prints with it (D-188).
+  await expect(dealer.locator('article[aria-labelledby="rc-h"] img[src^="/pictures/"]')).toBeVisible();
   await expect(dealer.getByRole('main')).toContainText('UGX 1,000,000');
   // The dashboard: cards that open each part, and sales by month.
   await dealer.goto(`${listUrl}/dashboard`);

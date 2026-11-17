@@ -55,6 +55,7 @@ export class BrokerService {
       orgs.set(id, { name: o?.tradingName ?? o?.legalName ?? '', district: o?.district ?? null, ok: o?.status === 'approved' && o.type === 'dealer' });
     }
     const open = rows.filter((r) => orgs.get(r.organisationId)?.ok).slice(0, limit);
+    const logos = await this.iam.logoIds([...new Set(open.map((r) => r.organisationId))]);
     const views = await Promise.all(open.map((r) => this.dealer.view(r)));
     return views.map((v, i) => {
       const r = open[i]!;
@@ -64,7 +65,7 @@ export class BrokerService {
         specs: { make: v.vehicle?.make ?? d.make, model: v.vehicle?.model ?? d.model, year: v.vehicle?.year ?? d.modelYear, engineCc: d.engineCc, fuel: d.fuel, transmission: d.transmission, kind: d.kind ?? null, category: d.category ?? null },
         askingPriceUgx: v.askingPriceUgx, listedMileageKm: v.listedMileageKm, photos: v.photos.map((p) => p.photoId),
         commission: d.commissionKind === 'fixed' ? { kind: 'fixed' as const, amountUgx: d.commissionFixedUgx } : { kind: 'percent' as const, percent: d.commissionPercent },
-        dealer: { organisationId: r.organisationId, name: orgs.get(r.organisationId)!.name, district: orgs.get(r.organisationId)!.district },
+        dealer: { organisationId: r.organisationId, name: orgs.get(r.organisationId)!.name, district: orgs.get(r.organisationId)!.district, logoId: logos.get(r.organisationId) ?? null },
         questions: v.questions, recordConfidence: v.recordConfidence, listedAt: v.listedAt,
       };
     });
@@ -100,11 +101,13 @@ export class BrokerService {
   /** The broker's own enquiries: the customer they brought (phone partly hidden), the car, the stage and protection. */
   async enquiries(actor: Actor) {
     const rows = await this.selling.brokerLeads(actor.userId);
+    const logos = await this.iam.logoIds([...new Set(rows.map((r) => r.organisationId))]);
     return Promise.all(rows.map(async (r) => {
       const [person, car, org] = await Promise.all([this.parties.reveal(r.partyId), r.stockItemId ? this.stock.get(r.stockItemId) : undefined, this.iam.organisation(r.organisationId)]);
       const v = car ? (await this.dealer.view(car)).vehicle : null;
       return {
         leadId: r.id, stage: r.stage, createdAt: new Date(r.createdAt).toISOString(), dealer: org?.tradingName ?? org?.legalName ?? null,
+        dealerLogoId: logos.get(r.organisationId) ?? null,
         car: v?.make ? [v.year, v.make, v.model].filter(Boolean).join(' ') : car ? [car.modelYear, car.make, car.model].filter(Boolean).join(' ') : null,
         customer: { name: person?.name ?? null, phone: maskPhone(person?.phone) ?? null },
         protectedUntil: r.protectedUntil ? new Date(r.protectedUntil).toISOString() : null,
@@ -116,12 +119,13 @@ export class BrokerService {
   /** The broker's statement: every commission with its status, and totals. */
   async commissions(actor: Actor) {
     const rows = await this.selling.commissions({ brokerUserId: actor.userId });
+    const logos = await this.iam.logoIds([...new Set(rows.map((c) => c.organisationId))]);
     const items = await Promise.all(rows.map(async (c) => {
       const [car, org] = await Promise.all([this.stock.get(c.stockItemId), this.iam.organisation(c.organisationId)]);
       const v = car ? (await this.dealer.view(car)).vehicle : null;
       return {
         commissionId: c.id, status: c.status, amountUgx: c.amountUgx, sharePercent: c.sharePercent, kind: c.kind, percent: c.percent,
-        dealer: org?.tradingName ?? org?.legalName ?? null, car: v?.make ? [v.year, v.make, v.model].filter(Boolean).join(' ') : car?.make ?? null,
+        dealer: org?.tradingName ?? org?.legalName ?? null, dealerLogoId: logos.get(c.organisationId) ?? null, car: v?.make ? [v.year, v.make, v.model].filter(Boolean).join(' ') : car?.make ?? null,
         paidReference: c.status === 'paid' ? c.paidReference : null, createdAt: new Date(c.createdAt).toISOString(), updatedAt: new Date(c.updatedAt).toISOString(),
       };
     }));

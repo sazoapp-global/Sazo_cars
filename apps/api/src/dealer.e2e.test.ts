@@ -134,7 +134,7 @@ describe.skipIf(!base)('dealer workspace (e2e)', () => {
     const known = items.find((i: { vehicleRef: string }) => i.vehicleRef === knownRef);
     expect(known).toMatchObject({ askingPriceUgx: 36_000_000, listedMileageKm: 131000, category: 'ug_used', vehicle: { make: 'Toyota' } });
     expect(known.dealerName).toBeTruthy();
-    expect(Object.keys(known).sort()).toEqual(['askingPriceUgx', 'category', 'dealerName', 'listedAt', 'listedMileageKm', 'vehicle', 'vehicleRef']);
+    expect(Object.keys(known).sort()).toEqual(['askingPriceUgx', 'category', 'dealerLogoId', 'dealerName', 'listedAt', 'listedMileageKm', 'vehicle', 'vehicleRef']);
   });
 
   it('a sale is recorded but its price stays confidential; buyer links work like any share link', async () => {

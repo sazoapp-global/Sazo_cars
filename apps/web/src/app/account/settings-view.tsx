@@ -181,7 +181,10 @@ export async function AccountSettings({ sp, back, inPanel = false }: { sp: Setti
           <ul className="mt-2 divide-y divide-line">
             {me.memberships.map((m) => (
               <li key={m.organisationId} className="flex items-center justify-between gap-3 py-2">
-                <a href={m.organisationType === 'dealer' && m.organisationStatus === 'approved' ? `/dealer/${m.organisationId}` : `/business/${m.organisationId}`} className="link">{m.organisationName}</a>
+                <span className="flex min-w-0 items-center gap-3">
+                  <Avatar name={m.organisationName} pictureId={m.logoId} size={40} logo />
+                  <a href={m.organisationType === 'dealer' && m.organisationStatus === 'approved' ? `/dealer/${m.organisationId}` : `/business/${m.organisationId}`} className="link">{m.organisationName}</a>
+                </span>
                 <span className="text-sm text-muted">{ORG_STATUS[m.organisationStatus] ?? m.organisationStatus}</span>
               </li>
             ))}

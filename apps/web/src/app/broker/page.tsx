@@ -1,4 +1,5 @@
 import { ConfirmButton } from '@/components/confirm-button';
+import { Avatar } from '@/components/avatar';
 import { Flash } from '@/components/flash';
 import { CAR_CATEGORY_LABELS, type CarCategory, KIND_LABELS, QUESTION_ORDER, QUESTION_TITLES, VEHICLE_KINDS, formatDate, formatKm, formatUgx, isVehicleKind, type VehicleKind } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -21,11 +22,11 @@ export const metadata: Metadata = { title: 'Brokers', robots: { index: false } }
 interface BrokerCar {
   stockId: string; vehicleRef: string; vehicle: VehicleCard | null; specs: { make: string | null; model: string | null; year: number | null; engineCc: number | null; fuel: string | null; transmission: string | null; kind?: VehicleKind | null; category?: CarCategory | null };
   askingPriceUgx: number; listedMileageKm: number | null; photos: string[]; commission: { kind: 'fixed'; amountUgx: number } | { kind: 'percent'; percent: number };
-  dealer: { organisationId: string; name: string; district: string | null }; questions: QuestionView[]; listedAt: string;
+  dealer: { organisationId: string; name: string; district: string | null; logoId?: string | null }; questions: QuestionView[]; listedAt: string;
 }
 interface BrokerLink { linkId: string; channel: string; createdAt: string; stockId: string; live: boolean; car: string | null }
-interface BrokerEnquiry { leadId: string; stage: string; createdAt: string; dealer: string | null; car: string | null; customer: { name: string | null; phone: string | null }; protectedUntil: string | null; waitingForDealerDecision: boolean; sharedWithAnotherBroker: boolean }
-interface Commission { commissionId: string; status: string; amountUgx: number; sharePercent: number; dealer: string | null; car: string | null; paidReference: string | null; createdAt: string; updatedAt: string }
+interface BrokerEnquiry { leadId: string; stage: string; createdAt: string; dealer: string | null; dealerLogoId?: string | null; car: string | null; customer: { name: string | null; phone: string | null }; protectedUntil: string | null; waitingForDealerDecision: boolean; sharedWithAnotherBroker: boolean }
+interface Commission { commissionId: string; status: string; amountUgx: number; sharePercent: number; dealer: string | null; dealerLogoId?: string | null; car: string | null; paidReference: string | null; createdAt: string; updatedAt: string }
 
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const STAGE: Record<string, string> = { enquiry: 'New enquiry', viewing: 'Viewing', negotiation: 'Negotiating', deposit: 'Deposit paid', handover: 'Handover', completed: 'Sold', lost: 'Lost' };
@@ -144,7 +145,7 @@ async function Cars({ kind, page }: { kind?: VehicleKind; page?: string }) {
               <h2 className="font-display text-lg font-bold">{name(c.specs)}</h2>
               {(c.specs.category || c.specs.kind) && <p className="text-sm font-semibold text-primary-container">{[c.specs.category && CAR_CATEGORY_LABELS[c.specs.category], c.specs.kind && KIND_LABELS[c.specs.kind]].filter(Boolean).join(' · ')}</p>}
               <p className="font-display text-xl font-extrabold tabular-nums">{formatUgx(c.askingPriceUgx, false)}</p>
-              <p className="text-sm text-muted">{c.dealer.name}{c.dealer.district ? `, ${c.dealer.district}` : ''}{c.listedMileageKm !== null ? `. ${formatKm(c.listedMileageKm)}` : ''}</p>
+              <p className="flex items-center gap-2 text-sm text-muted">{c.dealer.logoId && <Avatar name={c.dealer.name} pictureId={c.dealer.logoId} size={24} logo />}{c.dealer.name}{c.dealer.district ? `, ${c.dealer.district}` : ''}{c.listedMileageKm !== null ? `. ${formatKm(c.listedMileageKm)}` : ''}</p>
               <p className="chip w-fit border-lime bg-lime/30 text-ink"><Icon name="payments" size={14} />{commissionText(c.commission)}</p>
               <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs" aria-label="What SAZO records show">
                 {qs.map((q) => { const st = statusIcon(q.status); return <li key={q.question} className={`flex items-center gap-1 font-semibold ${st.cls}`}><Icon name={st.icon} size={14} />{QUESTION_TITLES[q.question]?.short}</li>; })}
@@ -195,7 +196,7 @@ async function Enquiries({ page }: { page?: string }) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="font-bold">{e.customer.name ?? 'Customer'} <span className="font-normal text-muted">{e.customer.phone}</span></p>
-              <p className="text-sm text-muted">{e.car ?? 'Car'} at {e.dealer ?? 'a dealer'}. {formatDate(e.createdAt)}</p>
+              <p className="flex items-center gap-2 text-sm text-muted">{e.dealerLogoId && <Avatar name={e.dealer ?? ''} pictureId={e.dealerLogoId} size={24} logo />}<span>{e.car ?? 'Car'} at {e.dealer ?? 'a dealer'}. {formatDate(e.createdAt)}</span></p>
               {e.protectedUntil && <p className="text-sm">Registered to you until {formatDate(e.protectedUntil)}.</p>}
               {e.waitingForDealerDecision && <p className="text-sm font-semibold text-warn-text">Someone else also registered this customer. The dealer will decide.</p>}
               {e.sharedWithAnotherBroker && <p className="text-sm">The dealer decided you share this customer with another broker.</p>}
@@ -230,7 +231,7 @@ async function Commissions({ page }: { page?: string }) {
           {s.items.map((c) => (
             // On screen one page of 10; a printed statement keeps every line.
             <li key={c.commissionId} className={`flex-wrap items-start justify-between gap-2 p-4 text-sm ${shown.items.includes(c) ? 'flex' : `hidden print:flex`}`}>
-              <div><p className="font-bold">{c.car ?? 'Car'} at {c.dealer ?? 'a dealer'}</p>
+              <div><p className="flex items-center gap-2 font-bold">{c.dealerLogoId && <Avatar name={c.dealer ?? ''} pictureId={c.dealerLogoId} size={24} logo />}<span>{c.car ?? 'Car'} at {c.dealer ?? 'a dealer'}</span></p>
                 <p className="text-muted">{formatDate(c.createdAt)}{c.sharePercent < 100 ? `. Your share: ${c.sharePercent}%` : ''}{c.paidReference ? `. Reference: ${c.paidReference}` : ''}</p></div>
               <div className="sm:text-right"><p className="font-display text-lg font-extrabold tabular-nums">{formatUgx(c.amountUgx, false)}</p><p className="text-muted">{PAY[c.status] ?? c.status}</p></div>
             </li>

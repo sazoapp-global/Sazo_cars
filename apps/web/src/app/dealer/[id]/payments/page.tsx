@@ -1,4 +1,5 @@
 import { ConfirmButton } from '@/components/confirm-button';
+import { Avatar } from '@/components/avatar';
 import { Flash } from '@/components/flash';
 import { formatUgx } from '@sazo/contracts';
 import type { Metadata } from 'next';
@@ -41,7 +42,7 @@ interface Detail extends Item {
 }
 interface Receipt {
   receiptNo: string; paidOn: string; amountUgx: number; method: string; reference: string | null; note: string | null;
-  dealer: { name: string; phone: string | null }; buyer: { name: string | null; phone: string | null }; car: Car; priceUgx: number; balanceAfterUgx: number;
+  dealer: { name: string; phone: string | null; logoId?: string | null }; buyer: { name: string | null; phone: string | null }; car: Car; priceUgx: number; balanceAfterUgx: number;
 }
 interface Lead { leadId: string; stockId: string | null; broker: string | null; customer: { name: string | null; phone: string | null }; open: boolean; stage: string }
 /** Where a broker's commission stands, as the commissions page says it. */
@@ -150,7 +151,11 @@ export default async function DealerPayments({ params, searchParams }: { params:
             <article aria-labelledby="rc-h" className="max-w-xl rounded-[14px] border border-line bg-card p-6">
               <div className="flex items-start justify-between gap-3">
                 <div><p className="text-xs font-bold uppercase tracking-wider text-label">Receipt</p><h1 id="rc-h" className="font-display text-2xl font-extrabold">{r.receiptNo}</h1></div>
-                <div className="text-right"><p className="font-bold">{r.dealer.name}</p>{r.dealer.phone && <p className="text-sm text-muted">{localPhone(r.dealer.phone)}</p>}</div>
+                {/* The dealer's logo beside its name, on screen and printed (D-188). */}
+                <div className="flex items-center gap-3">
+                  <div className="text-right"><p className="font-bold">{r.dealer.name}</p>{r.dealer.phone && <p className="text-sm text-muted">{localPhone(r.dealer.phone)}</p>}</div>
+                  {r.dealer.logoId && <Avatar name={r.dealer.name} pictureId={r.dealer.logoId} size={56} logo />}
+                </div>
               </div>
               <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
                 <dt className="text-muted">Date</dt><dd className="font-semibold">{longDate(r.paidOn)}</dd>

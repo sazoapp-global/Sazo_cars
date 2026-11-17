@@ -1,6 +1,7 @@
 'use client';
 // The compare pop-up: add cars by number plate, or pick from the cars dealers have for sale, then compare
 // two or three side by side.
+import { Avatar } from '@/components/avatar';
 import { formatUgx } from '@sazo/contracts';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -8,7 +9,7 @@ import { Icon } from '@/components/icon';
 import { Plate } from '@/components/plate';
 import { findCarToCompare, type PickedCar } from './actions';
 
-export interface ForSaleCar { vehicleRef: string; name: string; plate?: string; askingPriceUgx: number; listedMileageKm: number | null; dealerName: string; category?: string }
+export interface ForSaleCar { vehicleRef: string; name: string; plate?: string; askingPriceUgx: number; listedMileageKm: number | null; dealerName: string; dealerLogoId?: string | null; category?: string }
 
 const MAX = 3;
 
@@ -100,7 +101,7 @@ export function CompareDialog({ initial, forSale, closeHref }: { initial: Picked
                             onChange={() => (on ? remove(c.vehicleRef) : add({ ref: c.vehicleRef, name: c.name, plate: c.plate }))} />
                           <span className="min-w-0 flex-1">
                             <span className="flex flex-wrap items-center gap-2 font-semibold">{c.name}{c.plate && <Plate value={c.plate} size="sm" />}</span>
-                            <span className="block text-sm text-muted">{c.category ? `${c.category} · ` : ''}{formatUgx(c.askingPriceUgx)}{c.listedMileageKm !== null ? ` · ${c.listedMileageKm.toLocaleString('en-UG')} km` : ''} · {c.dealerName}</span>
+                            <span className="block text-sm text-muted">{c.category ? `${c.category} · ` : ''}{formatUgx(c.askingPriceUgx)}{c.listedMileageKm !== null ? ` · ${c.listedMileageKm.toLocaleString('en-UG')} km` : ''} · <span className="inline-flex items-center gap-1.5 align-middle">{c.dealerLogoId && <Avatar name={c.dealerName} pictureId={c.dealerLogoId} size={20} logo />}{c.dealerName}</span></span>
                           </span>
                         </label>
                       </li>
