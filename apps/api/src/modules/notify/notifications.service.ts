@@ -77,6 +77,26 @@ export class NotificationsService {
     return createHmac('sha256', this.cfg.HMAC_SECRET).update(phoneE164).digest();
   }
 
+  // Notices for one person in the bell (D-191) -----------------------------------------------------------
+
+  /** Add a notice once (the same key for the same person is ignored). True when it was added. */
+  async notice(userId: string, key: string, n: { title: string; body: string; href?: string }): Promise<boolean> {
+    const r = await this.pool.query(
+      `INSERT INTO notify.personal_notices (user_id, key, title, body, href) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (user_id, key) DO NOTHING`,
+      [userId, key, n.title, n.body, n.href ?? null]);
+    return r.rowCount === 1;
+  }
+
+  async notices(userId: string): Promise<{ id: string; title: string; body: string; href: string | null; createdAt: Date; read: boolean }[]> {
+    return (await this.pool.query(
+      `SELECT id, title, body, href, created_at AS "createdAt", read_at IS NOT NULL AS read FROM notify.personal_notices
+        WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [userId])).rows;
+  }
+
+  async markNoticesRead(userId: string, ids: string[]): Promise<void> {
+    if (ids.length) await this.pool.query(`UPDATE notify.personal_notices SET read_at = now() WHERE user_id = $1 AND id = ANY($2) AND read_at IS NULL`, [userId, ids]);
+  }
+
   /** Send a templated SMS to a phone number. The number is used for delivery only and never stored. */
   async sendSmsToPhone(phoneE164: string, template: SmsTemplate, params: Record<string, string | number>,
     purpose: 'otp' | 'attestation' | 'account' | 'reminder', toUserId?: string | null,

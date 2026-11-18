@@ -16,6 +16,7 @@ import type { CarOption, ConversationItem, Thread } from '@/components/messages/
 import { ApiError, api, isSignedIn } from '@/lib/api';
 import type { Me, QuestionView, VehicleCard } from '@/lib/types';
 import { brokerLink, sendBrokerMessage, stopBrokerLink } from './actions';
+import { PAY } from './labels';
 
 export const metadata: Metadata = { title: 'Brokers', robots: { index: false } };
 
@@ -30,7 +31,6 @@ interface Commission { commissionId: string; status: string; amountUgx: number; 
 
 const CHANNELS: [string, string][] = [['whatsapp', 'WhatsApp'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'], ['instagram', 'Instagram'], ['other', 'Somewhere else']];
 const STAGE: Record<string, string> = { enquiry: 'New enquiry', viewing: 'Viewing', negotiation: 'Negotiating', deposit: 'Deposit paid', handover: 'Handover', completed: 'Sold', lost: 'Lost' };
-const PAY: Record<string, string> = { awaiting_payment: 'Due at the buyer’s first payment', on_hold: 'Waiting for the dealer to decide', pending: 'Waiting for approval', approved: 'Approved, not paid yet', paid: 'Paid', cancelled: 'Cancelled' };
 const TABS = [['cars', 'Cars to share'], ['links', 'My links'], ['enquiries', 'My customers'], ['commissions', 'My commission'], ['messages', 'Messages']] as const;
 type Tab = (typeof TABS)[number][0];
 /** One line under each page's title. */
@@ -234,6 +234,8 @@ async function Commissions({ page }: { page?: string }) {
               <div><p className="flex items-center gap-2 font-bold">{c.dealerLogoId && <Avatar name={c.dealer ?? ''} pictureId={c.dealerLogoId} size={24} logo />}<span>{c.car ?? 'Car'} at {c.dealer ?? 'a dealer'}</span></p>
                 <p className="text-muted">{formatDate(c.createdAt)}{c.sharePercent < 100 ? `. Your share: ${c.sharePercent}%` : ''}{c.paidReference ? `. Reference: ${c.paidReference}` : ''}</p></div>
               <div className="sm:text-right"><p className="font-display text-lg font-extrabold tabular-nums">{formatUgx(c.amountUgx, false)}</p><p className="text-muted">{PAY[c.status] ?? c.status}</p></div>
+              {/* Follow how the customer is paying, and the car (D-191). Not on the printed statement. */}
+              <div className="w-full print:hidden"><Link href={`/broker/sales/${c.commissionId}`} className="btn-soft">Follow the payments and the car<Icon name="arrow_forward" /></Link></div>
             </li>
           ))}
         </ul>

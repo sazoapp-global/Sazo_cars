@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Problem, badRequest, notFound } from '../../platform/problem.js';
 import { CurrentActor, Public, RequirePermission, type Actor } from '../iam/index.js';
 import { AUDIENCES, FAQ_STATUSES, HelpError, HelpService, audiencesOf } from './help.service.js';
+import { NotificationsService } from '../notify/index.js';
 
 const Uuid = z.string().uuid();
 const Announcement = z.object({
@@ -35,20 +36,25 @@ const iso = (d: Date | null) => (d ? new Date(d).toISOString() : null);
 
 @Controller()
 export class HelpController {
-  constructor(@Inject(HelpService) private readonly help: HelpService) {}
+  constructor(@Inject(HelpService) private readonly help: HelpService, @Inject(NotificationsService) private readonly notify: NotificationsService) {}
 
-  /** GET /v1/me/announcements: the bell. */
+  /** GET /v1/me/announcements: the bell. SAZO's announcements and notices for this person (D-191), newest first. */
   @Get('me/announcements')
   async mine(@CurrentActor() actor: Actor) {
-    const items = await this.help.mine(actor);
-    return { unread: items.filter((a) => !a.read).length, items: items.map((a) => ({ id: a.id, audience: a.audience, title: a.title, body: a.body, createdAt: iso(a.createdAt), read: !!a.read })) };
+    const [items, notices] = await Promise.all([this.help.mine(actor), this.notify.notices(actor.userId)]);
+    const all = [
+      ...items.map((a) => ({ id: a.id, audience: a.audience as string, title: a.title, body: a.body, createdAt: iso(a.createdAt), read: !!a.read, href: null as string | null })),
+      ...notices.map((n) => ({ id: n.id, audience: 'you', title: n.title, body: n.body, createdAt: iso(n.createdAt), read: n.read, href: n.href })),
+    ].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+    return { unread: all.filter((a) => !a.read).length, items: all };
   }
 
   /** POST /v1/me/announcements/read { ids }: mark as read. */
   @Post('me/announcements/read')
   @HttpCode(204)
   async read(@CurrentActor() actor: Actor, @Body() body: unknown) {
-    await this.help.markRead(actor, parse(z.object({ ids: z.array(Uuid).max(50) }), body).ids);
+    const ids = parse(z.object({ ids: z.array(Uuid).max(100) }), body).ids;
+    await Promise.all([this.help.markRead(actor, ids), this.notify.markNoticesRead(actor.userId, ids)]);
   }
 
   /** GET /v1/help/faqs: published questions for everyone (signed out), or for my groups (signed in). */

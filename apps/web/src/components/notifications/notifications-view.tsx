@@ -84,7 +84,9 @@ function NoticeDialog({ notice, onClose }: { notice?: Notice; onClose: () => voi
           <h2 id={titleId} className="mt-3 font-display text-xl font-bold">{notice.title}</h2>
           <p className="mt-1 text-sm text-muted">{formatDate(notice.createdAt)}, {new Date(notice.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
           <p className="mt-4 whitespace-pre-line leading-relaxed">{notice.body}</p>
-          {notice.audience && <p className="mt-4"><span className="rounded-full bg-soft px-2.5 py-1 text-xs text-muted">For {audienceLabel(notice.audience).toLowerCase()}</span></p>}
+          {notice.audience && notice.audience !== 'you' && <p className="mt-4"><span className="rounded-full bg-soft px-2.5 py-1 text-xs text-muted">For {audienceLabel(notice.audience).toLowerCase()}</span></p>}
+          {/* A notice for this person links to where to look (D-191). */}
+          {notice.href && <p className="mt-4"><a href={notice.href} className="btn-soft">Open it<Icon name="arrow_forward" /></a></p>}
           <div className="mt-6 flex justify-end"><button type="button" onClick={() => ref.current?.close()} className="btn btn-primary">Close</button></div>
         </div>
       )}

@@ -260,6 +260,48 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
     };
   }
 
+  /**
+   * A broker follows a sale they brought (D-191): how the buyer is paying and the car. View only, and only the
+   * broker's own sales (any other id is "not found"). No payment methods or references, costs, margins or notes.
+   */
+  async brokerSale(brokerUserId: string, commissionId: string, today = kampalaToday()) {
+    const c = (await this.leads.commissions({ brokerUserId })).find((x) => x.id === commissionId);
+    if (!c) throw new DealerError('stock_not_found', 'No such sale');
+    const [row, org, lead] = await Promise.all([this.stockRepo.get(c.stockItemId), this.iam.organisation(c.organisationId), this.leads.lead(c.leadId)]);
+    if (!row) throw new DealerError('stock_not_found', 'No such sale');
+    const { rows: [planRow] } = await this.pool.query<PlanRow>(
+      `SELECT ${PLAN_COLS} FROM dealer.payment_plans p JOIN dealer.stock_items s ON s.id = p.stock_item_id WHERE p.stock_item_id = $1 ORDER BY p.created_at DESC LIMIT 1`, [c.stockItemId]);
+    const v = row.vehicleId ? await this.registry.getVehicle(row.vehicleId) : undefined;
+    const card = v ? await this.registry.card(v.id).catch(() => undefined) : undefined;
+    const person = planRow ? await this.parties.reveal(planRow.partyId) : lead?.partyId ? await this.parties.reveal(lead.partyId) : undefined;
+    let plan = null;
+    if (planRow) {
+      const [inst, pays] = await Promise.all([this.instalments([planRow.id]), this.payments([planRow.id])]);
+      const i = inst.get(planRow.id) ?? [];
+      const ps = pays.get(planRow.id) ?? [];
+      const sum = this.summarise(planRow, i, ps, today);
+      plan = {
+        kind: sum.kind, priceUgx: sum.priceUgx, paidUgx: sum.paidUgx, balanceUgx: sum.balanceUgx, state: sum.state, daysLate: sum.daysLate, next: sum.next,
+        schedule: allocate(i, sum.paidUgx, today).map((r) => ({ seq: r.seq, dueOn: r.dueOn, amountUgx: r.amountUgx, paidUgx: r.paidUgx, owingUgx: r.owingUgx, status: r.status, daysLate: r.daysLate, daysLeft: r.daysLeft })),
+      };
+    }
+    const name = [row.make, row.model].filter(Boolean).join(' ') || 'Car';
+    return {
+      commissionId: c.id,
+      commission: { amountUgx: c.amountUgx, status: c.status },
+      dealer: { name: org?.tradingName ?? org?.legalName ?? 'Dealer', logoId: (await this.iam.logoIds([c.organisationId])).get(c.organisationId) ?? null },
+      soldOn: row.soldAt ? kampalaToday(new Date(row.soldAt)) : null,
+      buyer: { name: person?.name ?? null, phone: person?.phone ?? null },
+      car: {
+        name: row.modelYear ? `${name} ${row.modelYear}` : name,
+        plate: (card as { currentPlate?: string } | undefined)?.currentPlate ?? row.heldIdentifiers?.plate ?? null,
+        vehicleRef: v?.publicRef ?? null,
+        make: row.make, model: row.model, modelYear: row.modelYear, mileageKm: row.listedMileageKm, colour: row.colour, engineCc: row.engineCc, fuel: row.fuel, transmission: row.transmission,
+      },
+      plan,
+    };
+  }
+
   /** The broker who brought this buyer, and where their commission stands (D-185). */
   private async broker(leadId: string | null) {
     if (!leadId) return null;
@@ -441,6 +483,8 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
         if (until > 0 && until <= REMIND_BEFORE_DAYS) kinds.push('before');
         if (until === 0) kinds.push('due');
         if (until <= -LATE_TEXT_AFTER_DAYS && until > -30) kinds.push('late', 'dealer_late');
+        // The broker who brought the buyer sees a notice in their bell, once per late payment (D-191).
+        if (until <= -LATE_TEXT_AFTER_DAYS && until > -30 && p.leadId) sent += await this.tellBrokers(p, r);
         for (const kind of kinds) {
           if (kind !== 'dealer_late' && !p.reminders) continue;
           const claimed = await this.pool.query(`INSERT INTO dealer.payment_reminders (plan_id, seq, kind) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [p.id, r.seq, kind]);
@@ -451,6 +495,23 @@ export class PaymentsService implements OnApplicationBootstrap, OnApplicationShu
       }
     }
     return sent;
+  }
+
+  private async tellBrokers(p: PlanRow, r: { seq: number; dueOn: string; owingUgx: number }): Promise<number> {
+    const commissions = (await this.leads.commissionsForLead(this.pool, p.leadId!)).filter((c) => c.status !== 'cancelled');
+    if (!commissions.length) return 0;
+    const [car, dealer, person] = await Promise.all([this.car(p.organisationId, p.stockItemId), this.dealerName(p.organisationId), this.parties.reveal(p.partyId)]);
+    const date = new Date(`${r.dueOn}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    let n = 0;
+    for (const c of commissions) {
+      const added = await this.notify.notice(c.brokerUserId, `late:${p.id}:${r.seq}`, {
+        title: `${person?.name ?? 'Your customer'} is late with a payment`,
+        body: `${r.seq === 0 ? 'The deposit' : `Payment ${r.seq}`} for the ${car.name}${car.plate ? ` (${car.plate})` : ''} at ${dealer} was due ${date}. UGX ${fmt(r.owingUgx)} is still owed.`,
+        href: `/broker/sales/${c.id}`,
+      });
+      if (added) n += 1;
+    }
+    return n;
   }
 
   private async remind(p: PlanRow, r: { seq: number; dueOn: string; owingUgx: number }, kind: 'before' | 'due' | 'late' | 'dealer_late') {

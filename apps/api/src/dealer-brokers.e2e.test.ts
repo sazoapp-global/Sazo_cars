@@ -16,6 +16,7 @@ import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { AuthService, IamService } from './modules/iam/index.js';
 import { ConsoleEmailSender } from './modules/notify/index.js';
+import { PaymentsService } from './modules/dealer/payments.service.js';
 import { signInWithCode, approveOrg } from './test-auth.js';
 import { testPhoto } from './test-photos.js';
 
@@ -297,5 +298,38 @@ describe.skipIf(!base)('brokers: identity check, marketplace, protection, decisi
     await http.post(`/v1/dealer/stock/${car2}/sold`).set(as(manager)).send({ salePriceUgx: 54_000_000 }).expect(200);
     const grace = list.find((b: { name: string }) => /Grace/.test(b.name));
     expect((await http.post(`/v1/dealer/stock/${car2}/payment-plan`).set(as(manager)).send({ buyer: { leadId: peterLead }, kind: 'cash', paidAtSale: { method: 'cash' }, brokerUserId: grace.userId }).expect(409)).body.code).toBe('broker_conflict');
+
+    // The broker follows the sale, view only (D-191): the payments, the car, and the buyer's name and phone.
+    const commission = (await http.get('/v1/broker/commissions').set(bearer(broker1)).expect(200)).body.items.find((x: { car: string }) => /Noah/.test(x.car));
+    const view = (await http.get(`/v1/broker/sales/${commission.commissionId}`).set(bearer(broker1)).expect(200)).body;
+    expect(view).toMatchObject({ dealer: { name: 'Kyambogo Bond' }, buyer: { name: 'Walk In Buyer', phone: '+256772800777' }, car: { make: 'Toyota', model: 'Noah' },
+      commission: { amountUgx: 1_200_000, status: 'pending' }, plan: { priceUgx: 60_000_000, paidUgx: 10_000_000, balanceUgx: 50_000_000 } });
+    expect(view.plan.schedule[0]).toMatchObject({ seq: 1, amountUgx: 10_000_000, paidUgx: 10_000_000, owingUgx: 0 });
+    // Nothing private: no payment methods or references, costs, margins or notes.
+    expect(JSON.stringify(view)).not.toMatch(/method|reference|cost|margin|notes/i);
+    // Only the broker's own sales, and only to look at.
+    await http.get(`/v1/broker/sales/${commission.commissionId}`).set(bearer(broker2)).expect(404);
+    await http.get(`/v1/broker/sales/${commission.commissionId}`).set(as(staff)).expect(403);
+    await http.post(`/v1/dealer/payments/${d.planId}/payments`).set({ ...bearer(broker1), 'X-Organisation-Id': orgId }).send({ amountUgx: 1, method: 'cash', paidOn: new Date().toISOString().slice(0, 10) }).expect((r) => expect([403, 404]).toContain(r.status));
+
+    // A late payment: the broker gets a notice in their bell, once.
+    const day = (n: number) => new Date(Date.now() + 3 * 3600_000 + n * 86_400_000).toISOString().slice(0, 10);
+    const car3 = await add('ZRR80-0555997', 30_000_000, { make: 'Toyota', model: 'Voxy', commissionKind: 'fixed', commissionFixedUgx: 400_000 });
+    await http.post(`/v1/dealer/stock/${car3}/sold`).set(as(staff)).send({ salePriceUgx: 30_000_000, soldOn: day(-10) }).expect(200);
+    await http.post(`/v1/dealer/stock/${car3}/payment-plan`).set(as(staff)).send({ buyer: { name: 'Late Buyer', phone: '+256772800778' }, kind: 'instalments', depositUgx: 6_000_000,
+      months: 4, firstDueOn: day(-3), paidAtSale: { method: 'cash' }, brokerUserId: ivan.userId }).expect(201);
+    const service = app.get(PaymentsService, { strict: false });
+    await service.sendReminders(new Date(`${day(0)}T07:00:00Z`));
+    await service.sendReminders(new Date(`${day(0)}T08:00:00Z`));
+    const bell = (await http.get('/v1/me/announcements').set(bearer(broker1)).expect(200)).body;
+    const late = bell.items.filter((n: { title: string }) => n.title === 'Late Buyer is late with a payment');
+    expect(late).toHaveLength(1);
+    expect(late[0]).toMatchObject({ read: false, audience: 'you' });
+    expect(late[0].body).toMatch(/^Payment 1 for the Toyota Voxy at Kyambogo Bond was due .*\. UGX 6,000,000 is still owed\.$/);
+    expect(late[0].href).toMatch(/^\/broker\/sales\/[0-9a-f-]{36}$/);
+    await http.post('/v1/me/announcements/read').set(bearer(broker1)).send({ ids: [late[0].id] }).expect(204);
+    expect((await http.get('/v1/me/announcements').set(bearer(broker1)).expect(200)).body.items.find((n: { id: string }) => n.id === late[0].id).read).toBe(true);
+    // Not to anyone else.
+    expect((await http.get('/v1/me/announcements').set(bearer(broker2)).expect(200)).body.items.some((n: { title: string }) => /Late Buyer/.test(n.title))).toBe(false);
   });
 });

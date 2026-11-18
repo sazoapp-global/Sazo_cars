@@ -189,5 +189,14 @@ test('a broker shares a dealer’s car, brings a customer and follows the commis
   await expect(broker.getByRole('listitem').filter({ hasText: '2016 Toyota Esquire' })).toContainText('Approved, not paid yet');
   await a11y(broker);
   await shot(broker, 'broker-statement');
+  // The broker follows the sale, view only (D-191): paid in full, the car, and nothing to change.
+  await broker.getByRole('listitem').filter({ hasText: '2016 Toyota Esquire' }).getByRole('link', { name: 'Follow the payments and the car' }).click();
+  await expect(broker).toHaveURL(/\/broker\/sales\//);
+  await expect(broker.getByRole('main')).toContainText('View only. The dealer records the payments.');
+  await expect(broker.getByRole('region', { name: 'How the buyer is paying' })).toContainText('Paid in full');
+  await expect(broker.getByRole('region', { name: 'About the car' })).toContainText('Toyota');
+  await expect(broker.getByRole('button', { name: /Record a payment|Correct|Save|Mark as sold/ })).toHaveCount(0);
+  await a11y(broker);
+  await shot(broker, 'broker-sale');
   void car;
 });

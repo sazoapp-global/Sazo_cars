@@ -8,6 +8,8 @@ import { BrokerApplicationError, BrokersService, CurrentActor, RequirePermission
 import { BrokerError, BrokerService } from './broker.service.js';
 import { linkView, sellingProblem } from './selling.controller.js';
 import { LINK_CHANNELS } from './selling.repository.js';
+import { PaymentsService } from './payments.service.js';
+import { DealerError } from './dealer.service.js';
 
 const Uuid = z.string().uuid();
 /** Uganda National ID number: 14 characters, CM (male) or CF (female) then letters and digits. */
@@ -30,7 +32,8 @@ function parse<T>(schema: z.ZodType<T>, body: unknown): T {
 
 @Controller('broker')
 export class BrokerController {
-  constructor(@Inject(BrokerService) private readonly broker: BrokerService, @Inject(BrokersService) private readonly brokers: BrokersService) {}
+  constructor(@Inject(BrokerService) private readonly broker: BrokerService, @Inject(BrokersService) private readonly brokers: BrokersService,
+    @Inject(PaymentsService) private readonly payments: PaymentsService) {}
 
   /** GET /v1/broker/application: the person's latest application and whether they are a broker now. */
   @Get('application')
@@ -100,6 +103,17 @@ export class BrokerController {
   @RequirePermission('broker.access')
   async commissions(@CurrentActor() actor: Actor) {
     return this.broker.commissions(actor);
+  }
+
+  /** GET /v1/broker/sales/:commissionId: follow a sale the broker brought, view only (D-191). */
+  @Get('sales/:id')
+  @RequirePermission('broker.access')
+  async sale(@CurrentActor() actor: Actor, @Param('id') id: string) {
+    if (!Uuid.safeParse(id).success) throw notFound('stock_not_found', 'No such sale');
+    try { return await this.payments.brokerSale(actor.userId, id); } catch (e) {
+      if (e instanceof DealerError) throw notFound('sale_not_found', 'No such sale');
+      throw e;
+    }
   }
 }
 
