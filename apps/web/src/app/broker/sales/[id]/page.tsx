@@ -54,7 +54,7 @@ export default async function BrokerSale({ params }: { params: Promise<{ id: str
 
   return (
     <AppFrame workspace="broker" viewer={{ platformRoles: me.platformRoles }} business={{ name: me.displayName, approved: true, badge: 'Approved broker' }}>
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="space-y-4">
         <Link href="/broker?tab=commissions" className="btn-soft"><Icon name="arrow_back" />My commission</Link>
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight md:text-3xl">{c.name}{c.plate ? ` · ${c.plate}` : ''}</h1>
@@ -79,13 +79,13 @@ export default async function BrokerSale({ params }: { params: Promise<{ id: str
               {p.state === 'paid' ? <p className="mt-3 rounded-lg bg-ok-fill p-2.5 font-bold text-ok-text">Paid in full</p>
                 : p.state === 'late' ? <p className="mt-3 rounded-lg bg-bad-fill p-2.5 font-bold text-bad-text">A payment is late: {plural(p.daysLate, 'day')}</p>
                 : <p className="mt-3 rounded-lg bg-ok-fill p-2.5 font-bold text-ok-text">On time</p>}
-              <dl className="mt-3 space-y-1.5 text-sm">
-                {p.next && <div className="flex justify-between gap-3"><dt className="text-muted">Next payment</dt><dd className="text-right font-bold">{formatDate(p.next.dueOn)} · {n0(p.next.owingUgx)}</dd></div>}
-                <div className="flex justify-between gap-3"><dt className="text-muted">Balance</dt><dd className="text-right font-bold tabular-nums">{n0(p.balanceUgx)}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-muted">Your commission</dt><dd className="text-right font-bold">{n0(sale.commission.amountUgx)} · {PAY[sale.commission.status] ?? sale.commission.status}</dd></div>
+              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                {p.next && <div className="rounded-xl border border-line bg-soft/60 p-3"><dt className="text-xs font-bold uppercase tracking-wider text-label">Next payment</dt><dd className="mt-1 font-bold">{formatDate(p.next.dueOn)} · {n0(p.next.owingUgx)}</dd></div>}
+                <div className="rounded-xl border border-line bg-soft/60 p-3"><dt className="text-xs font-bold uppercase tracking-wider text-label">Balance</dt><dd className="mt-1 font-bold tabular-nums">{n0(p.balanceUgx)}</dd></div>
+                <div className="rounded-xl border border-line bg-soft/60 p-3"><dt className="text-xs font-bold uppercase tracking-wider text-label">Your commission</dt><dd className="mt-1 font-bold">{n0(sale.commission.amountUgx)} · {PAY[sale.commission.status] ?? sale.commission.status}</dd></div>
                 {sale.buyer.phone && (
-                  <div className="flex justify-between gap-3"><dt className="text-muted">Buyer&apos;s phone</dt>
-                    <dd className="text-right"><a className="font-bold text-primary-container" href={`tel:${sale.buyer.phone}`}>{localPhone(sale.buyer.phone)}</a></dd></div>
+                  <div className="rounded-xl border border-line bg-soft/60 p-3"><dt className="text-xs font-bold uppercase tracking-wider text-label">Buyer&apos;s phone</dt>
+                    <dd className="mt-1"><a className="font-bold text-primary-container" href={`tel:${sale.buyer.phone}`}>{localPhone(sale.buyer.phone)}</a></dd></div>
                 )}
               </dl>
             </>
@@ -95,31 +95,36 @@ export default async function BrokerSale({ params }: { params: Promise<{ id: str
         {p && (
           <section aria-labelledby="sch-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
             <h2 id="sch-h" className="font-display text-lg font-bold text-primary-container">Payments</h2>
-            <ul className="mt-2 divide-y divide-line" aria-label="Payments">
-              {p.schedule.map((r) => {
-                const [label, tone] = pill(r);
-                return (
-                  <li key={r.seq} className="flex items-center justify-between gap-3 py-2.5">
-                    <div className="min-w-0">
-                      <p className="font-bold">{r.seq === 0 ? (p.kind === 'cash' ? 'Paid in full' : 'Deposit') : `Payment ${r.seq}`}</p>
-                      <p className="text-sm text-muted">
-                        {formatDate(r.dueOn)} · {n0(r.amountUgx)}{r.paidUgx > 0 && r.owingUgx > 0 ? ` · ${n0(r.paidUgx)} paid` : ''}
-                        {r.status === 'late' ? <b className="text-bad-text"> · {plural(r.daysLate, 'day')} late</b> : r.owingUgx > 0 ? ` · ${plural(r.daysLeft, 'day')} left` : ''}
-                      </p>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide ${tone}`}>{label}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="mt-2 overflow-x-auto">
+              <table className="stack-table w-full text-left text-sm">
+                <thead className="border-b border-line text-[11px] uppercase tracking-wider text-label">
+                  <tr><th className="py-2 pr-3">Payment</th><th className="py-2 pr-3">Due</th><th className="py-2 pr-3 text-right">Amount (UGX)</th><th className="py-2 pr-3 text-right">Paid (UGX)</th><th className="py-2 pr-3">Days left</th><th className="py-2">Status</th></tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {p.schedule.map((r) => {
+                    const [label, tone] = pill(r);
+                    return (
+                      <tr key={r.seq}>
+                        <td data-label="Payment" className="py-2.5 pr-3 font-semibold">{r.seq === 0 ? (p.kind === 'cash' ? 'Paid in full' : 'Deposit') : `Payment ${r.seq}`}</td>
+                        <td data-label="Due" className="whitespace-nowrap py-2.5 pr-3">{formatDate(r.dueOn)}</td>
+                        <td data-label="Amount (UGX)" className="py-2.5 pr-3 text-right tabular-nums">{n0(r.amountUgx)}</td>
+                        <td data-label="Paid (UGX)" className="py-2.5 pr-3 text-right tabular-nums">{n0(r.paidUgx)}</td>
+                        <td data-label="Days left" className="whitespace-nowrap py-2.5 pr-3">{r.status === 'late' ? <b className="text-bad-text">{plural(r.daysLate, 'day')} late</b> : plural(r.daysLeft, 'day')}</td>
+                        <td data-label="Status" className="py-2.5"><span className={`rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide ${tone}`}>{label}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </section>
         )}
 
         <section aria-labelledby="car-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
           <details open>
             <summary id="car-h" className="cursor-pointer font-display text-lg font-bold text-primary-container">About the car</summary>
-            <dl className="mt-2 divide-y divide-line text-sm">
-              {facts.map(([k, v]) => <div key={k} className="flex justify-between gap-3 py-2"><dt className="text-muted">{k}</dt><dd className="text-right font-semibold">{v}</dd></div>)}
+            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
+              {facts.map(([k, v]) => <div key={k} className="rounded-xl border border-line p-3"><dt className="text-xs font-bold uppercase tracking-wider text-label">{k}</dt><dd className="mt-1 font-semibold">{v}</dd></div>)}
             </dl>
             {c.vehicleRef && <Link href={`/v/${c.vehicleRef}`} className="btn-soft mt-3">See the SAZO report for this car<Icon name="arrow_forward" /></Link>}
           </details>
