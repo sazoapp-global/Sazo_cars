@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Icon, type IconName } from '@/components/icon';
 import { api, isSignedIn } from '@/lib/api';
-import type { Me, MyOrganisation } from '@/lib/types';
+import type { DealerSettings, Me, MyOrganisation } from '@/lib/types';
+import { DealerSettingsCard } from '../dealer-settings';
 import { removeLogo, sendDocuments, sendIdentity, setLogo } from '../actions';
 import { Avatar } from '@/components/avatar';
 import { PictureForm } from '@/components/picture-form';
@@ -36,6 +37,9 @@ export default async function BusinessStatus({ params, searchParams }: { params:
   // The logo (D-186): managers change it; every change is kept, with who made it and when.
   const logoId = me?.memberships.find((m) => m.organisationId === id)?.logoId ?? null;
   const logoManager = org.role === 'org_manager' && org.status !== 'rejected' && org.status !== 'suspended';
+  // Business settings (D-192): a dealer's managers change them here, under Business details.
+  const settings = logoManager && org.type === 'dealer' && org.status !== 'rejected' && org.status !== 'suspended'
+    ? await api<DealerSettings>('/dealer/settings', { auth: true, headers: { 'X-Organisation-Id': id } }).catch(() => undefined) : undefined;
   const history = logoManager ? await api<{ items: LogoChange[] }>(`/organisations/${id}/logo/history`, { auth: true }).then((r) => r.items).catch(() => [] as LogoChange[]) : [];
   const name = org.tradingName ?? org.legalName;
   const pending = org.status === 'pending_verification';
@@ -70,6 +74,8 @@ export default async function BusinessStatus({ params, searchParams }: { params:
           <p className="mt-1">“{org.infoRequested}”</p>
         </div>
       )}
+
+      {settings && <DealerSettingsCard id={id} settings={settings} />}
 
       {logoManager && (
         <section id="logo" className="card scroll-mt-24 p-4 xl:col-span-2" aria-labelledby="logo-h">

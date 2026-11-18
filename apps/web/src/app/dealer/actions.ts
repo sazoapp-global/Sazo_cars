@@ -280,7 +280,7 @@ export async function saveSettings(form: FormData) {
   const { org } = ids(form);
   const levels = text(form, 'levels').split(/[^\d]+/).filter(Boolean).map(Number);
   const wa = text(form, 'whatsapp') ? toE164(text(form, 'whatsapp')) : null;
-  const toSettings = (q: Record<string, string>): never => redirect(`/dealer/${org}/settings?${new URLSearchParams(q)}`);
+  const toSettings = (q: Record<string, string>): never => redirect(`/business/${org}?${new URLSearchParams(q)}#settings`);
   if (text(form, 'whatsapp') && !wa) toSettings({ error: 'Enter the WhatsApp number like 0772 123 456.' });
   const minDeposit = text(form, 'minDeposit') ? digits(text(form, 'minDeposit')) : null;
   if (minDeposit !== null && (minDeposit < 1 || minDeposit > 100)) toSettings({ error: 'Enter the lowest deposit as a number from 1 to 100, or leave it empty.' });

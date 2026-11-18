@@ -159,8 +159,8 @@ export const WORKSPACES: Record<WorkspaceKey, Workspace> = {
       { key: 'commissions', label: 'Commission', short: 'Commission', icon: 'payments', href: '/dealer/{org}/commissions', rule: MANAGER_APPROVED },
       { key: 'sold', label: 'Sold', short: 'Sold', icon: 'sell', href: '/dealer/{org}?show=sold', rule: APPROVED },
       { key: 'team', label: 'Team', short: 'Team', icon: 'group', href: '/dealer/{org}/team', rule: MANAGER_APPROVED },
-      { key: 'business-settings', label: 'Business settings', short: 'Business', icon: 'checklist', href: '/dealer/{org}/settings', rule: MANAGER },
-      // Managers only (4 Nov 2026): salespeople do not run the business's approval steps or documents.
+      // Managers only (4 Nov 2026): salespeople do not run the business's approval steps or documents. Business settings
+      // live here too (D-192).
       { key: 'business', label: 'Business details', short: 'Business', icon: 'verified_user', href: '/business/{org}', rule: MANAGER },
     ],
   },
