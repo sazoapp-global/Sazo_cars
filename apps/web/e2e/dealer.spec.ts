@@ -281,9 +281,21 @@ test('list cars, share a buyer link, record a sale', async ({ browser }) => {
   await sale.getByLabel("Buyer's phone").fill(`0774${stamp.slice(-6)}`);
   await sale.getByText('Instalments', { exact: true }).click();
   await sale.getByLabel('Deposit (UGX)').fill('5,000,000');
-  await sale.getByLabel('Number of months').fill('6');
+  await sale.getByLabel('Number of months', { exact: true }).fill('6');
   await sale.getByLabel('First due date').fill(new Date(Date.now() + 3 * 3600_000 + 10 * 86_400_000).toISOString().slice(0, 10)); // in 10 days
-  await expect(sale).toContainText('6 monthly payments of UGX 3,000,000');
+  // How the buyer pays (D-190): the balance after the deposit, split into the months given.
+  const pays = sale.getByRole('region', { name: 'How the buyer pays' });
+  await expect(pays).toContainText('Balance to pay18,000,000');
+  await expect(pays).toContainText('3,000,000 × 6 months');
+  // Or from what the buyer can pay each month: SAZO works out the months, the last one takes what is left.
+  await sale.getByText('By monthly amount', { exact: true }).click();
+  await sale.getByLabel('Each month (UGX)').fill('4,000,000');
+  await expect(pays).toContainText('4,000,000 × 4, then 2,000,000');
+  await pays.getByText('See all 6 payments').click();
+  await expect(pays.getByRole('row')).toHaveCount(6);
+  await a11y(dealer);
+  await sale.getByText('By number of months', { exact: true }).click();
+  await expect(pays).toContainText('3,000,000 × 6 months');
   await sale.getByText('MTN MoMo').click();
   await a11y(dealer);
   await shot(dealer, 'dealer-sell');

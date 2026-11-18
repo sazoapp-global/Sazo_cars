@@ -282,8 +282,10 @@ export async function saveSettings(form: FormData) {
   const wa = text(form, 'whatsapp') ? toE164(text(form, 'whatsapp')) : null;
   const toSettings = (q: Record<string, string>): never => redirect(`/dealer/${org}/settings?${new URLSearchParams(q)}`);
   if (text(form, 'whatsapp') && !wa) toSettings({ error: 'Enter the WhatsApp number like 0772 123 456.' });
+  const minDeposit = text(form, 'minDeposit') ? digits(text(form, 'minDeposit')) : null;
+  if (minDeposit !== null && (minDeposit < 1 || minDeposit > 100)) toSettings({ error: 'Enter the lowest deposit as a number from 1 to 100, or leave it empty.' });
   try {
-    await api('/dealer/settings', { method: 'PUT', ...asDealer(org), body: { stockAgeAlertDays: levels, leadProtectionDays: digits(text(form, 'protection')), whatsappE164: wa } });
+    await api('/dealer/settings', { method: 'PUT', ...asDealer(org), body: { stockAgeAlertDays: levels, leadProtectionDays: digits(text(form, 'protection')), whatsappE164: wa, minDepositPercent: minDeposit } });
   } catch (err) { toSettings({ error: reason(err, 'Could not save the settings. Use up to 5 numbers of days.') }); }
   toSettings({ done: 'Settings saved.' });
 }
@@ -451,11 +453,18 @@ function planFrom(form: FormData, fail: (msg: string) => never): Record<string, 
   }
   if (kind === 'instalments') {
     const months = digits(text(form, 'months'));
-    if (!months || months > 120) fail('Enter the number of monthly payments (1 to 120).');
+    if (!months || months > 120) fail(text(form, 'by') === 'amount' ? 'Enter a monthly amount that pays the balance within 120 months.' : 'Enter the number of monthly payments (1 to 120).');
     if (!text(form, 'firstDueOn')) fail('Enter when the first monthly payment is due.');
     plan.depositUgx = digits(text(form, 'deposit'));
     plan.months = months;
     plan.firstDueOn = text(form, 'firstDueOn');
+    // Worked out from a monthly amount (D-190): the same amounts the form showed; SAZO checks they add up.
+    if (text(form, 'by') === 'amount') {
+      let amounts: unknown;
+      try { amounts = JSON.parse(text(form, 'amounts')); } catch { amounts = null; }
+      if (!Array.isArray(amounts) || amounts.length !== months || !amounts.every((x) => Number.isInteger(x) && x > 0)) fail('Enter what the buyer pays each month.');
+      plan.amounts = amounts;
+    }
     if (!plan.depositUgx) delete plan.paidAtSale;
   }
   return plan;

@@ -220,10 +220,13 @@ describe.skipIf(!base)('dealer cars, costs and clocks (e2e)', () => {
   });
 
   it('dealer settings: staff can read them, managers change them', async () => {
-    expect((await http.get('/v1/dealer/settings').set(as(staff)).expect(200)).body).toEqual({ stockAgeAlertDays: [90, 180, 240], leadProtectionDays: 30, whatsappE164: null });
+    expect((await http.get('/v1/dealer/settings').set(as(staff)).expect(200)).body).toEqual({ stockAgeAlertDays: [90, 180, 240], leadProtectionDays: 30, whatsappE164: null, minDepositPercent: null });
     await http.put('/v1/dealer/settings').set(as(staff)).send({ stockAgeAlertDays: [60], leadProtectionDays: 14 }).expect(403);
-    expect((await http.put('/v1/dealer/settings').set(as(manager)).send({ stockAgeAlertDays: [120, 60], leadProtectionDays: 14, whatsappE164: '+256772600001' }).expect(200)).body)
-      .toEqual({ stockAgeAlertDays: [60, 120], leadProtectionDays: 14, whatsappE164: '+256772600001' });
+    expect((await http.put('/v1/dealer/settings').set(as(manager)).send({ stockAgeAlertDays: [120, 60], leadProtectionDays: 14, whatsappE164: '+256772600001', minDepositPercent: 30 }).expect(200)).body)
+      .toEqual({ stockAgeAlertDays: [60, 120], leadProtectionDays: 14, whatsappE164: '+256772600001', minDepositPercent: 30 });
+    // The lowest deposit (D-190): staff read it for the sale form; it is a share of the price, 1 to 100.
+    expect((await http.get('/v1/dealer/settings').set(as(staff)).expect(200)).body.minDepositPercent).toBe(30);
+    await http.put('/v1/dealer/settings').set(as(manager)).send({ stockAgeAlertDays: [60, 120], leadProtectionDays: 14, minDepositPercent: 0 }).expect(400);
     const view = (await http.get(`/v1/dealer/stock/${carId}`).set(as(staff)).expect(200)).body;
     expect(view.clocks).toMatchObject({ stockAgeAlertDays: [60, 120], stockAgeLevel: 1 });
   });

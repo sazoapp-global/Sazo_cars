@@ -1,4 +1,5 @@
 import { ConfirmButton } from '@/components/confirm-button';
+import type { DealerSettings } from '@/lib/types';
 import { Avatar } from '@/components/avatar';
 import { Flash } from '@/components/flash';
 import { formatUgx } from '@sazo/contracts';
@@ -117,9 +118,10 @@ export default async function DealerPayments({ params, searchParams }: { params:
   // A sold car without a payment record: say how it is paid for.
   const adding = sp.add && UUID.test(sp.add) ? list.unplanned.find((u) => u.car.stockId === sp.add) : undefined;
   if (adding) {
-    const [leads, brokers] = await Promise.all([
+    const [leads, brokers, minDeposit] = await Promise.all([
       api<{ items: Lead[] }>('/dealer/leads', as).then((r) => r.items).catch(() => [] as Lead[]),
       api<{ items: BrokerChoice[] }>('/dealer/brokers', as).then((r) => r.items).catch(() => [] as BrokerChoice[]),
+      api<DealerSettings>('/dealer/settings', as).then((r) => r.minDepositPercent ?? null).catch(() => null),
     ]);
     const buyers: BuyerChoice[] = leads.filter((l) => l.stockId === adding.car.stockId && l.stage !== 'lost')
       .map((l) => ({ leadId: l.leadId, name: l.customer.name ?? 'Customer', phone: l.customer.phone ? localPhone(l.customer.phone) : null, broker: l.broker }));
@@ -130,7 +132,7 @@ export default async function DealerPayments({ params, searchParams }: { params:
         <section aria-labelledby="add-h" className="rounded-[14px] border border-line bg-card p-4 md:p-5">
           <h1 id="add-h" className="font-display text-2xl font-bold">How is {carTitle(adding.car)} paid for?</h1>
           <p className="mb-4 mt-1 text-sm text-muted">Sold on {longDate(adding.soldOn)}.</p>
-          <SaleForm org={id} carId={adding.car.stockId} salePriceUgx={adding.salePriceUgx} today={today()} buyers={buyers} brokers={brokers} mode="plan" />
+          <SaleForm org={id} carId={adding.car.stockId} salePriceUgx={adding.salePriceUgx} today={today()} buyers={buyers} brokers={brokers} minDepositPercent={minDeposit} mode="plan" />
         </section>
       </>,
     );

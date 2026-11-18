@@ -76,6 +76,7 @@ const Settings = z.object({
   stockAgeAlertDays: z.array(z.number().int().min(1).max(3650)).min(1).max(5),
   leadProtectionDays: z.number().int().min(1).max(365),
   whatsappE164: z.string().regex(/^\+[1-9]\d{7,14}$/).nullable().default(null),
+  minDepositPercent: z.number().int().min(1).max(100).nullable().default(null),
 });
 
 const STATUS: Record<string, number> = {
