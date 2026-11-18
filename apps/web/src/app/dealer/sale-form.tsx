@@ -177,6 +177,15 @@ export function SaleForm({ org, carId, askingPriceUgx, salePriceUgx, today, buye
                 </p>
               )}
               {tooLong && <p role="alert" className="text-sm font-semibold text-bad-text">At that amount it takes {amounts.length} months. The most is 120: ask for a bigger monthly amount or deposit.</p>}
+              {!ready && !tooLong && (
+                <p role="status" className="flex gap-2 rounded-lg bg-soft p-3 text-sm text-muted">
+                  <Icon name="info" className="shrink-0" />
+                  <span>{p <= 0 ? 'Type the price the car sold for to see the deposit, balance and monthly payments.'
+                    : d >= p ? 'The deposit covers the whole price, so there is nothing to pay monthly. Choose Cash, in full instead.'
+                    : by === 'amount' ? 'Type what the buyer can pay each month to see the payments.'
+                    : 'Type the number of months to see the payments.'}</span>
+                </p>
+              )}
               {ready && (
                 <section aria-live="polite" aria-label="How the buyer pays" className="rounded-[14px] border border-soft-3 bg-soft px-4 py-3 text-sm">
                   <p className="text-xs font-extrabold uppercase tracking-wider text-label">How the buyer pays</p>
